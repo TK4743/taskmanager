@@ -10,7 +10,6 @@ const execPromise = util.promisify(exec);
 import fs from 'fs';
 import express, { Request, Response, NextFunction } from 'express';
 import compression from 'compression';
-import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
@@ -7857,20 +7856,23 @@ async function startServer() {
   });
 
 
-  // ── Vite & Static Serving ─────────────────────────────────────────────────
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    app.use(express.static(path.join(__dirname, 'dist'), {
-      maxAge: '1y',
-      immutable: true,
-      index: false,
-    }));
-    app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist/index.html')));
+  // ── Vite & Static Serving (Standalone / Local / Render mode only) ───────────
+  if (!process.env.VERCEL) {
+    if (process.env.NODE_ENV !== 'production') {
+      const { createServer: createViteServer } = await import('vite');
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+    } else {
+      app.use(express.static(path.join(__dirname, 'dist'), {
+        maxAge: '1y',
+        immutable: true,
+        index: false,
+      }));
+      app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist/index.html')));
+    }
   }
 
   // ── Global Error Handler ───────────────────────────────────────────────────
