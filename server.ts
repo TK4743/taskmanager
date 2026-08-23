@@ -546,7 +546,13 @@ async function startServer() {
         'http://it-taskmanager.mooo.com',
         'https://it-taskmanager.mooo.com'
       ];
-      if (!origin || allowedOrigins.includes(origin) || (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL)) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) ||
+        origin.endsWith('.vercel.app') ||
+        origin.includes('vercel.app')
+      ) {
         callback(null, true);
       } else {
         console.warn(`CORS rejected origin: ${origin}`);
