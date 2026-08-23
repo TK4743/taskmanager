@@ -6,10 +6,6 @@ dotenv.config();
 
 import ExcelJS from 'exceljs';
 
-import { exec } from 'child_process';
-import util from 'util';
-const execPromise = util.promisify(exec);
-
 import fs from 'fs';
 import express, { Request, Response, NextFunction } from 'express';
 import compression from 'compression';

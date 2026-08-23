@@ -8,9 +8,6 @@ import {
   constantStudentByRegNoMap,
   constantStudentByEmailMap,
   cleanStudentName
-} from './studentDirectoryService.js';
-import { sendTaskStatusEmail } from './emailService.js';
-
 let cachedBotUsername = process.env.TELEGRAM_BOT_USERNAME || 'IT_TaskManager_Alerts_bot';
 
 export async function fetchBotUsername(): Promise<string> {
