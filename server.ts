@@ -613,6 +613,23 @@ async function startServer() {
   }
   const userAuthCache = new Map<string, CachedAuthUser>();
 
+  const setUserAuthCache = (userId: string, user: any) => {
+    if (userAuthCache.size > 2000) {
+      const now = Date.now();
+      for (const [k, v] of userAuthCache.entries()) {
+        if (now - v.cachedAt > 120000) userAuthCache.delete(k);
+      }
+      if (userAuthCache.size > 2000) {
+        let count = 0;
+        for (const k of userAuthCache.keys()) {
+          userAuthCache.delete(k);
+          if (++count >= 200) break;
+        }
+      }
+    }
+    userAuthCache.set(userId, { user, cachedAt: Date.now() });
+  };
+
   const invalidateUserAuthCache = (userId?: string) => {
     if (userId) {
       userAuthCache.delete(String(userId));
@@ -641,6 +658,21 @@ async function startServer() {
   };
 
   const setApiCache = (key: string, data: any, ttlSeconds = 30): void => {
+    if (apiMemoryCache.size > 3000) {
+      const now = Date.now();
+      for (const [k, v] of apiMemoryCache.entries()) {
+        if (now > v.expiresAt) {
+          apiMemoryCache.delete(k);
+        }
+      }
+      if (apiMemoryCache.size > 3000) {
+        let count = 0;
+        for (const k of apiMemoryCache.keys()) {
+          apiMemoryCache.delete(k);
+          if (++count >= 300) break;
+        }
+      }
+    }
     apiMemoryCache.set(key, { data, expiresAt: Date.now() + ttlSeconds * 1000 });
   };
 
@@ -676,7 +708,7 @@ async function startServer() {
         );
         user = dbUserRes.rows[0];
         if (user) {
-          userAuthCache.set(userId, { user, cachedAt: now });
+          setUserAuthCache(userId, user);
         }
       }
 
