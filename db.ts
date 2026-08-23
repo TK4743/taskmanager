@@ -576,7 +576,12 @@ export async function initDB() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_classes_dept ON classes(department_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read) WHERE is_read = false;`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_password_resets_lookup ON password_resets(email, otp_code, used);`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_tasks_status_created ON tasks(status, created_at DESC);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at DESC);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_task_submissions_user_task_status ON task_submissions(user_id, task_id, status);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_users_role_dept_class ON users(role, department_id, class_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_classes_dept_year ON classes(department_id, year);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_teams_task_status ON teams(task_id, status);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_task_deadline_alerts ON task_deadline_alerts(task_id, user_id, alert_type);`);
 
     // ─── Module 5: LeetCode Targets & Progress Tracking ───────────────────────

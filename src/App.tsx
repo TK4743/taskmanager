@@ -4120,12 +4120,20 @@ export default function App() {
   const [forgotCountdown, setForgotCountdown] = useState(600);
   const [forgotResendCooldown, setForgotResendCooldown] = useState(0);
 
-  // Data State
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [classes, setClasses] = useState<Class[]>([]);
+  // Data State with SWR Instant Local Render
+  const [departments, setDepartments] = useState<Department[]>(() => {
+    try { const c = sessionStorage.getItem('app_cache_depts'); return c ? JSON.parse(c) : []; } catch { return []; }
+  });
+  const [classes, setClasses] = useState<Class[]>(() => {
+    try { const c = sessionStorage.getItem('app_cache_classes'); return c ? JSON.parse(c) : []; } catch { return []; }
+  });
   const [users, setUsers] = useState<User[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    try { const c = sessionStorage.getItem('app_cache_tasks'); return c ? JSON.parse(c) : []; } catch { return []; }
+  });
+  const [submissions, setSubmissions] = useState<Submission[]>(() => {
+    try { const c = sessionStorage.getItem('app_cache_submissions'); return c ? JSON.parse(c) : []; } catch { return []; }
+  });
   const [hodStats, setHodStats] = useState<HODStats | null>(null);
   const [advisorStats, setAdvisorStats] = useState<AdvisorStats | null>(null);
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
@@ -5188,12 +5196,23 @@ export default function App() {
         return timeA - timeB;
       });
 
-      setDepartments(sortDeptsList(depts));
-      setClasses(sortClassesList(classes));
+      const sortedDepts = sortDeptsList(depts);
+      const sortedClasses = sortClassesList(classes);
+      const sortedTasks = sortTasksAscending(tasks);
+
+      setDepartments(sortedDepts);
+      setClasses(sortedClasses);
       setUsers(users);
-      setTasks(sortTasksAscending(tasks));
+      setTasks(sortedTasks);
       setSubmissions(submissions);
       setNotifications(notifications);
+
+      try {
+        sessionStorage.setItem('app_cache_depts', JSON.stringify(sortedDepts));
+        sessionStorage.setItem('app_cache_classes', JSON.stringify(sortedClasses));
+        sessionStorage.setItem('app_cache_tasks', JSON.stringify(sortedTasks));
+        sessionStorage.setItem('app_cache_submissions', JSON.stringify(submissions));
+      } catch {}
 
       if (savedUser) {
         // Refresh user data from server to avoid stale session flags

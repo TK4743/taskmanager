@@ -530,6 +530,7 @@ async function startServer() {
   const app = express();
   app.disable('x-powered-by');
   app.set('etag', 'strong');
+  app.set('json spaces', 0);
 
   // Enable trust proxy so express-rate-limit correctly identifies individual client IPs behind reverse proxies (Render, Cloudflare, Nginx)
   app.set('trust proxy', 1);
