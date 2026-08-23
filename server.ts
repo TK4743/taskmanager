@@ -5537,9 +5537,11 @@ async function startServer() {
     }
   };
 
-  // Run once on startup, then every hour
-  checkAndSendReminders();
-  setInterval(checkAndSendReminders, 60 * 60 * 1000);
+  // Run once on startup, then every hour (Standalone/Render mode only)
+  if (!process.env.VERCEL) {
+    checkAndSendReminders();
+    setInterval(checkAndSendReminders, 60 * 60 * 1000);
+  }
   // ── LeetCode Targets & Progress API Module ───────────────────────────────────
 
   // Utility: Extract username from profile URL or username
@@ -7803,19 +7805,21 @@ async function startServer() {
     }
   }
 
-  // GitHub startup sync + schedule daemon
-  if (process.env.GITHUB_TOKEN) {
-    syncGitHubProgressForScope().catch(err => console.error('[GitHub Sync] Startup sync error:', err));
-    scheduleGitHubDailySync();
-  }
+  if (!process.env.VERCEL) {
+    // GitHub startup sync + schedule daemon
+    if (process.env.GITHUB_TOKEN) {
+      syncGitHubProgressForScope().catch(err => console.error('[GitHub Sync] Startup sync error:', err));
+      scheduleGitHubDailySync();
+    }
 
-  // Telegram Bot startup poller
-  if (process.env.TELEGRAM_BOT_TOKEN) {
-    try {
-      startTelegramPoller();
-      console.log('[Telegram Bot] Background poller started successfully.');
-    } catch (err) {
-      console.error('[Telegram Bot] Failed to start poller:', err);
+    // Telegram Bot startup poller
+    if (process.env.TELEGRAM_BOT_TOKEN) {
+      try {
+        startTelegramPoller();
+        console.log('[Telegram Bot] Background poller started successfully.');
+      } catch (err) {
+        console.error('[Telegram Bot] Failed to start poller:', err);
+      }
     }
   }
 
