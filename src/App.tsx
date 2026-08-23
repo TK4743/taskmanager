@@ -5063,9 +5063,7 @@ export default function App() {
       // Smart live polling every 25 seconds only when tab is visible
       const interval = setInterval(() => {
         if (document.visibilityState === 'visible') {
-          fetchTasks();
-          fetchSubmissions();
-          fetchNotifications();
+          fetchRefresh();
           if (user?.role === 'STUDENT') fetchMyTeamsAndInvitations();
         }
       }, 25000);
@@ -5073,9 +5071,7 @@ export default function App() {
       // Instant refresh when tab/window gains focus
       const handleFocusOrVisible = () => {
         if (document.visibilityState === 'visible') {
-          fetchTasks();
-          fetchSubmissions();
-          fetchNotifications();
+          fetchRefresh();
         }
       };
 
@@ -5234,6 +5230,68 @@ export default function App() {
       console.error('Failed to fetch data', e);
       addToast('Failed to load application data. Check your connection.', 'error');
       setIsLoading(false);
+    }
+  };
+
+  // Batched refresh helper (calls /api/refresh to fetch tasks, submissions, notifs in ONE call)
+  const fetchRefresh = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/refresh`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.tasks) {
+          const sortDescending = (list: Task[]) => [...(list || [])].sort((a, b) => {
+            const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.deadline ? new Date(a.deadline).getTime() : 0);
+            const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.deadline ? new Date(b.deadline).getTime() : 0);
+            return timeB - timeA;
+          });
+          setTasks(sortDescending(data.tasks));
+        }
+        if (data.submissions) {
+          setSubmissions(data.submissions);
+        }
+        if (data.notifications) {
+          const notifs: Notification[] = data.notifications;
+          if (initialNotifsLoadedRef.current) {
+            const newUnreads = notifs.filter(n => !n.is_read && !knownNotificationIdsRef.current.has(n.id));
+            if (newUnreads.length > 0) {
+              newUnreads.forEach(n => {
+                addToast(`🔔 ${n.message}`, 'info');
+                if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                  try {
+                    navigator.serviceWorker?.ready?.then(reg => {
+                      if (reg && reg.showNotification) {
+                        reg.showNotification('🔔 IT TaskManager', {
+                          body: n.message,
+                          icon: '/logo.png',
+                          badge: '/badge.png',
+                          tag: `notif-${n.id}`,
+                          data: { url: '/' }
+                        });
+                      } else {
+                        new Notification('🔔 IT TaskManager', { body: n.message, icon: '/logo.png' });
+                      }
+                    }).catch(() => {
+                      new Notification('🔔 IT TaskManager', { body: n.message, icon: '/logo.png' });
+                    });
+                  } catch { }
+                }
+              });
+            }
+          }
+          notifs.forEach(n => knownNotificationIdsRef.current.add(n.id));
+          initialNotifsLoadedRef.current = true;
+          setNotifications(notifs);
+        }
+      } else {
+        fetchTasks();
+        fetchSubmissions();
+        fetchNotifications();
+      }
+    } catch (e) {
+      fetchTasks();
+      fetchSubmissions();
+      fetchNotifications();
     }
   };
 

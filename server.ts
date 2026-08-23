@@ -665,7 +665,7 @@ async function startServer() {
       let user: any = null;
       const cached = userAuthCache.get(userId);
       const now = Date.now();
-      if (cached && (now - cached.cachedAt) < 45000) {
+      if (cached && (now - cached.cachedAt) < 120000) {
         user = cached.user;
       } else {
         const dbUserRes = await pool.query(
@@ -3547,21 +3547,29 @@ async function startServer() {
   // ── Stats: Supreme Admin ──────────────────────────────────────────────────
   app.get('/api/stats/supreme', authenticate, authorize(['SUPREME_ADMIN']), async (req, res) => {
     try {
-      const totalDepts = await pool.query('SELECT count(*) FROM departments');
-      const totalClasses = await pool.query('SELECT count(*) FROM classes');
-      const totalUsers = await pool.query('SELECT count(*) FROM users');
-      const activeTasks = await pool.query("SELECT count(*) FROM tasks WHERE status = 'OPEN'");
-      const totalSubmissions = await pool.query('SELECT count(*) FROM task_submissions');
-      const pendingVerifications = await pool.query("SELECT count(*) FROM task_submissions WHERE status = 'SUBMITTED'");
+      const cacheKey = 'stats_supreme';
+      const cached = getApiCache(cacheKey);
+      if (cached) return res.json(cached);
 
-      res.json({
+      const [totalDepts, totalClasses, totalUsers, activeTasks, totalSubmissions, pendingVerifications] = await Promise.all([
+        pool.query('SELECT count(*) FROM departments'),
+        pool.query('SELECT count(*) FROM classes'),
+        pool.query('SELECT count(*) FROM users'),
+        pool.query("SELECT count(*) FROM tasks WHERE status = 'OPEN'"),
+        pool.query('SELECT count(*) FROM task_submissions'),
+        pool.query("SELECT count(*) FROM task_submissions WHERE status = 'SUBMITTED'"),
+      ]);
+
+      const data = {
         total_departments: parseInt(totalDepts.rows[0].count),
         total_classes: parseInt(totalClasses.rows[0].count),
         total_users: parseInt(totalUsers.rows[0].count),
         total_active_tasks: parseInt(activeTasks.rows[0].count),
         total_submissions: parseInt(totalSubmissions.rows[0].count),
         pending_verifications: parseInt(pendingVerifications.rows[0].count),
-      });
+      };
+      setApiCache(cacheKey, data, 30);
+      res.json(data);
     } catch (err) {
       console.error('Supreme Stats Error:', err);
       res.status(500).json({ error: 'Failed to fetch Supreme Admin stats' });
@@ -3570,6 +3578,9 @@ async function startServer() {
 
   app.get('/api/stats/hod', authenticate, authorize(['HOD']), async (req: any, res) => {
     const deptId = req.user.department_id;
+    const cacheKey = `stats_hod_${deptId}`;
+    const cached = getApiCache(cacheKey);
+    if (cached) return res.json(cached);
 
     const classesRes = await pool.query('SELECT * FROM classes WHERE department_id = $1 ORDER BY year ASC, name ASC', [deptId]);
     const classes = classesRes.rows;
@@ -3706,7 +3717,7 @@ async function startServer() {
       WHERE u.department_id = $1 AND ts.status = 'VERIFIED'
     `, [deptId]);
 
-    res.json({
+    const hodData = {
       taskStats,
       classStats,
       total_students: parseInt(totalStudentsRes.rows[0].count),
@@ -3714,7 +3725,9 @@ async function startServer() {
       total_classes: parseInt(totalClassesRes.rows[0].count),
       pending_submissions: parseInt(pendingSubmissionsRes.rows[0].count),
       verified_submissions: parseInt(verifiedSubmissionsRes.rows[0].count)
-    });
+    };
+    setApiCache(cacheKey, hodData, 15);
+    res.json(hodData);
   });
 
   app.get('/api/stats/coordinator', authenticate, async (req: any, res) => {
@@ -3723,6 +3736,9 @@ async function startServer() {
 
     const classId = req.user.class_id;
     const deptId = req.user.department_id;
+    const coordCacheKey = `stats_coord_${classId}`;
+    const coordCached = getApiCache(coordCacheKey);
+    if (coordCached) return res.json(coordCached);
 
     const tasksRes = await pool.query(`
       SELECT t.*
@@ -3771,47 +3787,20 @@ async function startServer() {
       total_tasks: totalTaskCount
     }));
 
-    const totalStudentsRes = await pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT'", [classId]);
-    const totalBoysRes = await pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT' AND UPPER(gender) IN ('MALE', 'BOYS', 'BOY', 'M')", [classId]);
-    const totalGirlsRes = await pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT' AND UPPER(gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F')", [classId]);
 
-    const pendingReviewsRes = await pool.query(`
-      SELECT count(DISTINCT ts.user_id) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.class_id = $1 AND ts.status = 'SUBMITTED'
-    `, [classId]);
-    const verifiedSubmissionsRes = await pool.query(`
-      SELECT count(DISTINCT ts.user_id) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.class_id = $1 AND ts.status = 'VERIFIED'
-    `, [classId]);
-    const rejectedSubmissionsRes = await pool.query(`
-      SELECT count(*) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.class_id = $1 AND ts.status = 'REJECTED'
-    `, [classId]);
 
-    const boysVerifiedRes = await pool.query(`
-      SELECT count(DISTINCT ts.user_id) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.class_id = $1 AND UPPER(u.gender) IN ('MALE', 'BOYS', 'BOY', 'M') AND ts.status = 'VERIFIED'
-    `, [classId]);
-    const girlsVerifiedRes = await pool.query(`
-      SELECT count(DISTINCT ts.user_id) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.class_id = $1 AND UPPER(u.gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F') AND ts.status = 'VERIFIED'
-    `, [classId]);
-
-    const boysPendingRes = await pool.query(`
-      SELECT count(DISTINCT ts.user_id) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.class_id = $1 AND UPPER(u.gender) IN ('MALE', 'BOYS', 'BOY', 'M') AND ts.status = 'SUBMITTED'
-    `, [classId]);
-    const girlsPendingRes = await pool.query(`
-      SELECT count(DISTINCT ts.user_id) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.class_id = $1 AND UPPER(u.gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F') AND ts.status = 'SUBMITTED'
-    `, [classId]);
+    const [totalStudentsRes, totalBoysRes, totalGirlsRes, pendingReviewsRes, verifiedSubmissionsRes, rejectedSubmissionsRes, boysVerifiedRes, girlsVerifiedRes, boysPendingRes, girlsPendingRes] = await Promise.all([
+      pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT'", [classId]),
+      pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT' AND UPPER(gender) IN ('MALE', 'BOYS', 'BOY', 'M')", [classId]),
+      pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT' AND UPPER(gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F')", [classId]),
+      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND ts.status = 'SUBMITTED'`, [classId]),
+      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND ts.status = 'VERIFIED'`, [classId]),
+      pool.query(`SELECT count(*) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND ts.status = 'REJECTED'`, [classId]),
+      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND UPPER(u.gender) IN ('MALE', 'BOYS', 'BOY', 'M') AND ts.status = 'VERIFIED'`, [classId]),
+      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND UPPER(u.gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F') AND ts.status = 'VERIFIED'`, [classId]),
+      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND UPPER(u.gender) IN ('MALE', 'BOYS', 'BOY', 'M') AND ts.status = 'SUBMITTED'`, [classId]),
+      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND UPPER(u.gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F') AND ts.status = 'SUBMITTED'`, [classId]),
+    ]);
 
     const totalBoys = parseInt(totalBoysRes.rows[0].count);
     const totalGirls = parseInt(totalGirlsRes.rows[0].count);
@@ -3820,7 +3809,7 @@ async function startServer() {
     const boysPending = parseInt(boysPendingRes.rows[0].count);
     const girlsPending = parseInt(girlsPendingRes.rows[0].count);
 
-    res.json({
+    const coordData = {
       taskStats,
       studentStats,
       class_student_count: parseInt(totalStudentsRes.rows[0].count),
@@ -3835,7 +3824,9 @@ async function startServer() {
       girls_pending: girlsPending,
       boys_incomplete: Math.max(0, totalBoys - boysVerified),
       girls_incomplete: Math.max(0, totalGirls - girlsVerified),
-    });
+    };
+    setApiCache(coordCacheKey, coordData, 15);
+    res.json(coordData);
   });
 
   // ── Submissions ───────────────────────────────────────────────────────────
@@ -3943,6 +3934,8 @@ async function startServer() {
               submitted_at = NOW(), updated_at = NOW()
           WHERE id = $2
         `, [not_participating_reason.trim(), existing.id]);
+        invalidateApiCache('submissions_');
+        invalidateApiCache(`stats_coord_${req.user.class_id}`);
         return res.json({ success: true, id: existing.id });
       }
 
@@ -3951,6 +3944,8 @@ async function startServer() {
         VALUES ($1, $2, 'NOT_PARTICIPATING', TRUE, $3, NOW())
         RETURNING id
       `, [task_id, req.user.id, not_participating_reason.trim()]);
+      invalidateApiCache('submissions_');
+      invalidateApiCache(`stats_coord_${req.user.class_id}`);
       return res.json({ success: true, id: subRes.rows[0].id });
     } catch (err: any) {
       if (err.code === '23505') return res.status(400).json({ error: 'You have already submitted a response for this task.' });
@@ -4048,6 +4043,8 @@ async function startServer() {
 
         notifyTaskSubmissionReceived(req.user.id, task_id).catch(err => console.error('[Telegram Notify Submission Error]:', err));
         invalidateApiCache('tasks_');
+        invalidateApiCache('submissions_');
+        invalidateApiCache(`stats_coord_${req.user.class_id}`);
         return res.json({ success: true, id: existing.id });
       }
 
@@ -4059,6 +4056,8 @@ async function startServer() {
 
       notifyTaskSubmissionReceived(req.user.id, task_id).catch(err => console.error('[Telegram Notify Submission Error]:', err));
       invalidateApiCache('tasks_');
+      invalidateApiCache('submissions_');
+      invalidateApiCache(`stats_coord_${req.user.class_id}`);
       res.json({ success: true, id: subRes.rows[0].id });
     } catch (err: any) {
       // Bug 3: Handle race condition — two simultaneous requests both passed the SELECT check
@@ -4353,6 +4352,91 @@ async function startServer() {
     invalidateApiCache(`notifs_${req.user.id}`);
     res.json({ success: true });
   });
+
+  // ── Batched Refresh Endpoint (replaces 3 polling calls with 1) ────────────
+  // 300 users × 25s polling → this single endpoint handles it all in parallel
+  // from in-memory cache. ~0.1ms response when cached, vs 3× DB queries before.
+  app.get('/api/refresh', authenticate, async (req: any, res) => {
+    const dbUser = req.user;
+    const tasksKey = `tasks_${dbUser.role}_${dbUser.id}_${dbUser.class_id || 'all'}_${dbUser.department_id || 'all'}_${dbUser.year_scope || 'all'}`;
+    const subsKey = `submissions_${dbUser.role}_${dbUser.id}_${dbUser.class_id || 'all'}_${dbUser.department_id || 'all'}_${dbUser.year_scope || 'all'}_${dbUser.is_coordinator ? 'coord' : 'normal'}`;
+    const notifsKey = `notifs_${dbUser.id}`;
+
+    const [cachedTasks, cachedSubs, cachedNotifs] = [
+      getApiCache(tasksKey),
+      getApiCache(subsKey),
+      getApiCache(notifsKey),
+    ];
+
+    // All 3 are cached — instant response from RAM
+    if (cachedTasks && cachedSubs && cachedNotifs) {
+      return res.json({ tasks: cachedTasks, submissions: cachedSubs, notifications: cachedNotifs });
+    }
+
+    // Run uncached queries in parallel (at most 3 DB queries concurrently)
+    const buildTasksQuery = async () => {
+      if (cachedTasks) return cachedTasks;
+      // Reuse tasks logic: simplified version for common student case
+      if (dbUser.role === 'STUDENT' || dbUser.role === 'CLASS_ADVISOR') {
+        const tRes = await pool.query(`
+          SELECT t.*, u.full_name as creator_name, d.name as department_name,
+                 (SELECT array_remove(array_agg(class_id), NULL) FROM task_classes WHERE task_id = t.id) as class_ids
+          FROM tasks t
+          LEFT JOIN users u ON t.created_by = u.id
+          LEFT JOIN departments d ON t.department_id = d.id
+          WHERE t.status = 'OPEN'
+            AND (
+              t.department_id = $1
+              OR t.department_id IS NULL
+              OR EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id AND class_id = $2)
+            )
+          ORDER BY t.created_at DESC
+        `, [dbUser.department_id, dbUser.class_id]);
+        const data = tRes.rows.map((t: any) => ({ id: t.id, title: t.title, description: t.description, category: t.category, external_link: t.external_link, deadline: t.deadline, screenshot_instruction: t.screenshot_instruction, custom_field_label: t.custom_field_label, creator_name: t.creator_name || 'Admin', department_id: t.department_id, department_name: t.department_name || null, class_ids: t.class_ids, status: t.status, submission_type: t.submission_type || 'INDIVIDUAL', min_team_size: t.min_team_size ?? 2, max_team_size: t.max_team_size ?? 5, created_at: t.created_at, poster_url: t.poster_url || null, poster_cloudinary_public_id: t.poster_cloudinary_public_id || null, submission_count: 0 }));
+        setApiCache(tasksKey, data, 15);
+        return data;
+      }
+      return cachedTasks || [];
+    };
+
+    const buildSubsQuery = async () => {
+      if (cachedSubs) return cachedSubs;
+      const baseQuery = `SELECT ts.*, t.title as task_title, u.full_name as student_name, u.register_number, u.class_id, c.name as class_name, c.year as class_year FROM task_submissions ts JOIN tasks t ON ts.task_id = t.id JOIN users u ON ts.user_id = u.id LEFT JOIN classes c ON u.class_id = c.id`;
+      let sRes;
+      if (dbUser.role === 'STUDENT' && !dbUser.is_coordinator) {
+        sRes = await pool.query(`${baseQuery} WHERE ts.user_id = $1`, [dbUser.id]);
+      } else if (dbUser.role === 'STUDENT' && dbUser.is_coordinator) {
+        const studRes = await pool.query('SELECT id FROM users WHERE class_id = $1', [dbUser.class_id]);
+        sRes = await pool.query(`${baseQuery} WHERE ts.user_id = ANY($1)`, [studRes.rows.map((s: any) => s.id)]);
+      } else if (dbUser.role === 'CLASS_ADVISOR') {
+        const studRes = await pool.query('SELECT id FROM users WHERE class_id = $1', [dbUser.class_id]);
+        sRes = await pool.query(`${baseQuery} WHERE ts.user_id = ANY($1)`, [studRes.rows.map((s: any) => s.id)]);
+      } else {
+        sRes = await pool.query(baseQuery);
+      }
+      const data = sRes.rows.map((s: any) => ({ id: s.id, task_id: s.task_id, task_title: s.task_title, user_id: s.user_id, student_name: s.student_name, register_number: s.register_number, class_id: s.class_id, class_name: s.class_name, class_year: s.class_year, status: s.status, screenshot_url: s.screenshot_url, custom_field_value: s.custom_field_value, verification_note: s.verification_note, rejection_reason: s.rejection_reason, not_participating: s.not_participating, not_participating_reason: s.not_participating_reason, submitted_at: s.submitted_at, verified_at: s.verified_at, resubmission_count: s.resubmission_count }));
+      setApiCache(subsKey, data, 10);
+      return data;
+    };
+
+    const buildNotifsQuery = async () => {
+      if (cachedNotifs) return cachedNotifs;
+      const nRes = await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [dbUser.id]);
+      const data = nRes.rows.map((n: any) => ({ id: n.id, message: n.message, type: n.type, is_read: n.is_read, created_at: n.created_at }));
+      setApiCache(notifsKey, data, 8);
+      return data;
+    };
+
+    const [tasks, submissions, notifications] = await Promise.all([
+      buildTasksQuery(),
+      buildSubsQuery(),
+      buildNotifsQuery(),
+    ]);
+
+    res.json({ tasks, submissions, notifications });
+  });
+
+
 
   app.patch('/api/submissions/:id/unlock', authenticate, authorize(['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR']), async (req: any, res) => {
     const subId = req.params.id;
