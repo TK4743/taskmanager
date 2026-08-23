@@ -616,8 +616,10 @@ async function startServer() {
   const invalidateUserAuthCache = (userId?: string) => {
     if (userId) {
       userAuthCache.delete(String(userId));
+      invalidateApiCache(`me_${userId}`);
     } else {
       userAuthCache.clear();
+      invalidateApiCache('me_');
     }
   };
 
@@ -1288,6 +1290,10 @@ async function startServer() {
   }));
 
   app.get('/api/auth/me', authenticate, asyncHandler(async (req: any, res: Response) => {
+    const cacheKey = `me_${req.user.id}`;
+    const cached = getApiCache(cacheKey);
+    if (cached) return res.json(cached);
+
     const userRes = await pool.query(`
       SELECT 
         u.id, u.username, u.role, u.full_name, u.email, u.register_number, u.gender,
@@ -1313,7 +1319,7 @@ async function startServer() {
       }
     }
 
-    res.json({
+    const meData = {
       id: user.id,
       username: user.username,
       role: user.role,
@@ -1338,7 +1344,9 @@ async function startServer() {
       is_coordinator: Boolean(user.is_coordinator),
       is_year_coordinator: Boolean(user.is_year_coordinator),
       year_scope: user.year_scope,
-    });
+    };
+    setApiCache(cacheKey, meData, 60);
+    res.json(meData);
   }));
 
 
@@ -1565,10 +1573,16 @@ async function startServer() {
       return res.status(403).json({ error: 'Forbidden' });
     }
     if (!req.user.class_id) return res.json(null);
+    const cacheKey = `my_class_${req.user.class_id}`;
+    const cached = getApiCache(cacheKey);
+    if (cached) return res.json(cached);
+
     const clsRes = await pool.query('SELECT * FROM classes WHERE id = $1 LIMIT 1', [req.user.class_id]);
     const cls = clsRes.rows[0];
     if (!cls) return res.json(null);
-    res.json({ id: cls.id, name: cls.name, year: cls.year, batch: cls.batch, department_id: cls.department_id });
+    const data = { id: cls.id, name: cls.name, year: cls.year, batch: cls.batch, department_id: cls.department_id };
+    setApiCache(cacheKey, data, 60);
+    res.json(data);
   });
 
   // ── Users ─────────────────────────────────────────────────────────────────
@@ -6423,6 +6437,9 @@ async function startServer() {
   app.get('/api/leetcode/stats', authenticate, asyncHandler(async (req: any, res: Response) => {
     const scope = enforceUserScopeFilter(req.user, req.query);
     const dateStr = req.query.date ? req.query.date.toString() : getISTDateStr();
+    const cacheKey = `leetcode_stats_${JSON.stringify(scope)}_${dateStr}`;
+    const cached = getApiCache(cacheKey);
+    if (cached) return res.json(cached);
 
     const studentRows = await fetchStudentsForScope(scope);
     const enrichedList = await enrichStudentProgressBatch(studentRows, dateStr);
@@ -6449,7 +6466,7 @@ async function startServer() {
 
     const completionDailyRate = totalStudents > 0 ? Math.round((metDaily / totalStudents) * 100) : 0;
 
-    res.json({
+    const statsData = {
       totalStudents,
       metDaily,
       inProgressDaily,
@@ -6459,7 +6476,9 @@ async function startServer() {
       dailyNotCompleted,
       weeklyCompleted,
       weeklyNotCompleted
-    });
+    };
+    setApiCache(cacheKey, statsData, 30);
+    res.json(statsData);
   }));
 
   // Optimized in-memory student lookup helper (uses RAM map when available, falls back to DB)
