@@ -38,7 +38,12 @@ export function getAdminChatId(): string {
 }
 
 export function getPortalUrl(): string {
-  return process.env.FRONTEND_URL || 'https://it-taskmanager-6rgp.onrender.com';
+  const url = process.env.FRONTEND_URL || process.env.APP_URL || 'https://it-taskmanager-6rgp.onrender.com';
+  // Telegram Bot API strictly forbids http:// or localhost/127.0.0.1 in inline keyboard buttons
+  if (!url || !url.startsWith('https://') || url.includes('localhost') || url.includes('127.0.0.1')) {
+    return 'https://it-taskmanager-6rgp.onrender.com';
+  }
+  return url.replace(/\/$/, '');
 }
 
 export function getWatermarkHtml(): string {
@@ -326,6 +331,25 @@ async function sendSingleTelegramMessage(
 ): Promise<{ ok: boolean; description?: string; result?: any }> {
   const token = getBotToken();
   try {
+    // Sanitize any invalid inline keyboard URLs (Telegram strictly requires valid public https URLs)
+    let sanitizedMarkup = options.reply_markup;
+    if (sanitizedMarkup && Array.isArray(sanitizedMarkup.inline_keyboard)) {
+      sanitizedMarkup = {
+        ...sanitizedMarkup,
+        inline_keyboard: sanitizedMarkup.inline_keyboard.map((row: any[]) =>
+          row.map((btn: any) => {
+            if (btn && btn.url) {
+              const u = String(btn.url).trim();
+              if (!u.startsWith('https://') || u.includes('localhost') || u.includes('127.0.0.1')) {
+                return { ...btn, url: 'https://it-taskmanager-6rgp.onrender.com' };
+              }
+            }
+            return btn;
+          })
+        )
+      };
+    }
+
     const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -334,7 +358,7 @@ async function sendSingleTelegramMessage(
         text,
         parse_mode: options.parse_mode || 'HTML',
         disable_web_page_preview: options.disable_web_page_preview ?? true,
-        reply_markup: options.reply_markup
+        reply_markup: sanitizedMarkup
       })
     });
 

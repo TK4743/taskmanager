@@ -4129,20 +4129,12 @@ export default function App() {
   const [forgotCountdown, setForgotCountdown] = useState(600);
   const [forgotResendCooldown, setForgotResendCooldown] = useState(0);
 
-  // Data State with SWR Instant Local Render
-  const [departments, setDepartments] = useState<Department[]>(() => {
-    try { const c = sessionStorage.getItem('app_cache_depts'); return c ? JSON.parse(c) : []; } catch { return []; }
-  });
-  const [classes, setClasses] = useState<Class[]>(() => {
-    try { const c = sessionStorage.getItem('app_cache_classes'); return c ? JSON.parse(c) : []; } catch { return []; }
-  });
+  // Data State
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    try { const c = sessionStorage.getItem('app_cache_tasks'); return c ? JSON.parse(c) : []; } catch { return []; }
-  });
-  const [submissions, setSubmissions] = useState<Submission[]>(() => {
-    try { const c = sessionStorage.getItem('app_cache_submissions'); return c ? JSON.parse(c) : []; } catch { return []; }
-  });
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [hodStats, setHodStats] = useState<HODStats | null>(null);
   const [advisorStats, setAdvisorStats] = useState<AdvisorStats | null>(null);
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
@@ -5150,11 +5142,11 @@ export default function App() {
 
       const shouldFetchUsers = !savedUser || ['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR'].includes(savedUser.role) || (savedUser.role === 'STUDENT' && savedUser.is_coordinator);
 
-      // Fire all requests in parallel (skip /api/users for regular students to save bandwidth and DB load)
+      // Fire all requests in parallel
       const [deptsRes, classesRes, usersRes, tasksRes, submissionsRes, notificationsRes] = await Promise.all([
         fetch(`${API_URL}/api/departments`, { headers }),
         fetch(`${API_URL}/api/classes`, { headers }),
-        shouldFetchUsers ? fetch(`${API_URL}/api/users`, { headers }) : Promise.resolve(null),
+        fetch(`${API_URL}/api/users`, { headers }),
         fetch(`${API_URL}/api/tasks`, { headers }),
         fetch(`${API_URL}/api/submissions`, { headers }),
         fetch(`${API_URL}/api/notifications`, { headers })
@@ -5199,15 +5191,15 @@ export default function App() {
 
       const sortClassesList = (clsList: Class[]) => [...(clsList || [])].sort((a, b) => (a.year || 0) - (b.year || 0) || (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
       const sortDeptsList = (deptList: Department[]) => [...(deptList || [])].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
-      const sortTasksAscending = (taskList: Task[]) => [...(taskList || [])].sort((a, b) => {
+      const sortTasksDescending = (taskList: Task[]) => [...(taskList || [])].sort((a, b) => {
         const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.deadline ? new Date(a.deadline).getTime() : 0);
         const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.deadline ? new Date(b.deadline).getTime() : 0);
-        return timeA - timeB;
+        return timeB - timeA;
       });
 
       const sortedDepts = sortDeptsList(depts);
       const sortedClasses = sortClassesList(classes);
-      const sortedTasks = sortTasksAscending(tasks);
+      const sortedTasks = sortTasksDescending(tasks);
 
       setDepartments(sortedDepts);
       setClasses(sortedClasses);

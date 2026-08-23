@@ -707,7 +707,7 @@ async function startServer() {
         user = cached.user;
       } else {
         const dbUserRes = await pool.query(
-          'SELECT id, username, role, department_id, class_id, is_coordinator, is_year_coordinator, year_scope, register_number FROM users WHERE id = $1 LIMIT 1',
+          'SELECT * FROM users WHERE id = $1 LIMIT 1',
           [userId]
         );
         user = dbUserRes.rows[0];
@@ -721,9 +721,12 @@ async function startServer() {
       }
 
       req.user = {
+        ...user,
         id: user.id,
         username: user.username || user.register_number,
         role: user.role || 'STUDENT',
+        full_name: user.full_name,
+        email: user.email,
         department_id: user.department_id,
         class_id: user.class_id,
         is_coordinator: Boolean(user.is_coordinator),
@@ -1988,15 +1991,8 @@ async function startServer() {
     }
   });
 
-  // ── Tasks ─────────────────────────────────────────────────────────────────
-  app.get('/api/tasks', authenticate, async (req: any, res) => {
-    const dbUser = req.user;
-    if (!dbUser) return res.status(401).json({ error: 'User not found' });
-
-    const cacheKey = `tasks_${dbUser.role}_${dbUser.id}_${dbUser.class_id || 'all'}_${dbUser.department_id || 'all'}_${dbUser.year_scope || 'all'}`;
-    const cached = getApiCache(cacheKey);
-    if (cached) return res.json(cached);
-
+  // Shared Task Data Query for /api/tasks and /api/refresh
+  async function getTasksDataForUser(dbUser: any) {
     let tasksRes;
     if (dbUser.role === 'SUPREME_ADMIN') {
       tasksRes = await pool.query(`
@@ -2023,7 +2019,7 @@ async function startServer() {
 
       if (dbUser.is_year_coordinator) {
         const yearClassesRes = await pool.query('SELECT id FROM classes WHERE department_id = $1 AND year = $2', [dbUser.department_id, dbUser.year_scope]);
-        const yearClassIds = yearClassesRes.rows.map(c => c.id);
+        const yearClassIds = yearClassesRes.rows.map((c: any) => c.id);
         if (yearClassIds.length > 0) {
           query += ' OR EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id AND class_id = ANY($4))';
           params.push(yearClassIds);
@@ -2035,7 +2031,7 @@ async function startServer() {
     } else {
       // HOD
       const deptClassesRes = await pool.query('SELECT id FROM classes WHERE department_id = $1', [dbUser.department_id]);
-      const deptClassIds = deptClassesRes.rows.map(c => c.id);
+      const deptClassIds = deptClassesRes.rows.map((c: any) => c.id);
 
       let query = `
         SELECT t.*, u.full_name as creator_name, d.name as department_name,
@@ -2059,33 +2055,15 @@ async function startServer() {
     }
 
     const tasks = tasksRes.rows;
-    const taskIds = tasks.map(t => t.id);
+    const taskIds = tasks.map((t: any) => t.id);
 
     let countsMap: Record<string, number> = {};
-    if (taskIds.length > 0) {
+    if (taskIds.length > 0 && dbUser.role !== 'STUDENT') {
       let countsRes;
-      if (dbUser.role === 'STUDENT' && !dbUser.is_coordinator) {
-        // Normal students do not receive submission counts
-        countsMap = {};
-      } else if (dbUser.role === 'STUDENT' && dbUser.is_coordinator) {
-        // Coordinator sees submission count ONLY for students in their class
-        countsRes = await pool.query(`
-          SELECT ts.task_id, count(*) as count
-          FROM task_submissions ts
-          JOIN users u ON ts.user_id = u.id
-          WHERE ts.task_id = ANY($1) 
-            AND ts.status IN ('SUBMITTED', 'VERIFIED')
-            AND u.class_id = $2
-          GROUP BY ts.task_id
-        `, [taskIds, dbUser.class_id]);
-        countsRes.rows.forEach(c => {
-          countsMap[c.task_id] = parseInt(c.count);
-        });
-      } else if (dbUser.role === 'CLASS_ADVISOR') {
+      if (dbUser.role === 'CLASS_ADVISOR') {
         if (dbUser.is_year_coordinator && dbUser.year_scope) {
-          // Year Coordinator Advisor sees count for classes in their year scope
           const yearClassesRes = await pool.query('SELECT id FROM classes WHERE department_id = $1 AND year = $2', [dbUser.department_id, dbUser.year_scope]);
-          const yearClassIds = yearClassesRes.rows.map(c => c.id);
+          const yearClassIds = yearClassesRes.rows.map((c: any) => c.id);
           countsRes = await pool.query(`
             SELECT ts.task_id, count(*) as count
             FROM task_submissions ts
@@ -2096,7 +2074,6 @@ async function startServer() {
             GROUP BY ts.task_id
           `, [taskIds, yearClassIds]);
         } else {
-          // Regular Advisor sees count ONLY for their assigned class
           countsRes = await pool.query(`
             SELECT ts.task_id, count(*) as count
             FROM task_submissions ts
@@ -2107,11 +2084,10 @@ async function startServer() {
             GROUP BY ts.task_id
           `, [taskIds, dbUser.class_id]);
         }
-        countsRes.rows.forEach(c => {
+        countsRes.rows.forEach((c: any) => {
           countsMap[c.task_id] = parseInt(c.count);
         });
       } else if (dbUser.role === 'HOD') {
-        // HOD sees count across ALL sections in their department
         countsRes = await pool.query(`
           SELECT ts.task_id, count(*) as count
           FROM task_submissions ts
@@ -2121,24 +2097,36 @@ async function startServer() {
             AND u.department_id = $2
           GROUP BY ts.task_id
         `, [taskIds, dbUser.department_id]);
-        countsRes.rows.forEach(c => {
+        countsRes.rows.forEach((c: any) => {
           countsMap[c.task_id] = parseInt(c.count);
         });
       } else {
-        // SUPREME_ADMIN sees global count across all classes
         countsRes = await pool.query(`
           SELECT task_id, count(*) as count
-          FROM task_submissions
+          FROM task_submissions ts
           WHERE task_id = ANY($1) AND status IN ('SUBMITTED', 'VERIFIED')
           GROUP BY task_id
         `, [taskIds]);
-        countsRes.rows.forEach(c => {
+        countsRes.rows.forEach((c: any) => {
           countsMap[c.task_id] = parseInt(c.count);
         });
       }
+    } else if (taskIds.length > 0 && dbUser.role === 'STUDENT' && dbUser.is_coordinator) {
+      const countsRes = await pool.query(`
+        SELECT ts.task_id, count(*) as count
+        FROM task_submissions ts
+        JOIN users u ON ts.user_id = u.id
+        WHERE ts.task_id = ANY($1) 
+          AND ts.status IN ('SUBMITTED', 'VERIFIED')
+          AND u.class_id = $2
+        GROUP BY ts.task_id
+      `, [taskIds, dbUser.class_id]);
+      countsRes.rows.forEach((c: any) => {
+        countsMap[c.task_id] = parseInt(c.count);
+      });
     }
 
-    const responseData = tasks.map((t: any) => ({
+    return tasks.map((t: any) => ({
       id: t.id,
       title: t.title,
       description: t.description,
@@ -2160,7 +2148,18 @@ async function startServer() {
       poster_cloudinary_public_id: t.poster_cloudinary_public_id || null,
       submission_count: countsMap[t.id] || 0
     }));
+  }
 
+  // ── Tasks ─────────────────────────────────────────────────────────────────
+  app.get('/api/tasks', authenticate, async (req: any, res) => {
+    const dbUser = req.user;
+    if (!dbUser) return res.status(401).json({ error: 'User not found' });
+
+    const cacheKey = `tasks_${dbUser.role}_${dbUser.id}_${dbUser.class_id || 'all'}_${dbUser.department_id || 'all'}_${dbUser.year_scope || 'all'}`;
+    const cached = getApiCache(cacheKey);
+    if (cached) return res.json(cached);
+
+    const responseData = await getTasksDataForUser(dbUser);
     setApiCache(cacheKey, responseData, 5);
     res.json(responseData);
   });
@@ -3879,12 +3878,8 @@ async function startServer() {
     res.json(coordData);
   });
 
-  // ── Submissions ───────────────────────────────────────────────────────────
-  app.get('/api/submissions', authenticate, async (req: any, res) => {
-    const cacheKey = `submissions_${req.user.role}_${req.user.id}_${req.user.class_id || 'all'}_${req.user.department_id || 'all'}_${req.user.year_scope || 'all'}_${req.user.is_coordinator ? 'coord' : 'normal'}`;
-    const cached = getApiCache(cacheKey);
-    if (cached) return res.json(cached);
-
+  // Shared Submissions Data Query for /api/submissions and /api/refresh
+  async function getSubmissionsDataForUser(dbUser: any) {
     let subsRes;
     const baseQuery = `
       SELECT ts.*, t.title as task_title, u.full_name as student_name, u.register_number, u.class_id, c.name as class_name, c.year as class_year
@@ -3894,32 +3889,32 @@ async function startServer() {
       LEFT JOIN classes c ON u.class_id = c.id
     `;
 
-    if (req.user.role === 'STUDENT') {
-      if (req.user.is_coordinator) {
-        const studentsRes = await pool.query('SELECT id FROM users WHERE class_id = $1', [req.user.class_id]);
-        const studentIds = studentsRes.rows.map(s => s.id);
+    if (dbUser.role === 'STUDENT') {
+      if (dbUser.is_coordinator) {
+        const studentsRes = await pool.query('SELECT id FROM users WHERE class_id = $1', [dbUser.class_id]);
+        const studentIds = studentsRes.rows.map((s: any) => s.id);
         subsRes = await pool.query(`${baseQuery} WHERE ts.user_id = ANY($1)`, [studentIds]);
       } else {
-        subsRes = await pool.query(`${baseQuery} WHERE ts.user_id = $1`, [req.user.id]);
+        subsRes = await pool.query(`${baseQuery} WHERE ts.user_id = $1`, [dbUser.id]);
       }
-    } else if (req.user.role === 'CLASS_ADVISOR') {
-      let classIds = [req.user.class_id];
-      if (req.user.is_year_coordinator) {
-        const yearClassesRes = await pool.query('SELECT id FROM classes WHERE department_id = $1 AND year = $2', [req.user.department_id, req.user.year_scope]);
-        classIds = yearClassesRes.rows.map(c => c.id);
+    } else if (dbUser.role === 'CLASS_ADVISOR') {
+      let classIds = [dbUser.class_id];
+      if (dbUser.is_year_coordinator) {
+        const yearClassesRes = await pool.query('SELECT id FROM classes WHERE department_id = $1 AND year = $2', [dbUser.department_id, dbUser.year_scope]);
+        classIds = yearClassesRes.rows.map((c: any) => c.id);
       }
       const studentsRes = await pool.query('SELECT id FROM users WHERE class_id = ANY($1)', [classIds]);
-      const studentIds = studentsRes.rows.map(s => s.id);
+      const studentIds = studentsRes.rows.map((s: any) => s.id);
       subsRes = await pool.query(`${baseQuery} WHERE ts.user_id = ANY($1)`, [studentIds]);
-    } else if (req.user.role === 'HOD') {
-      const studentsRes = await pool.query('SELECT id FROM users WHERE department_id = $1 AND role = \'STUDENT\'', [req.user.department_id]);
-      const studentIds = studentsRes.rows.map(s => s.id);
+    } else if (dbUser.role === 'HOD') {
+      const studentsRes = await pool.query('SELECT id FROM users WHERE department_id = $1 AND role = \'STUDENT\'', [dbUser.department_id]);
+      const studentIds = studentsRes.rows.map((s: any) => s.id);
       subsRes = await pool.query(`${baseQuery} WHERE ts.user_id = ANY($1)`, [studentIds]);
     } else {
       subsRes = await pool.query(baseQuery);
     }
 
-    const data = subsRes.rows.map((s: any) => ({
+    return subsRes.rows.map((s: any) => ({
       id: s.id,
       task_id: s.task_id,
       task_title: s.task_title,
@@ -3940,6 +3935,15 @@ async function startServer() {
       verified_at: s.verified_at,
       resubmission_count: s.resubmission_count,
     }));
+  }
+
+  // ── Submissions ───────────────────────────────────────────────────────────
+  app.get('/api/submissions', authenticate, async (req: any, res) => {
+    const cacheKey = `submissions_${req.user.role}_${req.user.id}_${req.user.class_id || 'all'}_${req.user.department_id || 'all'}_${req.user.year_scope || 'all'}_${req.user.is_coordinator ? 'coord' : 'normal'}`;
+    const cached = getApiCache(cacheKey);
+    if (cached) return res.json(cached);
+
+    const data = await getSubmissionsDataForUser(req.user);
     setApiCache(cacheKey, data, 10);
     res.json(data);
   });
@@ -4426,45 +4430,14 @@ async function startServer() {
     // Run uncached queries in parallel (at most 3 DB queries concurrently)
     const buildTasksQuery = async () => {
       if (cachedTasks) return cachedTasks;
-      // Reuse tasks logic: simplified version for common student case
-      if (dbUser.role === 'STUDENT' || dbUser.role === 'CLASS_ADVISOR') {
-        const tRes = await pool.query(`
-          SELECT t.*, u.full_name as creator_name, d.name as department_name,
-                 (SELECT array_remove(array_agg(class_id), NULL) FROM task_classes WHERE task_id = t.id) as class_ids
-          FROM tasks t
-          LEFT JOIN users u ON t.created_by = u.id
-          LEFT JOIN departments d ON t.department_id = d.id
-          WHERE t.status = 'OPEN'
-            AND (
-              t.department_id = $1
-              OR t.department_id IS NULL
-              OR EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id AND class_id = $2)
-            )
-          ORDER BY t.created_at DESC
-        `, [dbUser.department_id, dbUser.class_id]);
-        const data = tRes.rows.map((t: any) => ({ id: t.id, title: t.title, description: t.description, category: t.category, external_link: t.external_link, deadline: t.deadline, screenshot_instruction: t.screenshot_instruction, custom_field_label: t.custom_field_label, creator_name: t.creator_name || 'Admin', department_id: t.department_id, department_name: t.department_name || null, class_ids: t.class_ids, status: t.status, submission_type: t.submission_type || 'INDIVIDUAL', min_team_size: t.min_team_size ?? 2, max_team_size: t.max_team_size ?? 5, created_at: t.created_at, poster_url: t.poster_url || null, poster_cloudinary_public_id: t.poster_cloudinary_public_id || null, submission_count: 0 }));
-        setApiCache(tasksKey, data, 15);
-        return data;
-      }
-      return cachedTasks || [];
+      const data = await getTasksDataForUser(dbUser);
+      setApiCache(tasksKey, data, 10);
+      return data;
     };
 
     const buildSubsQuery = async () => {
       if (cachedSubs) return cachedSubs;
-      const baseQuery = `SELECT ts.*, t.title as task_title, u.full_name as student_name, u.register_number, u.class_id, c.name as class_name, c.year as class_year FROM task_submissions ts JOIN tasks t ON ts.task_id = t.id JOIN users u ON ts.user_id = u.id LEFT JOIN classes c ON u.class_id = c.id`;
-      let sRes;
-      if (dbUser.role === 'STUDENT' && !dbUser.is_coordinator) {
-        sRes = await pool.query(`${baseQuery} WHERE ts.user_id = $1`, [dbUser.id]);
-      } else if (dbUser.role === 'STUDENT' && dbUser.is_coordinator) {
-        const studRes = await pool.query('SELECT id FROM users WHERE class_id = $1', [dbUser.class_id]);
-        sRes = await pool.query(`${baseQuery} WHERE ts.user_id = ANY($1)`, [studRes.rows.map((s: any) => s.id)]);
-      } else if (dbUser.role === 'CLASS_ADVISOR') {
-        const studRes = await pool.query('SELECT id FROM users WHERE class_id = $1', [dbUser.class_id]);
-        sRes = await pool.query(`${baseQuery} WHERE ts.user_id = ANY($1)`, [studRes.rows.map((s: any) => s.id)]);
-      } else {
-        sRes = await pool.query(baseQuery);
-      }
-      const data = sRes.rows.map((s: any) => ({ id: s.id, task_id: s.task_id, task_title: s.task_title, user_id: s.user_id, student_name: s.student_name, register_number: s.register_number, class_id: s.class_id, class_name: s.class_name, class_year: s.class_year, status: s.status, screenshot_url: s.screenshot_url, custom_field_value: s.custom_field_value, verification_note: s.verification_note, rejection_reason: s.rejection_reason, not_participating: s.not_participating, not_participating_reason: s.not_participating_reason, submitted_at: s.submitted_at, verified_at: s.verified_at, resubmission_count: s.resubmission_count }));
+      const data = await getSubmissionsDataForUser(dbUser);
       setApiCache(subsKey, data, 10);
       return data;
     };
