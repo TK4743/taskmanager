@@ -308,7 +308,7 @@ export async function updateGitHubFileViaAPI(filePath: string, commitMsg: string
   const token = process.env.GITHUB_TOKEN;
   if (!token || !fs.existsSync(filePath)) return false;
 
-  const repo = process.env.GITHUB_REPO || 'Tharun4743/IT_taskmanager';
+  const repo = process.env.GITHUB_REPO || 'Tharun4743/taskmanager';
   const relativePath = path.relative(process.cwd(), filePath).replace(/\\/g, '/');
   const url = `https://api.github.com/repos/${repo}/contents/${relativePath}`;
 
@@ -369,7 +369,7 @@ export async function deleteGitHubFileViaAPI(relativePath: string, commitMsg: st
   const token = process.env.GITHUB_TOKEN;
   if (!token) return false;
 
-  const repo = process.env.GITHUB_REPO || 'Tharun4743/IT_taskmanager';
+  const repo = process.env.GITHUB_REPO || 'Tharun4743/taskmanager';
   const cleanPath = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
   const url = `https://api.github.com/repos/${repo}/contents/${cleanPath}`;
 
