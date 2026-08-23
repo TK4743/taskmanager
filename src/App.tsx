@@ -107,6 +107,15 @@ const renderCategoryIcon = (category: string, size = 14) => {
   }
 };
 
+// Global Helper for Auto-Optimized WebP/AVIF Cloudinary Images (reduces image bandwidth by up to 90%)
+export const getOptimizedImgUrl = (url?: string | null, width = 600) => {
+  if (!url) return '';
+  if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
+    return url.replace('/upload/', `/upload/f_auto,q_auto,w_${width},c_limit/`);
+  }
+  return url;
+};
+
 // --- Types ---
 interface YearStats {
   total_students: number;
