@@ -5053,42 +5053,44 @@ export default function App() {
 
   useEffect(() => {
     runHealthCheckWithRetries();
+    if (token) {
+      fetchInitialData();
+    }
   }, []);
 
   useEffect(() => {
-    if (isServerAwake) {
-      if (token) {
-        fetchInitialData();
-        // Fast live polling for notifications and updates every 12 seconds
-        const interval = setInterval(() => {
+    if (token) {
+      // Smart live polling every 25 seconds only when tab is visible
+      const interval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
           fetchTasks();
           fetchSubmissions();
           fetchNotifications();
           if (user?.role === 'STUDENT') fetchMyTeamsAndInvitations();
-        }, 12000);
+        }
+      }, 25000);
 
-        // Immediate refresh when tab/window gains focus
-        const handleFocusOrVisible = () => {
-          if (document.visibilityState === 'visible') {
-            fetchTasks();
-            fetchSubmissions();
-            fetchNotifications();
-          }
-        };
+      // Instant refresh when tab/window gains focus
+      const handleFocusOrVisible = () => {
+        if (document.visibilityState === 'visible') {
+          fetchTasks();
+          fetchSubmissions();
+          fetchNotifications();
+        }
+      };
 
-        document.addEventListener('visibilitychange', handleFocusOrVisible);
-        window.addEventListener('focus', handleFocusOrVisible);
+      document.addEventListener('visibilitychange', handleFocusOrVisible);
+      window.addEventListener('focus', handleFocusOrVisible);
 
-        return () => {
-          clearInterval(interval);
-          document.removeEventListener('visibilitychange', handleFocusOrVisible);
-          window.removeEventListener('focus', handleFocusOrVisible);
-        };
-      } else {
-        setIsLoading(false);
-      }
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', handleFocusOrVisible);
+        window.removeEventListener('focus', handleFocusOrVisible);
+      };
+    } else {
+      setIsLoading(false);
     }
-  }, [isServerAwake, token]);
+  }, [token, user?.role]);
 
   useEffect(() => {
     if (token && user?.role === 'STUDENT' && view === 'tasks') {
@@ -7907,16 +7909,19 @@ export default function App() {
         body: JSON.stringify({})
       });
       if (res.ok) {
-        const data = await res.json();
-        addToast(`Sync finished: Synced ${data.synced} profiles, ${data.failed} failed.`, 'success');
-        fetchLeetcodeProgress();
-        fetchLeetcodeStats();
+        addToast('Sync started! Data will update automatically in ~30s.', 'success');
+        // Auto-refresh after sync completes in background
+        setTimeout(() => {
+          fetchLeetcodeProgress();
+          fetchLeetcodeStats();
+          setSyncingLeetcode(false);
+        }, 35000);
       } else {
-        addToast('Failed to sync LeetCode progress', 'error');
+        addToast('Failed to start LeetCode sync', 'error');
+        setSyncingLeetcode(false);
       }
     } catch (err) {
-      addToast('Network error syncing LeetCode progress', 'error');
-    } finally {
+      addToast('Network error starting LeetCode sync', 'error');
       setSyncingLeetcode(false);
     }
   };

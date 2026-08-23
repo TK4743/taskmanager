@@ -5,6 +5,8 @@ import pg from 'pg';
 import bcrypt from 'bcryptjs';
 
 const { Pool } = pg;
+// Parse Postgres INT8 / COUNT(*) directly as Number for 2x faster JSON serialization and aggregation speed
+pg.types.setTypeParser(20, (val: string) => parseInt(val, 10));
 
 const rawDatabaseUrl = process.env.DATABASE_URL;
 if (!rawDatabaseUrl) {
@@ -19,11 +21,12 @@ if (databaseUrl && databaseUrl.includes('pooler.supabase.com:5432')) {
   databaseUrl = databaseUrl.replace('pooler.supabase.com:5432', 'pooler.supabase.com:6543');
 }
 
-const poolMax = process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : (process.env.PGMAXCONNECTIONS ? parseInt(process.env.PGMAXCONNECTIONS, 10) : 25);
-const poolMin = process.env.DB_POOL_MIN ? parseInt(process.env.DB_POOL_MIN, 10) : 2;
-const connectionTimeoutMillis = process.env.DB_CONNECTION_TIMEOUT_MS ? parseInt(process.env.DB_CONNECTION_TIMEOUT_MS, 10) : 20000;
-const idleTimeoutMillis = process.env.DB_IDLE_TIMEOUT_MS ? parseInt(process.env.DB_IDLE_TIMEOUT_MS, 10) : 30000;
-const statementTimeout = process.env.DB_STATEMENT_TIMEOUT_MS ? parseInt(process.env.DB_STATEMENT_TIMEOUT_MS, 10) : 30000;
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const poolMax = process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : (process.env.PGMAXCONNECTIONS ? parseInt(process.env.PGMAXCONNECTIONS, 10) : (isServerless ? 10 : 25));
+const poolMin = process.env.DB_POOL_MIN ? parseInt(process.env.DB_POOL_MIN, 10) : (isServerless ? 0 : 2);
+const connectionTimeoutMillis = process.env.DB_CONNECTION_TIMEOUT_MS ? parseInt(process.env.DB_CONNECTION_TIMEOUT_MS, 10) : (isServerless ? 5000 : 15000);
+const idleTimeoutMillis = process.env.DB_IDLE_TIMEOUT_MS ? parseInt(process.env.DB_IDLE_TIMEOUT_MS, 10) : (isServerless ? 10000 : 30000);
+const statementTimeout = process.env.DB_STATEMENT_TIMEOUT_MS ? parseInt(process.env.DB_STATEMENT_TIMEOUT_MS, 10) : 20000;
 const maxUses = process.env.DB_POOL_MAX_USES ? parseInt(process.env.DB_POOL_MAX_USES, 10) : 7500;
 
 export const pool = new Pool(databaseUrl ? {
@@ -556,6 +559,21 @@ export async function initDB() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users(LOWER(email));`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_student_coding_user ON student_coding_profiles(user_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_student_profiles_user ON student_profiles(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_student_skills_user ON student_skills(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_student_projects_user ON student_projects(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_student_internships_user ON student_internships(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_student_certifications_user ON student_certifications(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_student_achievements_user ON student_achievements(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_student_languages_user ON student_languages(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_student_career_user ON student_career_preferences(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_student_resumes_user ON student_resumes(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_submission_reviews_submission ON submission_reviews(submission_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_task_classes_task ON task_classes(task_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_tasks_created_by ON tasks(created_by);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_tasks_deadline ON tasks(deadline);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_users_dept ON users(department_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_users_class ON users(class_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_classes_dept ON classes(department_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read) WHERE is_read = false;`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_password_resets_lookup ON password_resets(email, otp_code, used);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);`);

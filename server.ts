@@ -388,25 +388,32 @@ const memoryUpload = multer({
 
 // ─── Express App ──────────────────────────────────────────────────────────────
 async function startServer() {
-  // Initialize PostgreSQL database schemas and tables if database URL is configured
-  if (process.env.DATABASE_URL) {
+  const isVercel = Boolean(process.env.VERCEL);
+
+  // Initialize PostgreSQL database schemas only in persistent server environments (e.g. local / Render).
+  // In Vercel serverless functions, database schema is already migrated, avoiding 60+ blocking DDL queries on cold start.
+  if (!isVercel && process.env.DATABASE_URL) {
     try {
       await initDB();
       await syncAndGenerateStudentDirectory().catch(err => console.error('[StudentDirectory] Startup sync warning:', err));
     } catch (dbErr) {
       console.error('[Database Init Warning] Could not complete initDB:', dbErr);
     }
-  } else {
+  } else if (!process.env.DATABASE_URL) {
     console.warn('[Database] DATABASE_URL is not set. Please configure DATABASE_URL in Vercel Environment Variables.');
   }
 
-  // Initialize Sentry Production Error Tracking
-  initSentry();
+  // Initialize Sentry Production Error Tracking asynchronously
+  try {
+    initSentry();
+  } catch (e) {
+    console.warn('[Sentry] Init warning:', e);
+  }
 
-  // Initialize Web Push VAPID Notification Service
-  await initPushNotifications().catch(err => console.error('[WebPush] Startup init warning:', err));
+  // Initialize Web Push VAPID Notification Service in non-blocking fashion
+  initPushNotifications().catch(err => console.error('[WebPush] Startup init warning:', err));
 
-  if (!process.env.VERCEL) {
+  if (!isVercel) {
     // Trigger initial 7-day screenshot cleanup and schedule daily background execution (every 24 hours)
     cleanupOnlyTaskScreenshots().catch(err => console.error('[ImageCleanup] Startup cleanup warning:', err));
     setInterval(() => {
@@ -518,6 +525,8 @@ async function startServer() {
   }
 
   const app = express();
+  app.disable('x-powered-by');
+  app.set('etag', 'strong');
 
   // Enable trust proxy so express-rate-limit correctly identifies individual client IPs behind reverse proxies (Render, Cloudflare, Nginx)
   app.set('trust proxy', 1);
@@ -537,7 +546,14 @@ async function startServer() {
 
   app.use('/api/', apiLimiter);
   // Gzip/Brotli compression — reduces JSON response sizes by ~70%, critical for slow mobile connections
-  app.use(compression());
+  app.use(compression({
+    level: 6,
+    threshold: 512,
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    }
+  }));
   app.use(express.json({ limit: '10mb' }));
   app.use(cors({
     origin: function (origin, callback) {
@@ -689,6 +705,13 @@ async function startServer() {
     next();
   };
 
+  // Admin endpoint: On-demand database schema migration & tables initialization
+  app.post('/api/admin/init-db', authenticate, authorize(['SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
+    await initDB();
+    await syncAndGenerateStudentDirectory().catch(err => console.error('[StudentDirectory] Sync warning:', err));
+    res.json({ success: true, message: 'Database schema and student directory successfully migrated and verified.' });
+  }));
+
   // Admin endpoint: Trigger manual purge of proof screenshots older than 7 days
   app.post('/api/admin/purge-old-screenshots', authenticate, authorize(['SUPREME_ADMIN', 'HOD']), asyncHandler(async (req: Request, res: Response) => {
     const purgedCount = await cleanupOnlyTaskScreenshots();
@@ -777,6 +800,7 @@ async function startServer() {
 
   // ── Web Push Notification Endpoints (PWA / Mobile / Lock Screen) ──────────
   app.get('/api/push/public-key', (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
     const publicKey = getVapidPublicKey();
     res.json({ publicKey });
   });
@@ -1549,6 +1573,10 @@ async function startServer() {
 
   // ── Users ─────────────────────────────────────────────────────────────────
   app.get('/api/users', authenticate, async (req: any, res) => {
+    const cacheKey = `users_${req.user.role}_${req.user.department_id || 'all'}_${req.user.class_id || 'all'}_${req.user.year_scope || 'all'}`;
+    const cached = getApiCache(cacheKey);
+    if (cached) return res.json(cached);
+
     let usersRes;
     if (req.user.role === 'SUPREME_ADMIN') {
       usersRes = await pool.query(`
@@ -1589,7 +1617,7 @@ async function startServer() {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    res.json(usersRes.rows.map((u: any) => ({
+    const data = usersRes.rows.map((u: any) => ({
       id: u.id,
       username: u.username,
       role: u.role,
@@ -1605,7 +1633,9 @@ async function startServer() {
       class_name: u.class_name,
       is_year_coordinator: u.is_year_coordinator,
       year_scope: u.year_scope,
-    })));
+    }));
+    setApiCache(cacheKey, data, 20);
+    res.json(data);
   });
 
   app.post('/api/users', authenticate, authorize(['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR']), async (req: any, res) => {
@@ -3810,6 +3840,10 @@ async function startServer() {
 
   // ── Submissions ───────────────────────────────────────────────────────────
   app.get('/api/submissions', authenticate, async (req: any, res) => {
+    const cacheKey = `submissions_${req.user.role}_${req.user.id}_${req.user.class_id || 'all'}_${req.user.department_id || 'all'}_${req.user.year_scope || 'all'}_${req.user.is_coordinator ? 'coord' : 'normal'}`;
+    const cached = getApiCache(cacheKey);
+    if (cached) return res.json(cached);
+
     let subsRes;
     const baseQuery = `
       SELECT ts.*, t.title as task_title, u.full_name as student_name, u.register_number, u.class_id, c.name as class_name, c.year as class_year
@@ -3844,7 +3878,7 @@ async function startServer() {
       subsRes = await pool.query(baseQuery);
     }
 
-    res.json(subsRes.rows.map((s: any) => ({
+    const data = subsRes.rows.map((s: any) => ({
       id: s.id,
       task_id: s.task_id,
       task_title: s.task_title,
@@ -3864,7 +3898,9 @@ async function startServer() {
       submitted_at: s.submitted_at,
       verified_at: s.verified_at,
       resubmission_count: s.resubmission_count,
-    })));
+    }));
+    setApiCache(cacheKey, data, 10);
+    res.json(data);
   });
 
   // ── Not Participating submission (no screenshot required) ─────────────────
@@ -4299,15 +4335,22 @@ async function startServer() {
 
   // ── Notifications ─────────────────────────────────────────────────────────
   app.get('/api/notifications', authenticate, async (req: any, res) => {
+    const cacheKey = `notifs_${req.user.id}`;
+    const cached = getApiCache(cacheKey);
+    if (cached) return res.json(cached);
+
     const notifsRes = await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [req.user.id]);
-    res.json(notifsRes.rows.map(n => ({
+    const data = notifsRes.rows.map(n => ({
       id: n.id, message: n.message, type: n.type,
       is_read: n.is_read, created_at: n.created_at,
-    })));
+    }));
+    setApiCache(cacheKey, data, 8);
+    res.json(data);
   });
 
   app.patch('/api/notifications/read', authenticate, async (req: any, res) => {
     await pool.query('UPDATE notifications SET is_read = TRUE, updated_at = NOW() WHERE user_id = $1', [req.user.id]);
+    invalidateApiCache(`notifs_${req.user.id}`);
     res.json({ success: true });
   });
 
@@ -5684,7 +5727,7 @@ async function startServer() {
           `,
           variables: { username }
         }),
-        signal: AbortSignal.timeout(10000)
+        signal: AbortSignal.timeout(5000)
       });
       if (!response.ok) return null;
       const result: any = await response.json();
@@ -5744,7 +5787,7 @@ async function startServer() {
       let synced = 0;
       let failed = 0;
 
-      const chunkSize = 5;
+      const chunkSize = 10;
       for (let i = 0; i < students.rows.length; i += chunkSize) {
         const chunk = students.rows.slice(i, i + chunkSize);
         await Promise.all(chunk.map(async (student) => {
@@ -6157,12 +6200,18 @@ async function startServer() {
     });
   }));
 
-  // 4. Trigger Progress Sync
-  app.post('/api/leetcode/sync', authenticate, authorizeTargetManagement, asyncHandler(async (req: any, res: Response) => {
+  // 4. Trigger Progress Sync (fire-and-forget to prevent 504 gateway timeout)
+  // Sync runs in background; client receives immediate 202 Accepted so serverless
+  // timeout is never hit even with 100+ students taking 60s+ to sync externally.
+  app.post('/api/leetcode/sync', authenticate, authorizeTargetManagement, (req: any, res: Response) => {
     const scope = enforceUserScopeFilter(req.user, req.body);
-    const syncResult = await syncLeetcodeProgressForScope(scope);
-    res.json(syncResult);
-  }));
+    // Respond immediately so proxy/serverless gateway doesn't timeout
+    res.status(202).json({ success: true, message: 'LeetCode sync started in background. Refresh in ~30s to see updated data.' });
+    // Run the actual sync without blocking the response
+    syncLeetcodeProgressForScope(scope).catch(err =>
+      console.error('[LeetCode Sync] Background sync error:', err)
+    );
+  });
 
   // Helper to enrich student progress in batch (3 DB queries total for N students!)
   async function enrichStudentProgressBatch(students: any[], dateStr: string) {

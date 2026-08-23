@@ -2,12 +2,33 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "regions": ["bom1"],
   "functions": {
     "api/index.ts": {
-      "maxDuration": 60,
-      "memory": 1024
+      "maxDuration": 30,
+      "memory": 1536
     }
   },
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*\\.(?:ico|png|jpg|jpeg|svg|webp|woff|woff2|ttf|json))",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
