@@ -1,3 +1,6 @@
+// Expand Libuv worker threadpool from 4 to 128 threads to handle concurrent bcrypt, compression, and crypto operations without thread starvation
+process.env.UV_THREADPOOL_SIZE = process.env.UV_THREADPOOL_SIZE || '128';
+
 import dotenv from 'dotenv';
 dotenv.config();
 

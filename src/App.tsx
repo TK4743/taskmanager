@@ -5235,8 +5235,12 @@ export default function App() {
     }
   };
 
+  const isRefreshingRef = useRef<boolean>(false);
+
   // Batched refresh helper (calls /api/refresh to fetch tasks, submissions, notifs in ONE call)
   const fetchRefresh = async () => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
     try {
       const res = await fetch(`${API_URL}/api/refresh`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
@@ -5294,6 +5298,8 @@ export default function App() {
       fetchTasks();
       fetchSubmissions();
       fetchNotifications();
+    } finally {
+      isRefreshingRef.current = false;
     }
   };
 
