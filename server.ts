@@ -402,114 +402,116 @@ async function startServer() {
   // Initialize Web Push VAPID Notification Service
   await initPushNotifications().catch(err => console.error('[WebPush] Startup init warning:', err));
 
-  // Trigger initial 7-day screenshot cleanup and schedule daily background execution (every 24 hours)
-  cleanupOnlyTaskScreenshots().catch(err => console.error('[ImageCleanup] Startup cleanup warning:', err));
-  setInterval(() => {
-    cleanupOnlyTaskScreenshots().catch(err => console.error('[ImageCleanup] Scheduled cleanup warning:', err));
-  }, 24 * 60 * 60 * 1000);
+  if (!process.env.VERCEL) {
+    // Trigger initial 7-day screenshot cleanup and schedule daily background execution (every 24 hours)
+    cleanupOnlyTaskScreenshots().catch(err => console.error('[ImageCleanup] Startup cleanup warning:', err));
+    setInterval(() => {
+      cleanupOnlyTaskScreenshots().catch(err => console.error('[ImageCleanup] Scheduled cleanup warning:', err));
+    }, 24 * 60 * 60 * 1000);
 
-  // Initialize Telegram Bot update poller for automated student 1-click account linking
-  try {
-    startTelegramPoller();
-  } catch (tgErr) {
-    console.error('[Telegram] Failed to start poller:', tgErr);
-  }
-
-  // Schedule automated daily Telegram notifications:
-  // 1. 8:00 AM IST -> Morning Group Summary to the Department Telegram Group
-  // 2. 8:00 PM IST -> 1-to-1 Private Reminders to students with pending deadlines
-  // 3. 9:00 PM IST -> Evening Group Summary to the Department Telegram Group
-  // 4. 11:55 PM IST -> Daily LeetCode & GitHub Progress Sync & CSV/JSON GitHub Auto-Push
-  let lastRemindersDate = '';
-  let lastGroupSummaryMorningDate = '';
-  let lastGroupSummaryEveningDate = '';
-  let lastLeetcodePushDate = '';
- 
-  setInterval(async () => {
+    // Initialize Telegram Bot update poller for automated student 1-click account linking
     try {
-      const now = new Date();
-      const istOffset = 5.5 * 60 * 60 * 1000;
-      const istDate = new Date(now.getTime() + istOffset);
-      const todayStr = istDate.toISOString().split('T')[0];
-      const hours = istDate.getUTCHours();
-      const minutes = istDate.getUTCMinutes();
- 
-      // 8:00 AM IST (08:00) -> Morning Group Summary & Deadline Alerts (strictly once per day)
-      if (hours === 8 && minutes >= 0 && minutes <= 10 && lastGroupSummaryMorningDate !== todayStr) {
-        const checkRes = await pool.query("SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_morning_date' LIMIT 1").catch(() => ({ rows: [] }));
-        const alreadySent = checkRes.rows[0]?.value;
-        if (alreadySent !== todayStr) {
-          lastGroupSummaryMorningDate = todayStr;
-          await pool.query(`
-            INSERT INTO system_settings (key, value, updated_at)
-            VALUES ('telegram_last_group_summary_morning_date', $1, CURRENT_TIMESTAMP)
-            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
-          `, [todayStr]).catch(() => {});
-          
-          const prevIstDate = new Date(istDate.getTime() - 24 * 60 * 60 * 1000);
-          const prevDayStr = prevIstDate.toISOString().split('T')[0];
-          console.log(`[Telegram Scheduler] 📊 Running automated 8:00 AM IST daily group summary (for previous day: ${prevDayStr})...`);
-          sendGroupSummary(undefined, prevDayStr).catch(err => console.error('[Telegram Scheduler] Error sending morning group summary:', err));
-
-          // Send 8:00 AM IST 24-Hour Upcoming Deadline Alert to Group
-          sendGroupDeadlineAlert().catch(err => console.error('[Telegram Scheduler] Error sending morning deadline alert:', err));
-        }
-      }
-
-      // 8:00 PM IST (20:00) -> Private Reminders (strictly once per day)
-      if (hours === 20 && minutes >= 0 && minutes <= 10 && lastRemindersDate !== todayStr) {
-        const checkRes = await pool.query("SELECT value FROM system_settings WHERE key = 'telegram_last_reminders_date' LIMIT 1").catch(() => ({ rows: [] }));
-        const alreadySent = checkRes.rows[0]?.value;
-        if (alreadySent !== todayStr) {
-          lastRemindersDate = todayStr;
-          await pool.query(`
-            INSERT INTO system_settings (key, value, updated_at)
-            VALUES ('telegram_last_reminders_date', $1, CURRENT_TIMESTAMP)
-            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
-          `, [todayStr]).catch(() => {});
-          console.log(`[Telegram Scheduler] 📢 Running automated 8:00 PM IST student deadline reminders for ${todayStr}...`);
-          triggerPendingTaskReminders().catch(err => console.error('[Telegram Scheduler] Error sending reminders:', err));
-        }
-      }
- 
-      // 9:00 PM IST (21:00) -> Evening Group Summary (strictly once per day)
-      if (hours === 21 && minutes >= 0 && minutes <= 10 && lastGroupSummaryEveningDate !== todayStr) {
-        const checkRes = await pool.query("SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_evening_date' LIMIT 1").catch(() => ({ rows: [] }));
-        const alreadySent = checkRes.rows[0]?.value;
-        if (alreadySent !== todayStr) {
-          lastGroupSummaryEveningDate = todayStr;
-          await pool.query(`
-            INSERT INTO system_settings (key, value, updated_at)
-            VALUES ('telegram_last_group_summary_evening_date', $1, CURRENT_TIMESTAMP)
-            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
-          `, [todayStr]).catch(() => {});
-          console.log(`[Telegram Scheduler] 📊 Running automated 9:00 PM IST daily group summary for ${todayStr}...`);
-          sendGroupSummary().catch(err => console.error('[Telegram Scheduler] Error sending evening group summary:', err));
-        }
-      }
-
-      // 11:55 PM IST (23:55) -> Daily LeetCode Progress Sync & CSV/JSON GitHub Auto-Push
-      if (hours === 23 && minutes >= 55 && minutes <= 59 && lastLeetcodePushDate !== todayStr) {
-        const checkRes = await pool.query("SELECT value FROM system_settings WHERE key = 'leetcode_last_daily_csv_push_date' LIMIT 1").catch(() => ({ rows: [] }));
-        const alreadyPushed = checkRes.rows[0]?.value;
-        if (alreadyPushed !== todayStr) {
-          lastLeetcodePushDate = todayStr;
-          await pool.query(`
-            INSERT INTO system_settings (key, value, updated_at)
-            VALUES ('leetcode_last_daily_csv_push_date', $1, CURRENT_TIMESTAMP)
-            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
-          `, [todayStr]).catch(() => {});
-          console.log(`[LeetCode AutoSync] 🚀 Running automated 11:55 PM IST daily LeetCode sync & CSV export for ${todayStr}...`);
-          syncLeetcodeProgressForScope()
-            .then(() => exportAndPushLeetcodeDailyProgress(todayStr))
-            .then(() => generateDatabaseSnapshot())
-            .catch(err => console.error('[LeetCode AutoSync] Nightly sync error:', err));
-        }
-      }
-    } catch (schedErr) {
-      console.error('[Scheduler] Check error:', schedErr);
+      startTelegramPoller();
+    } catch (tgErr) {
+      console.error('[Telegram] Failed to start poller:', tgErr);
     }
-  }, 60 * 1000);
+
+    // Schedule automated daily Telegram notifications:
+    // 1. 8:00 AM IST -> Morning Group Summary to the Department Telegram Group
+    // 2. 8:00 PM IST -> 1-to-1 Private Reminders to students with pending deadlines
+    // 3. 9:00 PM IST -> Evening Group Summary to the Department Telegram Group
+    // 4. 11:55 PM IST -> Daily LeetCode & GitHub Progress Sync & CSV/JSON GitHub Auto-Push
+    let lastRemindersDate = '';
+    let lastGroupSummaryMorningDate = '';
+    let lastGroupSummaryEveningDate = '';
+    let lastLeetcodePushDate = '';
+   
+    setInterval(async () => {
+      try {
+        const now = new Date();
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const istDate = new Date(now.getTime() + istOffset);
+        const todayStr = istDate.toISOString().split('T')[0];
+        const hours = istDate.getUTCHours();
+        const minutes = istDate.getUTCMinutes();
+   
+        // 8:00 AM IST (08:00) -> Morning Group Summary & Deadline Alerts (strictly once per day)
+        if (hours === 8 && minutes >= 0 && minutes <= 10 && lastGroupSummaryMorningDate !== todayStr) {
+          const checkRes = await pool.query("SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_morning_date' LIMIT 1").catch(() => ({ rows: [] }));
+          const alreadySent = checkRes.rows[0]?.value;
+          if (alreadySent !== todayStr) {
+            lastGroupSummaryMorningDate = todayStr;
+            await pool.query(`
+              INSERT INTO system_settings (key, value, updated_at)
+              VALUES ('telegram_last_group_summary_morning_date', $1, CURRENT_TIMESTAMP)
+              ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+            `, [todayStr]).catch(() => {});
+            
+            const prevIstDate = new Date(istDate.getTime() - 24 * 60 * 60 * 1000);
+            const prevDayStr = prevIstDate.toISOString().split('T')[0];
+            console.log(`[Telegram Scheduler] 📊 Running automated 8:00 AM IST daily group summary (for previous day: ${prevDayStr})...`);
+            sendGroupSummary(undefined, prevDayStr).catch(err => console.error('[Telegram Scheduler] Error sending morning group summary:', err));
+
+            // Send 8:00 AM IST 24-Hour Upcoming Deadline Alert to Group
+            sendGroupDeadlineAlert().catch(err => console.error('[Telegram Scheduler] Error sending morning deadline alert:', err));
+          }
+        }
+
+        // 8:00 PM IST (20:00) -> Private Reminders (strictly once per day)
+        if (hours === 20 && minutes >= 0 && minutes <= 10 && lastRemindersDate !== todayStr) {
+          const checkRes = await pool.query("SELECT value FROM system_settings WHERE key = 'telegram_last_reminders_date' LIMIT 1").catch(() => ({ rows: [] }));
+          const alreadySent = checkRes.rows[0]?.value;
+          if (alreadySent !== todayStr) {
+            lastRemindersDate = todayStr;
+            await pool.query(`
+              INSERT INTO system_settings (key, value, updated_at)
+              VALUES ('telegram_last_reminders_date', $1, CURRENT_TIMESTAMP)
+              ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+            `, [todayStr]).catch(() => {});
+            console.log(`[Telegram Scheduler] 📢 Running automated 8:00 PM IST student deadline reminders for ${todayStr}...`);
+            triggerPendingTaskReminders().catch(err => console.error('[Telegram Scheduler] Error sending reminders:', err));
+          }
+        }
+   
+        // 9:00 PM IST (21:00) -> Evening Group Summary (strictly once per day)
+        if (hours === 21 && minutes >= 0 && minutes <= 10 && lastGroupSummaryEveningDate !== todayStr) {
+          const checkRes = await pool.query("SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_evening_date' LIMIT 1").catch(() => ({ rows: [] }));
+          const alreadySent = checkRes.rows[0]?.value;
+          if (alreadySent !== todayStr) {
+            lastGroupSummaryEveningDate = todayStr;
+            await pool.query(`
+              INSERT INTO system_settings (key, value, updated_at)
+              VALUES ('telegram_last_group_summary_evening_date', $1, CURRENT_TIMESTAMP)
+              ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+            `, [todayStr]).catch(() => {});
+            console.log(`[Telegram Scheduler] 📊 Running automated 9:00 PM IST daily group summary for ${todayStr}...`);
+            sendGroupSummary().catch(err => console.error('[Telegram Scheduler] Error sending evening group summary:', err));
+          }
+        }
+
+        // 11:55 PM IST (23:55) -> Daily LeetCode Progress Sync & CSV/JSON GitHub Auto-Push
+        if (hours === 23 && minutes >= 55 && minutes <= 59 && lastLeetcodePushDate !== todayStr) {
+          const checkRes = await pool.query("SELECT value FROM system_settings WHERE key = 'leetcode_last_daily_csv_push_date' LIMIT 1").catch(() => ({ rows: [] }));
+          const alreadyPushed = checkRes.rows[0]?.value;
+          if (alreadyPushed !== todayStr) {
+            lastLeetcodePushDate = todayStr;
+            await pool.query(`
+              INSERT INTO system_settings (key, value, updated_at)
+              VALUES ('leetcode_last_daily_csv_push_date', $1, CURRENT_TIMESTAMP)
+              ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+            `, [todayStr]).catch(() => {});
+            console.log(`[LeetCode AutoSync] 🚀 Running automated 11:55 PM IST daily LeetCode sync & CSV export for ${todayStr}...`);
+            syncLeetcodeProgressForScope()
+              .then(() => exportAndPushLeetcodeDailyProgress(todayStr))
+              .then(() => generateDatabaseSnapshot())
+              .catch(err => console.error('[LeetCode AutoSync] Nightly sync error:', err));
+          }
+        }
+      } catch (schedErr) {
+        console.error('[Scheduler] Check error:', schedErr);
+      }
+    }, 60 * 1000);
+  }
 
   const app = express();
 
@@ -7889,7 +7891,9 @@ async function startServer() {
     });
   };
 
-  startApp(PORT);
+  if (!process.env.VERCEL) {
+    startApp(PORT);
+  }
 
   // ── Graceful Shutdown Handler for Render redeployments ────────────────────
   const gracefulShutdown = (signal: string) => {
