@@ -8,14 +8,13 @@ const { Pool } = pg;
 
 const rawDatabaseUrl = process.env.DATABASE_URL;
 if (!rawDatabaseUrl) {
-  console.error("FATAL DATABASE ERROR: DATABASE_URL environment variable is missing!");
-  process.exit(1);
+  console.warn("WARNING: DATABASE_URL environment variable is missing! Please configure DATABASE_URL in Vercel Environment Variables.");
 }
 
 // Automatically upgrade Supabase pooler from Session mode (port 5432, hard limit 15 clients)
 // to Transaction mode (port 6543, unlimited concurrent clients) to prevent EMAXCONNSESSION crashes
-let databaseUrl = rawDatabaseUrl;
-if (databaseUrl.includes('pooler.supabase.com:5432')) {
+let databaseUrl = rawDatabaseUrl || '';
+if (databaseUrl && databaseUrl.includes('pooler.supabase.com:5432')) {
   console.log('[PostgreSQL Pool] Automatically routing Supabase connection to Port 6543 (Transaction Mode) to eliminate EMAXCONNSESSION limit.');
   databaseUrl = databaseUrl.replace('pooler.supabase.com:5432', 'pooler.supabase.com:6543');
 }
@@ -27,7 +26,7 @@ const idleTimeoutMillis = process.env.DB_IDLE_TIMEOUT_MS ? parseInt(process.env.
 const statementTimeout = process.env.DB_STATEMENT_TIMEOUT_MS ? parseInt(process.env.DB_STATEMENT_TIMEOUT_MS, 10) : 30000;
 const maxUses = process.env.DB_POOL_MAX_USES ? parseInt(process.env.DB_POOL_MAX_USES, 10) : 7500;
 
-export const pool = new Pool({
+export const pool = new Pool(databaseUrl ? {
   connectionString: databaseUrl,
   max: poolMax,
   min: poolMin,
@@ -39,7 +38,7 @@ export const pool = new Pool({
   ssl: databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1')
     ? false
     : { rejectUnauthorized: false }
-});
+} : undefined);
 
 pool.on('error', (err: any) => {
   console.error('[PostgreSQL Pool] Unexpected error on idle client:', err?.message || err);

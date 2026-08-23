@@ -347,10 +347,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'vsbec_super_secret_jwt_key_2026';
-if (!JWT_SECRET) {
-  console.error("FATAL STARTUP ERROR: JWT_SECRET environment variable is missing!");
-  process.exit(1);
-}
 
 const missingCloudinary = [
   'CLOUDINARY_CLOUD_NAME',
@@ -359,16 +355,17 @@ const missingCloudinary = [
 ].filter(key => !process.env[key]);
 
 if (missingCloudinary.length > 0) {
-  console.error(`FATAL STARTUP ERROR: Missing required Cloudinary configuration: ${missingCloudinary.join(', ')}`);
-  process.exit(1);
+  console.warn(`[Cloudinary Warning] Missing Cloudinary keys: ${missingCloudinary.join(', ')}. Image uploads will be disabled until configured.`);
 }
 
 // ─── Cloudinary Config ────────────────────────────────────────────────────────
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+}
 
 const cloudinaryStorage = new CloudinaryStorage({
   cloudinary,
@@ -392,9 +389,17 @@ const memoryUpload = multer({
 
 // ─── Express App ──────────────────────────────────────────────────────────────
 async function startServer() {
-  // Initialize PostgreSQL database schemas and tables
-  await initDB();
-  await syncAndGenerateStudentDirectory().catch(err => console.error('[StudentDirectory] Startup sync warning:', err));
+  // Initialize PostgreSQL database schemas and tables if database URL is configured
+  if (process.env.DATABASE_URL) {
+    try {
+      await initDB();
+      await syncAndGenerateStudentDirectory().catch(err => console.error('[StudentDirectory] Startup sync warning:', err));
+    } catch (dbErr) {
+      console.error('[Database Init Warning] Could not complete initDB:', dbErr);
+    }
+  } else {
+    console.warn('[Database] DATABASE_URL is not set. Please configure DATABASE_URL in Vercel Environment Variables.');
+  }
 
   // Initialize Sentry Production Error Tracking
   initSentry();
