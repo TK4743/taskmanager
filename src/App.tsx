@@ -90,6 +90,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
+import { DeveloperProfileView } from './DeveloperProfileView.tsx';
 
 // Helper to render Lucide vector icons for task categories
 const renderCategoryIcon = (category: string, size = 14) => {
@@ -1164,9 +1165,9 @@ const FeatureComparisonView = () => {
   );
 };
 
-const FooterContext = React.createContext<((type: 'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES') => void) | null>(null);
+const FooterContext = React.createContext<((type: 'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES' | 'DEVELOPER') => void) | null>(null);
 
-const Footer = ({ onShowModal }: { onShowModal: (type: 'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES') => void }) => (
+const Footer = ({ onShowModal }: { onShowModal: (type: 'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES' | 'DEVELOPER') => void }) => (
   <footer className="mt-8 pt-4 pb-4 border-t border-zinc-200/80 shrink-0 w-full bg-white/60 backdrop-blur-md px-4 md:px-8">
     <div className="w-full flex flex-col lg:flex-row items-center justify-between gap-3 text-xs min-w-0">
       {/* Brand Logo & Name */}
@@ -1177,36 +1178,38 @@ const Footer = ({ onShowModal }: { onShowModal: (type: 'PRIVACY' | 'TERMS' | 'SU
         <span className="font-extrabold text-zinc-900 text-xs tracking-tight whitespace-nowrap">VSBEC IT Task Manager</span>
       </div>
 
-      {/* Center: Legal Links */}
+      {/* Center: Legal & Developer Links */}
       <div className="flex items-center gap-3 text-xs font-medium text-zinc-600 flex-wrap justify-center">
-        <button onClick={() => onShowModal('PRIVACY')} className="hover:text-indigo-600 transition-colors whitespace-nowrap">
+        <button onClick={() => onShowModal('PRIVACY')} className="hover:text-indigo-600 transition-colors whitespace-nowrap cursor-pointer">
           Privacy Policy
         </button>
         <span className="text-zinc-300">•</span>
-        <button onClick={() => onShowModal('TERMS')} className="hover:text-indigo-600 transition-colors whitespace-nowrap">
+        <button onClick={() => onShowModal('TERMS')} className="hover:text-indigo-600 transition-colors whitespace-nowrap cursor-pointer">
           Terms of Service
         </button>
         <span className="text-zinc-300">•</span>
-        <button onClick={() => onShowModal('SUPPORT')} className="hover:text-indigo-600 transition-colors whitespace-nowrap">
+        <button onClick={() => onShowModal('SUPPORT')} className="hover:text-indigo-600 transition-colors whitespace-nowrap cursor-pointer">
           Help & Support
         </button>
         <span className="text-zinc-300">•</span>
-        <button onClick={() => onShowModal('SOURCES')} className="hover:text-indigo-600 transition-colors whitespace-nowrap">
+        <button onClick={() => onShowModal('SOURCES')} className="hover:text-indigo-600 transition-colors whitespace-nowrap cursor-pointer">
           Sources
+        </button>
+        <span className="text-zinc-300">•</span>
+        <button onClick={() => onShowModal('DEVELOPER')} className="hover:text-indigo-600 font-bold text-indigo-600 transition-colors whitespace-nowrap cursor-pointer">
+          About Developer
         </button>
       </div>
 
       {/* Right: Developed & Maintained By */}
       <div className="text-center lg:text-right text-zinc-600 text-xs font-medium leading-tight shrink-0">
         <span>Developed and maintained by </span>
-        <a
-          href="https://tharunkumark4743.netlify.app/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-bold text-zinc-900 hover:text-indigo-600 transition-colors underline decoration-zinc-300 underline-offset-2"
+        <button
+          onClick={() => onShowModal('DEVELOPER')}
+          className="font-bold text-zinc-900 hover:text-indigo-600 transition-colors underline decoration-zinc-300 underline-offset-2 cursor-pointer"
         >
           Tharunkumar K
-        </a>
+        </button>
         <div className="text-[11px] text-zinc-500 font-medium mt-0.5">
           Department of Information Technology, VSB Engineering College
         </div>
@@ -4481,7 +4484,7 @@ export default function App() {
   const [verificationClassFilter, setVerificationClassFilter] = useState('');
   const [verificationTaskFilter, setVerificationTaskFilter] = useState('');
   const [studentFilter, setStudentFilter] = useState<'ALL' | 'COORDINATORS'>('ALL');
-  const [showFooterModal, setShowFooterModal] = useState<'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES' | null>(null);
+  const [showFooterModal, setShowFooterModal] = useState<'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES' | 'DEVELOPER' | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [userPage, setUserPage] = useState(1);
   const [submissionSearchTerm, setSubmissionSearchTerm] = useState('');
@@ -13408,7 +13411,7 @@ export default function App() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   className={cn(
                     "bg-white rounded-3xl p-6 md:p-8 w-full max-h-[85vh] overflow-y-auto shadow-2xl relative scrollbar-thin",
-                    showFooterModal === 'SOURCES' ? 'max-w-5xl' : 'max-w-2xl'
+                    (showFooterModal === 'SOURCES' || showFooterModal === 'DEVELOPER') ? 'max-w-5xl' : 'max-w-2xl'
                   )}
                 >
                   <button
@@ -13455,6 +13458,10 @@ export default function App() {
 
                   {showFooterModal === 'SOURCES' && (
                     <FeatureComparisonView />
+                  )}
+
+                  {showFooterModal === 'DEVELOPER' && (
+                    <DeveloperProfileView />
                   )}
 
                   <Button onClick={() => setShowFooterModal(null)} className="w-full mt-8">Close</Button>
