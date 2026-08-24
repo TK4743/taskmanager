@@ -1,4 +1,4 @@
-Date,Register_Number,Student_Name,Class,Year,Email_ID,LeetCode_ID,LeetCode_URL,Daily_Target,Solved_Today,Daily_Status,Total_Solved,Solved_This_Week,Weekly_Target,Weekly_Status
+﻿Date,Register_Number,Student_Name,Class,Year,Email_ID,LeetCode_ID,LeetCode_URL,Daily_Target,Solved_Today,Daily_Status,Total_Solved,Solved_This_Week,Weekly_Target,Weekly_Status
 "2026-08-20","922525205001","AAFRIN T","II IT A","2","aafrin0708@gmail.com","aafrin_07","https://leetcode.com/u/aafrin_07/","0","0","NO TARGET","203","10","0","NO TARGET"
 "2026-08-20","922525205002","ABINANDHAN V","II IT A","2","abinandhanvsb@gmail.com","ABINANDHAN_V","https://leetcode.com/u/ABINANDHAN_V","0","0","NO TARGET","111","0","0","NO TARGET"
 "2026-08-20","922525205003","ABINAYA P","II IT A","2","abinayabtechit10@gmail.com","Abinaya_Periyasamy","https://leetcode.com/u/Abinaya_Periyasamy/","0","0","NO TARGET","121","0","0","NO TARGET"
@@ -24,7 +24,7 @@ Date,Register_Number,Student_Name,Class,Year,Email_ID,LeetCode_ID,LeetCode_URL,D
 "2026-08-20","922525205023","DARSHANKANTH S","II IT A","2","darshan9787130751@gmail.com","DARSHANKANTH","https://leetcode.com/u/DARSHANKANTH/","0","0","NO TARGET","175","6","0","NO TARGET"
 "2026-08-20","922525205024","DEEPIKA T","II IT A","2","deepikatg07@gmail.com","Deepika171207","https://leetcode.com/u/Deepika171207/","0","0","NO TARGET","258","0","0","NO TARGET"
 "2026-08-20","922525205025","DEVI G","II IT A","2","gdevi250326@gmail.com","DEVI_G","https://leetcode.com/u/DEVI_G","0","0","NO TARGET","149","0","0","NO TARGET"
-"2026-08-20","922525205026","DHANUSH R","II IT A","2","dhanushmohun676@gmail.com","dhanush_2604","https://leetcode.com/u/dhanush_2604/","0","0","NO TARGET","123","0","0","NO TARGET"
+"2026-08-20","922525205026","DHANUSH R","II IT A","2","dhanushmohan676@gmail.com","dhanush_2604","https://leetcode.com/u/dhanush_2604/","0","0","NO TARGET","123","0","0","NO TARGET"
 "2026-08-20","922525205027","DHANUSRI R","II IT A","2","dhanusrir0801@gmail.com","dhanu0801","https://leetcode.com/u/dhanu0801/","0","2","NO TARGET","157","2","0","NO TARGET"
 "2026-08-20","922525205028","DHARANI KANNAYAN","II IT A","2","dharanikannayan2008@gmail.com","Dharu_1529","https://leetcode.com/u/Dharu_1529/","0","0","NO TARGET","142","0","0","NO TARGET"
 "2026-08-20","922525205029","DHARANMANI K","II IT A","2","kdharanmani31@gmail.com","DHARANMANI","https://leetcode.com/u/DHARANMANI","0","0","NO TARGET","72","0","0","NO TARGET"

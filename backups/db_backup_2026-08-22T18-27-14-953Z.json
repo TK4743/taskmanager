@@ -1,4 +1,4 @@
-{
+﻿{
   "version": "2.0",
   "exported_at": "2026-08-22T18:27:14.952Z",
   "record_counts": {
@@ -3559,7 +3559,7 @@
         "department_id": "a6a12dd8-1863-4a21-9d3d-f6d67486788a",
         "class_id": "c3c12dd8-1863-4a21-9d3d-f6d67486788a",
         "full_name": "DHANUSH R",
-        "email": "dhanushmohun676@gmail.com",
+        "email": "dhanushmohan676@gmail.com",
         "register_number": "922525205026",
         "is_coordinator": false,
         "is_year_coordinator": false,
