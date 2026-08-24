@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://it-taskmanager.vercel.app/sitemap.xml
