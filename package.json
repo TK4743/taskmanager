@@ -1,8 +1,14 @@
 {
   "$schema": "https://json.schemastore.org/package",
-  "name": "react-example",
+  "name": "vsbec-it-taskmanager",
+  "description": "Academic Task Management, Submission, and Verification Platform for VSB Engineering College Department of Information Technology",
+  "author": {
+    "name": "Tharunkumar K",
+    "url": "https://tharunkumark4743.netlify.app/"
+  },
+  "homepage": "https://it-taskmanager.vercel.app/",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "start": "tsx server.ts",
