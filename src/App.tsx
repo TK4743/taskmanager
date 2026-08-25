@@ -506,14 +506,14 @@ const Button = ({ className, variant = 'primary', ...props }: React.ButtonHTMLAt
 
 const Input = ({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
-    className={cn('w-full h-11 px-4 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all text-sm bg-white truncate', className)}
+    className={cn('w-full h-11 px-4 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all text-sm bg-white text-zinc-900 placeholder:text-zinc-400 truncate', className)}
     {...props}
   />
 );
 
 const Select = ({ className, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => (
   <select
-    className={cn('w-full h-11 px-4 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all text-sm bg-white', className)}
+    className={cn('w-full h-11 px-4 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all text-sm bg-white text-zinc-900 font-semibold cursor-pointer', className)}
     {...props}
   >
     {children}

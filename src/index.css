@@ -10,6 +10,9 @@
 
 
 @layer base {
+  :root {
+    color-scheme: light;
+  }
   * {
     border-color: #e4e4e7;
     box-sizing: border-box;
@@ -17,6 +20,15 @@
   body {
     background-color: #fafafa;
     color: #18181b;
+    color-scheme: light;
+  }
+  input, select, textarea, button {
+    color: #18181b;
+    color-scheme: light;
+  }
+  select option {
+    color: #18181b;
+    background-color: #ffffff;
   }
 }
 
