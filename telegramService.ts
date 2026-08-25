@@ -38,10 +38,10 @@ export function getAdminChatId(): string {
 }
 
 export function getPortalUrl(): string {
-  const url = process.env.FRONTEND_URL || process.env.APP_URL || 'https://it-taskmanager-6rgp.onrender.com';
-  // Telegram Bot API strictly forbids http:// or localhost/127.0.0.1 in inline keyboard buttons
-  if (!url || !url.startsWith('https://') || url.includes('localhost') || url.includes('127.0.0.1')) {
-    return 'https://it-taskmanager-6rgp.onrender.com';
+  let url = process.env.FRONTEND_URL || process.env.APP_URL || 'https://it-taskmanager.vercel.app';
+  // Ensure valid HTTPS protocol and fallback if onrender/localhost
+  if (!url || typeof url !== 'string' || url.includes('onrender.com') || !url.startsWith('https://') || url.includes('localhost') || url.includes('127.0.0.1')) {
+    return 'https://it-taskmanager.vercel.app';
   }
   return url.replace(/\/$/, '');
 }
@@ -340,8 +340,8 @@ async function sendSingleTelegramMessage(
           row.map((btn: any) => {
             if (btn && btn.url) {
               const u = String(btn.url).trim();
-              if (!u.startsWith('https://') || u.includes('localhost') || u.includes('127.0.0.1')) {
-                return { ...btn, url: 'https://it-taskmanager-6rgp.onrender.com' };
+              if (!u.startsWith('https://') || u.includes('onrender.com') || u.includes('localhost') || u.includes('127.0.0.1')) {
+                return { ...btn, url: 'https://it-taskmanager.vercel.app' };
               }
             }
             return btn;
