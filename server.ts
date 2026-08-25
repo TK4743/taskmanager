@@ -5694,10 +5694,20 @@ async function startServer() {
   // ── LeetCode Targets & Progress API Module ───────────────────────────────────
 
   // Utility: Extract username from profile URL or username
-  function extractLeetCodeUsername(urlOrUsername: string): string {
-    const clean = urlOrUsername.trim().replace(/\/$/, '');
-    const match = clean.match(/leetcode\.com\/(?:u\/)?([^/]+)/);
-    return match && match[1] ? match[1] : clean;
+  function extractLeetCodeUsername(urlOrUsername: string | null | undefined): string {
+    if (!urlOrUsername) return '';
+    const clean = urlOrUsername.trim().split(/[?#]/)[0].replace(/\/+$/, '');
+    if (!clean) return '';
+    const match = clean.match(/leetcode\.(?:com|cn)\/(?:u\/)?([^/]+)/i);
+    if (match && match[1]) {
+      const extracted = match[1].trim();
+      if (['u', 'problems', 'contest', 'explore'].includes(extracted.toLowerCase())) return '';
+      return extracted;
+    }
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      return '';
+    }
+    return clean;
   }
 
   // Utility: Get date string in IST YYYY-MM-DD
@@ -6372,7 +6382,8 @@ async function startServer() {
     return students.map(student => {
       const activeTarget = resolveTargetInMemory(student, activeTargets);
       const studentDir = constantStudentByIdMap.get(student.id);
-      const leetcodeUrl = studentDir?.leetcode || '';
+      const leetcodeUrl = (studentDir?.leetcode || student.leetcode_url || student.leetcode || '').trim();
+      const githubUrl = (studentDir?.github || student.github_url || student.github || '').trim();
 
       const dailyRow = dailyMap.get(student.id);
       const solvedToday = dailyRow?.total_solved !== null && dailyRow?.total_solved !== undefined
@@ -6426,6 +6437,7 @@ async function startServer() {
         className: student.class_name || 'Unassigned',
         leetcodeUsername: extractLeetCodeUsername(leetcodeUrl),
         leetcodeUrl: leetcodeUrl,
+        githubUrl: githubUrl,
         dailyTarget: activeTarget.daily_target,
         solvedToday,
         solvedYesterday,
@@ -6503,13 +6515,18 @@ async function startServer() {
         department_id: s.department_id,
         year: s.year,
         batch: s.batch,
-        class_name: s.class_name
+        class_name: s.class_name,
+        leetcode_url: s.leetcode || '',
+        github_url: s.github || ''
       }));
     } else {
       let baseQuery = `
-        SELECT u.id, u.register_number, u.full_name, u.class_id, u.department_id, c.year, c.batch, c.name as class_name
+        SELECT u.id, u.register_number, u.full_name, u.class_id, u.department_id, c.year, c.batch, c.name as class_name,
+               COALESCE(scp.leetcode, u.leetcode_url, '') AS leetcode_url,
+               COALESCE(scp.github, u.github_url, '') AS github_url
         FROM users u
         LEFT JOIN classes c ON u.class_id = c.id
+        LEFT JOIN student_coding_profiles scp ON u.id = scp.user_id
         WHERE u.role = 'STUDENT'
       `;
       const params: any[] = [];

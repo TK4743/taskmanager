@@ -137,10 +137,13 @@ export async function syncAndGenerateStudentDirectory() {
         u.department_id,
         COALESCE(d.name, 'Unassigned Dept') AS department_name,
         COALESCE(c.year, 0) AS year,
-        COALESCE(c.batch, 'N/A') AS batch
+        COALESCE(c.batch, 'N/A') AS batch,
+        COALESCE(scp.leetcode, u.leetcode_url, '') AS leetcode,
+        COALESCE(scp.github, u.github_url, '') AS github
       FROM users u
       LEFT JOIN classes c ON u.class_id = c.id
       LEFT JOIN departments d ON u.department_id = d.id
+      LEFT JOIN student_coding_profiles scp ON u.id = scp.user_id
       WHERE u.role = 'STUDENT'
       ORDER BY c.year ASC, c.name ASC, u.register_number ASC;
     `;
@@ -167,11 +170,11 @@ export async function syncAndGenerateStudentDirectory() {
 
     for (const student of students) {
       student.full_name = cleanStudentName(student.full_name);
-      // Merge LeetCode and GitHub URL from existing disk files to keep it strictly file-based
+      // Merge LeetCode and GitHub URL from existing disk files or database
       const regKey = student.register_number ? student.register_number.toLowerCase().trim() : '';
       const existing = constantStudentByRegNoMap.get(regKey);
-      student.leetcode = existing?.leetcode || '';
-      student.github = existing?.github || '';
+      student.leetcode = (student.leetcode || existing?.leetcode || '').trim();
+      student.github = (student.github || existing?.github || '').trim();
 
       // 1. Populate In-Memory Caches
       constantStudentByIdMap.set(student.id.toString(), student);

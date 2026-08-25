@@ -8128,7 +8128,14 @@ export default function App() {
                     style={{ width: `${Math.min(100, myLeetcodeProgress?.completionDailyPct ?? 0)}%` }}
                   />
                 </div>
-                <span className="text-xs text-zinc-500 font-bold">{myLeetcodeProgress?.completionDailyPct ?? 0}% completed today</span>
+                <div className="flex items-center justify-between text-xs text-zinc-500 font-bold">
+                  <span>{myLeetcodeProgress?.completionDailyPct ?? 0}% completed today</span>
+                  {myLeetcodeProgress?.leetcodeUrl && (
+                    <a href={myLeetcodeProgress.leetcodeUrl.startsWith('http') ? myLeetcodeProgress.leetcodeUrl : `https://leetcode.com/u/${myLeetcodeProgress.leetcodeUrl}/`} target="_blank" rel="noreferrer" className="text-orange-600 font-bold hover:underline flex items-center gap-1">
+                      Profile <ExternalLink size={11} />
+                    </a>
+                  )}
+                </div>
               </div>
             </Card>
 
@@ -8499,9 +8506,11 @@ export default function App() {
                           const solved = isDaily ? (row.solvedToday ?? 0) : (row.solvedThisWeek ?? 0);
                           const target = isDaily ? (row.dailyTarget ?? 0) : (row.weeklyTarget ?? 0);
                           const status = (isDaily ? row.dailyStatus : row.weeklyStatus) || 'PENDING';
-                          const profileUrl = row.leetcodeUsername
-                            ? (row.leetcodeUsername.startsWith('http') ? row.leetcodeUsername : `https://leetcode.com/u/${row.leetcodeUsername}/`)
-                            : null;
+                          const profileUrl = row.leetcodeUrl
+                            ? (row.leetcodeUrl.startsWith('http') ? row.leetcodeUrl : `https://leetcode.com/u/${row.leetcodeUrl}/`)
+                            : (row.leetcodeUsername
+                              ? (row.leetcodeUsername.startsWith('http') ? row.leetcodeUsername : `https://leetcode.com/u/${row.leetcodeUsername}/`)
+                              : null);
 
                           const displayStatus = status === 'COMPLETED' ? 'COMPLETED' :
                             status === 'NO_TARGET' ? 'NO TARGET' : 'INCOMPLETE';
