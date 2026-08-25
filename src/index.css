@@ -17,18 +17,22 @@
     border-color: #e4e4e7;
     box-sizing: border-box;
   }
-  body {
+  html, body {
     background-color: #fafafa;
     color: #18181b;
     color-scheme: light;
+    -webkit-font-smoothing: antialiased;
   }
   input, select, textarea, button {
     color: #18181b;
     color-scheme: light;
   }
-  select option {
-    color: #18181b;
-    background-color: #ffffff;
+  select, select option {
+    color: #18181b !important;
+    background-color: #ffffff !important;
+  }
+  label {
+    color: #52525b;
   }
 }
 
