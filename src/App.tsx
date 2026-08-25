@@ -11524,9 +11524,18 @@ export default function App() {
                                   </label>
                                   {(() => {
                                     const availClasses = classes.filter(c => {
-                                      if (isAdmin) return !newTask.department_id || c.department_id?.toString() === newTask.department_id?.toString();
-                                      if (user?.is_year_coordinator) return c.year === user.year_scope && c.department_id?.toString() === user.department_id?.toString();
-                                      return c.department_id?.toString() === user?.department_id?.toString();
+                                      if (isAdmin) {
+                                        return !newTask.department_id || String(c.department_id) === String(newTask.department_id);
+                                      }
+                                      if (user?.is_year_coordinator) {
+                                        const isYearMatch = !user?.year_scope && !user?.year ? true : Number(c.year) === Number(user.year_scope || user.year);
+                                        const isDeptMatch = !user?.department_id || String(c.department_id) === String(user.department_id);
+                                        return isYearMatch && isDeptMatch;
+                                      }
+                                      if (isHOD) {
+                                        return !user?.department_id || String(c.department_id) === String(user?.department_id);
+                                      }
+                                      return !user?.department_id || String(c.department_id) === String(user?.department_id);
                                     });
                                     const allSelected = availClasses.length > 0 && availClasses.every(c => (newTask.class_ids || []).map(String).includes(String(c.id)));
                                     return (
@@ -11540,7 +11549,7 @@ export default function App() {
                                               setNewTask(prev => ({ ...prev, class_ids: availClasses.map(c => c.id) }));
                                             }
                                           }}
-                                          className="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition-colors"
+                                          className="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
                                         >
                                           {allSelected ? 'Deselect All' : `Select All (${availClasses.length})`}
                                         </button>
@@ -11550,18 +11559,27 @@ export default function App() {
                                 </div>
 
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                                  {[...classes]
+                                  {classes
                                     .filter(c => {
-                                      if (isAdmin) return !newTask.department_id || c.department_id?.toString() === newTask.department_id?.toString();
-                                      if (user?.is_year_coordinator) return c.year === user.year_scope && c.department_id?.toString() === user.department_id?.toString();
-                                      return c.department_id?.toString() === user?.department_id?.toString();
+                                      if (isAdmin) {
+                                        return !newTask.department_id || String(c.department_id) === String(newTask.department_id);
+                                      }
+                                      if (user?.is_year_coordinator) {
+                                        const isYearMatch = !user?.year_scope && !user?.year ? true : Number(c.year) === Number(user.year_scope || user.year);
+                                        const isDeptMatch = !user?.department_id || String(c.department_id) === String(user.department_id);
+                                        return isYearMatch && isDeptMatch;
+                                      }
+                                      if (isHOD) {
+                                        return !user?.department_id || String(c.department_id) === String(user?.department_id);
+                                      }
+                                      return !user?.department_id || String(c.department_id) === String(user?.department_id);
                                     })
                                     .sort((a, b) => (a.year || 0) - (b.year || 0) || (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }))
                                     .map(c => (
                                       <label key={c.id} className="flex items-center gap-2 p-2 hover:bg-zinc-50 rounded-md cursor-pointer transition-colors border border-transparent hover:border-zinc-200">
                                         <input
                                           type="checkbox"
-                                          className="w-4 h-4 rounded border-zinc-300 text-black focus:ring-black/20 font-medium text-xs"
+                                          className="w-4 h-4 rounded border-zinc-300 text-black focus:ring-black/20 font-medium text-xs cursor-pointer"
                                           checked={(newTask.class_ids || []).map(String).includes(String(c.id))}
                                           onChange={(e) => {
                                             if (e.target.checked) {
