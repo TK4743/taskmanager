@@ -8118,7 +8118,12 @@ export default function App() {
                 </div>
                 <div className="flex items-baseline gap-2 mb-4">
                   <span className="text-5xl font-black text-zinc-900">{myLeetcodeProgress?.solvedToday ?? 0}</span>
-                  <span className="text-zinc-400 font-bold">/ {myLeetcodeProgress?.dailyTarget ?? 0} solved today (Yesterday: {myLeetcodeProgress?.solvedYesterday ?? 0})</span>
+                  <span className="text-sm font-bold text-zinc-600 flex items-center gap-1.5">
+                    <span className="text-zinc-400 font-bold">/</span>
+                    <span className="font-extrabold text-zinc-800">{myLeetcodeProgress?.dailyTarget ?? 0}</span>
+                    <span>solved today</span>
+                    <span className="text-zinc-400 font-normal text-xs">(Yesterday: {myLeetcodeProgress?.solvedYesterday ?? 0})</span>
+                  </span>
                 </div>
               </div>
               <div>
@@ -8543,7 +8548,11 @@ export default function App() {
                                 )}
                               </td>
                               <td className="px-6 py-4 text-center font-semibold">
-                                <span className="text-zinc-900 font-bold">{solved}</span> / <span className="text-zinc-400">{target}</span>
+                                <span className="inline-flex items-center justify-center gap-1.5 font-mono">
+                                  <span className="text-zinc-900 font-black text-sm">{solved}</span>
+                                  <span className="text-zinc-400 font-black text-sm select-none">/</span>
+                                  <span className="text-zinc-600 font-bold text-xs">{target}</span>
+                                </span>
                               </td>
                               {isDaily && (
                                 <td className="px-6 py-4 text-center font-semibold text-zinc-600">
