@@ -1,16 +1,18 @@
 <div align="center">
 
 # 🎓 IT TASK MANAGER & ACADEMIC MANAGEMENT SYSTEM
-### *Enterprise Academic Governance, Live Coding Analytics & Automated Telegram Bot Engine*
+### *Enterprise Academic Governance, Live Coding Analytics, Web Push PWA & Automated Telegram Bot Engine*
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.x-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8+-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19.x-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.x-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-4.x-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![ExcelJS](https://img.shields.io/badge/ExcelJS-OpenXML-217346?style=for-the-badge&logo=microsoft-excel&logoColor=white)](https://github.com/exceljs/exceljs)
+[![Web Push](https://img.shields.io/badge/Web_Push-PWA-FF6B6B?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
 [![Telegram Bot](https://img.shields.io/badge/Telegram_Bot-Automated-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://core.telegram.org/bots/api)
+[![Sentry](https://img.shields.io/badge/Sentry-Observability-362D59?style=for-the-badge&logo=sentry&logoColor=white)](https://sentry.io/)
 
 <p align="center">
   <b>Department of Information Technology</b> • <b>VSB Engineering College, Karur</b>
@@ -22,15 +24,17 @@
 
 ## 📌 Executive Summary
 
-**IT Task Manager** is an enterprise-grade academic task tracking and coding analytics platform engineered for educational institutions, faculty coordinators, department leadership (HODs), and students.
+**IT Task Manager** is an enterprise-grade academic task tracking, coding analytics, and institutional governance platform engineered for educational institutions, faculty coordinators, department leadership (HODs), and students.
 
 ### Core Capabilities:
-1. **Academic Task Governance**: Precision scope assignments (Individual, Class Section, Batch Year, Department), team submissions, and multi-tier verification workflows.
-2. **Live Coding Analytics (LeetCode & GitHub)**: Real-time synchronization of LeetCode problem velocity, student daily total GitHub commit counts, multi-level LeetCode target inheritance, and defaulter tracking.
+1. **Academic Task Governance**: Precision scope assignments (Individual, Class Section, Batch Year, Department), team submissions, multi-tier verification workflows, and structured opt-out governance.
+2. **Live Coding Analytics (LeetCode & GitHub)**: Real-time synchronization of LeetCode problem velocity, student daily total GitHub commit counts, 4-level target inheritance, and automated defaulter tracking.
 3. **Automated Telegram Bot Engine (`@IT_TaskManager_Alerts_bot`)**: Register Number instant lookup, class/year analysis shortcuts (`/3ita`, `/2it`, `/year3`) with section breakdowns, private deadline reminders, and daily department briefs.
-4. **Institutional Reporting Suite**: Direct OpenXML `.xlsx` generation across 9 specialized formats with dynamic boundary trimming and zero file corruption.
-5. **Automated Cloud Sync & Snapshots**: 11:55 PM IST daily LeetCode CSV auto-export pushed to GitHub, alongside daily 31-table JSON snapshot backups with 7-day rolling retention.
-6. **Automated Email Dispatch & Security OTP Engine**: Multi-node load balanced email delivery with instant failover, 4 institutional notification streams, and self-service 1-click easy copy OTP password reset.
+4. **Progressive Web App (PWA) & Web Push Notifications**: Native desktop & mobile PWA installability with background Service Worker sync, persistent VAPID key infrastructure, and real-time push alerts for task dispatches, verifications, and deadlines.
+5. **Institutional Reporting Suite**: Direct OpenXML `.xlsx` generation across 9 specialized formats with dynamic boundary trimming and zero file corruption via ExcelJS.
+6. **Automated Cloud Sync & Database Snapshots**: 11:55 PM IST daily LeetCode CSV auto-export pushed to GitHub, alongside daily 31-table JSON snapshot backups with 7-day rolling retention.
+7. **Automated Email Dispatch & Security OTP Engine**: Multi-node load-balanced email delivery with instant failover, 4 institutional notification streams, and self-service 1-click easy copy OTP password reset.
+8. **Observability & Smart India Hackathon (SIH) Suite**: Sentry production error telemetry, rate-limiting security, and a dedicated SIH preparation portal for student innovation teams.
 
 ---
 
@@ -38,28 +42,34 @@
 
 ```mermaid
 flowchart TD
-    subgraph UI["🖥️ Client Layer (React 18 + Vite + TailwindCSS)"]
+    subgraph UI["🖥️ Client Layer (React 19 + Vite 6 + TailwindCSS v4 + PWA)"]
         A1["🛡️ HOD & Admin Portal"]
         A2["👨‍🏫 Faculty & Advisor Workspace"]
         A3["🎓 Student Learning Dashboard"]
+        A4["📱 PWA Service Worker & Push Client"]
+        A5["💡 SIH Innovation Prep Portal"]
     end
 
     subgraph API["⚡ Backend Gateway (Node.js + Express + TypeScript)"]
-        B1["🔐 Auth & RBAC Security"]
+        B1["🔐 Auth & RBAC Security (JWT + RateLimit)"]
         B2["📝 Task & Verification Engine"]
-        B3["💻 LeetCode & GitHub Sync Engine"]
-        B4["🤖 Telegram Bot Service"]
-        B5["📧 Multi-Node Email & OTP Engine"]
-        B6["📊 ExcelJS Report Builder"]
-        B7["🚀 RAM Directory Cache"]
+        B3["💻 LeetCode GraphQL & GitHub Sync Engine"]
+        B4["🤖 Telegram Bot Service (@IT_TaskManager_Alerts_bot)"]
+        B5["🔔 Web Push VAPID Notification Engine"]
+        B6["📧 Multi-Node Email & OTP Pool"]
+        B7["📊 ExcelJS OpenXML Report Builder"]
+        B8["🚀 RAM Directory Cache (<0.01ms)"]
+        B9["🛡️ Sentry Real-Time Error Telemetry"]
     end
 
     subgraph Storage["💾 Persistence & Cloud Services"]
-        C1[("🗄️ PostgreSQL Database")]
-        C2["📱 Telegram API"]
+        C1[("🗄️ PostgreSQL Database (31 Tables)")]
+        C2["📱 Telegram Bot API"]
         C3["☁️ LeetCode GraphQL & GitHub API"]
-        C4["🖼️ Cloudinary CDN"]
+        C4["🖼️ Cloudinary CDN Asset Storage"]
         C5["✉️ Cloud Email Dispatcher (HTTPS REST)"]
+        C6["🔔 Web Push Services (FCM / Mozilla / Apple)"]
+        C7["🐙 GitHub API (Auto CSV & Backup Push)"]
     end
 
     UI --> API
@@ -76,8 +86,8 @@ flowchart TD
 flowchart LR
     Create["📝 Staff Creates Task"] --> Submit["📤 Student Submits Proof"]
     Submit --> Review{"🔍 Staff Review"}
-    Review -->|Approved| Verified["✅ Task Verified"]
-    Review -->|Needs Work| Rejection["⚠️ Rejected with Feedback"]
+    Review -->|Approved| Verified["✅ Task Verified & Pushed"]
+    Review -->|Needs Work| Rejection["⚠️ Rejected with Notes"]
     Rejection --> Reupload["🔄 Student Re-uploads Proof"]
     Reupload --> Review
 ```
@@ -89,27 +99,30 @@ flowchart LR
     S["Student Target"] -->|Overrides| C["Class Target"]
     C -->|Overrides| Y["Year Target"]
     Y -->|Overrides| D["Department Baseline"]
-    D -->|Fallback| G["System Default"]
+    D -->|Fallback| G["System Default (1 Solved / Day)"]
 ```
 
 ---
 
 ## 🌟 Feature Modules
 
-### Module 1: Academic Task Governance & Teams
-- **Granular Scoping**: Assign tasks to individuals, class sections (e.g. IT-A, IT-B), academic years, or the entire department.
-- **Team-Based Submissions**: Configurable group sizes (2–5 members), interactive invitation banners, leader/member role badges, and single consolidated proof submission.
-- **Review & Resubmission**: Instant rejection alert banners with detailed staff feedback and 1-click proof re-upload.
+### Module 1: Academic Task Governance & Collaborative Teams
+- **Granular Scoping**: Assign tasks to individual students, class sections (e.g., IT-A, IT-B, IT-C), academic years, or the entire department.
+- **Team-Based Submissions**: Configurable group sizes (2–5 members), interactive invitation banners, leader/member role badges, and single consolidated proof submission with leader override.
+- **Review & Resubmission**: Instant rejection alert banners with detailed staff feedback, history tracking, and 1-click proof re-upload.
+- **Opt-Out Governance**: Structured student participation opt-out tracking with mandatory justification logging for faculty audit.
+- **Threaded Discussions**: In-task interactive discussion threads with `@mentions` and real-time alerts.
 
-### Module 2: Coding Competency Tracking
-- **LeetCode Engine**: Live tracking of total solved problems, daily solve velocity, Easy/Medium/Hard breakdown, and daily/weekly target completion status.
-- **GitHub Engine**: Real-time synchronization of daily total commit counts per student with weekly aggregate metrics.
-- **Combined Dashboard**: Side-by-side progress monitor displaying student LeetCode statistics and daily total GitHub commits with filtering.
+### Module 2: Coding Competency Tracking (LeetCode & GitHub)
+- **LeetCode Engine**: Live tracking of total solved problems, daily solve velocity, Easy/Medium/Hard breakdown, and daily/weekly target completion status via LeetCode GraphQL API.
+- **GitHub Engine**: Real-time synchronization of daily total commit counts per student with weekly aggregate metrics and commit streak indicators.
+- **Combined Coding Matrix**: Side-by-side progress monitor displaying student LeetCode statistics and daily total GitHub commits with multi-tier class & year filtering.
+- **Defaulter Detection**: Automated identification of students missing daily problem solving quotas or deadline requirements.
 
-### Module 3: Automated Telegram Bot & Analysis Engine
+### Module 3: Automated Telegram Bot Engine
 - **Bot Username**: `@IT_TaskManager_Alerts_bot`
 - **Instant Student Lookup**: Anyone can send a student's Register Number (e.g., `922524205001`) or `/check <reg_no>` for a full performance scorecard.
-- **Class & Year Shortcuts**:
+- **Class & Year Analysis Shortcuts**:
   - `/3ita`, `/3itb`, `/3itc`, `/2ita`, `/2itb` $\rightarrow$ Class section report with active assignments and incomplete student lists.
   - `/2it`, `/3it`, `/year2`, `/year3` $\rightarrow$ Academic year batch report with **Section-Wise Breakdown** (IT-A, IT-B, IT-C overview).
 - **Scheduled Automated Reminders**:
@@ -117,17 +130,23 @@ flowchart LR
   - `21:00 IST`: Formatted department group summary with ASCII completion gauges (`[██████░░] 75%`).
   - PostgreSQL persistent locks (`system_settings`) prevent duplicate dispatches on server restarts.
 
-### Module 4: Professional Excel Reporting Suite
-- Pure **ExcelJS** OpenXML generator eliminating XML formatting errors and blank space.
-- Official institutional header with auto-calculated column widths and print area pinning.
+### Module 4: Progressive Web App (PWA) & Web Push Notification Engine
+- **Native PWA Installation**: Complete PWA manifest (`manifest.json`), service worker (`sw.js`), and custom responsive install prompt overlay (`PWAInstallOverlay.tsx`).
+- **Web Push Notifications (`pushNotificationService.ts`)**: Standards-compliant Web Push protocol with automatic VAPID keypair generation and PostgreSQL persistence.
+- **Multi-Event Background Dispatch**: Instant push alerts triggered on new task publications, submission status updates (Verified / Rejected), and approaching deadline alarms.
+- **Device Management**: Automatic registration and synchronization of multiple browser subscriptions per student/faculty account.
+
+### Module 5: Professional Excel Reporting Suite
+- Pure **ExcelJS** OpenXML generator eliminating XML formatting errors, memory leaks, and blank margins.
+- Official institutional header with auto-calculated column widths, custom color-coded status badges, and print area pinning.
 - Supported formats: HOD Master Task Report, LeetCode Daily & Weekly Reports, GitHub Activity Reports, Combined Coding Matrices, and Department Defaulters Lists.
 
-### Module 5: Automated Cloud Sync & Database Snapshots
-- **11:55 PM IST Daily LeetCode CSV Auto-Push**: Generates datewise master and section-wise CSV reports (`leetcode/LeetCode_Daily_Report_YYYY-MM-DD.csv`, `leetcode/YYYY-MM-DD/Section_*.csv`) and automatically commits and pushes them to GitHub.
+### Module 6: Automated Cloud Sync & Database Snapshots
+- **11:55 PM IST Daily LeetCode CSV Auto-Push**: Generates datewise master and section-wise CSV reports (`leetcode/LeetCode_Daily_Report_YYYY-MM-DD.csv`, `leetcode/YYYY-MM-DD/Section_*.csv`) and automatically commits and pushes them to GitHub via GitHub Contents API & Git CLI.
 - **Automated Database Snapshots**: Every 24 hours, captures all 31 PostgreSQL tables in `backups/db_backup_*.json` and pushes snapshots to GitHub with a 7-day rolling retention policy.
 - **RAM Directory Auto-Sync**: In-memory student cache (< 0.01ms lookups) with auto-push to GitHub on profile updates.
 
-### Module 6: Enterprise Automated Email System & Security OTP Engine
+### Module 7: Enterprise Automated Email System & Security OTP Engine
 - **Self-Service 6-Digit Email OTP Password Reset**: Automated verification pipeline with 10-minute expiry window, 3-attempt brute-force protection, and 1-tap/1-click instant copy container.
 - **Multi-Node Load Balanced Email Pool**: High-availability multi-node architecture with round-robin load distribution and automated zero-downtime failover over secure HTTPS REST protocol.
 - **4 Core Academic Notification Streams**:
@@ -136,6 +155,11 @@ flowchart LR
   - *Submission Rejection*: Real-time correction notice with reviewer remarks and direct resubmission portal link.
   - *Incomplete Task 2-Hour Deadline Alert*: Automated background scanner triggering final-call urgency emails for incomplete students.
 - **Institutional Academic Letterhead**: Formal government & college letterhead embedding the official institutional emblem (`logo.png`), NAAC 'A' Grade accreditation banner, and reference tracking.
+
+### Module 8: Observability, Security & Smart India Hackathon (SIH) Suite
+- **Sentry Real-Time Telemetry**: Production error capture, stack trace diagnosis, and 20% trace sampling rate for performance observability.
+- **Security & Hardening**: Bcrypt salted password hashing, JWT stateless authentication, sanitized multi-identifier logins (College Email / Register No), and IP rate limiting.
+- **SIH Preparation Portal**: Dedicated innovation management space featuring problem statement tracking, domain classification, and submission guidelines.
 
 ---
 
@@ -152,8 +176,10 @@ flowchart LR
 | **Manage Coding Target Thresholds** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | **Trigger Telegram Broadcasts** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | **Export Official Excel Reports** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Configure Department Notices** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | **Submit Task Proofs & Link Bot** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | **Create & Manage Project Teams** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Subscribe to Web Push Alerts** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ---
 
@@ -185,3 +211,4 @@ For permissions, authorized deployment inquiries, or official institutional requ
 Made with ❤️ by **[Tharunkumar K](https://tharunkumark4743.netlify.app/)**
 
 </div>
+
