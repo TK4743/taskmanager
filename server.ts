@@ -566,8 +566,6 @@ async function startServer() {
         'http://localhost:3000',
         'https://it-taskmanager.vercel.app',
         'https://vsbec.unaux.com',
-        'https://it-taskmanager-6rgp.onrender.com',
-        'https://it-taskmanager.onrender.com',
         'http://it-taskmanager.mooo.com',
         'https://it-taskmanager.mooo.com'
       ];
