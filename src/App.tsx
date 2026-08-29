@@ -4148,7 +4148,7 @@ export default function App() {
   const initialNotifsLoadedRef = useRef<boolean>(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [reportFilters, setReportFilters] = useState<{ classIds: string[]; taskId: string; status: string }>({ classIds: [], taskId: '', status: 'ALL' });
+  const [reportFilters, setReportFilters] = useState<{ classIds: string[]; taskId: string; year: string; status: string }>({ classIds: [], taskId: '', year: '', status: 'ALL' });
   const [screenshotDownloadProgress, setScreenshotDownloadProgress] = useState<{
     current: number;
     total: number;
@@ -6352,12 +6352,13 @@ export default function App() {
     }
   };
 
-  const exportToExcel = async (filters?: { classIds?: string[]; taskId?: string; status?: string; }) => {
+  const exportToExcel = async (filters?: { classIds?: string[]; taskId?: string; year?: string; status?: string; }) => {
     const isAdminRole = user?.role === 'SUPREME_ADMIN';
     const isHODRole = user?.role === 'HOD';
     const isYearCoordRole = user?.is_year_coordinator;
     const isClsRole = user?.role === 'CLASS_ADVISOR' || (user?.role === 'STUDENT' && user?.is_coordinator);
     const selectedClassIds = filters?.classIds || [];
+    const selectedYear = filters?.year || '';
 
     // ── Small helpers ──────────────────────────────────────────────────────────
     const ACADEMIC_YEAR = '2024-2028';
@@ -6616,6 +6617,11 @@ export default function App() {
       }
 
       if (!inScope) return false;
+
+      if (selectedYear) {
+        const sc = classes.find(c => c.id.toString() === u.class_id?.toString());
+        if (!sc || String(sc.year) !== String(selectedYear)) return false;
+      }
 
       if (selectedClassIds.length > 0) {
         return selectedClassIds.includes(u.class_id?.toString() || '');
@@ -7004,6 +7010,9 @@ export default function App() {
 
     const dateTag = new Date().toISOString().split('T')[0];
     const roleTag = isAdminRole ? 'SuperAdmin' : isHODRole ? 'HOD' : isYearCoordRole ? `Year${user?.year_scope}_Coord` : 'Class';
+    const yearTag = selectedYear ? `Year${selectedYear}_` : '';
+    const taskObj = tasks.find(t => t.id?.toString() === filters?.taskId);
+    const taskTag = taskObj ? `${(taskObj.title || 'Task').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 18)}_` : '';
     const statusTag = selectedStatus === 'ALL' ? 'All' : selectedStatus.charAt(0) + selectedStatus.slice(1).toLowerCase();
 
     try {
@@ -7012,7 +7021,7 @@ export default function App() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${roleTag}_Report_${statusTag}_${dateTag}.xlsx`;
+      a.download = `${roleTag}_${yearTag}${taskTag}Report_${statusTag}_${dateTag}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -7028,10 +7037,15 @@ export default function App() {
   const availableScreenshotCount = useMemo(() => {
     if (!showExportModal) return 0;
     const selectedClassIds = reportFilters.classIds || [];
+    const selectedYear = reportFilters.year || '';
     const selectedStatus = reportFilters.status || 'ALL';
 
     const targetStudents = users.filter(u => {
       if (u.role !== 'STUDENT') return false;
+      if (selectedYear) {
+        const uClass = classes.find(c => c.id?.toString() === u.class_id?.toString());
+        if (!uClass || String(uClass.year) !== String(selectedYear)) return false;
+      }
       if (user?.role === 'SUPREME_ADMIN') {
         if (selectedClassIds.length > 0) return selectedClassIds.includes(u.class_id?.toString() || '');
         return true;
@@ -7073,7 +7087,7 @@ export default function App() {
 
   // ── Download Screenshots as ZIP ─────────────────────────────────────────────
   const downloadScreenshotsZip = async (
-    filters?: { classIds?: string[]; taskId?: string; status?: string; },
+    filters?: { classIds?: string[]; taskId?: string; year?: string; status?: string; },
     explicitSubmissions?: any[]
   ) => {
     const isAdminRole = user?.role === 'SUPREME_ADMIN';
@@ -7081,7 +7095,9 @@ export default function App() {
     const isYearCoordRole = user?.is_year_coordinator;
     const isClsRole = user?.role === 'CLASS_ADVISOR' || (user?.role === 'STUDENT' && user?.is_coordinator);
     const selectedClassIds = filters?.classIds || [];
+    const selectedYear = filters?.year || '';
     const selectedStatus = filters?.status || 'ALL';
+    const romanYearMap: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
 
     const itemsToDownload: {
       url: string;
@@ -7093,14 +7109,17 @@ export default function App() {
     if (explicitSubmissions && explicitSubmissions.length > 0) {
       explicitSubmissions.forEach(s => {
         if (!s.screenshot_url || s.screenshot_url.startsWith('PURGED')) return;
+        const sClass = classes.find(c => c.id?.toString() === s.class_id?.toString());
+        const yrNum = sClass?.year || s.class_year;
+        const safeYear = yrNum ? (romanYearMap[yrNum] ? `${romanYearMap[yrNum]}_Year` : `Year_${yrNum}`) : 'Other_Year';
         const safeRegNo = (s.register_number || 'UNKNOWN').replace(/[/\\?%*:|"<>]/g, '_');
         const safeName = (s.student_name || 'STUDENT').replace(/[/\\?%*:|"<>]/g, '_');
         const safeTask = (s.task_title || tasks.find(t => t.id === s.task_id)?.title || 'TASK').replace(/[/\\?%*:|"<>]/g, '_');
-        const safeClass = (s.class_name || classes.find(c => c.id === s.class_id)?.name || 'CLASS').replace(/[/\\?%*:|"<>]/g, '_');
+        const safeClass = (s.class_name || sClass?.name || 'CLASS').replace(/[/\\?%*:|"<>]/g, '_');
 
         itemsToDownload.push({
           url: s.screenshot_url,
-          filename: `${safeTask}/${safeClass}_${safeRegNo}_${safeName}`,
+          filename: `${safeTask}/${safeYear}/${safeClass}/${safeRegNo}_${safeName}`,
           displayName: `${safeRegNo} - ${safeName}`
         });
       });
@@ -7108,6 +7127,10 @@ export default function App() {
       // Mode 2: Report Studio filters
       const targetStudents = users.filter(u => {
         if (u.role !== 'STUDENT') return false;
+        if (selectedYear) {
+          const uClass = classes.find(c => c.id?.toString() === u.class_id?.toString());
+          if (!uClass || String(uClass.year) !== String(selectedYear)) return false;
+        }
         if (isAdminRole) {
           if (selectedClassIds.length > 0) return selectedClassIds.includes(u.class_id?.toString() || '');
           return true;
@@ -7174,14 +7197,19 @@ export default function App() {
           else if (selectedStatus === 'REJECTED') include = sub.status === 'REJECTED';
 
           if (include) {
+            const studentClass = classes.find(c => c.id?.toString() === student.class_id?.toString());
+            const yrNum = studentClass?.year || (student as any).year;
+            const safeYear = yrNum ? (romanYearMap[yrNum] ? `${romanYearMap[yrNum]}_Year` : `Year_${yrNum}`) : 'Other_Year';
             const safeRegNo = (student.register_number || 'UNKNOWN').replace(/[/\\?%*:|"<>]/g, '_');
             const safeName = (student.full_name || 'STUDENT').replace(/[/\\?%*:|"<>]/g, '_');
             const safeTask = (task.title || 'TASK').replace(/[/\\?%*:|"<>]/g, '_');
-            const safeClass = (student.class_name || classes.find(c => c.id === student.class_id)?.name || 'CLASS').replace(/[/\\?%*:|"<>]/g, '_');
+            const safeClass = (student.class_name || studentClass?.name || 'CLASS').replace(/[/\\?%*:|"<>]/g, '_');
 
             itemsToDownload.push({
               url: sub.screenshot_url,
-              filename: filters?.taskId ? `${safeClass}/${safeRegNo}_${safeName}` : `${safeTask}/${safeClass}/${safeRegNo}_${safeName}`,
+              filename: filters?.taskId
+                ? `${safeYear}/${safeClass}/${safeRegNo}_${safeName}`
+                : `${safeTask}/${safeYear}/${safeClass}/${safeRegNo}_${safeName}`,
               displayName: `${safeRegNo} - ${safeName} (${safeTask})`
             });
           }
@@ -7201,6 +7229,11 @@ export default function App() {
             if (filters?.taskId && t.task_id?.toString() !== filters.taskId.toString()) return;
             if (!t.proof_url || t.proof_url.startsWith('PURGED')) return;
 
+            const teamClass = classes.find(c => c.id?.toString() === t.class_id?.toString());
+            if (selectedYear) {
+              if (!teamClass || String(teamClass.year) !== String(selectedYear)) return;
+            }
+
             const subStat = (t.submission_status || '').toUpperCase();
             const teamStat = (t.team_status || '').toUpperCase();
             let mappedStatus = 'NOT_SUBMITTED';
@@ -7215,13 +7248,18 @@ export default function App() {
             else if (selectedStatus === 'REJECTED') includeTeam = mappedStatus === 'REJECTED';
 
             if (includeTeam) {
+              const teamYrNum = teamClass?.year;
+              const safeTeamYear = teamYrNum ? (romanYearMap[teamYrNum] ? `${romanYearMap[teamYrNum]}_Year` : `Year_${teamYrNum}`) : 'Other_Year';
+              const safeTeamClass = (teamClass?.name || 'Class').replace(/[/\\?%*:|"<>]/g, '_');
               const safeTeam = (t.team_name || 'TEAM').replace(/[/\\?%*:|"<>]/g, '_');
               const safeTask = (t.task_title || 'TASK').replace(/[/\\?%*:|"<>]/g, '_');
               const safeLeader = (t.leader_regno || 'LEADER').replace(/[/\\?%*:|"<>]/g, '_');
 
               itemsToDownload.push({
                 url: t.proof_url,
-                filename: `Teams/${safeTask}/${safeTeam}_Leader_${safeLeader}`,
+                filename: filters?.taskId
+                  ? `Teams/${safeTeamYear}/${safeTeamClass}/${safeTeam}_Leader_${safeLeader}`
+                  : `Teams/${safeTask}/${safeTeamYear}/${safeTeamClass}/${safeTeam}_Leader_${safeLeader}`,
                 displayName: `Team ${safeTeam} (${safeTask})`
               });
             }
@@ -7320,8 +7358,11 @@ export default function App() {
 
       const dateTag = new Date().toISOString().split('T')[0];
       const roleTag = isAdminRole ? 'SuperAdmin' : isHODRole ? 'HOD' : isYearCoordRole ? `Year${user?.year_scope}_Coord` : 'Class';
+      const yearTag = selectedYear ? `Year${selectedYear}_` : '';
+      const taskObj = tasks.find(t => t.id?.toString() === filters?.taskId);
+      const taskTag = taskObj ? `${(taskObj.title || 'Task').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 18)}_` : '';
       const statusTag = selectedStatus === 'ALL' ? 'All' : selectedStatus.charAt(0) + selectedStatus.slice(1).toLowerCase();
-      const zipFileName = `${roleTag}_Screenshots_${statusTag}_${dateTag}.zip`;
+      const zipFileName = `${roleTag}_${yearTag}${taskTag}Screenshots_${statusTag}_${dateTag}.zip`;
 
       const downloadUrl = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
@@ -13708,17 +13749,47 @@ export default function App() {
 
                   <div className="space-y-4">
 
+                    {/* HOD / Admin: Class Year Filter */}
+                    {(isAdmin || isHOD) && (
+                      <div>
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2 flex items-center gap-1.5">
+                          <GraduationCap size={11} /> Class Year
+                        </label>
+                        <select
+                          className="w-full p-3 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                          value={reportFilters.year || ''}
+                          onChange={(e) => setReportFilters(prev => ({ ...prev, year: e.target.value, classIds: [] }))}
+                        >
+                          <option value="">All Class Years (1st - 4th Year)</option>
+                          <option value="1">1st Year (I Year)</option>
+                          <option value="2">2nd Year (II Year)</option>
+                          <option value="3">3rd Year (III Year)</option>
+                          <option value="4">4th Year (IV Year)</option>
+                        </select>
+                      </div>
+                    )}
+
                     {/* HOD / Admin: multi-class checkbox picker */}
                     {(isAdmin || isHOD) && (() => {
-                      const availableClasses = isAdmin
+                      const baseClasses = isAdmin
                         ? classes
                         : (hodStats?.classStats || classes.filter(c => c.department_id?.toString() === user?.department_id?.toString()));
+                      const availableClasses = reportFilters.year
+                        ? baseClasses.filter((c: any) => String(c.year) === String(reportFilters.year))
+                        : baseClasses;
                       return (
                         <div>
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2 flex items-center gap-1.5">
-                            <Users size={11} />
-                            Select Classes <span className="normal-case text-zinc-300 font-medium">(pick multiple)</span>
-                          </label>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-1.5">
+                              <Users size={11} />
+                              Select Classes <span className="normal-case text-zinc-300 font-medium">(pick multiple)</span>
+                            </label>
+                            {reportFilters.year && (
+                              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                                Year {reportFilters.year} Classes
+                              </span>
+                            )}
+                          </div>
                           <div className="max-h-40 overflow-y-auto border border-zinc-100 rounded-2xl bg-zinc-50 p-3 flex flex-col gap-2">
                             {(availableClasses as any[]).slice().sort((a: any, b: any) => (a.year || 0) - (b.year || 0) || (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })).map((c: any) => {
                               const cid = c.id.toString();
@@ -13904,7 +13975,7 @@ export default function App() {
                         <div className="flex gap-2.5">
                           <Button
                             variant="ghost"
-                            onClick={() => { setShowExportModal(false); setReportFilters({ classIds: [], taskId: '', status: 'ALL' }); }}
+                            onClick={() => { setShowExportModal(false); setReportFilters({ classIds: [], taskId: '', year: '', status: 'ALL' }); }}
                             className="rounded-2xl text-zinc-500 hover:text-zinc-800 px-4"
                           >
                             Cancel
