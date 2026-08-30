@@ -2703,7 +2703,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                       <p className="text-[11px] text-blue-800 font-semibold mt-0.5">
                         Live Quota Available:{' '}
                         <strong className="text-blue-950 font-mono text-xs">
-                          {emailNodesStatus?.totalAvailableCredits ?? 600} Credits
+                          {emailNodesStatus?.totalAvailableCredits ?? 900} Credits
                         </strong>{' '}
                         across active SMTP nodes
                       </p>
@@ -2748,12 +2748,15 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                       <span className="px-2.5 py-1 bg-white border border-blue-200 rounded-lg flex items-center gap-1">
                         <Mail size={10} className="text-blue-600" /> Node 2: 300 credits
                       </span>
+                      <span className="px-2.5 py-1 bg-white border border-blue-200 rounded-lg flex items-center gap-1">
+                        <Mail size={10} className="text-blue-600" /> Node 3: 300 credits
+                      </span>
                     </div>
                   )}
 
                   {/* Quota Check Indicator */}
                   <div className="ml-auto text-[10px] font-extrabold">
-                    {(targetPreviewCount ?? 0) <= (emailNodesStatus?.totalAvailableCredits ?? 600) ? (
+                    {(targetPreviewCount ?? 0) <= (emailNodesStatus?.totalAvailableCredits ?? 900) ? (
                       <span className="text-emerald-700 bg-emerald-50/90 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
                         <Check size={11} /> Quota Sufficient ({targetPreviewCount ?? 0} targeted)
                       </span>
