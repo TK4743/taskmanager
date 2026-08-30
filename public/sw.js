@@ -1,4 +1,4 @@
-// VSBEC IT TaskManager - PWA Push Notification Service Worker
+// VSBEC IT TaskManager - PWA Push Notification Service Worker (v1.2.0 - White Splash & Round Logo)
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
