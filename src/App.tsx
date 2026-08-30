@@ -9949,35 +9949,35 @@ export default function App() {
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
         <>
           <SidebarItem
-            icon={<LayoutDashboard size={20} />}
+            icon={<LayoutDashboard size={20} className="text-blue-500" />}
             label="Dashboard"
             active={view === 'dashboard'}
             onClick={() => { setView('dashboard'); setIsMobileSidebarOpen(false); }}
           />
 
           <SidebarItem
-            icon={<ClipboardList size={20} />}
+            icon={<ClipboardList size={20} className="text-indigo-500" />}
             label="Tasks"
             active={view === 'tasks'}
             onClick={() => { setView('tasks'); setIsMobileSidebarOpen(false); }}
           />
 
           <SidebarItem
-            icon={<Code size={20} />}
+            icon={<Code size={20} className="text-amber-500" />}
             label="Coding Progress"
             active={view === 'leetcode-targets' || view === 'coding-progress'}
             onClick={() => { setView('leetcode-targets'); setIsMobileSidebarOpen(false); }}
           />
 
           <SidebarItem
-            icon={<Megaphone size={20} />}
+            icon={<Megaphone size={20} className="text-rose-500" />}
             label="Notice Board"
             active={view === 'notice-board'}
             onClick={() => { setView('notice-board'); fetchNotices(); setIsMobileSidebarOpen(false); }}
           />
 
           <SidebarItem
-            icon={<Sparkles size={20} />}
+            icon={<Sparkles size={20} className="text-purple-500" />}
             label="Skill Assessment"
             badge="SIH Demo"
             active={view === 'skill-assessment'}
@@ -9985,7 +9985,7 @@ export default function App() {
           />
 
           <SidebarItem
-            icon={<Target size={20} />}
+            icon={<Target size={20} className="text-cyan-500" />}
             label="Placement Rating"
             badge="SIH Demo"
             active={view === 'placement-readiness'}
@@ -10003,13 +10003,13 @@ export default function App() {
           {isAdmin && (
             <>
               <SidebarItem
-                icon={<Building2 size={20} />}
+                icon={<Building2 size={20} className="text-violet-500" />}
                 label="Departments"
                 active={view === 'departments'}
                 onClick={() => { setView('departments'); setIsMobileSidebarOpen(false); }}
               />
               <SidebarItem
-                icon={<Users size={20} />}
+                icon={<Users size={20} className="text-sky-500" />}
                 label="HOD Accounts"
                 active={view === 'users'}
                 onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
@@ -10020,13 +10020,13 @@ export default function App() {
           {isHOD && (
             <>
               <SidebarItem
-                icon={<Building2 size={20} />}
+                icon={<Building2 size={20} className="text-violet-500" />}
                 label="Classes"
                 active={view === 'classes'}
                 onClick={() => { setView('classes'); setIsMobileSidebarOpen(false); }}
               />
               <SidebarItem
-                icon={<Users size={20} />}
+                icon={<Users size={20} className="text-sky-500" />}
                 label="Users"
                 active={view === 'users'}
                 onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
@@ -10037,13 +10037,13 @@ export default function App() {
           {isAdvisor && (
             <>
               <SidebarItem
-                icon={<Building2 size={20} />}
+                icon={<Building2 size={20} className="text-violet-500" />}
                 label="My Class"
                 active={view === 'my-class'}
                 onClick={() => { setView('my-class'); setIsMobileSidebarOpen(false); }}
               />
               <SidebarItem
-                icon={<Users size={20} />}
+                icon={<Users size={20} className="text-sky-500" />}
                 label="Students"
                 active={view === 'users'}
                 onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
@@ -10053,7 +10053,7 @@ export default function App() {
 
           {(isAdvisor || isHOD || isAdmin || isCoordinator) && (
             <SidebarItem
-              icon={<ShieldCheck size={20} />}
+              icon={<ShieldCheck size={20} className="text-emerald-600" />}
               label="Verifications"
               active={view === 'verifications'}
               onClick={() => { setView('verifications'); setIsMobileSidebarOpen(false); }}
@@ -10063,13 +10063,13 @@ export default function App() {
           {isStudent && (
             <>
               <SidebarItem
-                icon={<CheckCircle2 size={20} />}
+                icon={<CheckCircle2 size={20} className="text-teal-500" />}
                 label="My Submissions"
                 active={view === 'submissions'}
                 onClick={() => { setView('submissions'); setIsMobileSidebarOpen(false); }}
               />
               <SidebarItem
-                icon={<User size={20} />}
+                icon={<User size={20} className="text-blue-600" />}
                 label="Profile"
                 active={view === 'profile'}
                 onClick={() => { setView('profile'); setIsMobileSidebarOpen(false); }}
@@ -10077,9 +10077,8 @@ export default function App() {
             </>
           )}
 
-
           <SidebarItem
-            icon={<Settings size={20} />}
+            icon={<Settings size={20} className="text-slate-500" />}
             label="Settings"
             active={view === 'settings'}
             onClick={() => { setView('settings'); setIsMobileSidebarOpen(false); }}
@@ -10098,9 +10097,9 @@ export default function App() {
         </div>
         <button
           onClick={() => { handleLogout(); setIsMobileSidebarOpen(false); }}
-          className="flex items-center gap-3 w-full px-4 py-2.5 text-zinc-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all font-semibold text-sm"
+          className="flex items-center gap-3 w-full px-4 py-2.5 text-zinc-600 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all font-semibold text-sm group"
         >
-          <LogOut size={20} />
+          <LogOut size={20} className="text-rose-500 group-hover:text-rose-600 transition-colors" />
           <span>Logout</span>
         </button>
 
@@ -10749,11 +10748,14 @@ export default function App() {
               )}
               <div className="relative group">
                 <button
-                  className="p-2.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100/80 rounded-xl transition-all relative"
+                  className="p-2.5 text-amber-500 hover:text-amber-600 bg-amber-50/80 hover:bg-amber-100/90 rounded-xl transition-all relative border border-amber-200/70 shadow-2xs group/bell"
                   onClick={markNotificationsRead}
                   title="Notifications"
                 >
-                  <Bell size={20} />
+                  <Bell size={20} className="text-amber-500 group-hover/bell:scale-110 transition-transform" />
+                  {notifications.filter(n => !n.is_read).length > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white animate-ping" />
+                  )}
                   {notifications.filter(n => !n.is_read).length > 0 && (
                     <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white" />
                   )}
@@ -14969,13 +14971,13 @@ function SidebarItem({ icon, label, active, onClick, badge }: { icon: React.Reac
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all font-medium text-sm text-left",
+        "flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all font-semibold text-sm text-left group",
         active
-          ? "bg-black text-white shadow-lg shadow-black/10"
-          : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+          ? "bg-zinc-900 text-white shadow-lg shadow-zinc-900/20"
+          : "text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900"
       )}
     >
-      <span className={cn("shrink-0", active ? "text-white" : "")}>{icon}</span>
+      <span className="shrink-0 transition-transform group-hover:scale-110 flex items-center justify-center">{icon}</span>
       <span className="truncate whitespace-nowrap">{label}</span>
       {badge && (
         <span className={cn(
