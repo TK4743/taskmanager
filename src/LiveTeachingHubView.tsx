@@ -66,30 +66,30 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
         </div>
 
         {/* ── Hero Headline Banner ────────────────────────────────────────────── */}
-        <div className="relative overflow-hidden rounded-3xl bg-white border border-zinc-200/80 p-6 md:p-10 shadow-sm space-y-6">
-          <div className="absolute -right-20 -top-20 w-72 h-72 bg-indigo-50 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-20 -bottom-20 w-72 h-72 bg-purple-50 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative overflow-hidden rounded-2xl bg-white border border-zinc-200/80 p-5 md:p-7 shadow-xs space-y-4">
+          <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-50 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-purple-50 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 max-w-3xl space-y-3.5">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-full uppercase tracking-wider">
-              <Sparkles size={13} className="text-indigo-600" /> Peer-to-Peer Learning Environment
+          <div className="relative z-10 max-w-3xl space-y-2.5">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold rounded-full uppercase tracking-wider">
+              <Sparkles size={12} className="text-indigo-600" /> Peer-to-Peer Learning Environment
             </div>
             
-            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-zinc-900 leading-tight">
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-900 leading-tight">
               Learn. Teach. Code Together.
             </h2>
             
-            <p className="text-sm md:text-base text-zinc-600 leading-relaxed font-normal">
+            <p className="text-xs md:text-sm text-zinc-600 leading-relaxed font-normal">
               Connect with your peers, teach concepts through voice, and write code together in real time — from anywhere.
             </p>
 
-            <div className="pt-3">
+            <div className="pt-1.5">
               <button
                 onClick={handleOpenGoatCE}
-                className="py-3.5 px-8 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-sm md:text-base rounded-2xl shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2.5 group cursor-pointer"
+                className="py-2.5 px-5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs md:text-sm rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center gap-2 group cursor-pointer"
               >
                 <span>🚀 Enter Live Teaching Hub</span>
-                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
