@@ -209,18 +209,18 @@ flowchart LR
 ## 🔒 Intellectual Property & Proprietary License
 
 ```
-Copyright (c) 2024–2026 Tharunkumar K. All Rights Reserved.
+Copyright (c) 2024–2026 Techsquad. All Rights Reserved.
 Department of Information Technology, VSB Engineering College.
 ```
 
 ### Terms & Restrictions of Use:
-- **Strictly Proprietary**: This software, including its source code, database architectures, user interface assets, analytics pipelines, and documentation, is the exclusive intellectual property of **Tharunkumar K** and the Department of Information Technology at VSB Engineering College.
+- **Strictly Proprietary**: This software, including its source code, database architectures, user interface assets, analytics pipelines, and documentation, is the exclusive intellectual property of **Techsquad** and the Department of Information Technology at VSB Engineering College.
 - **Unauthorized Copying Prohibited**: No individual or entity may clone, copy, distribute, modify, decompile, reverse-engineer, sublicense, publicly host, or commercially exploit this software or its source code, in whole or in part, without prior express written permission from the copyright owner.
 - **Institutional Exclusivity**: Engineered exclusively for internal academic governance and student coding analytics within VSB Engineering College.
 - **Legal Enforcement**: Any unauthorized use, reproduction, or infringement of these proprietary assets is strictly prohibited and subject to legal remedies under applicable intellectual property and copyright laws.
 
 For permissions, authorized deployment inquiries, or official institutional requests:
-- **Lead Architect & Developer**: [Tharunkumar K](https://tharunkumark4743.netlify.app/)
+- **Lead Architect & Developer**: [Techsquad](https://techsquadsih.netlify.app/)
 - **Department**: Department of Information Technology, VSB Engineering College, Karur, Tamil Nadu, India.
 
 ---
@@ -231,7 +231,7 @@ For permissions, authorized deployment inquiries, or official institutional requ
 **VSB Engineering College, Karur – 639111, Tamil Nadu, India**  
 *An Autonomous Institution • Accredited by NAAC with 'A' Grade • Approved by AICTE*
 
-Made with ❤️ by **[Tharunkumar K](https://tharunkumark4743.netlify.app/)**
+Made with ❤️ by **[Techsquad](https://techsquadsih.netlify.app/)**
 
 </div>
 

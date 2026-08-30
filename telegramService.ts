@@ -42,7 +42,7 @@ export function getPortalUrl(): string {
 }
 
 export function getWatermarkHtml(): string {
-  return `\n───────────────────────────────\n💻 Developed by <a href="https://tharunkumark4743.netlify.app/">Tharunkumar K</a>\n🏛 <i>Department of Information Technology, VSBEC</i>`;
+  return `\n───────────────────────────────\n💻 Developed by <a href="https://techsquadsih.netlify.app/">Techsquad</a>\n🏛 <i>Department of Information Technology, VSBEC</i>`;
 }
 
 export function getISTDateStr(): string {

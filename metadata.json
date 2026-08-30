@@ -1,9 +1,9 @@
 {
   "name": "IT Task Manager - VSB Engineering College",
-  "description": "Enterprise academic task management, submission, verification, and coding progress tracking platform developed by Tharunkumar K (https://tharunkumark4743.netlify.app/) for the Department of Information Technology at VSB Engineering College.",
+  "description": "Enterprise academic task management, submission, verification, and coding progress tracking platform developed by Techsquad (https://techsquadsih.netlify.app/) for the Department of Information Technology at VSB Engineering College.",
   "author": {
-    "name": "Tharunkumar K",
-    "url": "https://tharunkumark4743.netlify.app/",
+    "name": "Techsquad",
+    "url": "https://techsquadsih.netlify.app/",
     "github": "https://github.com/Tharun4743"
   },
   "requestFramePermissions": []

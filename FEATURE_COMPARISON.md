@@ -106,5 +106,5 @@ This document provides a comprehensive technical overview highlighting the initi
 
 ---
 
-👨‍💻 **Developed and maintained by Tharunkumar K**  
+👨‍💻 **Developed and maintained by Techsquad**  
 🏛️ **Department of Information Technology, VSB Engineering College**

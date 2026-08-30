@@ -1203,12 +1203,12 @@ const Footer = ({ onShowModal }: { onShowModal: (type: 'PRIVACY' | 'TERMS' | 'SU
       <div className="text-center lg:text-right text-zinc-600 text-xs font-medium leading-tight shrink-0">
         <span>Developed and maintained by </span>
         <a
-          href="https://tharunkumark4743.netlify.app/"
+          href="https://techsquadsih.netlify.app/"
           target="_blank"
           rel="noopener noreferrer"
           className="font-bold text-zinc-900 hover:text-indigo-600 transition-colors underline decoration-zinc-300 underline-offset-2 cursor-pointer"
         >
-          Tharunkumar K
+          Techsquad
         </a>
         <div className="text-[11px] text-zinc-500 font-medium mt-0.5">
           Department of Information Technology, VSB Engineering College
