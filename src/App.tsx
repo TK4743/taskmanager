@@ -10,6 +10,8 @@ import { API_URL } from './config';
 import SkillAssessmentView from './SkillAssessmentView';
 import PlacementReadinessView from './PlacementReadinessView';
 import LiveTeachingHubView from './LiveTeachingHubView';
+import PWAInstallOverlay from './PWAInstallOverlay';
+import PushNotificationPromptModal from './PushNotificationPromptModal';
 import {
   isPushSupported,
   getNotificationPermissionState,
@@ -15049,6 +15051,8 @@ export default function App() {
 
           {renderAssignTargetModal()}
           {renderHistoryDetailsModal()}
+          <PushNotificationPromptModal token={token} apiUrl={API_URL} addToast={addToast} />
+          <PWAInstallOverlay />
         </AnimatePresence>
       </div>
     </FooterContext.Provider>
