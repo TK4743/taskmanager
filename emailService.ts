@@ -2455,16 +2455,35 @@ export async function triggerAssessmentCampaignEmails(params: {
       return { totalTargeted: 0, totalDispatched: 0, failedCount: 0, errors: [] };
     }
 
-    console.log(`[EmailService] 📢 Initiating Assessment Campaign for "${track.track_title}" to ${students.length} students (Target Year: ${target_year}, Class: ${target_class_id})...`);
+    // 3. Deduplication check: Exclude students who already received an invitation for this track
+    const alreadySentRes = await pool.query(`
+      SELECT user_id FROM notifications 
+      WHERE type = 'ASSESSMENT_INVITATION' AND message LIKE $1
+    `, [`%${track.track_title}%`]);
+    const alreadySentSet = new Set(alreadySentRes.rows.map((r: any) => r.user_id));
+
+    const pendingStudents = students.filter((s: any) => !alreadySentSet.has(s.id));
+
+    console.log(`[EmailService] 📢 Initiating Assessment Campaign for "${track.track_title}": Total Cohort: ${students.length}, Already Notified: ${alreadySentSet.size}, Pending to Dispatch: ${pendingStudents.length}`);
+
+    if (pendingStudents.length === 0) {
+      console.log(`[EmailService] ℹ️ All ${students.length} students have already received invitations for "${track.track_title}". No duplicate emails sent.`);
+      return {
+        totalTargeted: students.length,
+        totalDispatched: students.length,
+        failedCount: 0,
+        errors: []
+      };
+    }
 
     let sentCount = 0;
     let failedCount = 0;
     const errors: string[] = [];
 
-    // Safe rate-controlled dispatch: batch size 2 with 250ms spacing
-    const BATCH_SIZE = 2;
-    for (let i = 0; i < students.length; i += BATCH_SIZE) {
-      const chunk = students.slice(i, i + BATCH_SIZE);
+    // High-performance concurrency across multi-node pool (8 concurrent with 60ms pacing)
+    const BATCH_SIZE = 8;
+    for (let i = 0; i < pendingStudents.length; i += BATCH_SIZE) {
+      const chunk = pendingStudents.slice(i, i + BATCH_SIZE);
       const promises = chunk.map(async (student) => {
         try {
           const res = await sendAssessmentInvitationEmail({
@@ -2502,15 +2521,16 @@ export async function triggerAssessmentCampaignEmails(params: {
       });
 
       await Promise.all(promises);
-      if (i + BATCH_SIZE < students.length) {
-        await new Promise(r => setTimeout(r, 250));
+      if (i + BATCH_SIZE < pendingStudents.length) {
+        await new Promise(r => setTimeout(r, 60));
       }
     }
 
-    console.log(`[EmailService] ✅ Completed Assessment Campaign: ${sentCount}/${students.length} dispatched successfully.`);
+    const totalSuccessful = sentCount + alreadySentSet.size;
+    console.log(`[EmailService] ✅ Completed Assessment Campaign: ${sentCount} new sent + ${alreadySentSet.size} previously sent = ${totalSuccessful}/${students.length} total notified.`);
     return {
       totalTargeted: students.length,
-      totalDispatched: sentCount,
+      totalDispatched: totalSuccessful,
       failedCount,
       errors: errors.slice(0, 10)
     };
