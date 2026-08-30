@@ -2683,8 +2683,13 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                   {/* Question by Question Review (if saved) */}
                   {Array.isArray(viewingScorecard.answers_summary) && viewingScorecard.answers_summary.length > 0 && (
                     <div className="space-y-3">
-                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-zinc-700">Detailed Answer Review</h4>
-                      <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-extrabold uppercase tracking-wider text-zinc-700">Detailed Answer Review</h4>
+                        <span className="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-full">
+                          {viewingScorecard.answers_summary.length} Questions
+                        </span>
+                      </div>
+                      <div className="space-y-2.5">
                         {viewingScorecard.answers_summary.map((item: any, idx: number) => (
                           <div
                             key={idx}
@@ -2718,6 +2723,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                       </div>
                     </div>
                   )}
+
 
                   <div className="pt-4 border-t border-zinc-100 flex justify-end">
                     <button
