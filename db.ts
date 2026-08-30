@@ -21,13 +21,23 @@ if (databaseUrl && databaseUrl.includes('pooler.supabase.com:5432')) {
   databaseUrl = databaseUrl.replace('pooler.supabase.com:5432', 'pooler.supabase.com:6543');
 }
 
-const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
-const poolMax = process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : (process.env.PGMAXCONNECTIONS ? parseInt(process.env.PGMAXCONNECTIONS, 10) : (isServerless ? 20 : 50));
-const poolMin = process.env.DB_POOL_MIN ? parseInt(process.env.DB_POOL_MIN, 10) : (isServerless ? 0 : 2);
-const connectionTimeoutMillis = process.env.DB_CONNECTION_TIMEOUT_MS ? parseInt(process.env.DB_CONNECTION_TIMEOUT_MS, 10) : (isServerless ? 5000 : 15000);
-const idleTimeoutMillis = process.env.DB_IDLE_TIMEOUT_MS ? parseInt(process.env.DB_IDLE_TIMEOUT_MS, 10) : (isServerless ? 10000 : 30000);
+const isServerless = Boolean(
+  process.env.VERCEL ||
+  process.env.VERCEL_ENV ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  process.env.LAMBDA_TASK_ROOT
+);
+
+// Serverless optimization: In Vercel/Lambda, set poolMin=0 and poolMax=2-3 to prevent Supavisor EMAXCONN (200 limit)
+const poolMax = isServerless
+  ? Math.min(process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 3, 4)
+  : (process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : (process.env.PGMAXCONNECTIONS ? parseInt(process.env.PGMAXCONNECTIONS, 10) : 25));
+
+const poolMin = isServerless ? 0 : (process.env.DB_POOL_MIN ? parseInt(process.env.DB_POOL_MIN, 10) : 1);
+const connectionTimeoutMillis = process.env.DB_CONNECTION_TIMEOUT_MS ? parseInt(process.env.DB_CONNECTION_TIMEOUT_MS, 10) : (isServerless ? 6000 : 15000);
+const idleTimeoutMillis = process.env.DB_IDLE_TIMEOUT_MS ? parseInt(process.env.DB_IDLE_TIMEOUT_MS, 10) : (isServerless ? 1500 : 25000);
 const statementTimeout = process.env.DB_STATEMENT_TIMEOUT_MS ? parseInt(process.env.DB_STATEMENT_TIMEOUT_MS, 10) : 20000;
-const maxUses = process.env.DB_POOL_MAX_USES ? parseInt(process.env.DB_POOL_MAX_USES, 10) : 7500;
+const maxUses = process.env.DB_POOL_MAX_USES ? parseInt(process.env.DB_POOL_MAX_USES, 10) : (isServerless ? 100 : 7500);
 
 export const pool = new Pool(databaseUrl ? {
   connectionString: databaseUrl,
