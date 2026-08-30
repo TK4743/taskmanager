@@ -665,8 +665,9 @@ export async function notifyNewTaskCreatedEmail(task: {
 
     console.log(`[EmailService] 📢 Broadcasting New Task email for "${task.title}" to ${studentRows.length} students...`);
 
-    for (let i = 0; i < studentRows.length; i += 5) {
-      const batch = studentRows.slice(i, i + 5);
+    const BATCH_SIZE = 8;
+    for (let i = 0; i < studentRows.length; i += BATCH_SIZE) {
+      const batch = studentRows.slice(i, i + BATCH_SIZE);
       await Promise.allSettled(batch.map(student => 
         sendNewTaskPostedEmail({
           to: student.email,
@@ -679,6 +680,9 @@ export async function notifyNewTaskCreatedEmail(task: {
           submissionType: task.submission_type
         })
       ));
+      if (i + BATCH_SIZE < studentRows.length) {
+        await new Promise(r => setTimeout(r, 60));
+      }
     }
   } catch (err: any) {
     console.error('[EmailService] Error broadcasting new task email:', err.message);
@@ -881,8 +885,9 @@ export async function notifyTaskReopenedEmail(task: {
 
     console.log(`[EmailService] 🔄 Broadcasting Reopened Task email for "${task.title}" to ${studentRows.length} students...`);
 
-    for (let i = 0; i < studentRows.length; i += 5) {
-      const batch = studentRows.slice(i, i + 5);
+    const BATCH_SIZE = 8;
+    for (let i = 0; i < studentRows.length; i += BATCH_SIZE) {
+      const batch = studentRows.slice(i, i + BATCH_SIZE);
       await Promise.allSettled(batch.map(student => 
         sendTaskReopenedEmail({
           to: student.email,
@@ -895,6 +900,9 @@ export async function notifyTaskReopenedEmail(task: {
           submissionType: task.submission_type
         })
       ));
+      if (i + BATCH_SIZE < studentRows.length) {
+        await new Promise(r => setTimeout(r, 60));
+      }
     }
     console.log(`[EmailService] ✅ Successfully dispatched reopened task emails for "${task.title}".`);
   } catch (err: any) {
@@ -1307,26 +1315,41 @@ export async function triggerDeadlineUrgentEmailReminders(): Promise<{ dispatche
     console.log(`[EmailService] ⏰ Found ${res.rows.length} pending submissions due in <= 2 hours. Dispatching urgent emails...`);
 
     let count = 0;
-    for (const row of res.rows) {
-      try {
-        const sendRes = await sendDeadlineAlertEmail({
-          to: row.email,
-          studentName: row.full_name,
-          registerNumber: row.register_number,
-          taskTitle: row.task_title,
-          deadline: row.deadline,
-          remainingText: '2 Hours Remaining'
-        });
+    const BATCH_SIZE = 8;
+    for (let i = 0; i < res.rows.length; i += BATCH_SIZE) {
+      const batch = res.rows.slice(i, i + BATCH_SIZE);
+      const successfulRows: any[] = [];
 
-        if (sendRes.success) {
-          await pool.query(
-            `INSERT INTO task_deadline_alerts (task_id, user_id, alert_type) VALUES ($1, $2, '2_HOUR') ON CONFLICT (task_id, user_id, alert_type) DO NOTHING`,
-            [row.task_id, row.user_id]
-          );
-          count++;
+      await Promise.all(batch.map(async (row: any) => {
+        try {
+          const sendRes = await sendDeadlineAlertEmail({
+            to: row.email,
+            studentName: row.full_name,
+            registerNumber: row.register_number,
+            taskTitle: row.task_title,
+            deadline: row.deadline,
+            remainingText: '2 Hours Remaining'
+          });
+
+          if (sendRes.success) {
+            count++;
+            successfulRows.push(row);
+          }
+        } catch (err: any) {
+          console.error(`[EmailService] Failed to send 2-hour deadline email to ${row.email}:`, err.message);
         }
-      } catch (err: any) {
-        console.error(`[EmailService] Failed to send 2-hour deadline email to ${row.email}:`, err.message);
+      }));
+
+      // Record alerts sent
+      for (const s of successfulRows) {
+        pool.query(
+          `INSERT INTO task_deadline_alerts (task_id, user_id, alert_type) VALUES ($1, $2, '2_HOUR') ON CONFLICT (task_id, user_id, alert_type) DO NOTHING`,
+          [s.task_id, s.user_id]
+        ).catch(() => {});
+      }
+
+      if (i + BATCH_SIZE < res.rows.length) {
+        await new Promise(r => setTimeout(r, 60));
       }
     }
 
@@ -1778,9 +1801,33 @@ export async function triggerManualTaskPendingReminders(
       return { success: true, totalStudents: 0, sentCount: 0, failedCount: 0, errors: [] };
     }
 
+    // Deduplication check: Exclude students who already received a reminder for this task in the last 1 hour
+    const recentNotifsRes = await pool.query(`
+      SELECT user_id FROM notifications
+      WHERE type = 'TASK_PENDING_REMINDER'
+        AND message LIKE $1
+        AND created_at >= CURRENT_TIMESTAMP - INTERVAL '1 hour'
+    `, [`%${task.title}%`]);
+    const recentSentSet = new Set(recentNotifsRes.rows.map((r: any) => r.user_id));
+
+    const pendingStudents = students.filter((s: any) => !recentSentSet.has(s.id));
+
+    console.log(`[EmailService] 📢 Task Pending Reminders for "${task.title}": Total Incomplete: ${students.length}, Already Notified (last 1h): ${recentSentSet.size}, Pending to Dispatch: ${pendingStudents.length}`);
+
+    if (pendingStudents.length === 0) {
+      return {
+        success: true,
+        totalStudents: students.length,
+        sentCount: students.length,
+        failedCount: 0,
+        errors: []
+      };
+    }
+
     let sentCount = 0;
     let failedCount = 0;
     const errors: string[] = [];
+    const successfulIds: string[] = [];
 
     const senderTitle = senderRole === 'HOD' 
       ? 'Head of the Department (HOD)' 
@@ -1788,10 +1835,10 @@ export async function triggerManualTaskPendingReminders(
           ? 'Supreme Administrator / Head of Department'
           : (senderName ? `${senderName} (${senderRole === 'CLASS_ADVISOR' ? 'Class Advisor' : (senderRole || 'Coordinator')})` : 'Department Coordinator'));
 
-    // Dispatch safely through our Brevo multi-node load balancer pool (concurrency 2 with 250ms spacing prevents 429 errors)
-    const BATCH_SIZE = 2;
-    for (let i = 0; i < students.length; i += BATCH_SIZE) {
-      const chunk = students.slice(i, i + BATCH_SIZE);
+    // High-concurrency dispatch across Brevo multi-node load balancer pool (8 concurrent requests with 50ms pacing)
+    const BATCH_SIZE = 8;
+    for (let i = 0; i < pendingStudents.length; i += BATCH_SIZE) {
+      const chunk = pendingStudents.slice(i, i + BATCH_SIZE);
       const promises = chunk.map(async (student) => {
         try {
           const res = await sendTaskPendingReminderEmail(
@@ -1808,12 +1855,7 @@ export async function triggerManualTaskPendingReminders(
 
           if (res.success) {
             sentCount++;
-            // Insert in-app notification as well
-            const deadlineText = task.deadline ? new Date(task.deadline).toLocaleString() : 'Approaching Soon';
-            await pool.query(`
-              INSERT INTO notifications (user_id, message, type)
-              VALUES ($1, $2, 'TASK_PENDING_REMINDER')
-            `, [student.id, `⚠️ Urgent Reminder: Submission pending for "${task.title}". Deadline: ${deadlineText}`]);
+            successfulIds.push(student.id);
           } else {
             failedCount++;
             if (res.error) errors.push(`${student.email}: ${res.error}`);
@@ -1825,15 +1867,31 @@ export async function triggerManualTaskPendingReminders(
       });
 
       await Promise.all(promises);
-      if (i + BATCH_SIZE < students.length) {
-        await new Promise(r => setTimeout(r, 250));
+      if (i + BATCH_SIZE < pendingStudents.length) {
+        await new Promise(r => setTimeout(r, 50));
       }
     }
 
+    // High-speed bulk in-app notification insert (1 single query instead of hundreds of sequential inserts)
+    if (successfulIds.length > 0) {
+      const deadlineText = task.deadline ? new Date(task.deadline).toLocaleString('en-IN') : 'Approaching Soon';
+      try {
+        await pool.query(`
+          INSERT INTO notifications (user_id, message, type)
+          SELECT u_id, $1, 'TASK_PENDING_REMINDER'
+          FROM UNNEST($2::uuid[]) as u_id
+        `, [`⚠️ Urgent Reminder: Submission pending for "${task.title}". Deadline: ${deadlineText}`, successfulIds]);
+      } catch (notifErr: any) {
+        console.warn('[EmailService] Bulk notification insert notice:', notifErr.message);
+      }
+    }
+
+    const totalSuccessful = sentCount + recentSentSet.size;
+    console.log(`[EmailService] ✅ Completed Task Pending Reminders: ${sentCount} new sent + ${recentSentSet.size} previously sent = ${totalSuccessful}/${students.length} total notified.`);
     return {
       success: true,
       totalStudents: students.length,
-      sentCount,
+      sentCount: totalSuccessful,
       failedCount,
       errors: errors.slice(0, 10)
     };
@@ -2117,8 +2175,9 @@ export async function notifyNoticeBoardAnnouncementEmail(notice: {
     console.log(`[EmailService] 📢 Broadcasting Notice Board Announcement "${notice.title}" (Notice ID: ${notice.id || 'N/A'}) to ${targetStudents.length} verified student email(s)...`);
 
     let dispatchedCount = 0;
-    for (let i = 0; i < targetStudents.length; i += 5) {
-      const batch = targetStudents.slice(i, i + 5);
+    const BATCH_SIZE = 8;
+    for (let i = 0; i < targetStudents.length; i += BATCH_SIZE) {
+      const batch = targetStudents.slice(i, i + BATCH_SIZE);
       const results = await Promise.allSettled(batch.map(st =>
         sendNoticeAnnouncementEmail({
           to: st.email,
@@ -2141,8 +2200,8 @@ export async function notifyNoticeBoardAnnouncementEmail(notice: {
       }
 
       // Small throttle interval to avoid API rate bursts
-      if (i + 5 < targetStudents.length) {
-        await new Promise(r => setTimeout(r, 350));
+      if (i + BATCH_SIZE < targetStudents.length) {
+        await new Promise(r => setTimeout(r, 60));
       }
     }
 
@@ -2479,8 +2538,9 @@ export async function triggerAssessmentCampaignEmails(params: {
     let sentCount = 0;
     let failedCount = 0;
     const errors: string[] = [];
+    const successfulIds: string[] = [];
 
-    // High-performance concurrency across multi-node pool (8 concurrent with 60ms pacing)
+    // High-performance concurrency across multi-node pool (8 concurrent with 50ms pacing)
     const BATCH_SIZE = 8;
     for (let i = 0; i < pendingStudents.length; i += BATCH_SIZE) {
       const chunk = pendingStudents.slice(i, i + BATCH_SIZE);
@@ -2505,11 +2565,7 @@ export async function triggerAssessmentCampaignEmails(params: {
 
           if (res.success) {
             sentCount++;
-            // Insert in-app notification
-            await pool.query(`
-              INSERT INTO notifications (user_id, message, type)
-              VALUES ($1, $2, 'ASSESSMENT_INVITATION')
-            `, [student.id, `🎯 New Placement Assessment Assigned: "${track.track_title}". Cutoff: ${track.cutoff_percentage}%.`]);
+            successfulIds.push(student.id);
           } else {
             failedCount++;
             if (res.error) errors.push(`${student.email}: ${res.error}`);
@@ -2522,7 +2578,20 @@ export async function triggerAssessmentCampaignEmails(params: {
 
       await Promise.all(promises);
       if (i + BATCH_SIZE < pendingStudents.length) {
-        await new Promise(r => setTimeout(r, 60));
+        await new Promise(r => setTimeout(r, 50));
+      }
+    }
+
+    // High-speed bulk in-app notification insert
+    if (successfulIds.length > 0) {
+      try {
+        await pool.query(`
+          INSERT INTO notifications (user_id, message, type)
+          SELECT u_id, $1, 'ASSESSMENT_INVITATION'
+          FROM UNNEST($2::uuid[]) as u_id
+        `, [`🎯 New Placement Assessment Assigned: "${track.track_title}". Cutoff: ${track.cutoff_percentage}%.`, successfulIds]);
+      } catch (e: any) {
+        console.warn('[EmailService] Bulk assessment notification insert notice:', e.message);
       }
     }
 
