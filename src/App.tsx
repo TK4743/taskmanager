@@ -9,6 +9,7 @@ import JSZip from 'jszip';
 import { API_URL } from './config';
 import SkillAssessmentView from './SkillAssessmentView';
 import PlacementReadinessView from './PlacementReadinessView';
+import LiveTeachingHubView from './LiveTeachingHubView';
 import {
   isPushSupported,
   getNotificationPermissionState,
@@ -89,7 +90,8 @@ import {
   Target,
   Hourglass,
   TrendingUp,
-  Terminal
+  Terminal,
+  Radio
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -9990,6 +9992,14 @@ export default function App() {
             onClick={() => { setView('placement-readiness'); setIsMobileSidebarOpen(false); }}
           />
 
+          <SidebarItem
+            icon={<Radio size={20} className="text-emerald-500 animate-pulse" />}
+            label="Live Teaching Hub"
+            badge="SIH 2026"
+            active={view === 'live-teaching-hub'}
+            onClick={() => { setView('live-teaching-hub'); setIsMobileSidebarOpen(false); }}
+          />
+
           {isAdmin && (
             <>
               <SidebarItem
@@ -10709,6 +10719,7 @@ export default function App() {
                     if (view === 'users') return 'User Management';
                     if (view === 'skill-assessment') return 'Placement Skill Assessment (SIH Demo)';
                     if (view === 'placement-readiness') return 'Placement Readiness Rating (SIH Demo)';
+                    if (view === 'live-teaching-hub') return 'Live Teaching Hub (GOAT Code Editor)';
                     if (view === 'tasks') return 'Tasks';
                     return view.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                   })()}
@@ -13776,6 +13787,24 @@ export default function App() {
                       token={token}
                       addToast={addToast}
                       onNavigateToAssessment={() => setView('skill-assessment')}
+                    />
+                  </motion.div>
+                )
+              }
+
+              {
+                view === 'live-teaching-hub' && (
+                  <motion.div
+                    key="live-teaching-hub"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="relative w-full h-full min-h-0"
+                  >
+                    <LiveTeachingHubView
+                      user={user}
+                      token={token}
+                      addToast={addToast}
                     />
                   </motion.div>
                 )
