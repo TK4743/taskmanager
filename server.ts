@@ -8866,7 +8866,7 @@ async function startServer() {
 
   // 7. Manual Assessment Announcement & Email Load Balancer Trigger
   app.post('/api/assessment/trigger-announcement', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR']), asyncHandler(async (req: any, res: any) => {
-    const { track_type, target_year = 'ALL', target_class_id = 'ALL', custom_instructions, deadline } = req.body;
+    const { track_type, target_year = 'ALL', target_class_id = 'ALL', custom_instructions, deadline, force_resend } = req.body;
 
     if (!track_type) {
       return res.status(400).json({ error: 'Assessment track_type is required' });
@@ -8895,7 +8895,7 @@ async function startServer() {
       req.user.id
     ]);
 
-    // Dispatch via email service load balancer
+    // Dispatch via email service load balancer (force_resend defaults to true for SIH demo update broadcast)
     const dispatchResult = await triggerAssessmentCampaignEmails({
       track_type,
       track_title: trackTitle,
@@ -8904,7 +8904,8 @@ async function startServer() {
       custom_instructions,
       deadline,
       senderRole: req.user.role,
-      senderName: req.user.full_name
+      senderName: req.user.full_name,
+      force_resend: force_resend !== undefined ? !!force_resend : true
     });
 
     // Also dispatch a Telegram group alert if Telegram bot is active

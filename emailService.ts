@@ -17,9 +17,20 @@ import { constantStudentByRegNoMap } from './studentDirectoryService.js';
 const COLLEGE_LOGO_URL = 'https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png';
 
 export function getCanonicalPortalUrl(portalUrl?: string): string {
-  let url = portalUrl || process.env.FRONTEND_URL || process.env.APP_URL || 'https://it-taskmanager.vercel.app';
-  if (!url || typeof url !== 'string' || url.includes('onrender.com') || !url.startsWith('http')) {
-    url = 'https://it-taskmanager.vercel.app';
+  const canonicalProductionUrl = 'https://it-taskmanager.vercel.app';
+  let url = portalUrl || process.env.APP_URL || process.env.PUBLIC_PORTAL_URL || canonicalProductionUrl;
+
+  // Strictly block any localhost, loopback, or non-production urls in outbound student emails
+  if (
+    !url ||
+    typeof url !== 'string' ||
+    url.includes('localhost') ||
+    url.includes('127.0.0.1') ||
+    url.includes('0.0.0.0') ||
+    url.includes('onrender.com') ||
+    !url.startsWith('http')
+  ) {
+    url = canonicalProductionUrl;
   }
   return url.replace(/\/$/, '');
 }
@@ -122,12 +133,24 @@ function isNodeAvailable(nodeId: string): boolean {
 }
 
 function markNodeExhausted(nodeId: string, errorMsg: string, status?: number) {
+  // Never disable an SMTP node on client-side bad recipient email or parameter error (HTTP 400)
+  if (status === 400 || /invalid_parameter|invalid.*recipient|bad.*request|duplicate_parameter/i.test(errorMsg)) {
+    console.warn(`[EmailService] ⚠️ Recipient validation error on [${nodeId}]: ${errorMsg}. Node remains active.`);
+    return;
+  }
+
   const isQuota = status === 402 || /quota|limit|credit|exceeded|maximum|not enough/i.test(errorMsg);
   const isRateLimit = status === 429 || /rate|too many requests/i.test(errorMsg);
   const isAuth = status === 401 || status === 403 || /unauthorized|forbidden|invalid.*key|suspended/i.test(errorMsg);
 
-  // Quota exhausted: 6-hour cooldown; Rate limited: 5-minute cooldown; Auth error: 12-hour cooldown
-  const cooldownMs = isQuota ? 6 * 60 * 60 * 1000 : isRateLimit ? 5 * 60 * 1000 : isAuth ? 12 * 60 * 60 * 1000 : 15 * 60 * 1000;
+  // If not a recognized infrastructure failure, do not disable the node for 15 minutes
+  if (!isQuota && !isRateLimit && !isAuth) {
+    console.warn(`[EmailService] ⚠️ Non-fatal error on [${nodeId}] (Status ${status}): ${errorMsg}. Node remains active.`);
+    return;
+  }
+
+  // Quota: 2-hour cooldown; Rate limit: 15-second throttle; Auth error: 6-hour cooldown
+  const cooldownMs = isQuota ? 2 * 60 * 60 * 1000 : isRateLimit ? 15 * 1000 : isAuth ? 6 * 60 * 60 * 1000 : 30 * 1000;
 
   nodeHealthMap.set(nodeId, {
     status: isQuota ? 'QUOTA_EXHAUSTED' : isRateLimit ? 'RATE_LIMITED' : isAuth ? 'AUTH_ERROR' : 'QUOTA_EXHAUSTED',
@@ -136,7 +159,7 @@ function markNodeExhausted(nodeId: string, errorMsg: string, status?: number) {
     lastError: errorMsg
   });
 
-  console.warn(`[EmailService] ⚡ Node [${nodeId}] marked unavailable for ${Math.round(cooldownMs / 60000)}m due to: ${errorMsg}. Load balancer will route to next node.`);
+  console.warn(`[EmailService] ⚡ Node [${nodeId}] marked unavailable for ${Math.round(cooldownMs / 1000)}s due to: ${errorMsg}. Load balancer will route to next node.`);
 }
 
 function markNodeHealthy(nodeId: string) {
@@ -173,11 +196,6 @@ function getBrevoNodes(): BrevoAccountNode[] {
 
   for (const cfg of nodeConfigs) {
     if (cfg.key && cfg.key.trim()) {
-      // Exclude nodes currently under active cooldown or authorization block
-      if (!isNodeAvailable(cfg.id)) {
-        continue;
-      }
-
       const defaultSender = cfg.id === 'Brevo-Node-2'
         ? 'campusvsb4743@gmail.com'
         : cfg.id === 'Brevo-Node-3'
@@ -1605,6 +1623,14 @@ export async function sendTaskPendingReminderEmail(
         <p style="margin: 0; font-size: 13px; color: #fde047; font-weight: 700; letter-spacing: 0.04em;">
           DEPARTMENT OF INFORMATION TECHNOLOGY
         </p>
+        <div style="margin-top: 8px;">
+          <span style="display: inline-block; background: #ea580c; border: 1px solid #fb923c; color: #ffffff; font-size: 10.5px; font-weight: 800; padding: 3px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 6px;">
+            🇮🇳 SIH DEMO
+          </span>
+          <span style="display: inline-block; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.4); color: #ffffff; font-size: 10.5px; font-weight: 700; padding: 3px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em;">
+            VSBEC IT TASK MANAGER
+          </span>
+        </div>
       </td>
     </tr>
 
@@ -1676,11 +1702,14 @@ export async function sendTaskPendingReminderEmail(
         </div>
 
         <!-- CTA Button -->
-        <div style="text-align: center; margin: 28px 0 16px 0;">
-          <a href="${portalLink}" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; font-size: 13.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 14px 34px; border-radius: 6px; border: 1px solid #b91c1c; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);">
-            🚀 Submit Task Proof Now
+        <div style="text-align: center; margin: 28px 0 12px 0;">
+          <a href="https://it-taskmanager.vercel.app/" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; font-size: 13.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 14px 34px; border-radius: 6px; border: 1px solid #b91c1c; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);">
+            🚀 Submit Task Proof on VSBEC IT Task Manager
           </a>
         </div>
+        <p style="text-align: center; font-size: 12.5px; color: #64748b; margin: 0 0 20px 0;">
+          Official Portal Link: <a href="https://it-taskmanager.vercel.app/" style="color: #2563eb; text-decoration: underline; font-weight: 700;">https://it-taskmanager.vercel.app/</a>
+        </p>
         ${getTelegramCommunityBoxHtml()}
 
 
@@ -1802,12 +1831,13 @@ export async function triggerManualTaskPendingReminders(
     }
 
     // Deduplication check: Exclude students who already received a reminder for this task in the last 1 hour
+    const safeTaskTitle = task.title ? String(task.title).replace(/[%_\\]/g, '\\$&') : '';
     const recentNotifsRes = await pool.query(`
       SELECT user_id FROM notifications
       WHERE type = 'TASK_PENDING_REMINDER'
         AND message LIKE $1
         AND created_at >= CURRENT_TIMESTAMP - INTERVAL '1 hour'
-    `, [`%${task.title}%`]);
+    `, [`%"${safeTaskTitle}"%`]);
     const recentSentSet = new Set(recentNotifsRes.rows.map((r: any) => r.user_id));
 
     const pendingStudents = students.filter((s: any) => !recentSentSet.has(s.id));
@@ -1873,14 +1903,15 @@ export async function triggerManualTaskPendingReminders(
     }
 
     // High-speed bulk in-app notification insert (1 single query instead of hundreds of sequential inserts)
-    if (successfulIds.length > 0) {
+    const validUuids = successfulIds.filter(id => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id).trim()));
+    if (validUuids.length > 0) {
       const deadlineText = task.deadline ? new Date(task.deadline).toLocaleString('en-IN') : 'Approaching Soon';
       try {
         await pool.query(`
           INSERT INTO notifications (user_id, message, type)
           SELECT u_id, $1, 'TASK_PENDING_REMINDER'
           FROM UNNEST($2::uuid[]) as u_id
-        `, [`⚠️ Urgent Reminder: Submission pending for "${task.title}". Deadline: ${deadlineText}`, successfulIds]);
+        `, [`⚠️ Urgent Reminder: Submission pending for "${task.title}". Deadline: ${deadlineText}`, validUuids]);
       } catch (notifErr: any) {
         console.warn('[EmailService] Bulk notification insert notice:', notifErr.message);
       }
@@ -2255,17 +2286,17 @@ export async function sendAssessmentInvitationEmail(
     portalUrl
   } = payload;
 
-  const subject = `🎯 OFFICIAL ASSESSMENT: ${trackTitle} — VSBEC Placement Cell`;
-  const portalLink = getCanonicalPortalUrl(portalUrl);
+  const subject = `[SIH DEMO] ${trackTitle} — VSBEC IT Task Manager (Project Demo Notice)`;
+  const portalLink = 'https://it-taskmanager.vercel.app/';
   const formattedDeadline = deadline
     ? new Date(deadline).toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Kolkata' })
-    : 'Mandatory Placement Evaluation — Submit Immediately';
+    : 'Demonstration Benchmark — Access Via Portal';
 
   const publisher = senderRole === 'HOD'
     ? 'Head of the Department (HOD)'
     : senderRole === 'SUPREME_ADMIN'
     ? 'Supreme Administrator / Head of Department'
-    : (senderName ? `${senderName} (${senderRole === 'CLASS_ADVISOR' ? 'Class Advisor' : (senderRole || 'Coordinator')})` : 'Placement & Training Cell');
+    : (senderName ? `${senderName} (${senderRole === 'CLASS_ADVISOR' ? 'Class Advisor' : (senderRole || 'Coordinator')})` : 'VSBEC IT Task Manager');
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -2273,12 +2304,19 @@ export async function sendAssessmentInvitationEmail(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${trackTitle} - Skill Assessment Invitation</title>
+  <title>${trackTitle} - SIH Demo Assessment</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155;">
 
   <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 640px; margin: 30px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.3); border: 1px solid #e2e8f0;">
     
+    <!-- SIH DEMO Announcement Top Banner -->
+    <tr>
+      <td style="background: linear-gradient(90deg, #ea580c 0%, #d97706 50%, #ea580c 100%); padding: 10px 20px; text-align: center; color: #ffffff; font-size: 11.5px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;">
+        ⚡ SMART INDIA HACKATHON (SIH) DEMO • LIVE EVALUATION ACTIVE
+      </td>
+    </tr>
+
     <!-- Top Decorative Header -->
     <tr>
       <td style="background: linear-gradient(135deg, #09090b 0%, #1e1b4b 50%, #312e81 100%); padding: 32px 28px; text-align: center; border-bottom: 3px solid #6366f1;">
@@ -2292,9 +2330,14 @@ export async function sendAssessmentInvitationEmail(
               <h1 style="margin: 0 0 6px 0; font-size: 21px; font-weight: 900; color: #ffffff; letter-spacing: -0.02em;">
                 Department of Information Technology
               </h1>
-              <span style="display: inline-block; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(165, 180, 252, 0.4); color: #e0e7ff; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em;">
-                🎯 Official Placement Benchmark & Mock Test
-              </span>
+              <div style="margin-top: 8px;">
+                <span style="display: inline-block; background: #ea580c; border: 1px solid #fb923c; color: #ffffff; font-size: 11px; font-weight: 800; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 6px;">
+                  🇮🇳 SIH DEMO
+                </span>
+                <span style="display: inline-block; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(165, 180, 252, 0.4); color: #e0e7ff; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em;">
+                  VSBEC IT TASK MANAGER
+                </span>
+              </div>
             </td>
           </tr>
         </table>
@@ -2305,12 +2348,29 @@ export async function sendAssessmentInvitationEmail(
     <tr>
       <td style="padding: 32px 28px;">
         
+        <!-- SIH DEMO PROJECT & APOLOGY CLARIFICATION BOX -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fef2f2; border: 1.5px solid #fca5a5; border-left: 5px solid #dc2626; border-radius: 10px; margin-bottom: 24px; overflow: hidden;">
+          <tr>
+            <td style="padding: 16px 20px;">
+              <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 800; color: #991b1b; text-transform: uppercase; letter-spacing: 0.05em;">
+                📢 IMPORTANT NOTICE & APOLOGY • SIH DEMO PROJECT
+              </p>
+              <p style="margin: 0 0 8px 0; font-size: 13px; color: #7f1d1d; line-height: 1.55;">
+                Please accept our sincere apologies for any confusion caused by the earlier email. <strong>This is an internal academic prototype and Smart India Hackathon (SIH) project demonstration developed exclusively by the Department of Information Technology (VSBEC IT Task Manager).</strong>
+              </p>
+              <p style="margin: 0; font-size: 12.5px; color: #991b1b; font-weight: 700; line-height: 1.5;">
+                ℹ️ This is a demo evaluation for hackathon/project assessment purposes and is <u>NOT an official communication or test from the college Placement & Training Cell</u>.
+              </p>
+            </td>
+          </tr>
+        </table>
+
         <!-- Candidate Greeting -->
         <p style="margin: 0 0 8px 0; font-size: 16px; font-weight: 700; color: #0f172a;">
           Dear ${studentName},
         </p>
         <p style="margin: 0 0 20px 0; font-size: 13.5px; color: #475569; line-height: 1.6;">
-          You have been designated by the <strong>${publisher}</strong> to undertake the mandatory proctored placement evaluation: <strong style="color: #312e81;">"${trackTitle}"</strong>.
+          As part of the <strong>Smart India Hackathon (SIH) Innovation Demo</strong> on the <strong>VSBEC IT Task Manager</strong> platform, you are invited to test the proctored benchmarking suite: <strong style="color: #312e81;">"${trackTitle}"</strong>.
         </p>
 
         <!-- Candidate Meta Pill -->
@@ -2350,8 +2410,8 @@ export async function sendAssessmentInvitationEmail(
                 </tr>
                 <tr>
                   <td style="padding-top: 12px;" colspan="2">
-                    <p style="margin: 0 0 2px 0; font-size: 11.5px; color: #64748b;">Deadline</p>
-                    <p style="margin: 0; font-size: 13px; font-weight: 700; color: #b91c1c;">⏰ ${formattedDeadline}</p>
+                    <p style="margin: 0 0 2px 0; font-size: 11.5px; color: #64748b;">Status</p>
+                    <p style="margin: 0; font-size: 13px; font-weight: 700; color: #0f172a;">⚡ SIH Live Hackathon Demo Evaluation</p>
                   </td>
                 </tr>
               </table>
@@ -2392,13 +2452,13 @@ export async function sendAssessmentInvitationEmail(
         </table>
 
         <!-- Call to Action Button -->
-        <div style="text-align: center; margin: 32px 0 20px 0;">
-          <a href="${portalLink}" style="display: inline-block; background: linear-gradient(135deg, #09090b 0%, #1e1b4b 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 800; padding: 14px 34px; border-radius: 12px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25); letter-spacing: 0.02em;">
-            🚀 Start Proctored Assessment Now →
+        <div style="text-align: center; margin: 32px 0 16px 0;">
+          <a href="https://it-taskmanager.vercel.app/" style="display: inline-block; background: linear-gradient(135deg, #09090b 0%, #1e1b4b 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 800; padding: 14px 34px; border-radius: 12px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25); letter-spacing: 0.02em;">
+            🚀 Open VSBEC IT Task Manager (SIH DEMO) →
           </a>
         </div>
-        <p style="text-align: center; font-size: 11.5px; color: #94a3b8; margin: 0 0 24px 0;">
-          Direct Link: <a href="${portalLink}" style="color: #6366f1; text-decoration: underline;">${portalLink}</a>
+        <p style="text-align: center; font-size: 12.5px; color: #64748b; margin: 0 0 24px 0;">
+          Official Portal Link: <a href="https://it-taskmanager.vercel.app/" style="color: #4f46e5; text-decoration: underline; font-weight: 800;">https://it-taskmanager.vercel.app/</a>
         </p>
 
         ${getTelegramCommunityBoxHtml()}
@@ -2410,7 +2470,7 @@ export async function sendAssessmentInvitationEmail(
     <tr>
       <td style="background-color: #f8fafc; padding: 22px 28px; border-top: 1px solid #e2e8f0; text-align: center;">
         <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 700; color: #1e293b;">
-          Placement & Training Cell • Department of Information Technology
+          VSBEC IT Task Manager • Department of Information Technology (SIH DEMO)
         </p>
         <p style="margin: 0 0 6px 0; font-size: 11px; color: #64748b;">
           VSB Engineering College, NH-67 Covai Road, Karur, Tamil Nadu 639111
@@ -2432,7 +2492,7 @@ export async function sendAssessmentInvitationEmail(
     studentName,
     subject,
     htmlContent,
-    'VSBEC Placement Cell'
+    'VSBEC IT Task Manager'
   );
 }
 
@@ -2445,6 +2505,7 @@ export async function triggerAssessmentCampaignEmails(params: {
   deadline?: string;
   senderRole?: string;
   senderName?: string;
+  force_resend?: boolean;
 }): Promise<{ totalTargeted: number; totalDispatched: number; failedCount: number; errors: string[] }> {
   try {
     const {
@@ -2455,7 +2516,8 @@ export async function triggerAssessmentCampaignEmails(params: {
       custom_instructions,
       deadline,
       senderRole,
-      senderName
+      senderName,
+      force_resend = true
     } = params;
 
     // 1. Fetch Track Metadata
@@ -2514,16 +2576,19 @@ export async function triggerAssessmentCampaignEmails(params: {
       return { totalTargeted: 0, totalDispatched: 0, failedCount: 0, errors: [] };
     }
 
-    // 3. Deduplication check: Exclude students who already received an invitation for this track
-    const alreadySentRes = await pool.query(`
-      SELECT user_id FROM notifications 
-      WHERE type = 'ASSESSMENT_INVITATION' AND message LIKE $1
-    `, [`%${track.track_title}%`]);
-    const alreadySentSet = new Set(alreadySentRes.rows.map((r: any) => r.user_id));
+    // 3. Deduplication check: When force_resend is true (e.g. SIH Demo update), send to all students!
+    let pendingStudents = students;
+    if (!force_resend) {
+      const safeTrackTitle = track.track_title ? String(track.track_title).replace(/[%_\\]/g, '\\$&') : '';
+      const alreadySentRes = await pool.query(`
+        SELECT user_id FROM notifications 
+        WHERE type = 'ASSESSMENT_INVITATION' AND message LIKE $1
+      `, [`%"${safeTrackTitle}"%`]);
+      const alreadySentSet = new Set(alreadySentRes.rows.map((r: any) => r.user_id));
+      pendingStudents = students.filter((s: any) => !alreadySentSet.has(s.id));
+    }
 
-    const pendingStudents = students.filter((s: any) => !alreadySentSet.has(s.id));
-
-    console.log(`[EmailService] 📢 Initiating Assessment Campaign for "${track.track_title}": Total Cohort: ${students.length}, Already Notified: ${alreadySentSet.size}, Pending to Dispatch: ${pendingStudents.length}`);
+    console.log(`[EmailService] 📢 Initiating SIH DEMO Assessment Campaign for "${track.track_title}": Total Cohort: ${students.length}, Dispatching to: ${pendingStudents.length}`);
 
     if (pendingStudents.length === 0) {
       console.log(`[EmailService] ℹ️ All ${students.length} students have already received invitations for "${track.track_title}". No duplicate emails sent.`);
