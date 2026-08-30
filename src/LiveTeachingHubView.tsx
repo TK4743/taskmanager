@@ -1,18 +1,13 @@
 import React from 'react';
 import {
   Mic,
-  Code,
   ExternalLink,
   Layers,
   ArrowRight,
   Radio,
   Award,
   Play,
-  Bot,
-  Sparkles,
-  CheckCircle2,
-  PhoneCall,
-  ShieldCheck
+  Bot
 } from 'lucide-react';
 
 interface LiveTeachingHubViewProps {
@@ -23,7 +18,6 @@ interface LiveTeachingHubViewProps {
 
 export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
   const GOAT_URL = 'https://goatcode-editor.onrender.com/';
-  const GITHUB_URL = 'https://github.com/Tharun4743/GOAT-CE';
 
   return (
     <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4]">
@@ -39,9 +33,9 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
               <h1 className="text-2xl md:text-3xl font-extrabold text-zinc-900 tracking-tight">
                 Live Teaching Hub
               </h1>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-gradient-to-r from-indigo-500/15 via-purple-500/15 to-indigo-500/15 text-indigo-900 border border-indigo-300 shadow-2xs">
-                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-                SIH 2026 DEMO INNOVATION
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 text-amber-900 border border-amber-300 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                SIH DEMO PURPOSE ONLY
               </span>
             </div>
             <p className="text-xs md:text-sm text-zinc-500 font-medium mt-1">
@@ -54,19 +48,10 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
               href={GOAT_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs md:text-sm font-bold rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center gap-2"
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs md:text-sm font-bold rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center gap-2 cursor-pointer"
             >
               <span>Open GOAT CE</span>
               <ExternalLink size={15} />
-            </a>
-            <a
-              href={GITHUB_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2.5 bg-white hover:bg-zinc-50 text-zinc-700 text-xs md:text-sm font-bold rounded-xl transition-all border border-zinc-300 shadow-2xs flex items-center gap-2"
-            >
-              <Code size={15} />
-              <span>GitHub Repo</span>
             </a>
           </div>
         </div>
@@ -81,7 +66,7 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
           {/* Badges */}
           <div className="relative z-10 flex items-center gap-2.5 flex-wrap">
             <span className="px-3 py-1 bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-2xs">
-              <Award size={14} className="text-amber-600" /> SIH 2026 • Problem Statement SIH26044
+              <Award size={14} className="text-amber-600" /> SIH Demo • Live Demonstration
             </span>
             <span className="px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-2xs">
               <Radio size={14} className="text-emerald-600 animate-pulse" /> 1-to-1 WebRTC Direct Voice Calling
@@ -155,25 +140,15 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
           </div>
 
           {/* Action Launch Bar */}
-          <div className="relative z-10 pt-4 flex flex-col sm:flex-row items-center gap-3">
+          <div className="relative z-10 pt-4 flex items-center">
             <a
               href={GOAT_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto flex-1 py-4 px-8 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-sm md:text-base rounded-2xl shadow-xl shadow-indigo-600/30 transition-all flex items-center justify-center gap-2.5 group cursor-pointer"
+              className="w-full py-4 px-8 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-sm md:text-base rounded-2xl shadow-xl shadow-indigo-600/30 transition-all flex items-center justify-center gap-2.5 group cursor-pointer"
             >
               <span>Launch GOAT Code Editor Live Demo</span>
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-            </a>
-
-            <a
-              href={GITHUB_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full sm:w-auto py-4 px-6 bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border border-zinc-300 font-bold text-sm rounded-2xl transition-all flex items-center justify-center gap-2 shadow-2xs"
-            >
-              <Code size={18} />
-              <span>GitHub Repository</span>
             </a>
           </div>
 

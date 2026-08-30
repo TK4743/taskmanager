@@ -9995,7 +9995,7 @@ export default function App() {
           <SidebarItem
             icon={<Radio size={20} className="text-emerald-500 animate-pulse" />}
             label="Live Teaching Hub"
-            badge="SIH 2026"
+            badge="SIH Demo"
             active={view === 'live-teaching-hub'}
             onClick={() => { setView('live-teaching-hub'); setIsMobileSidebarOpen(false); }}
           />
