@@ -2578,6 +2578,7 @@ export async function triggerAssessmentCampaignEmails(params: {
 
     // 3. Deduplication check: When force_resend is true (e.g. SIH Demo update), send to all students!
     let pendingStudents = students;
+    let alreadyNotifiedCount = 0;
     if (!force_resend) {
       const safeTrackTitle = track.track_title ? String(track.track_title).replace(/[%_\\]/g, '\\$&') : '';
       const alreadySentRes = await pool.query(`
@@ -2585,6 +2586,7 @@ export async function triggerAssessmentCampaignEmails(params: {
         WHERE type = 'ASSESSMENT_INVITATION' AND message LIKE $1
       `, [`%"${safeTrackTitle}"%`]);
       const alreadySentSet = new Set(alreadySentRes.rows.map((r: any) => r.user_id));
+      alreadyNotifiedCount = alreadySentSet.size;
       pendingStudents = students.filter((s: any) => !alreadySentSet.has(s.id));
     }
 
@@ -2648,20 +2650,21 @@ export async function triggerAssessmentCampaignEmails(params: {
     }
 
     // High-speed bulk in-app notification insert
-    if (successfulIds.length > 0) {
+    const validUuids = successfulIds.filter(id => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id).trim()));
+    if (validUuids.length > 0) {
       try {
         await pool.query(`
           INSERT INTO notifications (user_id, message, type)
           SELECT u_id, $1, 'ASSESSMENT_INVITATION'
           FROM UNNEST($2::uuid[]) as u_id
-        `, [`🎯 New Placement Assessment Assigned: "${track.track_title}". Cutoff: ${track.cutoff_percentage}%.`, successfulIds]);
+        `, [`🎯 New Placement Assessment Assigned: "${track.track_title}". Cutoff: ${track.cutoff_percentage}%.`, validUuids]);
       } catch (e: any) {
         console.warn('[EmailService] Bulk assessment notification insert notice:', e.message);
       }
     }
 
-    const totalSuccessful = sentCount + alreadySentSet.size;
-    console.log(`[EmailService] ✅ Completed Assessment Campaign: ${sentCount} new sent + ${alreadySentSet.size} previously sent = ${totalSuccessful}/${students.length} total notified.`);
+    const totalSuccessful = sentCount + alreadyNotifiedCount;
+    console.log(`[EmailService] ✅ Completed Assessment Campaign: ${sentCount} new sent + ${alreadyNotifiedCount} previously sent = ${totalSuccessful}/${students.length} total notified.`);
     return {
       totalTargeted: students.length,
       totalDispatched: totalSuccessful,
