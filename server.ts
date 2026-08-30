@@ -8618,6 +8618,58 @@ async function startServer() {
       highestScore = Math.round(Math.max(...result.rows.map(r => Number(r.score_percentage || 0))) * 100) / 100;
     }
 
+    // ── Reconstruct incomplete answers_summary from question bank ────────────
+    // For historical records where answers_summary has fewer items than total_questions,
+    // fetch all questions for that track and fill in the missing entries.
+    const enrichedAssessments = await Promise.all(result.rows.map(async (row) => {
+      const storedSummary: any[] = Array.isArray(row.answers_summary) ? row.answers_summary : [];
+      const expectedTotal = Number(row.total_questions) || 0;
+
+      if (storedSummary.length >= expectedTotal && expectedTotal > 0) {
+        return row; // Already complete, no reconstruction needed
+      }
+
+      // Fetch all questions for this track type
+      try {
+        const qRes = await pool.query(
+          `SELECT * FROM assessment_questions WHERE is_active = TRUE AND track_type = $1 ORDER BY created_at ASC;`,
+          [row.track_type || 'GENERAL_APTITUDE']
+        );
+        const allQuestions = qRes.rows.length > 0 ? qRes.rows : 
+          (await pool.query(`SELECT * FROM assessment_questions WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 15;`)).rows;
+
+        // Build a map of existing summary entries by question_id
+        const existingByQId: Record<string, any> = {};
+        for (const s of storedSummary) {
+          if (s.question_id) existingByQId[s.question_id] = s;
+        }
+
+        // Reconstruct the full summary
+        const reconstructed = allQuestions.slice(0, expectedTotal || allQuestions.length).map((q: any) => {
+          if (existingByQId[q.id]) {
+            return existingByQId[q.id]; // Keep existing entry
+          }
+          // No data for this question - show it without answer info
+          return {
+            question_id: q.id,
+            question_text: q.question_text,
+            options: q.options,
+            selected_option: null,
+            correct_option: q.correct_option,
+            is_correct: false,
+            category: q.category,
+            skill_tag: q.skill_tag,
+            explanation: q.explanation,
+            _reconstructed: true // flag so UI can show "Data unavailable"
+          };
+        });
+
+        return { ...row, answers_summary: reconstructed };
+      } catch (_) {
+        return row; // If reconstruction fails, return original
+      }
+    }));
+
     res.json({
       success: true,
       metrics: {
@@ -8627,9 +8679,10 @@ async function startServer() {
         passed_count: passedCount,
         pass_rate: totalAttempts > 0 ? Math.round((passedCount / totalAttempts) * 100) : 0
       },
-      assessments: result.rows
+      assessments: enrichedAssessments
     });
   }));
+
 
   // 7. Personalized AI Remedial Recommendations Engine (Curated Videos, Formulas, Quizzes)
   app.get('/api/assessment/remedial-plan', asyncHandler(async (req: any, res: any) => {

@@ -2686,43 +2686,94 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                       <div className="flex items-center justify-between">
                         <h4 className="text-xs font-extrabold uppercase tracking-wider text-zinc-700">Detailed Answer Review</h4>
                         <span className="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-full">
-                          {viewingScorecard.answers_summary.length} Questions
+                          {viewingScorecard.answers_summary.length} of {viewingScorecard.total_questions} Questions
                         </span>
                       </div>
                       <div className="space-y-2.5">
-                        {viewingScorecard.answers_summary.map((item: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
-                              item.is_correct
-                                ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
-                                : 'bg-rose-50/60 border-rose-200 text-rose-950'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-2 font-bold">
-                              <span>Q{idx + 1}. {item.question_text}</span>
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
-                                item.is_correct ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                              }`}>
-                                {item.is_correct ? 'Correct' : 'Incorrect'}
-                              </span>
-                            </div>
-                            <div className="text-[11px] space-y-0.5 font-medium">
-                              <div>Your Answer: <span className="font-bold">{item.selected_answer || 'Unanswered'}</span></div>
-                              {!item.is_correct && (
-                                <div className="text-emerald-800 font-bold">Correct Answer: {item.correct_answer}</div>
+                        {viewingScorecard.answers_summary.map((item: any, idx: number) => {
+                          const opts: string[] = Array.isArray(item.options) ? item.options : [];
+                          const selIdx = item.selected_option !== null && item.selected_option !== undefined ? Number(item.selected_option) : -1;
+                          const corrIdx = item.correct_option !== null && item.correct_option !== undefined ? Number(item.correct_option) : -1;
+                          const selectedText = selIdx >= 0 && opts[selIdx] ? `${String.fromCharCode(65 + selIdx)}. ${opts[selIdx]}` : (item.selected_answer || null);
+                          const correctText = corrIdx >= 0 && opts[corrIdx] ? `${String.fromCharCode(65 + corrIdx)}. ${opts[corrIdx]}` : (item.correct_answer || null);
+                          return (
+                            <div
+                              key={idx}
+                              className={`p-3.5 rounded-xl border text-xs space-y-2 ${
+                                item._reconstructed
+                                  ? 'bg-zinc-50/80 border-zinc-200 text-zinc-700'
+                                  : item.is_correct
+                                  ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+                                  : 'bg-rose-50/60 border-rose-200 text-rose-950'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2 font-bold">
+                                <span>Q{idx + 1}. {item.question_text}</span>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
+                                  item._reconstructed
+                                    ? 'bg-zinc-200 text-zinc-600'
+                                    : item.is_correct
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-rose-100 text-rose-800'
+                                }`}>
+                                  {item._reconstructed ? 'No Data' : item.is_correct ? 'Correct ✓' : 'Incorrect ✗'}
+                                </span>
+                              </div>
+
+                              {/* Show options if available */}
+                              {opts.length > 0 && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
+                                  {opts.map((opt, oIdx) => {
+                                    const isCorrectOpt = oIdx === corrIdx;
+                                    const isSelectedOpt = oIdx === selIdx;
+                                    return (
+                                      <div key={oIdx} className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-medium ${
+                                        isCorrectOpt && isSelectedOpt
+                                          ? 'bg-emerald-100 border-emerald-400 text-emerald-900 font-bold'
+                                          : isCorrectOpt
+                                          ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-bold'
+                                          : isSelectedOpt
+                                          ? 'bg-rose-50 border-rose-300 text-rose-900 font-bold'
+                                          : 'bg-white border-zinc-200 text-zinc-600'
+                                      }`}>
+                                        <span className="font-bold">{String.fromCharCode(65 + oIdx)}.</span> {opt}
+                                        {isCorrectOpt && <span className="ml-1 text-emerald-700 font-extrabold">✓</span>}
+                                        {isSelectedOpt && !isCorrectOpt && <span className="ml-1 text-rose-700 font-extrabold">✗</span>}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {/* Summary text */}
+                              {!item._reconstructed && (
+                                <div className="text-[11px] space-y-0.5 font-medium border-t border-zinc-200/50 pt-1.5">
+                                  {selectedText
+                                    ? <div>Your Answer: <span className="font-bold">{selectedText}</span></div>
+                                    : <div className="text-zinc-400 italic">Not answered</div>
+                                  }
+                                  {!item.is_correct && correctText && (
+                                    <div className="text-emerald-800 font-bold">Correct Answer: {correctText}</div>
+                                  )}
+                                </div>
+                              )}
+                              {item._reconstructed && (
+                                <div className="text-[11px] text-zinc-400 italic">
+                                  Your answer for this question was not saved in this session.
+                                </div>
                               )}
                               {item.explanation && (
-                                <div className="text-zinc-500 italic pt-1 border-t border-zinc-200/50 mt-1">
-                                  💡 {item.explanation}
+                                <div className="text-zinc-500 italic border-t border-zinc-200/50 pt-1.5 text-[11px]">
+                                  💡 <span className="font-semibold text-zinc-700">Explanation:</span> {item.explanation}
                                 </div>
                               )}
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
+
 
 
                   <div className="pt-4 border-t border-zinc-100 flex justify-end">
