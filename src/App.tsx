@@ -1403,8 +1403,8 @@ const ToastContainer = ({ toasts, removeToast }: { toasts: ToastMessage[], remov
   );
 };
 
-const Skeleton = ({ className }: { className?: string }) => (
-  <div className={cn("animate-pulse bg-zinc-200 rounded-lg", className)} />
+const Skeleton = ({ className, shimmer = true }: { className?: string; shimmer?: boolean }) => (
+  <div className={cn(shimmer ? "skeleton-shimmer" : "animate-pulse bg-zinc-200", "rounded-xl", className)} />
 );
 
 export const getStudentRegisterNumber = (userObj: any, profileObj?: any): string => {
@@ -8239,56 +8239,114 @@ export default function App() {
   if (isLoading) {
     return (
       <div className="flex h-screen bg-[#F5F5F4] font-sans text-zinc-900 overflow-hidden">
-        {/* Sidebar Skeleton */}
-        <div className="w-64 bg-white border-r border-zinc-200 flex flex-col shrink-0">
+        {/* Sidebar Skeleton (hidden on mobile, matches desktop sidebar) */}
+        <div className="hidden lg:flex w-64 bg-white border-r border-zinc-200 flex-col shrink-0">
           <div className="p-4 border-b border-zinc-100 flex items-center gap-3 shrink-0 h-20">
-            <Skeleton className="w-10 h-10 rounded-full" />
-            <Skeleton className="h-6 w-24 rounded" />
+            <div className="w-10 h-10 rounded-full border border-zinc-200 p-1 flex items-center justify-center bg-white shadow-2xs">
+              <img src="/logo.png" alt="Loading..." className="w-full h-full object-contain" />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-2.5 w-16" />
+            </div>
           </div>
-          <div className="flex-1 p-4 space-y-3 overflow-y-auto">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
+          <div className="flex-1 p-3 space-y-2 overflow-y-auto">
+            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-zinc-50 border border-zinc-100">
+              <Skeleton className="w-5 h-5 rounded-lg shrink-0" />
+              <Skeleton className="h-4 flex-1" />
+            </div>
+            {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <div key={i} className="flex items-center gap-3 p-2.5">
+                <Skeleton className="w-5 h-5 rounded-lg shrink-0" />
+                <Skeleton className="h-3.5 flex-1" />
+              </div>
+            ))}
           </div>
           {/* User bottom panel skeleton */}
           <div className="p-4 border-t border-zinc-100 shrink-0 bg-white space-y-3">
-            <div className="px-4 py-2 bg-zinc-50 rounded-xl space-y-2">
-              <Skeleton className="h-3 w-16" />
+            <div className="p-3 bg-zinc-50 rounded-2xl border border-zinc-100 space-y-2">
+              <Skeleton className="h-2.5 w-16" />
               <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-40" />
+              <Skeleton className="h-2.5 w-24" />
             </div>
             <Skeleton className="h-10 w-full rounded-xl" />
           </div>
         </div>
 
         {/* Content Pane Skeleton */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {/* Top Navbar Skeleton */}
-          <div className="h-20 bg-white border-b border-zinc-200 flex items-center justify-between px-8 shrink-0">
-            <Skeleton className="h-8 w-48" />
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-10 w-10 rounded-full animate-pulse" />
-              <Skeleton className="h-10 w-10 rounded-full animate-pulse" />
-              <Skeleton className="h-10 w-24 rounded-xl animate-pulse" />
+          <div className="h-18 md:h-20 bg-white border-b border-zinc-200 flex items-center justify-between px-4 md:px-8 shrink-0">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-7 w-36 md:w-56" />
+              <Skeleton className="hidden sm:block h-5 w-28 rounded-full" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Skeleton className="hidden md:block h-10 w-44 rounded-xl" />
+              <Skeleton className="h-10 w-10 rounded-xl" />
+              <Skeleton className="h-10 w-28 rounded-xl" />
             </div>
           </div>
 
           {/* Scrollable Content Workspace Skeleton */}
-          <div className="flex-1 p-8 overflow-y-auto space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-              <Skeleton className="h-32 w-full rounded-2xl bg-white border border-zinc-200 shadow-sm" />
-              <Skeleton className="h-32 w-full rounded-2xl bg-white border border-zinc-200 shadow-sm" />
-              <Skeleton className="h-32 w-full rounded-2xl bg-white border border-zinc-200 shadow-sm" />
-              <Skeleton className="h-32 w-full rounded-2xl bg-white border border-zinc-200 shadow-sm" />
+          <div className="flex-1 p-4 md:p-8 overflow-y-auto space-y-6">
+            {/* 4 Metric Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="p-5 bg-white border border-zinc-200 rounded-2xl shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+                  </div>
+                  <Skeleton className="h-7 w-16" />
+                  <Skeleton className="h-2 w-full rounded-full" />
+                </div>
+              ))}
             </div>
+
+            {/* Split Content Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Skeleton className="h-[450px] lg:col-span-2 rounded-2xl bg-white border border-zinc-200 shadow-sm" />
-              <Skeleton className="h-[450px] rounded-2xl bg-white border border-zinc-200 shadow-sm" />
+              {/* Left Main Card (Tasks/Progress) */}
+              <div className="lg:col-span-2 p-6 bg-white border border-zinc-200 rounded-2xl shadow-2xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-5 w-36" />
+                    <Skeleton className="h-3 w-48" />
+                  </div>
+                  <Skeleton className="h-8 w-24 rounded-xl" />
+                </div>
+                <div className="space-y-3 pt-1">
+                  {[1, 2, 3, 4, 5].map((row) => (
+                    <div key={row} className="p-3.5 bg-zinc-50/70 border border-zinc-100 rounded-xl flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <Skeleton className="h-3.5 w-3/4" />
+                          <Skeleton className="h-2.5 w-1/2" />
+                        </div>
+                      </div>
+                      <Skeleton className="h-6 w-20 rounded-full shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right Sidebar Card */}
+              <div className="p-6 bg-white border border-zinc-200 rounded-2xl shadow-2xs space-y-4">
+                <div className="pb-3 border-b border-zinc-100 space-y-1.5">
+                  <Skeleton className="h-5 w-28" />
+                  <Skeleton className="h-3 w-36" />
+                </div>
+                <div className="space-y-4 pt-1">
+                  <Skeleton className="h-28 w-full rounded-2xl" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-4/5" />
+                    <Skeleton className="h-3 w-2/3" />
+                  </div>
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                </div>
+              </div>
             </div>
           </div>
         </div>

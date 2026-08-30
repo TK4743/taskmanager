@@ -52,6 +52,27 @@
   background: #d4d4d8;
 }
 
+/* Shimmer Skeleton Animation */
+@keyframes shimmerWave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f4f4f5 0%,
+    #e4e4e7 35%,
+    #f4f4f5 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmerWave 1.6s ease-in-out infinite;
+}
+
 /* Global layout fixes */
 .truncate-safe {
   min-width: 0;
