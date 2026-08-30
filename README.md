@@ -10,6 +10,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-4.x-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Vercel Deployment](https://img.shields.io/badge/Deployed_on-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://it-taskmanager.vercel.app/)
 [![Web Push](https://img.shields.io/badge/Web_Push-PWA-FF6B6B?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
 [![Telegram Bot](https://img.shields.io/badge/Telegram_Bot-Automated-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://core.telegram.org/bots/api)
 [![Sentry](https://img.shields.io/badge/Sentry-Observability-362D59?style=for-the-badge&logo=sentry&logoColor=white)](https://sentry.io/)
@@ -35,6 +36,28 @@
 6. **Automated Cloud Sync & Database Snapshots**: 11:55 PM IST daily LeetCode CSV auto-export pushed to GitHub, alongside daily 31-table JSON snapshot backups with 30-day rolling retention.
 7. **Automated Email Dispatch & Security OTP Engine**: Multi-node load-balanced email delivery with instant failover, 4 institutional notification streams, and self-service 1-click easy copy OTP password reset.
 8. **Observability & Smart India Hackathon (SIH) Suite**: Sentry production error telemetry, rate-limiting security, and a dedicated SIH preparation portal for student innovation teams.
+
+---
+
+## ⚡ Vercel Production Deployment & Architecture
+
+> **Repository Designation**: This repository (`Tharun4743/taskmanager`) is specifically configured and optimized for live continuous deployment on the **[Vercel](https://vercel.com/)** platform.
+
+- **🌐 Live Production URL**: [https://it-taskmanager.vercel.app/](https://it-taskmanager.vercel.app/)
+- **📁 Dedicated Vercel Reference Folder**: [`vercel/`](./vercel/README.md)
+- **📄 Root Vercel Specification**: [`VERCEL.md`](./VERCEL.md)
+- **⚙️ Core Configuration**: [`vercel.json`](./vercel.json)
+
+### Key Vercel Specifications:
+| Parameter | Specification | Details |
+| :--- | :--- | :--- |
+| **Framework Preset** | Vite / Node.js | Fast modern frontend bundling with TypeScript |
+| **Build Command** | `npm run build` | Compiles optimized single-page application into `dist/` |
+| **Output Directory** | `dist` | Production client static distribution folder |
+| **Edge Region** | `bom1` (Mumbai, India) | Ultra-low latency edge routing for institutional users |
+| **Serverless Entrypoint** | `api/index.ts` | Express.js bridge with 1536 MB RAM & 30s max execution duration |
+| **Asset Caching** | Immutable Caching | `public, max-age=31536000, immutable` on `/assets/(.*)` |
+| **SPA Rewrites** | HTML5 PushState | Clean fallback to `/index.html` for client routing |
 
 ---
 
