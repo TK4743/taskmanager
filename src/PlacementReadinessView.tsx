@@ -314,7 +314,10 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                   {/* Pillar 1: Aptitude */}
                   <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Pillar 1 (35%)</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Pillar 1 (35%)</span>
+                        <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">SIH Demo</span>
+                      </div>
                       <Sparkles size={16} className="text-indigo-600" />
                     </div>
                     <div>

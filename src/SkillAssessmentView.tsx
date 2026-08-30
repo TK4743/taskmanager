@@ -982,13 +982,17 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
         {/* ── Header Bar ────────────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
           <div>
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0">
                 <Sparkles size={20} />
               </div>
               <h1 className="text-2xl font-extrabold text-zinc-900 tracking-tight">
                 Placement Skill Benchmark & Mock Tracks
               </h1>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 text-amber-900 border border-amber-300 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                SIH DEMO PURPOSE ONLY
+              </span>
             </div>
             <p className="text-xs text-zinc-500 font-semibold mt-1">
               Standardized Technical & Company Mock Assessments • AI Remedial Recommendations • Telegram Alerting
@@ -1118,6 +1122,10 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
             </div>
           ) : (
             <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-3 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-bold border border-amber-300 flex items-center gap-1.5 shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                SIH Demo Mode
+              </span>
               <span className="px-3 py-1 bg-red-50 text-red-700 rounded-full text-xs font-bold border border-red-200 flex items-center gap-1.5 animate-pulse">
                 <ShieldAlert size={14} /> Lockdown Active
               </span>
@@ -1131,6 +1139,44 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
           )}
           </div>
         </div>
+
+        {/* ── Notice for Students: SIH Demo Purpose Only ── */}
+        {!isHOD && !isAdvisor && !isLockdownActive && (
+          <div className="relative overflow-hidden bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-2 border-amber-300/90 rounded-2xl p-4 sm:p-5 shadow-xs">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-sm shrink-0 mt-0.5">
+                <AlertTriangle size={20} className="text-amber-100" />
+              </div>
+              <div className="space-y-1.5 flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest bg-amber-200/90 text-amber-950 px-2.5 py-0.5 rounded-full border border-amber-300 shadow-2xs">
+                    Official Student Notice
+                  </span>
+                  <span className="text-xs sm:text-sm font-extrabold text-amber-950">
+                    🎯 Assessment System Configured for SIH Demo Purposes Only
+                  </span>
+                </div>
+                <p className="text-xs text-amber-900 leading-relaxed font-medium">
+                  This skill assessment portal, proctored mock tracks, scoring rubrics, and automated AI remedials inside this project are deployed for <strong>Smart India Hackathon (SIH) demonstration and evaluation purposes only</strong>.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-1">
+                  <div className="bg-white/80 border border-amber-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 font-medium shadow-2xs">
+                    <span className="font-bold text-amber-700">1.</span> Select Any Mock Track
+                  </div>
+                  <div className="bg-white/80 border border-amber-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 font-medium shadow-2xs">
+                    <span className="font-bold text-amber-700">2.</span> Webcam Identity Check
+                  </div>
+                  <div className="bg-white/80 border border-amber-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 font-medium shadow-2xs">
+                    <span className="font-bold text-amber-700">3.</span> Fullscreen Lockdown
+                  </div>
+                  <div className="bg-white/80 border border-amber-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 font-medium shadow-2xs">
+                    <span className="font-bold text-amber-700">4.</span> Telegram Scorecard
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Active Assessment Announcements Banner ── */}
         {assignments.length > 0 && !isLockdownActive && (
@@ -1272,6 +1318,9 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                   <ShieldAlert size={15} /> Strict Institutional Integrity Protocol:
                 </div>
                 <ul className="list-disc list-inside space-y-1 text-[11px] text-amber-800/90 leading-relaxed font-medium">
+                  <li className="text-amber-950 font-bold">
+                    <strong>SIH Demo Purpose:</strong> This assessment session is conducted for Smart India Hackathon (SIH) demonstration purposes only within this project.
+                  </li>
                   <li><strong>Target Benchmark:</strong> {selectedTrackTitle} (Cutoff: {selectedTrackCutoff}%).</li>
                   <li><strong>Full-Screen Lockdown:</strong> Leaving full-screen logs an integrity incident.</li>
                   <li><strong>Telegram Alert:</strong> Scorecard will be instantly dispatched to your Telegram account upon submission.</li>
@@ -1374,18 +1423,26 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
           <div className="space-y-6">
             <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
-                  Campus Placement Suites
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                    Campus Placement Suites
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300">
+                    SIH Demo Sandbox
+                  </span>
+                </div>
                 <h3 className="text-xl font-bold text-zinc-900 mt-2">
                   Company-Specific & Technical Mock Tracks
                 </h3>
                 <p className="text-xs text-zinc-500 mt-1">
-                  Choose a specialized evaluation track patterned after top recruiters. Each track enforces strict proctoring and calculates separate eligibility scores.
+                  Choose a specialized evaluation track patterned after top recruiters. Each track enforces strict proctoring and calculates separate eligibility scores. (Live interactive simulation for SIH Demo).
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-amber-900 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-amber-600" /> SIH Demo Active
+                </span>
                 <span className="text-xs font-bold text-zinc-600 bg-zinc-100 px-3 py-1.5 rounded-xl border border-zinc-200 flex items-center gap-1.5">
                   <Send size={13} className="text-indigo-600" /> Telegram Alerts Active
                 </span>
@@ -1494,14 +1551,19 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
           <div className="space-y-6">
             <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
-                  Adaptive Learning Engine
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                    Adaptive Learning Engine
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300">
+                    SIH Demo Showcase
+                  </span>
+                </div>
                 <h3 className="text-xl font-bold text-zinc-900 mt-2">
                   Personalized AI Remedial Recommendations
                 </h3>
                 <p className="text-xs text-zinc-500 mt-1">
-                  Targeted learning modules, formula cheat sheets, and 5-question micro-quizzes generated from your identified skill gaps (&lt;60% accuracy).
+                  Targeted learning modules, formula cheat sheets, and 5-question micro-quizzes generated from your identified skill gaps (&lt;60% accuracy). Demonstrating automated student remediation for SIH evaluation.
                 </p>
               </div>
 
@@ -1710,6 +1772,10 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                       <p className="text-xs text-zinc-500 max-w-md">
                         Institutional placement benchmark score recorded in database. Cutoff for this track is {testResult.cutoff_percentage || selectedTrackCutoff}%.
                       </p>
+                      <div className="mt-2 text-[11px] font-semibold text-amber-900 bg-amber-50/90 border border-amber-300/80 rounded-xl p-2.5 flex items-center gap-2">
+                        <Sparkles size={14} className="text-amber-600 shrink-0" />
+                        <span><strong>SIH Demo Notice:</strong> This score, webcam identity verification, and evaluation breakdown were recorded for SIH Demo presentation purposes only.</span>
+                      </div>
                     </div>
                   </div>
 
@@ -1819,14 +1885,19 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                 </div>
 
                 <div className="space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
-                    Selected Mock Track
-                  </span>
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
+                      Selected Mock Track
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
+                      SIH Demo Purpose Only
+                    </span>
+                  </div>
                   <h2 className="text-2xl md:text-3xl font-extrabold text-zinc-900 tracking-tight">
                     {selectedTrackTitle}
                   </h2>
                   <p className="text-xs text-zinc-500 max-w-md mx-auto leading-relaxed">
-                    A standardized {totalQuestionCount}-question evaluation with strict webcam identity proctoring and full-screen enforcement. Cutoff score is {selectedTrackCutoff}%.
+                    A standardized {totalQuestionCount}-question evaluation with strict webcam identity proctoring and full-screen enforcement. Cutoff score is {selectedTrackCutoff}%. (Conducted for SIH Demo purpose only).
                   </p>
                 </div>
 
@@ -1902,6 +1973,11 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                   </div>
 
                   <div className="flex items-center gap-3">
+                    <span className="px-3 py-1.5 bg-amber-100 text-amber-900 rounded-xl text-xs font-extrabold border border-amber-300 flex items-center gap-1.5 shadow-2xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      <span>SIH Demo Session</span>
+                    </span>
+
                     <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-200 flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       <span className="hidden sm:inline">Camera Monitored</span>
@@ -1925,6 +2001,9 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                         </span>
                         <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[10px] font-semibold">
                           {selectedTrackTitle}
+                        </span>
+                        <span className="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded text-[10px] font-bold">
+                          SIH Demo
                         </span>
                       </div>
                       <span className="text-xs font-medium text-zinc-400">
@@ -2279,15 +2358,20 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
             {/* Header Banner */}
             <div className="bg-white border border-zinc-200 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full shadow-2xs">
-                  Official Academic Transcript • Pillar 1
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full shadow-2xs">
+                    Official Academic Transcript • Pillar 1
+                  </span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-amber-800 bg-amber-100 border border-amber-300 px-3 py-1 rounded-full shadow-2xs">
+                    SIH Demo Records
+                  </span>
+                </div>
                 <h3 className="text-2xl font-extrabold text-zinc-900 mt-2 flex items-center gap-2.5">
                   <Award className="text-amber-500" size={24} />
                   My Assessment Marks & Scorecards
                 </h3>
                 <p className="text-xs text-zinc-500 mt-1 max-w-xl leading-relaxed">
-                  Verified assessment records for campus placement benchmarks, institutional mock evaluation suites, and technical screening tracks.
+                  Verified assessment records for campus placement benchmarks, institutional mock evaluation suites, and technical screening tracks (Demonstration sandbox for SIH evaluation).
                 </p>
               </div>
 

@@ -9977,6 +9977,7 @@ export default function App() {
           <SidebarItem
             icon={<Sparkles size={20} />}
             label="Skill Assessment"
+            badge="SIH Demo"
             active={view === 'skill-assessment'}
             onClick={() => { setView('skill-assessment'); setIsMobileSidebarOpen(false); }}
           />
@@ -10705,6 +10706,8 @@ export default function App() {
                     if (view === 'analyzer') return 'Student Progress Analyzer';
                     if (view === 'verification') return 'Task Verification';
                     if (view === 'users') return 'User Management';
+                    if (view === 'skill-assessment') return 'Placement Skill Assessment (SIH Demo)';
+                    if (view === 'placement-readiness') return 'Placement Readiness Rating';
                     if (view === 'tasks') return 'Tasks';
                     return view.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                   })()}
@@ -14931,7 +14934,7 @@ export default function App() {
 
 // --- Helper Components ---
 
-function SidebarItem({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick: () => void }) {
+function SidebarItem({ icon, label, active, onClick, badge }: { icon: React.ReactNode; label: string; active?: boolean; onClick: () => void; badge?: string }) {
   return (
     <button
       onClick={onClick}
@@ -14944,7 +14947,15 @@ function SidebarItem({ icon, label, active, onClick }: { icon: React.ReactNode; 
     >
       <span className={cn("shrink-0", active ? "text-white" : "")}>{icon}</span>
       <span className="truncate whitespace-nowrap">{label}</span>
-      {active && <ChevronRight size={16} className="ml-auto opacity-50 shrink-0" />}
+      {badge && (
+        <span className={cn(
+          "ml-auto text-[9px] font-extrabold px-2 py-0.5 rounded-full shrink-0 tracking-wide uppercase",
+          active ? "bg-amber-400 text-black shadow-xs" : "bg-amber-100 text-amber-900 border border-amber-300"
+        )}>
+          {badge}
+        </span>
+      )}
+      {active && !badge && <ChevronRight size={16} className="ml-auto opacity-50 shrink-0" />}
     </button>
   );
 }
