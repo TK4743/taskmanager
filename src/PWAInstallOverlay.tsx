@@ -139,7 +139,7 @@ export function PWAInstallOverlay() {
           <img
             src="/logo.png"
             alt="VSBEC Logo"
-            className="w-18 h-18 rounded-full border-2 border-indigo-100 shadow-md object-contain bg-white relative z-10 p-0.5"
+            className="w-18 h-18 rounded-full border-2 border-indigo-500/20 shadow-md object-contain bg-black relative z-10 p-0.5"
           />
         </div>
 

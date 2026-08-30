@@ -35,14 +35,16 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
         {/* ── Page Header ────────────────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
           <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 shadow-xs">
-                <Radio size={22} className="animate-pulse" />
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0 shadow-2xs">
+                  <Radio size={22} className="animate-pulse" />
+                </div>
+                <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
+                  Live Teaching Hub
+                </h1>
               </div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-zinc-900 tracking-tight">
-                Live Teaching Hub
-              </h1>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 text-amber-900 border border-amber-300 shadow-2xs">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 text-amber-900 border border-amber-300 shadow-2xs shrink-0">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                 SIH DEMO PURPOSE ONLY
               </span>

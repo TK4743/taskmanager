@@ -35,6 +35,8 @@ import {
   Clock,
   ImageIcon,
   XCircle,
+  Check,
+  CheckCheck,
   CheckCircle2,
   ExternalLink,
   Camera,
@@ -4148,8 +4150,20 @@ export default function App() {
   const [supremeStats, setSupremeStats] = useState<any>(null);
   const [myClass, setMyClass] = useState<Class | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationDropdownRef = useRef<HTMLDivElement>(null);
   const knownNotificationIdsRef = useRef<Set<number>>(new Set());
   const initialNotifsLoadedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [reportFilters, setReportFilters] = useState<{ classIds: string[]; taskId: string; year: string; status: string }>({ classIds: [], taskId: '', year: '', status: 'ALL' });
@@ -5473,11 +5487,26 @@ export default function App() {
 
   const markNotificationsRead = async () => {
     try {
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       await fetch(`${API_URL}/api/notifications/read`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchNotifications();
+      addToast('All notifications marked as read', 'success');
+    } catch (e) {
+      addToast('Failed to mark notifications as read', 'error');
+    }
+  };
+
+  const markSingleNotificationRead = async (id: string | number) => {
+    try {
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+      await fetch(`${API_URL}/api/notifications/read`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ notification_id: id })
+      });
     } catch (e) { }
   };
 
@@ -10746,69 +10775,133 @@ export default function App() {
                   <CheckCircle2 size={12} /> Telegram Linked
                 </span>
               )}
-              <div className="relative group">
+              <div className="relative" ref={notificationDropdownRef}>
                 <button
-                  className="p-2.5 text-amber-500 hover:text-amber-600 bg-amber-50/80 hover:bg-amber-100/90 rounded-xl transition-all relative border border-amber-200/70 shadow-2xs group/bell"
-                  onClick={markNotificationsRead}
+                  className={cn(
+                    "p-2.5 rounded-xl transition-all relative border shadow-2xs group/bell cursor-pointer flex items-center justify-center",
+                    notifications.filter(n => !n.is_read).length > 0
+                      ? "text-amber-500 hover:text-amber-600 bg-amber-50/90 hover:bg-amber-100/90 border-amber-200/80 shadow-amber-500/10"
+                      : "text-zinc-500 hover:text-zinc-700 bg-white hover:bg-zinc-50 border-zinc-200"
+                  )}
+                  onClick={() => setShowNotifications(prev => !prev)}
                   title="Notifications"
                 >
-                  <Bell size={20} className="text-amber-500 group-hover/bell:scale-110 transition-transform" />
+                  <Bell size={20} className={cn("transition-transform group-hover/bell:scale-110", notifications.filter(n => !n.is_read).length > 0 ? "text-amber-500" : "text-zinc-500")} />
                   {notifications.filter(n => !n.is_read).length > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white animate-ping" />
-                  )}
-                  {notifications.filter(n => !n.is_read).length > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white" />
+                    <>
+                      <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white animate-ping" />
+                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-rose-500 text-[10px] font-bold text-white rounded-full border-2 border-white flex items-center justify-center shadow-xs">
+                        {notifications.filter(n => !n.is_read).length > 9 ? '9+' : notifications.filter(n => !n.is_read).length}
+                      </span>
+                    </>
                   )}
                 </button>
-                <div className="absolute right-0 mt-2 w-80 bg-white border border-zinc-200 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-4">
-                  <div className="flex items-center justify-between mb-3 pb-2 border-b border-zinc-100">
-                    <div className="flex items-center gap-2">
-                      <img src="/logo.png" alt="VSBEC Logo" className="w-5 h-5 object-contain" />
-                      <h3 className="text-sm font-extrabold text-zinc-900">Notifications</h3>
+
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-84 sm:w-96 bg-white border border-zinc-200 rounded-2xl shadow-2xl z-50 p-4 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-zinc-100">
+                      <div className="flex items-center gap-2">
+                        <img src="/logo.png" alt="VSBEC Logo" className="w-5 h-5 object-contain" />
+                        <h3 className="text-sm font-extrabold text-zinc-900">Notifications</h3>
+                        {notifications.filter(n => !n.is_read).length > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">
+                            {notifications.filter(n => !n.is_read).length} new
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {notifications.filter(n => !n.is_read).length > 0 ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markNotificationsRead();
+                            }}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 active:scale-95 transition-all shadow-2xs cursor-pointer border border-indigo-100/60"
+                            title="Mark all notifications as read"
+                          >
+                            <CheckCheck size={14} className="text-indigo-600" />
+                            <span>Mark all read</span>
+                          </button>
+                        ) : (
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
+                            <CheckCheck size={12} className="text-emerald-500" /> All read
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                      {notifications.length} updates
-                    </span>
-                  </div>
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <p className="text-xs text-zinc-400 text-center py-4">No notifications yet</p>
-                    ) : (
-                      notifications.map(n => {
-                        const matchingInv = myInvitations.find(inv =>
-                          n.message.includes(inv.team_name) || n.message.includes(inv.task_title)
-                        ) || myInvitations[0];
-                        const isTeamInv = n.type === 'TEAM_INVITATION' || n.message.toLowerCase().includes('invited');
-                        return (
-                          <div key={n.id} className={cn("p-3 rounded-xl text-xs flex items-start gap-3 transition-colors", n.is_read ? "bg-zinc-50" : "bg-indigo-50/70 border border-indigo-100")}>
-                            <img src="/logo.png" alt="VSBEC IT" className="w-8 h-8 rounded-lg object-contain bg-white p-1 border border-zinc-200 shrink-0 shadow-xs mt-0.5" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-zinc-900 mb-1 font-semibold leading-snug">{n.message}</p>
-                              <p className="text-[10px] text-zinc-400 font-medium">{new Date(n.created_at).toLocaleString()}</p>
-                              {isTeamInv && myInvitations.length > 0 && (
-                                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-indigo-200/50">
-                                  <Button
-                                    onClick={(e) => { e.stopPropagation(); handleRespondInvitation((matchingInv || myInvitations[0]).id, 'ACCEPT'); }}
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-3 py-1 h-auto rounded-lg shadow-sm"
-                                  >
-                                    Accept
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    onClick={(e) => { e.stopPropagation(); handleRespondInvitation((matchingInv || myInvitations[0]).id, 'DECLINE'); }}
-                                    className="bg-zinc-200 hover:bg-zinc-300 text-zinc-800 text-[11px] font-bold px-3 py-1 h-auto rounded-lg"
-                                  >
-                                    Decline
-                                  </Button>
-                                </div>
+                    <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+                      {notifications.length === 0 ? (
+                        <div className="text-center py-8">
+                          <Bell size={28} className="mx-auto text-zinc-300 mb-2" />
+                          <p className="text-xs text-zinc-400 font-medium">No notifications yet</p>
+                        </div>
+                      ) : (
+                        notifications.map(n => {
+                          const matchingInv = myInvitations.find(inv =>
+                            n.message.includes(inv.team_name) || n.message.includes(inv.task_title)
+                          ) || myInvitations[0];
+                          const isTeamInv = n.type === 'TEAM_INVITATION' || n.message.toLowerCase().includes('invited');
+                          return (
+                            <div
+                              key={n.id}
+                              onClick={() => {
+                                if (!n.is_read) markSingleNotificationRead(n.id);
+                              }}
+                              className={cn(
+                                "p-3 rounded-xl text-xs flex items-start gap-3 transition-all cursor-pointer relative group/item",
+                                n.is_read
+                                  ? "bg-zinc-50/70 hover:bg-zinc-100/80 border border-zinc-100"
+                                  : "bg-indigo-50/80 hover:bg-indigo-100/80 border border-indigo-100 shadow-2xs"
                               )}
+                            >
+                              <img src="/logo.png" alt="VSBEC IT" className="w-8 h-8 rounded-lg object-contain bg-white p-1 border border-zinc-200 shrink-0 shadow-xs mt-0.5" />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-1 mb-1">
+                                  <p className="text-zinc-900 font-semibold leading-snug">{n.message}</p>
+                                  {!n.is_read && (
+                                    <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0 mt-1" title="Unread" />
+                                  )}
+                                </div>
+                                <div className="flex items-center justify-between mt-1">
+                                  <p className="text-[10px] text-zinc-400 font-medium">{new Date(n.created_at).toLocaleString()}</p>
+                                  {!n.is_read && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        markSingleNotificationRead(n.id);
+                                      }}
+                                      className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-0.5"
+                                      title="Mark as read"
+                                    >
+                                      <Check size={11} /> Mark read
+                                    </button>
+                                  )}
+                                </div>
+                                {isTeamInv && myInvitations.length > 0 && (
+                                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-indigo-200/50">
+                                    <Button
+                                      onClick={(e) => { e.stopPropagation(); handleRespondInvitation((matchingInv || myInvitations[0]).id, 'ACCEPT'); }}
+                                      className="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-3 py-1 h-auto rounded-lg shadow-sm"
+                                    >
+                                      Accept
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      onClick={(e) => { e.stopPropagation(); handleRespondInvitation((matchingInv || myInvitations[0]).id, 'DECLINE'); }}
+                                      className="bg-zinc-200 hover:bg-zinc-300 text-zinc-800 text-[11px] font-bold px-3 py-1 h-auto rounded-lg"
+                                    >
+                                      Decline
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })
-                    )}
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </header>

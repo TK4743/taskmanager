@@ -4487,9 +4487,62 @@ async function startServer() {
   });
 
   app.patch('/api/notifications/read', authenticate, async (req: any, res) => {
-    await pool.query('UPDATE notifications SET is_read = TRUE, updated_at = NOW() WHERE user_id = $1', [req.user.id]);
+    const { notification_id } = req.body || {};
+    if (notification_id) {
+      await pool.query('UPDATE notifications SET is_read = TRUE, updated_at = NOW() WHERE id = $1 AND user_id = $2', [notification_id, req.user.id]);
+    } else {
+      await pool.query('UPDATE notifications SET is_read = TRUE, updated_at = NOW() WHERE user_id = $1', [req.user.id]);
+    }
     invalidateApiCache(`notifs_${req.user.id}`);
     res.json({ success: true });
+  });
+
+  // ── Web Push Notification Endpoints ─────────────────────────────────────────
+  app.get('/api/push/public-key', authenticate, async (_req: any, res) => {
+    try {
+      const publicKey = getVapidPublicKey();
+      res.json({ publicKey });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to retrieve VAPID key' });
+    }
+  });
+
+  app.post('/api/push/subscribe', authenticate, async (req: any, res) => {
+    try {
+      const { subscription, userAgent } = req.body || {};
+      if (!subscription) return res.status(400).json({ error: 'PushSubscription is required' });
+      await savePushSubscription(req.user.id, subscription, userAgent);
+      res.json({ success: true, message: 'Push notifications subscribed successfully' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to save push subscription' });
+    }
+  });
+
+  app.post('/api/push/unsubscribe', authenticate, async (req: any, res) => {
+    try {
+      const { endpoint } = req.body || {};
+      if (!endpoint) return res.status(400).json({ error: 'Endpoint is required' });
+      await removePushSubscription(req.user.id, endpoint);
+      res.json({ success: true, message: 'Unsubscribed from push notifications' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to unsubscribe' });
+    }
+  });
+
+  app.post('/api/push/test', authenticate, async (req: any, res) => {
+    try {
+      const result = await sendPushToUser(req.user.id, {
+        title: '🔔 VSBEC IT TaskManager',
+        body: '✅ Native lock-screen push notification test succeeded on this device!',
+        icon: '/icon-192.png',
+        badge: '/badge.png',
+        url: '/',
+        tag: `test-push-${Date.now()}`
+      });
+      res.json({ success: true, message: `Test push sent to ${result.sent} device(s).` });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to send test push' });
+    }
   });
 
   // ── Batched Refresh Endpoint (replaces 3 polling calls with 1) ────────────
@@ -5555,9 +5608,30 @@ async function startServer() {
       u.id, publish_at || new Date().toISOString(), expire_at || null,
     ]);
 
-    // Trigger email announcement asynchronously
+    // Trigger email & push announcement asynchronously
     if (result.rows[0]) {
-      notifyNoticeBoardAnnouncementEmail(result.rows[0]).catch(e => console.error('[Email Notice] Error:', e));
+      const nRow = result.rows[0];
+      notifyNoticeBoardAnnouncementEmail(nRow).catch(e => console.error('[Email Notice] Error:', e));
+
+      const pushTitle = `📢 Notice: ${nRow.title}`;
+      const pushBody = nRow.description ? (nRow.description.length > 100 ? nRow.description.slice(0, 97) + '...' : nRow.description) : 'New announcement posted on the Notice Board.';
+      if (nRow.scope === 'ALL') {
+        sendPushToAll({ title: pushTitle, body: pushBody, url: '/?view=notice-board', icon: '/icon-192.png', badge: '/badge.png', tag: `notice-${nRow.id}` }).catch(() => {});
+      } else if (nRow.class_id) {
+        sendPushToClasses([nRow.class_id], { title: pushTitle, body: pushBody, url: '/?view=notice-board', icon: '/icon-192.png', badge: '/badge.png', tag: `notice-${nRow.id}` }).catch(() => {});
+      } else if (nRow.year) {
+        pool.query('SELECT id FROM classes WHERE year = $1 AND department_id = $2', [nRow.year, nRow.department_id])
+          .then(cr => {
+            const cids = cr.rows.map((x: any) => x.id);
+            if (cids.length > 0) sendPushToClasses(cids, { title: pushTitle, body: pushBody, url: '/?view=notice-board', icon: '/icon-192.png', badge: '/badge.png', tag: `notice-${nRow.id}` }).catch(() => {});
+          }).catch(() => {});
+      } else if (nRow.department_id) {
+        pool.query('SELECT id FROM classes WHERE department_id = $1', [nRow.department_id])
+          .then(cr => {
+            const cids = cr.rows.map((x: any) => x.id);
+            if (cids.length > 0) sendPushToClasses(cids, { title: pushTitle, body: pushBody, url: '/?view=notice-board', icon: '/icon-192.png', badge: '/badge.png', tag: `notice-${nRow.id}` }).catch(() => {});
+          }).catch(() => {});
+      }
     }
 
     invalidateApiCache('notices_');
@@ -9475,7 +9549,7 @@ async function startServer() {
         server: { middlewareMode: true },
         appType: 'spa',
       });
-      app.use(vite.middlewares);
+      app.use(vite.middlewares as any);
     }
   }
 
