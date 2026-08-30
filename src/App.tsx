@@ -3067,7 +3067,7 @@ function SettingsView({
 
   return (
     <PageLayout>
-      <div className="space-y-6 max-w-4xl mx-auto pb-12">
+      <div className="space-y-6 w-full pb-12">
         <div className="flex items-center justify-between pb-4 border-b border-zinc-200">
           <div>
             <h1 className="text-2xl font-extrabold text-zinc-900 tracking-tight flex items-center gap-2">
