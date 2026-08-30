@@ -30,10 +30,14 @@ This document provides a comprehensive technical overview highlighting the initi
 | **20** | **Server Caching & Optimization** | Direct database querying with connection pooling. | **High-Speed In-Memory Cache**: Scoped caching for authentication and read-heavy routes, tuned pool timeouts, and 11 compound indexes. | `Performance Tuning` |
 | **21** | **Error Diagnostics & Observability** | Standard server console error logging. | **Sentry Observability Telemetry** (`sentryService.ts`): Distributed error logging, stack trace capture, and 20% performance trace sampling rate. | `Observability` |
 | **22** | **Student Portfolio & Resumes** | Core academic task profile. | **Comprehensive Portfolio Builder**: Full resume builder with personal info, skills, projects, internships, certifications, coding handles, and career goals. | `Career Development` |
-| **23** | **Relational Schema Scale** | Foundational 6 relational tables. | **31 Specialized Relational Tables** supporting coding analytics, teams, notices, student profiles, password reset OTPs, deadline alert deduplication, push subscriptions, and system automations. | `Enterprise Architecture` |
-| **24** | **Automated Email Dispatch & OTP** | No automated email subsystem; relies strictly on browser alerts. | **Multi-Node Cloud Email & OTP Engine** (`emailService.ts`): Self-service 6-digit OTP password reset with 1-click copy, multi-node load balanced email pool with zero-downtime failover, 4 institutional notification streams, and official college emblem letterhead. | `Multi-Channel Alerts & Security` |
+| **23** | **Relational Schema Scale** | Foundational 6 relational tables. | **34 Specialized Relational Tables** supporting coding analytics, teams, notices, student profiles, password reset OTPs, assessment questions, student assessments, assignments, push subscriptions, and system automations. | `Enterprise Architecture` |
+| **24** | **Automated Email Dispatch & OTP** | No automated email subsystem; relies strictly on browser alerts. | **Multi-Node Cloud Email & OTP Engine** (`emailService.ts`): Self-service 6-digit OTP password reset with 1-click copy, multi-node load balanced email pool with zero-downtime failover, 5 institutional notification streams, and official college emblem letterhead. | `Multi-Channel Alerts & Security` |
 | **25** | **Smart India Hackathon (SIH) Suite** | No hackathon prep or innovation management. | **SIH Innovation Prep Portal** (`sih-prep/index.html`): Dedicated preparation portal with structured problem statements, evaluation rubrics, domain categories, and guidelines. | `Innovation & Competitions` |
 | **26** | **Next-Gen Frontend & Styling** | Standard component library and CSS utilities. | **React 19 + TailwindCSS v4 + Motion**: Next-generation reactive frontend with motion micro-interactions, responsive glassmorphism dark mode, and Lucide icons. | `User Experience & Aesthetics` |
+| **27** | **Proctored Skill Assessments** | No online assessment or mock evaluation capabilities. | **Proctored Assessment Suite & Mock Tracks** (`SkillAssessmentView.tsx`, `server.ts`): Live webcam facial verification snapshot uploaded to Cloudinary, full-screen lockdown mode with violation tracking, 5 company-specific mock evaluation tracks, Fisher-Yates question shuffling, and instant Telegram scorecard dispatches. | `Assessment & Examination` |
+| **28** | **Student Marks Transcript** | No persistent student test history or scorecards. | **Student Marks Transcript & Detailed Scorecards** (`SkillAssessmentView.tsx`, `server.ts`): Dedicated student tab (`activeTab === 'my_marks'`) displaying 4 performance KPIs (Average Mark, Personal Best, Tests Attempted, Clearance Rate), attempt cards with proctor verified face badges, and interactive question-by-question review modals with explanations. | `Assessment & Examination` |
+| **29** | **Placement Readiness Engine 2.0** | No placement readiness scoring or company tier matching. | **Placement Readiness Rating Engine 2.0** (`PlacementReadinessView.tsx`, `server.ts`): 4-pillar algorithmic evaluation: Pillar 1 (Aptitude Assessment 35%), Pillar 2 (LeetCode 7-Day Rolling Weekly Streak & Consistency 25%), Pillar 3 (Verified Technical Project Portfolio 20%), and Pillar 4 (Academic Task Discipline 20%). Dynamic candidate ranking, 4-tier company shortlisting (Tier 1 Product/Dream, Tier 2 IT Services, Tier 3 Baseline), and custom Excel shortlist exports. | `Career Development & Analytics` |
+| **30** | **Live Brevo Multi-Node Email Balancer** | Single API key without load balancing or quota observability. | **Live Multi-Node Email Balancer & Quota Studio** (`emailService.ts`, `SkillAssessmentView.tsx`): Real-time multi-node credit counter (`600 credits`), node health status indicators (`Brevo-Node-1`, `Brevo-Node-2`), automatic recipient quota sufficiency validation, and targeted cohort email dispatch studio with official Mail branding. | `Multi-Channel Alerts & Infrastructure` |
 
 ---
 
@@ -64,23 +68,39 @@ This document provides a comprehensive technical overview highlighting the initi
 * **Automated Trigger Matrix**: Broadcasts on new task assignments, submission approvals, rejection notes with resubmission links, and 2-hour deadline alerts.
 
 ### 4. OpenXML ExcelJS Reporting Engine
-* Pure ExcelJS generation via `buildExcelReportBuffer` providing 9 specialized formats with dynamic boundary trimming, custom headers, and auto-calculated column widths.
+* Pure ExcelJS generation via `buildExcelReportBuffer` providing 10 specialized formats with dynamic boundary trimming, custom headers, and auto-calculated column widths (including Placement Readiness Shortlists with LeetCode Streak and Project metrics).
 
 ### 5. High-Speed RAM Directory & Dual-Mode Git Sync
 * Node.js memory cache (`studentDirectoryService.ts`) indexes 400+ student records in RAM for sub-millisecond lookups.
 * Auto-commits coding handle updates to GitHub via REST API (for cloud containers) or Git CLI (for local environments).
 
-### 6. Automated GitHub Nightly Sync & 31-Table Snapshot Archival
+### 6. Automated GitHub Nightly Sync & 34-Table Snapshot Archival
 * **11:55 PM IST Daily LeetCode CSV Auto-Push**: Automatically builds datewise master and section-wise CSV reports (`leetcode/LeetCode_Daily_Report_YYYY-MM-DD.csv`, `leetcode/YYYY-MM-DD/Section_*.csv`) and pushes them to GitHub via GitHub Contents REST API & Git CLI.
-* **31-Table JSON Snapshot Archival**: Every 24 hours, `generateDatabaseSnapshot()` captures all PostgreSQL tables in `backups/db_backup_*.json` and pushes the snapshot to GitHub with 30-day rolling retention and automatic cloud pruning.
+* **34-Table JSON Snapshot Archival**: Every 24 hours, `generateDatabaseSnapshot()` captures all PostgreSQL tables in `backups/db_backup_*.json` and pushes the snapshot to GitHub with 30-day rolling retention and automatic cloud pruning.
 
 ### 7. Automated Multi-Node Email Dispatch & Security OTP Engine
 * **Self-Service 6-Digit Email OTP Password Reset**: Automated identity verification with 10-minute expiry window, rate-limiting, and 1-tap/1-click instant copy container.
 * **Multi-Node Load Balanced Email Pool**: High-availability architecture with round-robin dispatch, automated zero-downtime failover, and HTTPS REST delivery.
-* **4 Core Academic Notification Streams**: Real-time broadcasts for *New Task Assignments*, *Submission Approvals*, *Rejections with Reviewer Notes*, and *Automated 2-Hour Approaching Deadline Alerts* for incomplete students.
+* **Live Brevo Multi-Node Quota Studio**: Real-time credit counter displaying combined available balance across nodes, node health indicators, and cohort quota sufficiency validation.
+* **5 Core Academic Notification Streams**: Real-time broadcasts for *New Task Assignments*, *Submission Approvals*, *Rejections with Reviewer Notes*, *Automated 2-Hour Approaching Deadline Alerts*, and *Proctored Assessment Invitations*.
 * **Institutional Academic Letterhead**: Formal government & college letterhead embedding the official institutional emblem (`logo.png`), NAAC 'A' Grade accreditation banner, and reference tracking.
 
-### 8. Production Observability & Hackathon Innovation Hub
+### 8. Proctored Assessment Room & Placement Readiness Engine 2.0
+* **5 Company-Specific Mock Evaluation Suites**: Tailored tracks for General Aptitude, Technical Core, Zoho Mock, TCS NQT, and Infosys Pattern with Fisher-Yates question sequence randomization.
+* **Strict Anti-Cheat & Identity Protocol**: Live webcam facial identity verification uploaded to Cloudinary, browser full-screen lockdown enforcement, tab-switch infraction logging, and automated submission after 3 violations.
+* **Student Marks Transcript & Interactive Scorecard**: Dedicated student tab with historical attempt records, pass/fail status, domain-level performance bars, and step-by-step question review modals.
+* **Unified 4-Pillar Placement Readiness Algorithm**:
+  - **Pillar 1 (35%)**: Proctored Aptitude & Skill Assessment Benchmark
+  - **Pillar 2 (25%)**: LeetCode 7-Day Rolling Weekly Streak (0–7 days) & Consistency Percentage
+  - **Pillar 3 (20%)**: Verified Technical Project Portfolio Count (3+ projects benchmark)
+  - **Pillar 4 (20%)**: Academic Task Submission Discipline Rate
+* **4-Tier Placement Classification**:
+  - *Tier 1 (80%+)*: Product / Dream Ready (*Zoho, Kaar Tech, Freshworks, Thoughtworks, TCS Prime*)
+  - *Tier 2 (65%–79%)*: IT Services Ready (*TCS Ninja, Infosys, Cognizant, Wipro, Accenture, HCL*)
+  - *Tier 3 (50%–64%)*: Developing Baseline
+  - *Action Required (< 50%)*: Remedial counseling and targeted problem-solving interventions
+
+### 9. Production Observability & Hackathon Innovation Hub
 * **Sentry Error Telemetry**: Integrated real-time exception logging and performance tracing across backend routes and services.
 * **Smart India Hackathon (SIH) Preparation Portal**: Structured repository for team ideation, problem statements, and presentation rubrics.
 
@@ -88,4 +108,3 @@ This document provides a comprehensive technical overview highlighting the initi
 
 👨‍💻 **Developed and maintained by Tharunkumar K**  
 🏛️ **Department of Information Technology, VSB Engineering College**
-
