@@ -9985,6 +9985,7 @@ export default function App() {
           <SidebarItem
             icon={<Target size={20} />}
             label="Placement Rating"
+            badge="SIH Demo"
             active={view === 'placement-readiness'}
             onClick={() => { setView('placement-readiness'); setIsMobileSidebarOpen(false); }}
           />
@@ -10707,7 +10708,7 @@ export default function App() {
                     if (view === 'verification') return 'Task Verification';
                     if (view === 'users') return 'User Management';
                     if (view === 'skill-assessment') return 'Placement Skill Assessment (SIH Demo)';
-                    if (view === 'placement-readiness') return 'Placement Readiness Rating';
+                    if (view === 'placement-readiness') return 'Placement Readiness Rating (SIH Demo)';
                     if (view === 'tasks') return 'Tasks';
                     return view.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                   })()}
@@ -13750,7 +13751,7 @@ export default function App() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="w-full h-full flex flex-col min-h-0 overflow-y-auto"
+                    className="relative w-full h-full min-h-0"
                   >
                     <SkillAssessmentView
                       user={user}
@@ -13768,7 +13769,7 @@ export default function App() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="w-full h-full flex flex-col min-h-0 overflow-y-auto"
+                    className="relative w-full h-full min-h-0"
                   >
                     <PlacementReadinessView
                       user={user}

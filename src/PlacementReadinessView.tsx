@@ -183,19 +183,23 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
   });
 
   return (
-    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] flex flex-col min-h-0">
-      <div className="w-full flex flex-col min-h-full space-y-6">
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4]">
+      <div className="w-full space-y-6">
 
         {/* ── Header ────────────────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
           <div>
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
                 <Target size={20} />
               </div>
               <h1 className="text-2xl font-extrabold text-zinc-900 tracking-tight">
                 Placement Readiness Rating
               </h1>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 text-amber-900 border border-amber-300 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                SIH DEMO PURPOSE ONLY
+              </span>
             </div>
             <p className="text-xs text-zinc-500 font-semibold mt-1">
               Unified 0–100% Placement Eligibility Index (Aptitude 35% • LeetCode 25% • GitHub 20% • Tasks 20%)
@@ -221,6 +225,42 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
               </button>
             </div>
           )}
+        </div>
+
+        {/* ── Notice: SIH Demo Purpose Only ── */}
+        <div className="relative bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-2 border-amber-300/90 rounded-2xl p-4 sm:p-5 shadow-xs shrink-0 min-h-fit">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-sm shrink-0 self-start mt-0.5">
+              <AlertTriangle size={20} className="text-amber-100" />
+            </div>
+            <div className="space-y-2 flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest bg-amber-200/90 text-amber-950 px-2.5 py-0.5 rounded-full border border-amber-300 shadow-2xs">
+                  {isStudent ? 'Official Student Notice' : 'Institutional Demo Notice'}
+                </span>
+                <span className="text-xs sm:text-sm font-extrabold text-amber-950">
+                  🎯 Placement Readiness Rating Configured for SIH Demo Purposes Only
+                </span>
+              </div>
+              <p className="text-xs text-amber-900 leading-relaxed font-medium">
+                This comprehensive 4-pillar placement readiness index, multi-source weighted scoring, and tier evaluation inside this project are deployed for <strong>Smart India Hackathon (SIH) demonstration and evaluation purposes only</strong>.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-1">
+                <div className="bg-white/80 border border-amber-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 font-medium shadow-2xs">
+                  <span className="font-bold text-amber-700">1.</span> Aptitude & Tech (35%)
+                </div>
+                <div className="bg-white/80 border border-amber-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 font-medium shadow-2xs">
+                  <span className="font-bold text-amber-700">2.</span> LeetCode Rating (25%)
+                </div>
+                <div className="bg-white/80 border border-amber-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 font-medium shadow-2xs">
+                  <span className="font-bold text-amber-700">3.</span> GitHub Velocity (20%)
+                </div>
+                <div className="bg-white/80 border border-amber-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 font-medium shadow-2xs">
+                  <span className="font-bold text-amber-700">4.</span> Verified Tasks (20%)
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* ═════════════════════════════════════════════════════════════════════
