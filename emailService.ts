@@ -2280,6 +2280,11 @@ export async function sendAssessmentInvitationEmail(
     portalUrl
   } = payload;
 
+  // Fully dynamic candidate display name (full_name -> username -> registerNumber -> Student)
+  const displayName = (studentName && studentName.trim())
+    ? studentName.trim()
+    : (registerNumber ? `Student (${registerNumber})` : 'Student');
+
   const subject = `[SIH Demo] ${trackTitle} — Online Skill Assessment (Prototype Evaluation)`;
   const portalLink = 'https://it-taskmanager.vercel.app/';
 
@@ -2342,7 +2347,7 @@ export async function sendAssessmentInvitationEmail(
 
       <!-- Candidate Greeting & Meta -->
       <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0;">
-        Dear ${studentName},
+        Dear ${displayName},
       </p>
       <p style="font-size: 13.5px; color: #475569; line-height: 1.6; margin: 0 0 20px 0;">
         You have been invited to participate in the benchmarking track: <strong style="color: #312e81;">"${trackTitle}"</strong>. Test your knowledge, experience real-time performance diagnostics, and explore the hackathon prototype features!
@@ -2350,7 +2355,7 @@ export async function sendAssessmentInvitationEmail(
 
       <!-- Candidate Meta Pill -->
       <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; margin-bottom: 24px; font-size: 12px; color: #64748b;">
-        <strong>Candidate:</strong> <span style="color: #0f172a; font-weight: 700;">${studentName}</span> &nbsp;•&nbsp;
+        <strong>Candidate:</strong> <span style="color: #0f172a; font-weight: 700;">${displayName}</span> &nbsp;•&nbsp;
         <strong>Reg No:</strong> <span style="color: #0f172a; font-family: monospace; font-weight: 600;">${registerNumber || 'N/A'}</span> &nbsp;•&nbsp;
         <strong>Class:</strong> <span style="color: #0f172a; font-weight: 600;">${className}${classYear ? ` (Year ${classYear})` : ''}</span>
       </div>
@@ -2437,7 +2442,7 @@ export async function sendAssessmentInvitationEmail(
 
   return await dispatchEmailThroughPool(
     to,
-    studentName,
+    displayName,
     subject,
     htmlContent,
     'VSBEC IT Task Manager (SIH Demo)'
@@ -2495,7 +2500,7 @@ export async function triggerAssessmentCampaignEmails(params: {
 
     // 2. Query target students matching Year and Class
     let query = `
-      SELECT u.id, u.full_name, u.register_number, u.email, u.telegram_chat_id,
+      SELECT u.id, u.full_name, u.username, u.register_number, u.email, u.telegram_chat_id,
              c.name as class_name, c.year as class_year
       FROM users u
       JOIN classes c ON c.id = u.class_id
@@ -2563,7 +2568,7 @@ export async function triggerAssessmentCampaignEmails(params: {
         try {
           const res = await sendAssessmentInvitationEmail({
             to: student.email,
-            studentName: student.full_name || 'Student',
+            studentName: (student.full_name && student.full_name.trim()) || student.username || (student.register_number ? `Student (${student.register_number})` : 'Student'),
             registerNumber: student.register_number || '',
             className: student.class_name || 'IT',
             classYear: student.class_year,
