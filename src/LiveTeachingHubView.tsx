@@ -30,7 +30,7 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
 
   return (
     <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4]">
-      <div className="max-w-5xl mx-auto space-y-6 pb-12">
+      <div className="w-full space-y-6 pb-12">
         
         {/* ── Page Header ────────────────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
