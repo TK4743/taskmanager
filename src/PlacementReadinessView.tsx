@@ -228,12 +228,12 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
         </div>
 
         {/* ── Notice: SIH Demo Purpose Only ── */}
-        <div className="relative bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-2 border-amber-300/90 rounded-2xl p-4 sm:p-5 shadow-xs shrink-0 min-h-fit">
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-sm shrink-0 self-start mt-0.5">
+        <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-2 border-amber-300/90 rounded-2xl p-4 sm:p-5 shadow-xs">
+          <div className="grid grid-cols-[40px_1fr] gap-3.5 items-start">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-sm mt-0.5">
               <AlertTriangle size={20} className="text-amber-100" />
             </div>
-            <div className="space-y-2 flex-1 min-w-0">
+            <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest bg-amber-200/90 text-amber-950 px-2.5 py-0.5 rounded-full border border-amber-300 shadow-2xs">
                   {isStudent ? 'Official Student Notice' : 'Institutional Demo Notice'}
