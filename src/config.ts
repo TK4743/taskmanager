@@ -1,5 +1,6 @@
 export const ENV = Object.freeze({
     API_URL: import.meta.env.VITE_API_URL || "/api",
+    GOAT_CE_URL: import.meta.env.VITE_GOAT_CE_URL || "https://goatcode-editor.onrender.com",
     IS_PRODUCTION: true,
     AUTH_TOKEN_STORAGE_KEY: "vsbec_auth_token",
     AUTH_HEADER_NAME: "Authorization",
@@ -8,3 +9,4 @@ export const ENV = Object.freeze({
 });
 
 export const API_URL = ENV.API_URL.replace(/\/api\/?$/, '');
+export const GOAT_CE_URL = ENV.GOAT_CE_URL;
