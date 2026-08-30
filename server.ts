@@ -8395,12 +8395,21 @@ async function startServer() {
         skillStats[skill].correct++;
       }
 
+      const selectedText = selectedOpt !== undefined && Array.isArray(q.options) && q.options[selectedOpt]
+        ? `${String.fromCharCode(65 + Number(selectedOpt))}. ${q.options[selectedOpt]}`
+        : null;
+      const correctText = Array.isArray(q.options) && q.options[q.correct_option]
+        ? `${String.fromCharCode(65 + Number(q.correct_option))}. ${q.options[q.correct_option]}`
+        : null;
+
       answersSummary.push({
         question_id: q.id,
         question_text: q.question_text,
         options: q.options,
         selected_option: selectedOpt !== undefined ? Number(selectedOpt) : null,
+        selected_answer: selectedText,
         correct_option: q.correct_option,
+        correct_answer: correctText,
         is_correct: isCorrect,
         category: q.category,
         skill_tag: q.skill_tag,
@@ -8541,6 +8550,53 @@ async function startServer() {
     });
   }));
 
+  // Helper to ensure answers_summary is fully populated with all questions for a track
+  const enrichAssessmentRow = async (row: any) => {
+    if (!row) return null;
+    const storedSummary: any[] = Array.isArray(row.answers_summary) ? row.answers_summary : [];
+    const expectedTotal = Number(row.total_questions) || 0;
+
+    if (storedSummary.length >= expectedTotal && expectedTotal > 0) {
+      return row; // Already complete, no reconstruction needed
+    }
+
+    try {
+      const qRes = await pool.query(
+        `SELECT * FROM assessment_questions WHERE is_active = TRUE AND track_type = $1 ORDER BY created_at ASC;`,
+        [row.track_type || 'GENERAL_APTITUDE']
+      );
+      const allQuestions = qRes.rows.length > 0 ? qRes.rows : 
+        (await pool.query(`SELECT * FROM assessment_questions WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 15;`)).rows;
+
+      const existingByQId: Record<string, any> = {};
+      for (const s of storedSummary) {
+        if (s.question_id) existingByQId[s.question_id] = s;
+      }
+
+      const reconstructed = allQuestions.slice(0, expectedTotal || allQuestions.length).map((q: any) => {
+        if (existingByQId[q.id]) {
+          return existingByQId[q.id];
+        }
+        return {
+          question_id: q.id,
+          question_text: q.question_text,
+          options: q.options,
+          selected_option: null,
+          correct_option: q.correct_option,
+          is_correct: false,
+          category: q.category,
+          skill_tag: q.skill_tag,
+          explanation: q.explanation,
+          _reconstructed: true
+        };
+      });
+
+      return { ...row, answers_summary: reconstructed };
+    } catch (_) {
+      return row;
+    }
+  };
+
   // 6. Retrieve Student's Latest Assessment Profile per Track
   app.get('/api/assessment/my-latest', asyncHandler(async (req: any, res: any) => {
     let targetUserId = req.query.user_id;
@@ -8569,7 +8625,8 @@ async function startServer() {
     query += ` ORDER BY created_at DESC LIMIT 1;`;
 
     const result = await pool.query(query, params);
-    res.json({ success: true, assessment: result.rows[0] || null });
+    const enriched = result.rows[0] ? await enrichAssessmentRow(result.rows[0]) : null;
+    res.json({ success: true, assessment: enriched });
   }));
 
   // 6b. Retrieve All Assessment Marks & Attempt History for Students
@@ -8619,56 +8676,7 @@ async function startServer() {
     }
 
     // ── Reconstruct incomplete answers_summary from question bank ────────────
-    // For historical records where answers_summary has fewer items than total_questions,
-    // fetch all questions for that track and fill in the missing entries.
-    const enrichedAssessments = await Promise.all(result.rows.map(async (row) => {
-      const storedSummary: any[] = Array.isArray(row.answers_summary) ? row.answers_summary : [];
-      const expectedTotal = Number(row.total_questions) || 0;
-
-      if (storedSummary.length >= expectedTotal && expectedTotal > 0) {
-        return row; // Already complete, no reconstruction needed
-      }
-
-      // Fetch all questions for this track type
-      try {
-        const qRes = await pool.query(
-          `SELECT * FROM assessment_questions WHERE is_active = TRUE AND track_type = $1 ORDER BY created_at ASC;`,
-          [row.track_type || 'GENERAL_APTITUDE']
-        );
-        const allQuestions = qRes.rows.length > 0 ? qRes.rows : 
-          (await pool.query(`SELECT * FROM assessment_questions WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 15;`)).rows;
-
-        // Build a map of existing summary entries by question_id
-        const existingByQId: Record<string, any> = {};
-        for (const s of storedSummary) {
-          if (s.question_id) existingByQId[s.question_id] = s;
-        }
-
-        // Reconstruct the full summary
-        const reconstructed = allQuestions.slice(0, expectedTotal || allQuestions.length).map((q: any) => {
-          if (existingByQId[q.id]) {
-            return existingByQId[q.id]; // Keep existing entry
-          }
-          // No data for this question - show it without answer info
-          return {
-            question_id: q.id,
-            question_text: q.question_text,
-            options: q.options,
-            selected_option: null,
-            correct_option: q.correct_option,
-            is_correct: false,
-            category: q.category,
-            skill_tag: q.skill_tag,
-            explanation: q.explanation,
-            _reconstructed: true // flag so UI can show "Data unavailable"
-          };
-        });
-
-        return { ...row, answers_summary: reconstructed };
-      } catch (_) {
-        return row; // If reconstruction fails, return original
-      }
-    }));
+    const enrichedAssessments = await Promise.all(result.rows.map(row => enrichAssessmentRow(row)));
 
     res.json({
       success: true,

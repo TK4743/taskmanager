@@ -1840,13 +1840,17 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                           <div className="flex items-start justify-between gap-4">
                             <span className="font-bold text-zinc-900">Q{idx + 1}. {a.question_text}</span>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
-                              a.is_correct ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900'
+                              a._reconstructed
+                                ? 'bg-zinc-200 text-zinc-600'
+                                : a.is_correct
+                                ? 'bg-emerald-100 text-emerald-900'
+                                : 'bg-rose-100 text-rose-900'
                             }`}>
-                              {a.is_correct ? '✓ Correct' : '✕ Incorrect'}
+                              {a._reconstructed ? 'No Data' : a.is_correct ? '✓ Correct' : '✕ Incorrect'}
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                             {a.options?.map((opt: string, oIdx: number) => {
                               const isSelected = oIdx === a.selected_option;
                               const isCorrect = oIdx === a.correct_option;
@@ -1854,7 +1858,9 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                                 <div
                                   key={oIdx}
                                   className={`p-2.5 rounded-xl border text-[11px] font-medium ${
-                                    isCorrect
+                                    isCorrect && isSelected
+                                      ? 'bg-emerald-100 border-emerald-400 text-emerald-950 font-bold shadow-2xs'
+                                      : isCorrect
                                       ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold'
                                       : isSelected
                                       ? 'bg-rose-50 border-rose-300 text-rose-950 font-bold'
@@ -1862,15 +1868,25 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                                   }`}
                                 >
                                   <span>{String.fromCharCode(65 + oIdx)}. {opt}</span>
-                                  {isCorrect && <span className="block text-[10px] text-emerald-700 font-bold">Correct Answer</span>}
+                                  {isCorrect && isSelected && (
+                                    <span className="block text-[10px] text-emerald-800 font-extrabold mt-0.5">✓ Correct (Your Choice)</span>
+                                  )}
+                                  {isCorrect && !isSelected && (
+                                    <span className="block text-[10px] text-emerald-700 font-bold mt-0.5">✓ Correct Answer</span>
+                                  )}
+                                  {isSelected && !isCorrect && (
+                                    <span className="block text-[10px] text-rose-700 font-bold mt-0.5">✗ Your Answer</span>
+                                  )}
                                 </div>
                               );
                             })}
                           </div>
 
-                          <p className="text-[11px] text-zinc-600 bg-zinc-50 p-2.5 rounded-lg border border-zinc-200">
-                            💡 <span className="font-bold text-zinc-800">Explanation:</span> {a.explanation}
-                          </p>
+                          {a.explanation && (
+                            <p className="text-[11px] text-zinc-600 bg-zinc-50 p-2.5 rounded-lg border border-zinc-200">
+                              💡 <span className="font-bold text-zinc-800">Explanation:</span> {a.explanation}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
