@@ -2727,16 +2727,19 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                     emailNodesStatus.nodes.map((node: any) => (
                       <div
                         key={node.nodeId}
+                        title={node.error || (node.status === 'HEALTHY' ? `${node.credits} credits remaining` : node.status)}
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border shadow-2xs ${
                           node.status === 'HEALTHY'
                             ? 'bg-white text-zinc-800 border-blue-200'
-                            : 'bg-zinc-100 text-zinc-400 border-zinc-200'
+                            : node.status === 'AUTH_ERROR'
+                            ? 'bg-red-50 text-red-700 border-red-200'
+                            : 'bg-zinc-100 text-zinc-500 border-zinc-200'
                         }`}
                       >
-                        <Mail size={11} className={node.status === 'HEALTHY' ? 'text-blue-600' : 'text-zinc-400'} />
+                        <Mail size={11} className={node.status === 'HEALTHY' ? 'text-blue-600' : node.status === 'AUTH_ERROR' ? 'text-red-600' : 'text-zinc-400'} />
                         <span className="font-mono">{node.nodeId}:</span>
-                        <span className="text-blue-700 font-extrabold">
-                          {node.credits !== null ? `${node.credits} left` : node.status}
+                        <span className={node.status === 'HEALTHY' ? 'text-blue-700 font-extrabold' : node.status === 'AUTH_ERROR' ? 'text-red-700 font-black' : 'text-zinc-500 font-extrabold'}>
+                          {node.status === 'AUTH_ERROR' ? 'IP UNRECOGNIZED' : (node.credits !== null ? `${node.credits} left` : node.status)}
                         </span>
                       </div>
                     ))
