@@ -8,6 +8,13 @@ export function PWAInstallOverlay() {
   const [showModal, setShowModal] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [isBannerClosed, setIsBannerClosed] = useState(() => {
+    try {
+      return sessionStorage.getItem('pwa_banner_closed') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     // 1. Check if running in standalone mode (already installed & opened from home screen)
@@ -50,6 +57,9 @@ export function PWAInstallOverlay() {
     // If not standalone and not installed, show modal after brief 1.2s delay
     if (!standalone) {
       const timer = setTimeout(() => {
+        try {
+          if (sessionStorage.getItem('pwa_banner_closed') === 'true') return;
+        } catch {}
         setShowModal(true);
       }, 1200);
       return () => clearTimeout(timer);
@@ -82,12 +92,12 @@ export function PWAInstallOverlay() {
     }
   };
 
-  // If already running as installed standalone app, render nothing
-  if (isStandalone || isInstalled) {
+  // If already running as installed standalone app, or user dismissed the banner, render nothing
+  if (isStandalone || isInstalled || isBannerClosed) {
     return null;
   }
 
-  // If user dismissed modal, show a slim persistent banner (light themed)
+  // If user dismissed modal, show a slim persistent banner (light themed) with close option
   if (isDismissed) {
     return (
       <div className="fixed bottom-3 left-3 right-3 md:left-auto md:right-4 md:bottom-4 z-[9999] bg-white border border-slate-200 text-slate-900 rounded-2xl shadow-xl p-3.5 flex items-center justify-between gap-3 animate-fade-in max-w-md">
@@ -100,12 +110,27 @@ export function PWAInstallOverlay() {
             <p className="text-[11px] text-slate-500 truncate">Faster loading & lock screen alerts</p>
           </div>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-xl shadow-sm transition shrink-0 cursor-pointer"
-        >
-          Install
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => setShowModal(true)}
+            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-xl shadow-sm transition shrink-0 cursor-pointer"
+          >
+            Install
+          </button>
+          <button
+            onClick={() => {
+              setIsBannerClosed(true);
+              try {
+                sessionStorage.setItem('pwa_banner_closed', 'true');
+              } catch {}
+            }}
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition shrink-0 cursor-pointer flex items-center justify-center"
+            title="Dismiss"
+            aria-label="Close install prompt"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     );
   }
