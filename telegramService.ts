@@ -3,12 +3,7 @@ dotenv.config();
 
 import { pool } from './db.js';
 import ExcelJS from 'exceljs';
-import {
-  constantStudentByIdMap,
-  constantStudentByRegNoMap,
-  constantStudentByEmailMap,
-  cleanStudentName
-} from './studentDirectoryService.js';
+import { constantStudentByRegNoMap } from './studentDirectoryService.js';
 import { sendTaskStatusEmail } from './emailService.js';
 
 let cachedBotUsername = process.env.TELEGRAM_BOT_USERNAME || 'IT_TaskManager_Alerts_bot';

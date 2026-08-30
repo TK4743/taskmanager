@@ -518,7 +518,7 @@ export async function sendNewTaskPostedEmail(payload: NewTaskEmailPayload): Prom
     </tr>
     <!-- Institutional Header -->
     <tr>
-      <td style="padding: 28px 24px 20px 24px; background-color: #ffffff; border-bottom: 2px solid #0f172a; text-align: center;">
+      <td style="padding: 28px 24px 20px 24px; background-color: #ffffff; border-bottom: 2px solid #3b82f6; text-align: center;">
         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
           <tr>
             <td align="center" style="padding-bottom: 12px;">
@@ -544,13 +544,13 @@ export async function sendNewTaskPostedEmail(payload: NewTaskEmailPayload): Prom
 
     <!-- Reference Bar -->
     <tr>
-      <td style="background-color: #0f172a; padding: 10px 24px; color: #f8fafc; font-size: 11px;">
+      <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 10px 24px; font-size: 11px;">
         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
           <tr>
-            <td align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 0.03em; color: #cbd5e1;">
+            <td align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 0.03em; color: #1e3a8a;">
               TASK: ${taskTitle}
             </td>
-            <td align="right" style="font-weight: 600; color: #f59e0b;">
+            <td align="right" style="font-weight: 700; color: #b45309;">
               DATE: ${currentDate}
             </td>
           </tr>
@@ -616,8 +616,8 @@ export async function sendNewTaskPostedEmail(payload: NewTaskEmailPayload): Prom
 
         <!-- CTA Button -->
         <div style="text-align: center; margin: 28px 0 16px 0;">
-          <a href="${portalLink}" style="display: inline-block; background-color: #0f172a; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 14px 32px; border-radius: 6px; border: 1px solid #1e3a8a; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);">
-            📝 View Assignment & Submit
+          <a href="${portalLink}" style="display: inline-block; background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%); color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 14px 32px; border-radius: 6px; border: 1px solid #1e40af; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
+            🚀 View & Submit Task on Portal
           </a>
         </div>
         ${getTelegramCommunityBoxHtml()}
@@ -753,14 +753,14 @@ export async function sendTaskReopenedEmail(payload: TaskReopenedEmailPayload): 
 <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
   <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 24px auto; background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
     <tr>
-      <td style="background-color: #0f172a; padding: 24px; text-align: left; border-bottom: 3px solid #10b981;">
+      <td style="background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%); padding: 24px; text-align: left; border-bottom: 3px solid #10b981;">
         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
           <tr>
             <td>
-              <h1 style="margin: 0 0 4px 0; color: #ffffff; font-size: 16px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">
+              <h1 style="margin: 0 0 4px 0; color: #0f172a; font-size: 16px; font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase;">
                 VSB Engineering College
               </h1>
-              <h2 style="margin: 0 0 10px 0; color: #94a3b8; font-size: 12px; font-weight: 500; text-transform: uppercase;">
+              <h2 style="margin: 0 0 10px 0; color: #047857; font-size: 12px; font-weight: 700; text-transform: uppercase;">
                 Department of Information Technology • Academic Portal
               </h2>
               <span style="display: inline-block; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 4px; padding: 3px 10px; font-size: 11px; font-weight: 700; color: #047857; letter-spacing: 0.05em;">
@@ -772,13 +772,13 @@ export async function sendTaskReopenedEmail(payload: TaskReopenedEmailPayload): 
       </td>
     </tr>
     <tr>
-      <td style="background-color: #1e293b; padding: 10px 24px; color: #f8fafc; font-size: 11px;">
+      <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 10px 24px; font-size: 11px;">
         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
           <tr>
-            <td align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 0.03em; color: #cbd5e1;">
+            <td align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 0.03em; color: #047857;">
               TASK: ${taskTitle}
             </td>
-            <td align="right" style="font-weight: 600; color: #34d399;">
+            <td align="right" style="font-weight: 700; color: #b45309;">
               DATE: ${currentDate}
             </td>
           </tr>
@@ -828,8 +828,8 @@ export async function sendTaskReopenedEmail(payload: TaskReopenedEmailPayload): 
           </tr>
         </table>
         <div style="text-align: center; margin: 28px 0 16px 0;">
-          <a href="${portalLink}" style="display: inline-block; background-color: #047857; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 14px 32px; border-radius: 6px; box-shadow: 0 4px 12px rgba(4, 120, 87, 0.25);">
-            📝 View & Submit Proof on Portal
+          <a href="${portalLink}" style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 14px 32px; border-radius: 6px; border: 1px solid #065f46; box-shadow: 0 4px 12px rgba(4, 120, 87, 0.25);">
+            🚀 View & Submit Proof on Portal
           </a>
         </div>
       </td>
@@ -981,7 +981,7 @@ export async function sendTaskStatusEmail(payload: EmailNotificationPayload): Pr
     </tr>
     <!-- Institutional Header -->
     <tr>
-      <td style="padding: 28px 24px 20px 24px; background-color: #ffffff; border-bottom: 2px solid #0f172a; text-align: center;">
+      <td style="padding: 28px 24px 20px 24px; background-color: #ffffff; border-bottom: 2px solid #3b82f6; text-align: center;">
         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
           <tr>
             <td align="center" style="padding-bottom: 12px;">
@@ -1007,13 +1007,13 @@ export async function sendTaskStatusEmail(payload: EmailNotificationPayload): Pr
 
     <!-- Reference Bar -->
     <tr>
-      <td style="background-color: #0f172a; padding: 10px 24px; color: #f8fafc; font-size: 11px;">
+      <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 10px 24px; font-size: 11px;">
         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
           <tr>
-            <td align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 0.03em; color: #cbd5e1;">
+            <td align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 0.03em; color: #1e3a8a;">
               TASK: ${taskTitle}
             </td>
-            <td align="right" style="font-weight: 600; color: #f59e0b;">
+            <td align="right" style="font-weight: 700; color: #b45309;">
               DATE: ${currentDate}
             </td>
           </tr>
@@ -1081,7 +1081,7 @@ export async function sendTaskStatusEmail(payload: EmailNotificationPayload): Pr
 
         <!-- CTA Button -->
         <div style="text-align: center; margin: 28px 0 16px 0;">
-          <a href="${portalLink}" style="display: inline-block; background-color: #0f172a; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 14px 32px; border-radius: 6px; border: 1px solid #1e3a8a; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);">
+          <a href="${portalLink}" style="display: inline-block; background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%); color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 14px 32px; border-radius: 6px; border: 1px solid #1e40af; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
             ${isVerified ? '📊 Access Portal Scorecard' : '🔄 Access Portal to Resubmit'}
           </a>
         </div>
@@ -1161,7 +1161,7 @@ export async function sendDeadlineAlertEmail(payload: DeadlineAlertEmailPayload)
     </tr>
     <!-- Institutional Header -->
     <tr>
-      <td style="padding: 28px 24px 20px 24px; background-color: #ffffff; border-bottom: 2px solid #0f172a; text-align: center;">
+      <td style="padding: 28px 24px 20px 24px; background-color: #ffffff; border-bottom: 2px solid #dc2626; text-align: center;">
         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
           <tr>
             <td align="center" style="padding-bottom: 12px;">
@@ -1187,13 +1187,13 @@ export async function sendDeadlineAlertEmail(payload: DeadlineAlertEmailPayload)
 
     <!-- Reference Bar -->
     <tr>
-      <td style="background-color: #0f172a; padding: 10px 24px; color: #f8fafc; font-size: 11px;">
+      <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 10px 24px; font-size: 11px;">
         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
           <tr>
-            <td align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 0.03em; color: #cbd5e1;">
+            <td align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 0.03em; color: #b91c1c;">
               TASK: ${taskTitle}
             </td>
-            <td align="right" style="font-weight: 600; color: #f59e0b;">
+            <td align="right" style="font-weight: 700; color: #b45309;">
               DATE: ${currentDate}
             </td>
           </tr>
@@ -1260,7 +1260,7 @@ export async function sendDeadlineAlertEmail(payload: DeadlineAlertEmailPayload)
 
         <!-- CTA Button -->
         <div style="text-align: center; margin: 28px 0 16px 0;">
-          <a href="${portalLink}" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 14px 32px; border-radius: 6px; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);">
+          <a href="${portalLink}" style="display: inline-block; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 14px 32px; border-radius: 6px; border: 1px solid #991b1b; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);">
             🚀 Submit Assignment Now
           </a>
         </div>
@@ -1409,18 +1409,9 @@ export async function sendPasswordResetOtpEmail(payload: PasswordResetOtpPayload
   
   <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #cbd5e1; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);">
     
-    <!-- Top Accent Stripe -->
-    <tr>
-      <td height="6" style="background: linear-gradient(90deg, #1e3a8a 0%, #d97706 50%, #1e3a8a 100%);"></td>
-    </tr>
-
-        <!-- Top Color Bar -->
-    <tr>
-      <td style="height: 5px; background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 50%, #d97706 100%); font-size: 0; line-height: 0;">&nbsp;</td>
-    </tr>
     <!-- Institutional Header -->
     <tr>
-      <td style="padding: 28px 24px 20px 24px; background-color: #ffffff; border-bottom: 2px solid #0f172a; text-align: center;">
+      <td style="padding: 28px 24px 20px 24px; background-color: #ffffff; border-bottom: 2px solid #3b82f6; text-align: center;">
         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
           <tr>
             <td align="center" style="padding-bottom: 12px;">
@@ -1435,8 +1426,8 @@ export async function sendPasswordResetOtpEmail(payload: PasswordResetOtpPayload
               <h2 style="margin: 0 0 6px 0; font-size: 13px; font-weight: 700; color: #1e3a8a; letter-spacing: 0.08em; text-transform: uppercase;">
                 Department of Information Technology
               </h2>
-              <span style="display: inline-block; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 3px 10px; font-size: 11px; font-weight: 600; color: #475569; letter-spacing: 0.05em;">
-                OFFICIAL PORTAL ACCESS & SECURITY DESK
+              <span style="display: inline-block; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 3px 10px; font-size: 11px; font-weight: 700; color: #1d4ed8; letter-spacing: 0.05em;">
+                SECURE IDENTITY VERIFICATION
               </span>
             </td>
           </tr>
@@ -1446,13 +1437,13 @@ export async function sendPasswordResetOtpEmail(payload: PasswordResetOtpPayload
 
     <!-- Reference Bar -->
     <tr>
-      <td style="background-color: #0f172a; padding: 10px 24px; color: #f8fafc; font-size: 11px;">
+      <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 10px 24px; font-size: 11px;">
         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
           <tr>
-            <td align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 0.03em; color: #cbd5e1;">
-              SECURITY: PASSWORD RESET OTP
+            <td align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 0.03em; color: #1e3a8a;">
+              SECURITY AUTHENTICATION
             </td>
-            <td align="right" style="font-weight: 600; color: #f59e0b;">
+            <td align="right" style="font-weight: 700; color: #b45309;">
               DATE: ${currentDate}
             </td>
           </tr>
@@ -1477,8 +1468,8 @@ export async function sendPasswordResetOtpEmail(payload: PasswordResetOtpPayload
           <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.15em; display: block; margin-bottom: 10px;">
             ONE-TIME SECURITY CODE
           </span>
-          <div style="background: #ffffff; border: 2px dashed #94a3b8; border-radius: 8px; padding: 12px 20px; display: inline-block; user-select: all; -webkit-user-select: all; -moz-user-select: all; -ms-user-select: all; cursor: pointer;">
-            <span style="font-family: 'Courier New', Courier, monospace, 'Lucida Console'; font-size: 38px; font-weight: 900; letter-spacing: 6px; color: #0f172a; display: block; user-select: all; -webkit-user-select: all;">${otpCode}</span>
+          <div style="background: #eff6ff; border: 2px dashed #3b82f6; border-radius: 8px; padding: 12px 20px; display: inline-block; user-select: all; -webkit-user-select: all; -moz-user-select: all; -ms-user-select: all; cursor: pointer;">
+            <span style="font-family: 'Courier New', Courier, monospace, 'Lucida Console'; font-size: 38px; font-weight: 900; letter-spacing: 6px; color: #1e3a8a; display: block; user-select: all; -webkit-user-select: all;">${otpCode}</span>
           </div>
           <span style="font-size: 11.5px; color: #64748b; font-weight: 600; display: block; margin-top: 10px;">
             📋 <i>Tap or click code to select all & copy</i>
@@ -1603,25 +1594,25 @@ export async function sendTaskPendingReminderEmail(
     
     <!-- Institutional Banner -->
     <tr>
-      <td style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); padding: 24px 28px; text-align: center; border-bottom: 4px solid #f59e0b;">
+      <td style="background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%); padding: 24px 28px; text-align: center; border-bottom: 4px solid #f59e0b;">
         <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto 12px auto;">
           <tr>
             <td align="center" style="vertical-align: middle;">
-              <img src="https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png" alt="VSBEC Emblem" width="68" height="68" style="display: block; border-radius: 8px; border: 2px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.25);" />
+              <img src="https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png" alt="VSBEC Emblem" width="68" height="68" style="display: block; border-radius: 8px; border: 2px solid #d97706; box-shadow: 0 2px 8px rgba(0,0,0,0.12);" />
             </td>
           </tr>
         </table>
-        <h1 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 800; color: #ffffff; letter-spacing: 0.06em; text-transform: uppercase;">
+        <h1 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 900; color: #0f172a; letter-spacing: 0.06em; text-transform: uppercase;">
           VSB ENGINEERING COLLEGE
         </h1>
-        <p style="margin: 0; font-size: 13px; color: #fde047; font-weight: 700; letter-spacing: 0.04em;">
+        <p style="margin: 0; font-size: 13px; color: #b45309; font-weight: 700; letter-spacing: 0.04em;">
           DEPARTMENT OF INFORMATION TECHNOLOGY
         </p>
         <div style="margin-top: 8px;">
           <span style="display: inline-block; background: #ea580c; border: 1px solid #fb923c; color: #ffffff; font-size: 10.5px; font-weight: 800; padding: 3px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 6px;">
             🇮🇳 SIH DEMO
           </span>
-          <span style="display: inline-block; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.4); color: #ffffff; font-size: 10.5px; font-weight: 700; padding: 3px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em;">
+          <span style="display: inline-block; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; font-size: 10.5px; font-weight: 700; padding: 3px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em;">
             VSBEC IT TASK MANAGER
           </span>
         </div>
@@ -1994,7 +1985,7 @@ export async function sendNoticeAnnouncementEmail(payload: NoticeEmailPayload): 
 
           <!-- Institutional Header -->
           <tr>
-            <td style="padding: 30px 24px 22px 24px; background-color: #ffffff; border-bottom: 2px solid #0f172a; text-align: center;">
+            <td style="padding: 30px 24px 22px 24px; background-color: #ffffff; border-bottom: 2px solid #3b82f6; text-align: center;">
               <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center" style="padding-bottom: 14px;">
@@ -2020,13 +2011,13 @@ export async function sendNoticeAnnouncementEmail(payload: NoticeEmailPayload): 
 
           <!-- Reference Bar -->
           <tr>
-            <td style="background-color: #0f172a; padding: 12px 24px; color: #f8fafc; font-size: 11px;">
+            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 12px 24px; font-size: 11px;">
               <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
-                  <td align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 0.03em; color: #cbd5e1;">
+                  <td align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 0.03em; color: #1e3a8a;">
                     DIGITAL NOTICE BOARD
                   </td>
-                  <td align="right" style="font-weight: 600; color: #f59e0b;">
+                  <td align="right" style="font-weight: 700; color: #b45309;">
                     DATE: ${currentDate}
                   </td>
                 </tr>
@@ -2302,9 +2293,9 @@ export async function sendAssessmentInvitationEmail(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${trackTitle} - SIH Demo Assessment</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155;">
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155;">
 
-  <div style="max-width: 640px; margin: 30px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.3); border: 1px solid #e2e8f0;">
+  <div style="max-width: 640px; margin: 30px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
 
     <!-- Top SIH Announcement Banner -->
     <div style="background: linear-gradient(90deg, #ea580c 0%, #d97706 50%, #ea580c 100%); padding: 10px 20px; text-align: center; color: #ffffff; font-size: 11.5px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;">
@@ -2312,19 +2303,19 @@ export async function sendAssessmentInvitationEmail(
     </div>
 
     <!-- Institutional Header -->
-    <div style="background: linear-gradient(135deg, #09090b 0%, #1e1b4b 50%, #312e81 100%); padding: 32px 28px; text-align: center; border-bottom: 3px solid #6366f1;">
-      <img src="https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png" width="68" height="68" style="display: block; margin: 0 auto 12px auto; background: #ffffff; border-radius: 12px; padding: 4px;" alt="VSBEC IT Task Manager Logo" />
-      <p style="color: #a5b4fc; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; margin: 0 0 4px 0;">
+    <div style="background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 50%, #e0f2fe 100%); padding: 32px 28px; text-align: center; border-bottom: 3px solid #0284c7;">
+      <img src="https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png" width="68" height="68" style="display: block; margin: 0 auto 12px auto; background: #ffffff; border-radius: 12px; border: 2px solid #0284c7; padding: 4px;" alt="VSBEC IT Task Manager Logo" />
+      <p style="color: #0369a1; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; margin: 0 0 4px 0;">
         VSB Engineering College (Autonomous)
       </p>
-      <h1 style="color: #ffffff; font-size: 21px; font-weight: 900; margin: 0 0 8px 0;">
+      <h1 style="color: #0f172a; font-size: 21px; font-weight: 900; margin: 0 0 8px 0;">
         Department of Information Technology
       </h1>
       <div style="margin-top: 8px;">
         <span style="background: #ea580c; color: #ffffff; font-size: 11px; font-weight: 800; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; margin-right: 6px; display: inline-block;">
           🇮🇳 SIH INNOVATION DEMO
         </span>
-        <span style="background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(165, 180, 252, 0.4); color: #e0e7ff; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; display: inline-block;">
+        <span style="background: #e0f2fe; border: 1px solid #7dd3fc; color: #0369a1; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; display: inline-block;">
           VSBEC IT TASK MANAGER
         </span>
       </div>
@@ -2410,7 +2401,7 @@ export async function sendAssessmentInvitationEmail(
 
       <!-- Direct Portal Call to Action -->
       <div style="text-align: center; margin: 32px 0 16px 0;">
-        <a href="https://it-taskmanager.vercel.app/" style="background: linear-gradient(135deg, #09090b 0%, #1e1b4b 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 800; padding: 14px 34px; border-radius: 12px; display: inline-block; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);">
+        <a href="https://it-taskmanager.vercel.app/" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 800; padding: 14px 34px; border-radius: 12px; display: inline-block; box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);">
           🚀 Launch Assessment Room (SIH Demo) →
         </a>
       </div>

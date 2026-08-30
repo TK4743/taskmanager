@@ -398,9 +398,12 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
       const base64 = canvas.toDataURL('image/jpeg', 0.85);
 
       // Upload to Cloudinary via backend
+      const authHeaders: any = { 'Content-Type': 'application/json' };
+      if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch(`${API_URL}/api/assessment/capture-photo`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           imageBase64: base64,
           user_id: user?.id
@@ -585,7 +588,9 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
       if (skillTag) {
         url = `${API_URL}/api/assessment/questions?skill_tag=${encodeURIComponent(skillTag)}`;
       }
-      const res = await fetch(url);
+      const authHeaders: any = {};
+      if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(url, { headers: authHeaders });
       const data = await res.json();
       if (data.success && Array.isArray(data.questions)) {
         setRawQuestions(data.questions);
@@ -645,7 +650,9 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
   const fetchHodResults = async () => {
     setIsLoadingResults(true);
     try {
-      const res = await fetch(`${API_URL}/api/assessment/hod-results`);
+      const authHeaders: any = {};
+      if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${API_URL}/api/assessment/hod-results`, { headers: authHeaders });
       const data = await res.json();
       if (data.success) {
         setAnalytics(data.metrics);
@@ -879,9 +886,11 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
     if (excelQuestions.length === 0) return;
     setIsPublishing(true);
     try {
+      const authHeaders: any = { 'Content-Type': 'application/json' };
+      if (token) authHeaders['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`${API_URL}/api/assessment/questions/bulk`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           questions: excelQuestions,
           replaceExisting: false,

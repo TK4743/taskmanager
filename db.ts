@@ -785,10 +785,11 @@ export async function initDB() {
         strengths JSONB,
         gaps JSONB,
         time_taken_seconds INTEGER DEFAULT 0,
-        proctor_photo_url VARCHAR(1000),
+        proctor_photo_url TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-      ALTER TABLE student_assessments ADD COLUMN IF NOT EXISTS proctor_photo_url VARCHAR(1000);
+      ALTER TABLE student_assessments ADD COLUMN IF NOT EXISTS proctor_photo_url TEXT;
+      ALTER TABLE student_assessments ALTER COLUMN proctor_photo_url TYPE TEXT;
       ALTER TABLE assessment_questions ADD COLUMN IF NOT EXISTS track_type VARCHAR(50) DEFAULT 'GENERAL_APTITUDE';
       ALTER TABLE assessment_questions ADD COLUMN IF NOT EXISTS track_title VARCHAR(150) DEFAULT 'General Aptitude Benchmark';
       ALTER TABLE assessment_questions ADD COLUMN IF NOT EXISTS cutoff_percentage NUMERIC(5,2) DEFAULT 60.00;
@@ -809,10 +810,20 @@ export async function initDB() {
         target_class_id UUID REFERENCES classes(id) ON DELETE SET NULL,
         custom_instructions TEXT,
         deadline TIMESTAMP,
-        created_by UUID REFERENCES users(id),
+        created_by UUID REFERENCES users(id) ON DELETE SET NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
       CREATE INDEX IF NOT EXISTS idx_assessment_assignments_target ON assessment_assignments(target_year, target_class_id);
+
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'assessment_assignments_created_by_fkey') THEN
+          ALTER TABLE assessment_assignments DROP CONSTRAINT assessment_assignments_created_by_fkey;
+        END IF;
+        ALTER TABLE assessment_assignments ADD CONSTRAINT assessment_assignments_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+      EXCEPTION WHEN OTHERS THEN
+        NULL;
+      END $$;
     `);
 
     // Seed 15 standardized aptitude questions (5 Quant, 5 Logical, 5 Verbal) if question bank is empty

@@ -61,7 +61,12 @@ export async function generateDatabaseSnapshot(force = false) {
       'student_languages',
       'student_career_preferences',
       'system_settings',
-      'notifications'
+      'notifications',
+      'assessment_questions',
+      'assessment_assignments',
+      'student_assessments',
+      'push_subscriptions',
+      'password_resets'
     ];
 
     const snapshotData: Record<string, any[]> = {};
@@ -69,11 +74,16 @@ export async function generateDatabaseSnapshot(force = false) {
     for (const table of tables) {
       try {
         const res = await pool.query(`SELECT * FROM ${table}`);
-        // Omit sensitive password hashes from backup JSON for security
+        // Omit sensitive password hashes & OTP codes from backup JSON for security
         if (table === 'users') {
           snapshotData[table] = res.rows.map(row => {
             const { password, ...safeUser } = row;
             return safeUser;
+          });
+        } else if (table === 'password_resets') {
+          snapshotData[table] = res.rows.map(row => {
+            const { otp_code, ...safeReset } = row;
+            return safeReset;
           });
         } else {
           snapshotData[table] = res.rows;

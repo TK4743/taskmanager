@@ -118,6 +118,9 @@ export function loadDirectoryFromDisk() {
   }
 }
 
+// Immediately initialize in-memory directory cache from disk on startup
+loadDirectoryFromDisk();
+
 /**
  * Fetches all constant student details from Supabase/PostgreSQL,
  * builds the in-memory constant cache, and writes Year-wise folders

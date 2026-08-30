@@ -71,7 +71,10 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
       if (selectedTier && selectedTier !== 'ALL') url += `tier=${selectedTier}&`;
       if (selectedClassId) url += `class_id=${selectedClassId}&`;
 
-      const res = await fetch(url);
+      const authHeaders: any = {};
+      if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(url, { headers: authHeaders });
       const data = await res.json();
       if (data.success) {
         setMetrics(data.metrics);
@@ -363,18 +366,18 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                     <div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-extrabold text-zinc-900">
-                          {myProfile.pillars.aptitude.completed ? `${myProfile.pillars.aptitude.score}%` : '0%'}
+                          {myProfile?.pillars?.aptitude?.completed ? `${myProfile.pillars.aptitude.score}%` : '0%'}
                         </span>
                         <span className="text-xs font-bold text-zinc-500">
-                          {myProfile.pillars.aptitude.completed ? 'Benchmark Score' : 'Not Attempted'}
+                          {myProfile?.pillars?.aptitude?.completed ? 'Benchmark Score' : 'Not Attempted'}
                         </span>
                       </div>
                       <span className="text-xs font-bold text-indigo-700 block mt-0.5">
-                        +{myProfile.pillars.aptitude.contribution} / 35 pts earned
+                        +{myProfile?.pillars?.aptitude?.contribution ?? 0} / 35 pts earned
                       </span>
                     </div>
                     <p className="text-[11px] text-zinc-500 font-medium">
-                      {myProfile.pillars.aptitude.completed
+                      {myProfile?.pillars?.aptitude?.completed
                         ? 'Proctored 15-Question Skill Assessment Benchmark.'
                         : 'Take the proctored 15-Q aptitude test to earn up to +35 points!'}
                     </p>
@@ -384,7 +387,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                         onClick={onNavigateToAssessment}
                         className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 pt-1 cursor-pointer"
                       >
-                        {myProfile.pillars.aptitude.completed ? 'View Marks & Scorecard' : 'Take Assessment Now'} <ArrowUpRight size={13} />
+                        {myProfile?.pillars?.aptitude?.completed ? 'View Marks & Scorecard' : 'Take Assessment Now'} <ArrowUpRight size={13} />
                       </button>
                     )}
                   </div>
@@ -474,12 +477,12 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                     <div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-extrabold text-zinc-900">
-                          {myProfile.pillars.tasks.rate}%
+                          {myProfile?.pillars?.tasks?.rate ?? 0}%
                         </span>
                         <span className="text-xs font-bold text-zinc-500">Discipline Rate</span>
                       </div>
                       <span className="text-xs font-bold text-purple-700 block mt-0.5">
-                        +{myProfile.pillars.tasks.contribution} / 20 pts ({myProfile.pillars.tasks.submitted}/{myProfile.pillars.tasks.total_assigned} tasks)
+                        +{myProfile?.pillars?.tasks?.contribution ?? 0} / 20 pts ({myProfile?.pillars?.tasks?.submitted ?? 0}/{myProfile?.pillars?.tasks?.total_assigned ?? 0} tasks)
                       </span>
                     </div>
                     <p className="text-[11px] text-zinc-500 font-medium">

@@ -53,7 +53,42 @@ export async function cleanupOnlyTaskScreenshots() {
       }
     }
 
-    console.log(`[Image Cleanup] Successfully purged ${purgedCount} task proof screenshots.`);
+    // Also purge team_submissions proof screenshots older than 30 days
+    try {
+      const teamResult = await pool.query(`
+        SELECT ts.id, ts.cloudinary_public_id
+        FROM team_submissions ts
+        JOIN teams tm ON ts.team_id = tm.id
+        JOIN tasks t ON tm.task_id = t.id
+        WHERE ts.cloudinary_public_id IS NOT NULL
+          AND ts.status IN ('APPROVED', 'REJECTED')
+          AND (
+            ts.reviewed_at < NOW() - INTERVAL '30 days'
+            OR t.deadline < NOW() - INTERVAL '30 days'
+          )
+      `);
+
+      for (const row of teamResult.rows) {
+        if (row.cloudinary_public_id) {
+          try {
+            await cloudinary.uploader.destroy(row.cloudinary_public_id);
+          } catch (cloudinaryErr) {
+            console.error(`[Image Cleanup] Error deleting team Cloudinary public_id ${row.cloudinary_public_id}:`, cloudinaryErr);
+          }
+          await pool.query(`
+            UPDATE team_submissions
+            SET proof_url = 'PURGED_EXPIRED_30D',
+                cloudinary_public_id = NULL
+            WHERE id = $1
+          `, [row.id]);
+          purgedCount++;
+        }
+      }
+    } catch (teamErr) {
+      console.error('[Image Cleanup Error for Teams]:', teamErr);
+    }
+
+    console.log(`[Image Cleanup] Successfully purged ${purgedCount} task and team proof screenshots.`);
     return purgedCount;
   } catch (error) {
     console.error('[Image Cleanup Error]:', error);

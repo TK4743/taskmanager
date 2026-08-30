@@ -908,6 +908,7 @@ async function startServer() {
     // Send a confirmation ping to the linked Telegram Chat
     const confirmMsg = `🎉 <b>TELEGRAM ACCOUNT LINKED SUCCESSFULLY!</b>\n\nHello <b>${user.full_name}</b> (<code>${user.register_number || user.username}</code>),\nYour Telegram account has been linked to the IT TaskManager portal!\nYou will now receive instant task updates, verification notices, and deadline alerts directly here. 🚀`;
     sendTelegramMessage(strChatId, confirmMsg).catch(() => {});
+    invalidateApiCache(`me_${req.user.id}`);
 
     res.json({ success: true, message: 'Telegram account linked successfully!', studentName: user.full_name });
   }));
@@ -915,6 +916,7 @@ async function startServer() {
   // 7. Unlink Telegram from Student Profile
   app.delete('/api/student/unlink-telegram', authenticate, asyncHandler(async (req: any, res: Response) => {
     await pool.query('UPDATE users SET telegram_chat_id = NULL, telegram_username = NULL, telegram_linked_at = NULL WHERE id = $1', [req.user.id]);
+    invalidateApiCache(`me_${req.user.id}`);
     res.json({ success: true, message: 'Telegram account unlinked successfully.' });
   }));
 
@@ -1299,6 +1301,7 @@ async function startServer() {
 
     // Mark OTP as used
     await pool.query('UPDATE password_resets SET used = TRUE WHERE id = $1', [record.id]);
+    invalidateUserAuthCache(user.id);
 
     // Sign JWT token for direct login
     const token = jwt.sign({
@@ -1546,6 +1549,7 @@ async function startServer() {
     if (req.user.role === 'CLASS_ADVISOR') {
       if (!req.user.class_id) return res.status(400).json({ error: 'No class assigned to advisor' });
       await pool.query('UPDATE classes SET name = $1, year = $2, batch = $3, updated_at = NOW() WHERE id = $4', [name, year, batch, req.user.class_id]);
+      invalidateApiCache('classes');
       return res.json({ id: req.user.class_id, name, year, batch });
     }
     const deptId = req.user.role === 'SUPREME_ADMIN' ? department_id : req.user.department_id;
@@ -1736,6 +1740,7 @@ async function startServer() {
         is_year_coordinator || false, year_scope || null
       ]);
       const u = newUserRes.rows[0];
+      invalidateApiCache('users_');
       res.json({ id: u.id, username, role: userRole, department_id: deptId, class_id: clsId, full_name, email, register_number });
     } catch (e: any) {
       const isDuplicate = e.code === '23505';
@@ -1841,6 +1846,7 @@ async function startServer() {
         is_year_coordinator || false, year_scope || null
       ]);
       const u = newUserRes.rows[0];
+      invalidateApiCache('users_');
       res.json({ id: u.id, username: u.username, role: u.role, department_id: u.department_id, class_id: u.class_id, full_name: u.full_name, email: u.email });
     } catch (e: any) {
       const isDuplicate = e.code === '23505';
@@ -1876,6 +1882,7 @@ async function startServer() {
         success++;
       } catch { failed++; }
     }
+    invalidateApiCache('users_');
     res.json({ success, failed });
   });
 
@@ -1897,6 +1904,7 @@ async function startServer() {
 
     await pool.query('UPDATE users SET is_coordinator = $1, updated_at = NOW() WHERE id = $2', [is_coordinator, req.params.id]);
     invalidateUserAuthCache(req.params.id);
+    invalidateApiCache('users_');
 
     const cached = constantStudentByIdMap.get(req.params.id.toString());
     if (cached) {
@@ -1980,6 +1988,7 @@ async function startServer() {
     await pool.query('DELETE FROM notifications WHERE user_id = $1', [req.params.id]);
     await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
     invalidateUserAuthCache(req.params.id);
+    invalidateApiCache('users_');
     await syncAndGenerateStudentDirectory().catch(err => console.error('[StudentDirectory] Sync on delete warning:', err));
     res.json({ success: true });
   });
@@ -3586,6 +3595,8 @@ async function startServer() {
       }
 
       await client.query('COMMIT');
+      invalidateApiCache('tasks_');
+      invalidateApiCache('submissions_');
       res.json({ success: true });
     } catch (err: any) {
       await client.query('ROLLBACK');
@@ -4070,6 +4081,13 @@ async function startServer() {
         return res.status(404).json({ error: 'Task not found' });
       }
 
+      if (task.submission_type === 'TEAM') {
+        if (cloudinary_public_id) {
+          try { await cloudinary.uploader.destroy(cloudinary_public_id); } catch (e) { }
+        }
+        return res.status(400).json({ error: 'This task is configured for Team submission. Please submit proof via your team.' });
+      }
+
       const accessibilityRes = await pool.query(`
         SELECT 1 FROM tasks t
         LEFT JOIN task_classes tc ON t.id = tc.task_id
@@ -4221,6 +4239,39 @@ async function startServer() {
       return res.status(403).json({ error: 'Only student coordinators can verify' });
     }
 
+    // Role-based scope verification for batch-verify
+    if (req.user.role === 'STUDENT' || req.user.role === 'CLASS_ADVISOR' || req.user.role === 'HOD') {
+      const scopeCheckRes = await pool.query(`
+        SELECT ts.id, u.class_id, u.department_id, c.year
+        FROM task_submissions ts
+        JOIN users u ON ts.user_id = u.id
+        LEFT JOIN classes c ON u.class_id = c.id
+        WHERE ts.id = ANY($1)
+      `, [submission_ids]);
+
+      for (const row of scopeCheckRes.rows) {
+        if (req.user.role === 'STUDENT' && req.user.is_coordinator) {
+          if (row.class_id?.toString() !== req.user.class_id?.toString()) {
+            return res.status(403).json({ error: 'Forbidden: One or more submissions do not belong to your class.' });
+          }
+        } else if (req.user.role === 'CLASS_ADVISOR') {
+          if (req.user.is_year_coordinator) {
+            if (row.department_id?.toString() !== req.user.department_id?.toString() || row.year !== req.user.year_scope) {
+              return res.status(403).json({ error: 'Forbidden: One or more submissions are outside your year scope.' });
+            }
+          } else {
+            if (row.class_id?.toString() !== req.user.class_id?.toString()) {
+              return res.status(403).json({ error: 'Forbidden: One or more submissions do not belong to your class.' });
+            }
+          }
+        } else if (req.user.role === 'HOD') {
+          if (row.department_id?.toString() !== req.user.department_id?.toString()) {
+            return res.status(403).json({ error: 'Forbidden: One or more submissions are outside your department.' });
+          }
+        }
+      }
+    }
+
     const note = verification_note || 'Batch verified';
     await pool.query(`
       UPDATE task_submissions
@@ -4245,6 +4296,7 @@ async function startServer() {
       .catch(e => console.error('[Push Batch Verify Error]:', e));
 
     invalidateApiCache('tasks_');
+    invalidateApiCache('submissions_');
     res.json({ success: true, count: submission_ids.length });
   });
 
@@ -4541,6 +4593,8 @@ async function startServer() {
       `, [subId, req.user.id, sub.status]);
 
       await client.query('COMMIT');
+      invalidateApiCache('tasks_');
+      invalidateApiCache('submissions_');
       res.json({ success: true });
     } catch (err) {
       await client.query('ROLLBACK');
@@ -5345,39 +5399,9 @@ async function startServer() {
 
     const newHash = await bcrypt.hash(newPassword, 10);
     await pool.query('UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2', [newHash, req.user.id]);
+    invalidateUserAuthCache(req.user.id);
 
     res.json({ message: 'Password changed successfully in database' });
-  }));
-
-  app.delete('/api/discussions/:id', authenticate, asyncHandler(async (req: any, res: Response) => {
-    const postRes = await pool.query(
-      'SELECT * FROM task_discussions WHERE id = $1 AND deleted_at IS NULL', [req.params.id]
-    );
-    if (!postRes.rows[0]) return res.status(404).json({ error: 'Post not found' });
-    const post = postRes.rows[0];
-
-    const isOwner = String(post.user_id) === String(req.user.id);
-    const isStaff = ['CLASS_ADVISOR', 'HOD', 'SUPREME_ADMIN'].includes(req.user.role);
-    const withinWindow = isOwner && (Date.now() - new Date(post.created_at).getTime()) < 10 * 60 * 1000;
-
-    if (!withinWindow && !isStaff) {
-      return res.status(403).json({ error: 'You can only delete your own posts within 10 minutes' });
-    }
-
-    await pool.query(`UPDATE task_discussions SET deleted_at = NOW() WHERE id = $1`, [req.params.id]);
-    res.json({ success: true });
-  }));
-
-  // PATCH /api/discussions/:id/pin â€” staff only
-  app.patch('/api/discussions/:id/pin', authenticate, authorize(['CLASS_ADVISOR', 'HOD', 'SUPREME_ADMIN']), asyncHandler(async (req: any, res: Response) => {
-    const postRes = await pool.query('SELECT is_pinned FROM task_discussions WHERE id = $1', [req.params.id]);
-    if (!postRes.rows[0]) return res.status(404).json({ error: 'Post not found' });
-
-    const updated = await pool.query(
-      `UPDATE task_discussions SET is_pinned = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
-      [!postRes.rows[0].is_pinned, req.params.id]
-    );
-    res.json(updated.rows[0]);
   }));
 
   // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -5414,7 +5438,7 @@ async function startServer() {
     } else {
       params.push(u.department_id, u.class_id);
       conditions.push(
-        `(n.scope='ALL' OR (n.scope='DEPARTMENT' AND n.department_id=$${params.length - 1}) OR (n.scope='CLASS' AND n.class_id=$${params.length}))`
+        `(n.scope='ALL' OR (n.scope='DEPARTMENT' AND n.department_id=$${params.length - 1}) OR (n.scope='YEAR' AND (n.year IS NULL OR n.year = (SELECT year FROM classes WHERE id=$${params.length}))) OR (n.scope='CLASS' AND n.class_id=$${params.length}))`
       );
     }
 
@@ -5471,6 +5495,27 @@ async function startServer() {
     }
 
     const deptId = u.role === 'CLASS_ADVISOR' ? u.department_id : (department_id || u.department_id || null);
+
+    // Validate advisor notice target classes
+    if (u.role === 'CLASS_ADVISOR') {
+      if (scope === 'CLASS' && Array.isArray(class_ids) && class_ids.length > 0) {
+        if (u.is_year_coordinator) {
+          const allowedClasses = await pool.query('SELECT id FROM classes WHERE department_id = $1 AND year = $2', [u.department_id, u.year_scope]);
+          const allowedIds = new Set(allowedClasses.rows.map((c: any) => c.id.toString()));
+          for (const cid of class_ids) {
+            if (!allowedIds.has(cid.toString())) {
+              return res.status(403).json({ error: 'Forbidden: Cannot post notices to classes outside your year scope.' });
+            }
+          }
+        } else {
+          for (const cid of class_ids) {
+            if (cid.toString() !== u.class_id?.toString()) {
+              return res.status(403).json({ error: 'Forbidden: Cannot post notices to classes other than your assigned class.' });
+            }
+          }
+        }
+      }
+    }
 
     // Multi-class notice creation handling
     if (scope === 'CLASS' && Array.isArray(class_ids) && class_ids.length > 0) {
@@ -6342,7 +6387,7 @@ async function startServer() {
   }));
 
   // TEMPORARY ADMIN ROUTE: Fix Anomalous Historical LeetCode Data
-  app.get('/api/admin/fix-anomalous-data', asyncHandler(async (req: any, res: Response) => {
+  app.get('/api/admin/fix-anomalous-data', authenticate, authorize(['SUPREME_ADMIN']), asyncHandler(async (req: any, res: Response) => {
     // The previous sync bug caused total_solved to be incorrectly inserted into solved_today 
     // when a user first connected or their total count jumped. 
     // Since LeetCode's recent submissions maxes at 50, any solved_today > 30 is highly likely 
@@ -8057,10 +8102,24 @@ async function startServer() {
   // ── Protected Cron Webhook (Render / External Cron Support) ─────────────────
   app.post('/api/cron/sync-coding-progress', asyncHandler(async (req: Request, res: Response) => {
     const cronSecret = process.env.CRON_SECRET;
+    const authHeader = req.headers.authorization || (req.headers['x-cron-secret'] as string);
     if (cronSecret) {
-      const authHeader = req.headers.authorization || req.headers['x-cron-secret'];
       if (authHeader !== cronSecret && authHeader !== `Bearer ${cronSecret}`) {
         return res.status(401).json({ error: 'Unauthorized cron request: Invalid secret key' });
+      }
+    } else {
+      // If CRON_SECRET is not configured in .env, require SUPREME_ADMIN JWT token
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized: CRON_SECRET or Admin token required' });
+      }
+      try {
+        const decoded: any = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+        const userRes = await pool.query('SELECT role FROM users WHERE id = $1', [decoded.id]);
+        if (!userRes.rows[0] || userRes.rows[0].role !== 'SUPREME_ADMIN') {
+          return res.status(403).json({ error: 'Forbidden: Supreme Admin required' });
+        }
+      } catch (_) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
       }
     }
 
@@ -8087,7 +8146,7 @@ async function startServer() {
   // ─── 📝 Skill & Aptitude Assessment APIs (Tracks, AI Remedials & Telegram Alerts) ───
 
   // 1. Fetch available Assessment Tracks (General Aptitude, Technical Core, Zoho, TCS NQT, Infosys)
-  app.get('/api/assessment/tracks', asyncHandler(async (req: any, res: any) => {
+  app.get('/api/assessment/tracks', authenticate, asyncHandler(async (req: any, res: any) => {
     const { class_id, year } = req.query;
 
     const [tracksRes, assignRes] = await Promise.all([
@@ -8176,7 +8235,7 @@ async function startServer() {
   }));
 
   // 2. Fetch active questions for a specific track or targeted micro-quiz (Sanitized: omit answers before submission)
-  app.get('/api/assessment/questions', asyncHandler(async (req: any, res: any) => {
+  app.get('/api/assessment/questions', authenticate, asyncHandler(async (req: any, res: any) => {
     const track = req.query.track || 'GENERAL_APTITUDE';
     const skillTag = req.query.skill_tag;
 
@@ -8200,7 +8259,7 @@ async function startServer() {
   }));
 
   // 3. HOD Bulk Upload & Publish Questions (from Excel parsing) with Track tagging
-  app.post('/api/assessment/questions/bulk', asyncHandler(async (req: any, res: any) => {
+  app.post('/api/assessment/questions/bulk', authenticate, authorize(['HOD', 'SUPREME_ADMIN']), asyncHandler(async (req: any, res: any) => {
     const { 
       questions, 
       replaceExisting = false,
@@ -8252,7 +8311,7 @@ async function startServer() {
   }));
 
   // 4. Proctor Photo Capture & Upload to Cloudinary
-  app.post('/api/assessment/capture-photo', asyncHandler(async (req: any, res: any) => {
+  app.post('/api/assessment/capture-photo', authenticate, asyncHandler(async (req: any, res: any) => {
     const { imageBase64 } = req.body;
     if (!imageBase64) {
       return res.status(400).json({ success: false, error: 'No image data provided' });
@@ -8290,55 +8349,26 @@ async function startServer() {
   }));
 
   // 5. Student Submits Assessment Quiz (With Telegram Scorecard & HOD Alerts)
-  app.post('/api/assessment/submit', asyncHandler(async (req: any, res: any) => {
+  app.post('/api/assessment/submit', authenticate, asyncHandler(async (req: any, res: any) => {
     const { 
       answers = {}, 
       question_ids = [],
       time_taken_seconds = 0, 
-      user_id, 
-      student_name, 
-      register_number, 
       proctor_photo_url,
       track_type = 'GENERAL_APTITUDE',
       track_title: clientTrackTitle,
       cutoff_percentage: clientCutoff
     } = req.body;
 
-    // Resolve user details
-    let targetUserId = user_id;
-    let targetName = student_name || 'Student';
-    let targetRegNo = register_number || 'REG-2026';
+    // Securely bind to authenticated session
+    const targetUserId = req.user.id;
+    let targetName = req.user.full_name || req.body.student_name || 'Student';
+    let targetRegNo = req.user.register_number || req.body.register_number || 'REG-2026';
 
-    if (!targetUserId) {
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        try {
-          const decoded: any = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET || 'secret');
-          targetUserId = decoded.id;
-        } catch (_) {}
-      }
-    }
-
-    if (targetUserId) {
-      const uRes = await pool.query('SELECT full_name, register_number, email, class_id, telegram_chat_id FROM users WHERE id = $1', [targetUserId]);
-      if (uRes.rows.length > 0) {
-        targetName = uRes.rows[0].full_name || targetName;
-        targetRegNo = uRes.rows[0].register_number || targetRegNo;
-      }
-    } else if (req.body.register_number) {
-      const regUser = await pool.query('SELECT id, full_name, register_number, email, class_id, telegram_chat_id FROM users WHERE register_number = $1', [req.body.register_number]);
-      if (regUser.rows.length > 0) {
-        targetUserId = regUser.rows[0].id;
-        targetName = regUser.rows[0].full_name;
-        targetRegNo = regUser.rows[0].register_number;
-      }
-    } else {
-      const fallbackUser = await pool.query("SELECT id, full_name, register_number FROM users WHERE role = 'STUDENT' LIMIT 1");
-      if (fallbackUser.rows.length > 0) {
-        targetUserId = fallbackUser.rows[0].id;
-        targetName = fallbackUser.rows[0].full_name;
-        targetRegNo = fallbackUser.rows[0].register_number;
-      }
+    const uRes = await pool.query('SELECT full_name, register_number, email, class_id, telegram_chat_id FROM users WHERE id = $1', [targetUserId]);
+    if (uRes.rows.length > 0) {
+      targetName = uRes.rows[0].full_name || targetName;
+      targetRegNo = uRes.rows[0].register_number || targetRegNo;
     }
 
     // Fetch questions to evaluate (prioritize exact questions served to candidate)
@@ -8598,19 +8628,9 @@ async function startServer() {
   };
 
   // 6. Retrieve Student's Latest Assessment Profile per Track
-  app.get('/api/assessment/my-latest', asyncHandler(async (req: any, res: any) => {
-    let targetUserId = req.query.user_id;
+  app.get('/api/assessment/my-latest', authenticate, asyncHandler(async (req: any, res: any) => {
+    const targetUserId = req.user.role === 'STUDENT' ? req.user.id : (req.query.user_id || req.user.id);
     const trackType = req.query.track;
-
-    if (!targetUserId) {
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        try {
-          const decoded: any = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET || 'secret');
-          targetUserId = decoded.id;
-        } catch (_) {}
-      }
-    }
 
     if (!targetUserId) {
       return res.json({ success: true, assessment: null });
@@ -8630,20 +8650,10 @@ async function startServer() {
   }));
 
   // 6b. Retrieve All Assessment Marks & Attempt History for Students
-  app.get('/api/assessment/my-results', asyncHandler(async (req: any, res: any) => {
-    let targetUserId = req.query.user_id;
+  app.get('/api/assessment/my-results', authenticate, asyncHandler(async (req: any, res: any) => {
+    let targetUserId = req.user.role === 'STUDENT' ? req.user.id : (req.query.user_id || req.user.id);
 
-    if (!targetUserId) {
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        try {
-          const decoded: any = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET || 'secret');
-          targetUserId = decoded.id;
-        } catch (_) {}
-      }
-    }
-
-    if (!targetUserId) {
+    if (req.user.role !== 'STUDENT' && !req.query.user_id) {
       const tharun = await pool.query("SELECT id FROM users WHERE register_number = '922524205171' LIMIT 1");
       if (tharun.rows.length > 0) targetUserId = tharun.rows[0].id;
     }
@@ -8693,19 +8703,10 @@ async function startServer() {
 
 
   // 7. Personalized AI Remedial Recommendations Engine (Curated Videos, Formulas, Quizzes)
-  app.get('/api/assessment/remedial-plan', asyncHandler(async (req: any, res: any) => {
-    let targetUserId = req.query.user_id;
-    if (!targetUserId) {
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        try {
-          const decoded: any = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET || 'secret');
-          targetUserId = decoded.id;
-        } catch (_) {}
-      }
-    }
+  app.get('/api/assessment/remedial-plan', authenticate, asyncHandler(async (req: any, res: any) => {
+    let targetUserId = req.user.role === 'STUDENT' ? req.user.id : (req.query.user_id || req.user.id);
 
-    if (!targetUserId) {
+    if (req.user.role !== 'STUDENT' && !req.query.user_id) {
       const tharun = await pool.query("SELECT id FROM users WHERE register_number = '922524205171' LIMIT 1");
       if (tharun.rows.length > 0) targetUserId = tharun.rows[0].id;
     }
@@ -8856,7 +8857,7 @@ async function startServer() {
   }));
 
   // 5. HOD Performance Analytics & Results Table
-  app.get('/api/assessment/hod-results', asyncHandler(async (_req: any, res: any) => {
+  app.get('/api/assessment/hod-results', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR']), asyncHandler(async (_req: any, res: any) => {
     const attemptsRes = await pool.query(`
       SELECT 
         sa.id, sa.user_id, sa.student_name, sa.register_number, sa.total_questions,
@@ -9014,7 +9015,7 @@ async function startServer() {
   }));
 
   // ─── Module 8: Unified Placement Readiness Rating Engine ───────────────────────
-  app.get('/api/placement/readiness-dashboard', asyncHandler(async (req: any, res: any) => {
+  app.get('/api/placement/readiness-dashboard', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR']), asyncHandler(async (req: any, res: any) => {
     const { class_id, tier, search } = req.query;
 
     const [
@@ -9244,41 +9245,24 @@ async function startServer() {
 
   // Student's individual readiness profile
   // Student's individual readiness profile (100% Real Live Data)
-  app.get('/api/placement/my-readiness', asyncHandler(async (req: any, res: any) => {
-    let targetUserId = req.query.user_id;
+  app.get('/api/placement/my-readiness', authenticate, asyncHandler(async (req: any, res: any) => {
+    let targetUserId = req.user.role === 'STUDENT' ? req.user.id : (req.query.user_id || req.user.id);
 
-    if (!targetUserId) {
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        try {
-          const decoded: any = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET || 'secret');
-          targetUserId = decoded.id;
-        } catch (_) {}
+    // If staff user wants to view a specific student by register number
+    if (req.user.role !== 'STUDENT') {
+      if (req.query.register_number) {
+        const regUser = await pool.query("SELECT id FROM users WHERE register_number = $1 LIMIT 1", [req.query.register_number]);
+        if (regUser.rows.length > 0) targetUserId = regUser.rows[0].id;
+      } else if (!req.query.user_id) {
+        // Staff preview: default to Tharunkumar K or first student
+        const tharun = await pool.query("SELECT id FROM users WHERE register_number = '922524205171' OR email LIKE '%tharun%' LIMIT 1");
+        if (tharun.rows.length > 0) {
+          targetUserId = tharun.rows[0].id;
+        } else {
+          const fallback = await pool.query("SELECT id FROM users WHERE role = 'STUDENT' ORDER BY full_name ASC LIMIT 1");
+          if (fallback.rows.length > 0) targetUserId = fallback.rows[0].id;
+        }
       }
-    }
-
-    // If targetUserId is an admin/HOD or not provided, check if register_number was passed
-    if (req.query.register_number) {
-      const regUser = await pool.query("SELECT id FROM users WHERE register_number = $1 LIMIT 1", [req.query.register_number]);
-      if (regUser.rows.length > 0) targetUserId = regUser.rows[0].id;
-    }
-
-    // Default to Tharunkumar K if no student is specified (prevents defaulting to random student)
-    if (!targetUserId) {
-      const tharun = await pool.query("SELECT id FROM users WHERE register_number = '922524205171' OR email LIKE '%tharun%' LIMIT 1");
-      if (tharun.rows.length > 0) {
-        targetUserId = tharun.rows[0].id;
-      } else {
-        const fallback = await pool.query("SELECT id FROM users WHERE role = 'STUDENT' ORDER BY full_name ASC LIMIT 1");
-        if (fallback.rows.length > 0) targetUserId = fallback.rows[0].id;
-      }
-    }
-
-    // If target user is an admin/HOD, also default to Tharun for viewing student readiness
-    const roleCheck = await pool.query("SELECT role FROM users WHERE id = $1", [targetUserId]);
-    if (roleCheck.rows.length > 0 && roleCheck.rows[0].role !== 'STUDENT') {
-      const tharun = await pool.query("SELECT id FROM users WHERE register_number = '922524205171' LIMIT 1");
-      if (tharun.rows.length > 0) targetUserId = tharun.rows[0].id;
     }
 
     const [userRes, assessmentRes, leetcodeRes, projectsRes, githubRes, taskSubRes, taskClassRes] = await Promise.all([
@@ -9418,6 +9402,10 @@ async function startServer() {
         batch: u.batch,
         leetcode_url: u.leetcode_url,
         github_url: u.github_url,
+        github_stats: {
+          commits_30d: githubCommits,
+          active_days_30d: githubActiveDays
+        },
         readiness_score: readinessScore,
         tier: studentTier,
         tier_label: tierLabel,
