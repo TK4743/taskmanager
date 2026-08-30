@@ -179,7 +179,7 @@ function getBrevoNodes(): BrevoAccountNode[] {
   const nodeConfigs = [
     { key: process.env.BREVO_API_KEY, email: process.env.BREVO_SENDER_EMAIL, name: process.env.BREVO_SENDER_NAME, id: 'Brevo-Node-1' },
     { key: process.env.BREVO_API_KEY_2, email: process.env.BREVO_SENDER_EMAIL_2, name: process.env.BREVO_SENDER_NAME_2, id: 'Brevo-Node-2' },
-    { key: process.env.BREVO_API_KEY_3, email: process.env.BREVO_SENDER_EMAIL_3 || 'campusconnectvsb@gmail.com', name: process.env.BREVO_SENDER_NAME_3 || 'VSBEC IT Department', id: 'Brevo-Node-3' },
+    { key: process.env.BREVO_API_KEY_3, email: process.env.BREVO_SENDER_EMAIL_3 || 'campusconnectvsb@gmail.com', name: process.env.BREVO_SENDER_NAME_3 || 'VSBEC IT Task Manager (Demo Purpose Only)', id: 'Brevo-Node-3' },
     { key: (process.env as any).BREVO_API_KEY_4, email: (process.env as any).BREVO_SENDER_EMAIL_4, name: (process.env as any).BREVO_SENDER_NAME_4, id: 'Brevo-Node-4' },
     { key: (process.env as any).BREVO_API_KEY_5, email: (process.env as any).BREVO_SENDER_EMAIL_5, name: (process.env as any).BREVO_SENDER_NAME_5, id: 'Brevo-Node-5' }
   ];
@@ -192,11 +192,15 @@ function getBrevoNodes(): BrevoAccountNode[] {
         ? 'campusconnectvsb@gmail.com'
         : 'vsbecitc2428@gmail.com';
 
+      const defaultSenderName = cfg.id === 'Brevo-Node-3'
+        ? 'VSBEC IT Task Manager (Demo Purpose Only)'
+        : 'VSBEC IT Department';
+
       nodes.push({
         nodeId: cfg.id,
         apiKey: cfg.key.trim(),
         senderEmail: cfg.email || defaultSender,
-        senderName: cfg.name || 'VSBEC IT Department'
+        senderName: cfg.name || defaultSenderName
       });
     }
   }
@@ -2276,14 +2280,8 @@ export async function sendAssessmentInvitationEmail(
     portalUrl
   } = payload;
 
-  const subject = `[SIH Project Demo] ${trackTitle} — Testing & Verification (Not Placement Cell)`;
+  const subject = `[SIH DEMO] ${trackTitle} — VSBEC IT Task Manager (Project Demo Notice)`;
   const portalLink = 'https://it-taskmanager.vercel.app/';
-
-  const publisher = senderRole === 'HOD'
-    ? 'Head of the Department (HOD)'
-    : senderRole === 'SUPREME_ADMIN'
-    ? 'Supreme Administrator / Head of Department'
-    : (senderName ? `${senderName} (${senderRole === 'CLASS_ADVISOR' ? 'Class Advisor' : (senderRole || 'Coordinator')})` : 'VSBEC IT Task Manager');
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -2291,179 +2289,106 @@ export async function sendAssessmentInvitationEmail(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${trackTitle} - SIH Demo Project Testing</title>
+  <title>${trackTitle} - SIH Demo Assessment</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155;">
 
-  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 640px; margin: 30px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.3); border: 1px solid #e2e8f0;">
-    
-    <!-- SIH DEMO Announcement Top Banner -->
-    <tr>
-      <td style="background: linear-gradient(90deg, #ea580c 0%, #d97706 50%, #ea580c 100%); padding: 10px 20px; text-align: center; color: #ffffff; font-size: 11.5px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;">
-        ⚡ SMART INDIA HACKATHON (SIH) PROJECT DEMO • SYSTEM TESTING MODE
-      </td>
-    </tr>
+  <div style="max-width: 640px; margin: 30px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.3); border: 1px solid #e2e8f0;">
 
-    <!-- Top Decorative Header -->
-    <tr>
-      <td style="background: linear-gradient(135deg, #09090b 0%, #1e1b4b 50%, #312e81 100%); padding: 32px 28px; text-align: center; border-bottom: 3px solid #6366f1;">
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
-          <tr>
-            <td style="text-align: center;">
-              <img src="${COLLEGE_LOGO_URL}" alt="VSBEC Crest" width="68" height="68" style="display: block; margin: 0 auto 14px auto; background: #ffffff; border-radius: 14px; padding: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" />
-              <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 800; color: #a5b4fc; text-transform: uppercase; letter-spacing: 0.14em;">
-                VSB Engineering College (Autonomous)
-              </p>
-              <h1 style="margin: 0 0 6px 0; font-size: 21px; font-weight: 900; color: #ffffff; letter-spacing: -0.02em;">
-                Department of Information Technology
-              </h1>
-              <div style="margin-top: 8px;">
-                <span style="display: inline-block; background: #ea580c; border: 1px solid #fb923c; color: #ffffff; font-size: 11px; font-weight: 800; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 6px;">
-                  🇮🇳 SIH DEMO TESTING
-                </span>
-                <span style="display: inline-block; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(165, 180, 252, 0.4); color: #e0e7ff; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em;">
-                  VSBEC IT TASK MANAGER
-                </span>
-              </div>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
+    <!-- Top SIH Announcement Banner -->
+    <div style="background: linear-gradient(90deg, #ea580c 0%, #d97706 50%, #ea580c 100%); padding: 10px 20px; text-align: center; color: #ffffff; font-size: 11.5px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;">
+      ⚡ SMART INDIA HACKATHON (SIH) DEMO • LIVE EVALUATION ACTIVE
+    </div>
 
-    <!-- Body Content -->
-    <tr>
-      <td style="padding: 32px 28px;">
-        
-        <!-- SIH DEMO CLARIFICATION & APOLOGY BOX -->
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fef2f2; border: 2px solid #ef4444; border-left: 6px solid #dc2626; border-radius: 10px; margin-bottom: 24px; overflow: hidden;">
-          <tr>
-            <td style="padding: 18px 22px;">
-              <p style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 800; color: #991b1b; text-transform: uppercase; letter-spacing: 0.05em;">
-                ⚠️ IMPORTANT NOTICE & APOLOGY • SIH DEMO PROJECT ONLY
-              </p>
-              <p style="margin: 0 0 8px 0; font-size: 13px; color: #7f1d1d; line-height: 1.55;">
-                Please disregard any previous communications mentioning 'Placement & Training Cell'. We sincerely apologize for any confusion caused by earlier test emails.
-              </p>
-              <p style="margin: 0; font-size: 13px; color: #991b1b; font-weight: 700; line-height: 1.55;">
-                ℹ️ <strong>This is strictly an internal feature demonstration & test run for our Smart India Hackathon (SIH) project ("VSBEC IT Task Manager").</strong> This is <u>NOT an official assessment or exam from the college Placement & Training Cell</u>, and your participation or score has <strong>NO effect on your placement eligibility or academic records</strong>.
-              </p>
-            </td>
-          </tr>
-        </table>
+    <!-- Institutional Header -->
+    <div style="background: linear-gradient(135deg, #09090b 0%, #1e1b4b 50%, #312e81 100%); padding: 32px 28px; text-align: center; border-bottom: 3px solid #6366f1;">
+      <img src="https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png" width="68" height="68" style="display: block; margin: 0 auto 12px auto; background: #ffffff; border-radius: 12px; padding: 4px;" alt="VSBEC IT Task Manager Logo" />
+      <p style="color: #a5b4fc; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; margin: 0 0 4px 0;">
+        VSB Engineering College (Autonomous)
+      </p>
+      <h1 style="color: #ffffff; font-size: 21px; font-weight: 900; margin: 0 0 8px 0;">
+        Department of Information Technology
+      </h1>
+      <div style="margin-top: 8px;">
+        <span style="background: #ea580c; color: #ffffff; font-size: 11px; font-weight: 800; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; margin-right: 6px; display: inline-block;">
+          🇮🇳 SIH DEMO
+        </span>
+        <span style="background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(165, 180, 252, 0.4); color: #e0e7ff; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; display: inline-block;">
+          VSBEC IT TASK MANAGER
+        </span>
+      </div>
+    </div>
 
-        <!-- Candidate Greeting -->
-        <p style="margin: 0 0 8px 0; font-size: 16px; font-weight: 700; color: #0f172a;">
-          Dear ${studentName},
+    <div style="padding: 28px;">
+      <!-- SIH DEMO PROJECT & APOLOGY CLARIFICATION BOX -->
+      <div style="background-color: #fef2f2; border: 1.5px solid #fca5a5; border-left: 5px solid #dc2626; border-radius: 10px; padding: 16px 20px; margin: 0 0 24px 0;">
+        <p style="font-size: 13px; font-weight: 800; color: #991b1b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">
+          📢 IMPORTANT NOTICE & APOLOGY • SIH DEMO PROJECT
         </p>
-        <p style="margin: 0 0 20px 0; font-size: 13.5px; color: #475569; line-height: 1.6;">
-          As part of the internal <strong>Smart India Hackathon (SIH) prototype verification</strong>, our student development team has deployed the test assessment room: <strong style="color: #312e81;">"${trackTitle}"</strong>. We invite you to explore this interactive assessment module to help us test the live scoring logic, responsiveness, and user experience!
+        <p style="font-size: 13px; color: #7f1d1d; line-height: 1.55; margin: 0 0 8px 0;">
+          Please accept our sincere apologies for any confusion caused by the earlier email. <strong>This is an internal academic prototype and Smart India Hackathon (SIH) project demonstration developed exclusively by the Department of Information Technology (VSBEC IT Task Manager).</strong>
         </p>
-
-        <!-- Candidate Meta Pill -->
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 24px; padding: 12px 16px;">
-          <tr>
-            <td style="font-size: 12px; color: #64748b;">
-              <strong>Student:</strong> <span style="color: #0f172a; font-weight: 600;">${studentName}</span> &nbsp;•&nbsp;
-              <strong>Register No:</strong> <span style="color: #0f172a; font-family: monospace;">${registerNumber || 'N/A'}</span> &nbsp;•&nbsp;
-              <strong>Cohort:</strong> <span style="color: #0f172a; font-weight: 600;">${className}${classYear ? ` (Year ${classYear})` : ''}</span>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Assessment Specifications Card (Demo Testing Specs) -->
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%); border: 1.5px solid #86efac; border-radius: 14px; margin-bottom: 24px; overflow: hidden;">
-          <tr>
-            <td style="padding: 20px 22px;">
-              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td style="padding-bottom: 14px; border-bottom: 1px dashed #cbd5e1;" colspan="2">
-                    <span style="font-size: 11px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 4px;">
-                      Demo Track Specification
-                    </span>
-                    <span style="font-size: 18px; font-weight: 800; color: #0f172a;">
-                      ${trackTitle}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding-top: 14px; width: 50%; vertical-align: top;">
-                    <p style="margin: 0 0 2px 0; font-size: 11.5px; color: #64748b;">Demo Quiz Length</p>
-                    <p style="margin: 0; font-size: 15px; font-weight: 800; color: #0f172a;">${questionCount} Questions (~${durationMins} Mins)</p>
-                  </td>
-                  <td style="padding-top: 14px; width: 50%; vertical-align: top;">
-                    <p style="margin: 0 0 2px 0; font-size: 11.5px; color: #64748b;">Module Purpose</p>
-                    <p style="margin: 0; font-size: 15px; font-weight: 800; color: #16a34a;">⚡ SIH Prototype Testing</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-
-        ${customInstructions ? `
-        <!-- Custom Instructions from Faculty / Coordinator -->
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 8px; margin-bottom: 24px; padding: 14px 18px;">
-          <tr>
-            <td>
-              <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 800; color: #b45309; text-transform: uppercase;">
-                📌 Note from ${publisher}:
-              </p>
-              <p style="margin: 0; font-size: 13px; color: #78350f; line-height: 1.5;">
-                ${customInstructions}
-              </p>
-            </td>
-          </tr>
-        </table>
-        ` : ''}
-
-        <!-- Demo Feature Protocols Card -->
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; border-radius: 12px; margin-bottom: 28px; padding: 16px 20px;">
-          <tr>
-            <td>
-              <p style="margin: 0 0 10px 0; font-size: 12px; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.05em;">
-                🛡️ SIH Innovative Prototype Features
-              </p>
-              <ul style="margin: 0; padding-left: 18px; font-size: 12.5px; color: #475569; line-height: 1.6;">
-                <li><strong>Anti-Cheat Web Simulation:</strong> Optional snapshot & focus detection built for hackathon evaluation.</li>
-                <li><strong>Instant Feedback:</strong> Real-time question analysis and gap suggestions generated upon submission.</li>
-                <li><strong>Safe Testing Environment:</strong> Practice freely — scores are for demonstration checking only.</li>
-              </ul>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Call to Action Button -->
-        <div style="text-align: center; margin: 32px 0 16px 0;">
-          <a href="https://it-taskmanager.vercel.app/" style="display: inline-block; background: linear-gradient(135deg, #09090b 0%, #1e1b4b 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 800; padding: 14px 34px; border-radius: 12px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25); letter-spacing: 0.02em;">
-            🚀 Test SIH Demo Module on VSBEC IT Task Manager →
-          </a>
-        </div>
-        <p style="text-align: center; font-size: 12.5px; color: #64748b; margin: 0 0 24px 0;">
-          Official Portal Link: <a href="https://it-taskmanager.vercel.app/" style="color: #4f46e5; text-decoration: underline; font-weight: 800;">https://it-taskmanager.vercel.app/</a>
+        <p style="font-size: 12.5px; color: #991b1b; font-weight: 700; line-height: 1.5; margin: 0;">
+          ℹ️ This is a demo evaluation for hackathon/project assessment purposes and is <u>NOT an official communication or test from the college Placement & Training Cell</u>.
         </p>
+      </div>
 
-        ${getTelegramCommunityBoxHtml()}
+      <!-- Candidate Greeting & Meta -->
+      <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0;">
+        Dear ${studentName},
+      </p>
+      <p style="font-size: 13.5px; color: #475569; line-height: 1.6; margin: 0 0 20px 0;">
+        As part of the <strong>Smart India Hackathon (SIH) Innovation Demo</strong> on the <strong>VSBEC IT Task Manager</strong> platform, you are invited to test the proctored benchmarking suite: <strong style="color: #312e81;">"${trackTitle}"</strong>.
+      </p>
 
-      </td>
-    </tr>
+      <!-- Track Specifications -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%); border: 1.5px solid #86efac; border-radius: 14px; padding: 18px; margin-bottom: 24px;">
+        <tr>
+          <td style="padding: 6px 10px; font-size: 13.5px; color: #1e293b;"><strong>Track:</strong> <span style="color: #15803d; font-weight: 800;">${trackTitle}</span></td>
+          <td style="padding: 6px 10px; font-size: 13.5px; color: #1e293b;"><strong>Target Cutoff:</strong> <span style="color: #15803d; font-weight: 800;">${cutoffPercentage}%</span></td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px; font-size: 13.5px; color: #1e293b;"><strong>Duration:</strong> ${durationMins} Mins (${questionCount} Qs)</td>
+          <td style="padding: 6px 10px; font-size: 13.5px; color: #1e293b;"><strong>Status:</strong> ⚡ SIH Live Hackathon Demo Evaluation</td>
+        </tr>
+      </table>
 
-    <!-- Footer -->
-    <tr>
-      <td style="background-color: #f8fafc; padding: 22px 28px; border-top: 1px solid #e2e8f0; text-align: center;">
-        <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 700; color: #1e293b;">
-          VSBEC IT Task Manager • Smart India Hackathon (SIH) Project Demo
+      ${customInstructions ? `
+      <!-- Faculty Instructions -->
+      <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px;">
+        <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 800; color: #b45309; text-transform: uppercase;">
+          📌 Note from Coordinator:
         </p>
-        <p style="margin: 0 0 6px 0; font-size: 11px; color: #64748b;">
-          Department of Information Technology, VSB Engineering College (Autonomous), Karur - 639111
+        <p style="margin: 0; font-size: 13px; color: #78350f; line-height: 1.5;">
+          ${customInstructions}
         </p>
-        <p style="margin: 0; font-size: 10.5px; color: #94a3b8;">
-          Developed and Maintained by Tharunkumar K for SIH Innovation Demonstration.
-        </p>
-      </td>
-    </tr>
+      </div>
+      ` : ''}
 
-  </table>
+      <!-- Direct Portal Call to Action -->
+      <div style="text-align: center; margin: 32px 0 16px 0;">
+        <a href="https://it-taskmanager.vercel.app/" style="background: linear-gradient(135deg, #09090b 0%, #1e1b4b 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 800; padding: 14px 34px; border-radius: 12px; display: inline-block; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);">
+          🚀 Open VSBEC IT Task Manager (SIH DEMO) →
+        </a>
+      </div>
+      <p style="text-align: center; font-size: 12.5px; color: #64748b; margin: 0 0 24px 0;">
+        Official Portal Link: <a href="https://it-taskmanager.vercel.app/" style="color: #4f46e5; text-decoration: underline; font-weight: 800;">https://it-taskmanager.vercel.app/</a>
+      </p>
+
+      ${getTelegramCommunityBoxHtml()}
+
+      <!-- Institutional Footer -->
+      <div style="text-align: center; font-size: 11.5px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 20px;">
+        <p style="font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">
+          VSBEC IT Task Manager • Department of Information Technology (SIH DEMO)
+        </p>
+        <p style="font-size: 11px; color: #64748b; margin: 0;">
+          VSB Engineering College, NH-67 Covai Road, Karur, Tamil Nadu 639111
+        </p>
+      </div>
+
+    </div>
+  </div>
 
 </body>
 </html>
@@ -2474,7 +2399,7 @@ export async function sendAssessmentInvitationEmail(
     studentName,
     subject,
     htmlContent,
-    'VSBEC IT Task Manager'
+    'VSBEC IT Task Manager (SIH Demo)'
   );
 }
 
