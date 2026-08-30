@@ -7,6 +7,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { API_URL } from './config';
+import SkillAssessmentView from './SkillAssessmentView';
+import PlacementReadinessView from './PlacementReadinessView';
 import {
   isPushSupported,
   getNotificationPermissionState,
@@ -9972,6 +9974,20 @@ export default function App() {
             onClick={() => { setView('notice-board'); fetchNotices(); setIsMobileSidebarOpen(false); }}
           />
 
+          <SidebarItem
+            icon={<Sparkles size={20} />}
+            label="Skill Assessment"
+            active={view === 'skill-assessment'}
+            onClick={() => { setView('skill-assessment'); setIsMobileSidebarOpen(false); }}
+          />
+
+          <SidebarItem
+            icon={<Target size={20} />}
+            label="Placement Rating"
+            active={view === 'placement-readiness'}
+            onClick={() => { setView('placement-readiness'); setIsMobileSidebarOpen(false); }}
+          />
+
           {isAdmin && (
             <>
               <SidebarItem
@@ -13723,6 +13739,43 @@ export default function App() {
                   </motion.div>
                 )
               }
+
+              {
+                view === 'skill-assessment' && (
+                  <motion.div
+                    key="skill-assessment"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="w-full h-full flex flex-col min-h-0 overflow-y-auto"
+                  >
+                    <SkillAssessmentView
+                      user={user}
+                      token={token}
+                      addToast={addToast}
+                    />
+                  </motion.div>
+                )
+              }
+
+              {
+                view === 'placement-readiness' && (
+                  <motion.div
+                    key="placement-readiness"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="w-full h-full flex flex-col min-h-0 overflow-y-auto"
+                  >
+                    <PlacementReadinessView
+                      user={user}
+                      token={token}
+                      addToast={addToast}
+                      onNavigateToAssessment={() => setView('skill-assessment')}
+                    />
+                  </motion.div>
+                )
+              }
             </AnimatePresence>
           </div>
 
@@ -14883,15 +14936,15 @@ function SidebarItem({ icon, label, active, onClick }: { icon: React.ReactNode; 
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all font-medium",
+        "flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all font-medium text-sm text-left",
         active
           ? "bg-black text-white shadow-lg shadow-black/10"
           : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
       )}
     >
-      {icon}
-      <span>{label}</span>
-      {active && <ChevronRight size={16} className="ml-auto opacity-50" />}
+      <span className={cn("shrink-0", active ? "text-white" : "")}>{icon}</span>
+      <span className="truncate whitespace-nowrap">{label}</span>
+      {active && <ChevronRight size={16} className="ml-auto opacity-50 shrink-0" />}
     </button>
   );
 }

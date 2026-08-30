@@ -747,6 +747,234 @@ export async function initDB() {
     await client.query(`UPDATE classes SET batch = '2025-2029', updated_at = NOW() WHERE year = 2;`);
     await client.query(`UPDATE classes SET batch = '2024-2028', updated_at = NOW() WHERE year = 3;`);
 
+    // ─── 📝 Skill & Aptitude Assessment Question Bank & Submissions Schema ───
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS assessment_questions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        question_text TEXT NOT NULL,
+        options JSONB NOT NULL,
+        correct_option INTEGER NOT NULL,
+        category VARCHAR(100) DEFAULT 'Quantitative Aptitude',
+        skill_tag VARCHAR(100) DEFAULT 'Aptitude',
+        difficulty VARCHAR(50) DEFAULT 'MEDIUM',
+        explanation TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS student_assessments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        student_name VARCHAR(255),
+        register_number VARCHAR(100),
+        total_questions INTEGER NOT NULL DEFAULT 10,
+        correct_count INTEGER NOT NULL DEFAULT 0,
+        score_percentage NUMERIC(5,2) NOT NULL DEFAULT 0.00,
+        category_breakdown JSONB,
+        answers_summary JSONB,
+        strengths JSONB,
+        gaps JSONB,
+        time_taken_seconds INTEGER DEFAULT 0,
+        proctor_photo_url VARCHAR(1000),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      ALTER TABLE student_assessments ADD COLUMN IF NOT EXISTS proctor_photo_url VARCHAR(1000);
+      ALTER TABLE assessment_questions ADD COLUMN IF NOT EXISTS track_type VARCHAR(50) DEFAULT 'GENERAL_APTITUDE';
+      ALTER TABLE assessment_questions ADD COLUMN IF NOT EXISTS track_title VARCHAR(150) DEFAULT 'General Aptitude Benchmark';
+      ALTER TABLE assessment_questions ADD COLUMN IF NOT EXISTS cutoff_percentage NUMERIC(5,2) DEFAULT 60.00;
+
+      ALTER TABLE student_assessments ADD COLUMN IF NOT EXISTS track_type VARCHAR(50) DEFAULT 'GENERAL_APTITUDE';
+      ALTER TABLE student_assessments ADD COLUMN IF NOT EXISTS track_title VARCHAR(150) DEFAULT 'General Aptitude Benchmark';
+      ALTER TABLE student_assessments ADD COLUMN IF NOT EXISTS cutoff_percentage NUMERIC(5,2) DEFAULT 60.00;
+      ALTER TABLE student_assessments ADD COLUMN IF NOT EXISTS is_passed BOOLEAN DEFAULT FALSE;
+
+      CREATE INDEX IF NOT EXISTS idx_assessment_q_track ON assessment_questions(track_type, is_active);
+      CREATE INDEX IF NOT EXISTS idx_student_assessments_track ON student_assessments(user_id, track_type);
+
+      CREATE TABLE IF NOT EXISTS assessment_assignments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        track_type VARCHAR(50) NOT NULL,
+        track_title VARCHAR(150) NOT NULL,
+        target_year VARCHAR(10) DEFAULT 'ALL',
+        target_class_id UUID REFERENCES classes(id) ON DELETE SET NULL,
+        custom_instructions TEXT,
+        deadline TIMESTAMP,
+        created_by UUID REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_assessment_assignments_target ON assessment_assignments(target_year, target_class_id);
+    `);
+
+    // Seed 15 standardized aptitude questions (5 Quant, 5 Logical, 5 Verbal) if question bank is empty
+    const countCheck = await client.query(`SELECT COUNT(*) FROM assessment_questions;`);
+    if (parseInt(countCheck.rows[0].count, 10) === 0) {
+      const seedAptitudeQuestions = [
+        // ── Quantitative Aptitude (5 Questions) ──────────────────────────────
+        {
+          question_text: "A train running at 60 km/hr crosses a telegraph pole in 9 seconds. What is the length of the train?",
+          options: ["120 metres", "150 metres", "180 metres", "324 metres"],
+          correct_option: 1,
+          category: "Quantitative Aptitude",
+          skill_tag: "Speed, Time & Distance",
+          difficulty: "EASY",
+          explanation: "Speed in m/s = 60 * (5/18) = 50/3 m/s. Length (Distance) = Speed * Time = (50/3) * 9 = 150 metres."
+        },
+        {
+          question_text: "If 12 workers can construct a road section in 15 days, in how many days can 20 workers complete the same task at the same pace?",
+          options: ["8 days", "9 days", "10 days", "12 days"],
+          correct_option: 1,
+          category: "Quantitative Aptitude",
+          skill_tag: "Time & Work",
+          difficulty: "MEDIUM",
+          explanation: "Work = Workers * Days = 12 * 15 = 180 man-days. Days required by 20 workers = 180 / 20 = 9 days."
+        },
+        {
+          question_text: "A shopkeeper sells a monitor for ₹840 at a 20% profit margin. What was the original cost price?",
+          options: ["₹680", "₹700", "₹720", "₹750"],
+          correct_option: 1,
+          category: "Quantitative Aptitude",
+          skill_tag: "Profit & Loss",
+          difficulty: "EASY",
+          explanation: "Selling Price = Cost Price * 1.20. Therefore, Cost Price = 840 / 1.20 = ₹700."
+        },
+        {
+          question_text: "The average score of 5 students in an assessment is 78. If a 6th student scoring 90 is added, what is the new group average?",
+          options: ["79.0", "80.0", "81.0", "82.5"],
+          correct_option: 1,
+          category: "Quantitative Aptitude",
+          skill_tag: "Averages & Percentages",
+          difficulty: "MEDIUM",
+          explanation: "Total score of 5 students = 5 * 78 = 390. Total score of 6 students = 390 + 90 = 480. New average = 480 / 6 = 80.0."
+        },
+        {
+          question_text: "In a box, there are 10 prize tokens and 25 blank tokens. If one token is drawn at random, what is the probability of drawing a prize token?",
+          options: ["1/7", "2/7", "2/5", "3/7"],
+          correct_option: 1,
+          category: "Quantitative Aptitude",
+          skill_tag: "Probability & Permutations",
+          difficulty: "MEDIUM",
+          explanation: "Total tokens = 10 + 25 = 35. Probability of a prize token = 10 / 35 = 2/7."
+        },
+
+        // ── Logical Reasoning (5 Questions) ───────────────────────────────────
+        {
+          question_text: "Identify the next number in the sequence: 4, 9, 25, 49, 121, ___",
+          options: ["144", "169", "196", "225"],
+          correct_option: 1,
+          category: "Logical Reasoning",
+          skill_tag: "Pattern & Number Series",
+          difficulty: "MEDIUM",
+          explanation: "The series consists of squares of consecutive prime numbers: 2^2=4, 3^2=9, 5^2=25, 7^2=49, 11^2=121. The next prime number is 13, and 13^2 = 169."
+        },
+        {
+          question_text: "Pointing to a photograph of a boy, Suresh remarked: 'He is the only son of my mother.' How is Suresh related to the boy?",
+          options: ["Brother", "Father", "Uncle", "Grandfather"],
+          correct_option: 1,
+          category: "Logical Reasoning",
+          skill_tag: "Blood Relations",
+          difficulty: "EASY",
+          explanation: "'The only son of Suresh\\'s mother' refers to Suresh himself. Therefore, the boy is Suresh\\'s son, and Suresh is his father."
+        },
+        {
+          question_text: "In a given substitution cipher, 'SYSTEM' is encoded as 'TZTUFN'. Following the same rule, how is 'ACTION' encoded?",
+          options: ["BDUJP O", "BDUJPO", "BCUIPO", "BDTKPO"],
+          correct_option: 1,
+          category: "Logical Reasoning",
+          skill_tag: "Coding & Decoding",
+          difficulty: "EASY",
+          explanation: "Each letter is shifted forward by +1: A->B, C->D, T->U, I->J, O->P, N->O => BDUJPO."
+        },
+        {
+          question_text: "Statements: All algorithms are structured. Some structured elements are optimized. Conclusion: Which deduction is definitely valid?",
+          options: ["All algorithms are optimized", "Some structured elements are algorithms", "No algorithms are optimized", "All optimized elements are algorithms"],
+          correct_option: 1,
+          category: "Logical Reasoning",
+          skill_tag: "Syllogism & Deductive Logic",
+          difficulty: "HARD",
+          explanation: "If all algorithms are structured, then by immediate conversion, some structured elements are definitely algorithms."
+        },
+        {
+          question_text: "A person walks 20 metres North, turns right and walks 30 metres, then turns right again and walks 20 metres. How far and in what direction is he from his starting point?",
+          options: ["20 metres East", "30 metres East", "30 metres West", "50 metres South"],
+          correct_option: 1,
+          category: "Logical Reasoning",
+          skill_tag: "Direction Sense",
+          difficulty: "EASY",
+          explanation: "The 20m North and 20m South movements cancel out vertically. The horizontal displacement is 30m due East."
+        },
+
+        // ── Verbal Ability (5 Questions) ──────────────────────────────────────
+        {
+          question_text: "Choose the word most nearly OPPOSITE in meaning to the word 'METICULOUS':",
+          options: ["Diligent", "Careless", "Precise", "Methodical"],
+          correct_option: 1,
+          category: "Verbal Ability",
+          skill_tag: "Vocabulary & Antonyms",
+          difficulty: "EASY",
+          explanation: "'Meticulous' means showing great attention to detail. Its exact antonym is 'Careless'."
+        },
+        {
+          question_text: "Identify the sentence with the correct grammatical structure and subject-verb agreement:",
+          options: [
+            "Neither the advisor nor the students was present.",
+            "Neither the advisor nor the students were present.",
+            "Neither the advisor or the students was present.",
+            "Neither the advisor nor the students has been present."
+          ],
+          correct_option: 1,
+          category: "Verbal Ability",
+          skill_tag: "Grammar & Error Spotting",
+          difficulty: "MEDIUM",
+          explanation: "When subjects are connected by 'neither... nor', the verb agrees with the closer subject ('students' is plural, requiring 'were')."
+        },
+        {
+          question_text: "Select the grammatically correct replacement for the underlined segment: 'The project manager insisted that each engineer submits their code daily.'",
+          options: [
+            "each engineer submitting their code",
+            "each engineer submit their code",
+            "each engineer will submit their code",
+            "each engineer submitted their code"
+          ],
+          correct_option: 1,
+          category: "Verbal Ability",
+          skill_tag: "Sentence Correction",
+          difficulty: "HARD",
+          explanation: "The verb 'insisted that' governs the subjunctive mood base form 'submit', rather than the third-person 'submits'."
+        },
+        {
+          question_text: "What is the true figurative meaning of the idiom 'To burn the candle at both ends'?",
+          options: [
+            "To waste money carelessly on luxury",
+            "To work exhaustingly hard from early morning until late at night",
+            "To create unnecessary workplace disputes",
+            "To attempt solving two conflicting problems at once"
+          ],
+          correct_option: 1,
+          category: "Verbal Ability",
+          skill_tag: "Idioms & Phrases",
+          difficulty: "MEDIUM",
+          explanation: "The idiom refers to exhausting one's energy by waking early and staying up late to work excessively."
+        },
+        {
+          question_text: "Fill in the blank with the most appropriate word: 'The lead researcher\\'s hypothesis was so _______ that the review panel approved the project without hesitation.'",
+          options: ["Ambiguous", "Compelling", "Superficial", "Tentative"],
+          correct_option: 1,
+          category: "Verbal Ability",
+          skill_tag: "Contextual Vocabulary",
+          difficulty: "EASY",
+          explanation: "'Compelling' means powerfully convincing and demanding attention or agreement."
+        }
+      ];
+
+      for (const q of seedAptitudeQuestions) {
+        await client.query(`
+          INSERT INTO assessment_questions (question_text, options, correct_option, category, skill_tag, difficulty, explanation)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [q.question_text, JSON.stringify(q.options), q.correct_option, q.category, q.skill_tag, q.difficulty, q.explanation]);
+      }
+      console.log('[Assessment] Seeded 10 standard aptitude questions successfully.');
+    }
+
     // ─── 🛡️ Supabase Security & Row Level Security (RLS) Auto-Enforcement ───
     try {
       await client.query(`

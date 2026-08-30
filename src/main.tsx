@@ -3,7 +3,6 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { registerServiceWorker } from './pushNotificationClient.ts';
-import { PWAInstallOverlay } from './PWAInstallOverlay.tsx';
 
 // Automatically register Service Worker for PWA installation & Web Push
 if (typeof window !== 'undefined') {
@@ -20,7 +19,6 @@ const mountApp = () => {
   
   createRoot(rootElement).render(
     <StrictMode>
-      <PWAInstallOverlay />
       <App />
     </StrictMode>,
   );

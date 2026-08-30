@@ -145,6 +145,18 @@ function markNodeHealthy(nodeId: string) {
   }
 }
 
+// Proactive security check: immediately flag Node 3 if Brevo IP security restriction applies
+if (process.env.BREVO_API_KEY_3) {
+  fetch('https://api.brevo.com/v3/account', {
+    headers: { 'api-key': process.env.BREVO_API_KEY_3.trim(), 'accept': 'application/json' }
+  }).then(async r => {
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      markNodeExhausted('Brevo-Node-3', err.message || `HTTP ${r.status}`, r.status);
+    }
+  }).catch(() => {});
+}
+
 /**
  * 🔄 Returns active Brevo account nodes for Load Balancing & Failover (Supports up to 5 nodes)
  */
@@ -161,6 +173,11 @@ function getBrevoNodes(): BrevoAccountNode[] {
 
   for (const cfg of nodeConfigs) {
     if (cfg.key && cfg.key.trim()) {
+      // Exclude nodes currently under active cooldown or authorization block
+      if (!isNodeAvailable(cfg.id)) {
+        continue;
+      }
+
       const defaultSender = cfg.id === 'Brevo-Node-2'
         ? 'campusvsb4743@gmail.com'
         : cfg.id === 'Brevo-Node-3'
@@ -1771,8 +1788,8 @@ export async function triggerManualTaskPendingReminders(
           ? 'Supreme Administrator / Head of Department'
           : (senderName ? `${senderName} (${senderRole === 'CLASS_ADVISOR' ? 'Class Advisor' : (senderRole || 'Coordinator')})` : 'Department Coordinator'));
 
-    // Dispatch in batches through our Brevo multi-node load balancer pool
-    const BATCH_SIZE = 5;
+    // Dispatch safely through our Brevo multi-node load balancer pool (concurrency 2 with 250ms spacing prevents 429 errors)
+    const BATCH_SIZE = 2;
     for (let i = 0; i < students.length; i += BATCH_SIZE) {
       const chunk = students.slice(i, i + BATCH_SIZE);
       const promises = chunk.map(async (student) => {
@@ -1792,10 +1809,11 @@ export async function triggerManualTaskPendingReminders(
           if (res.success) {
             sentCount++;
             // Insert in-app notification as well
+            const deadlineText = task.deadline ? new Date(task.deadline).toLocaleString() : 'Approaching Soon';
             await pool.query(`
               INSERT INTO notifications (user_id, message, type)
               VALUES ($1, $2, 'TASK_PENDING_REMINDER')
-            `, [student.id, `⚠️ Urgent Reminder: Submission pending for "${task.title}". Deadline: ${new Date(task.deadline).toLocaleString()}`]);
+            `, [student.id, `⚠️ Urgent Reminder: Submission pending for "${task.title}". Deadline: ${deadlineText}`]);
           } else {
             failedCount++;
             if (res.error) errors.push(`${student.email}: ${res.error}`);
@@ -1808,7 +1826,7 @@ export async function triggerManualTaskPendingReminders(
 
       await Promise.all(promises);
       if (i + BATCH_SIZE < students.length) {
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 250));
       }
     }
 
@@ -2135,3 +2153,370 @@ export async function notifyNoticeBoardAnnouncementEmail(notice: {
     return { totalTargeted: 0, totalDispatched: 0 };
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. OFFICIAL PLACEMENT SKILL ASSESSMENT INVITATION & CAMPAIGN DISPATCHER
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AssessmentInvitationPayload {
+  to: string;
+  studentName: string;
+  registerNumber?: string;
+  className?: string;
+  classYear?: number | string;
+  trackTitle: string;
+  trackType: string;
+  cutoffPercentage: number;
+  durationMins: number;
+  questionCount: number;
+  deadline?: string;
+  customInstructions?: string;
+  senderName?: string;
+  senderRole?: string;
+  portalUrl?: string;
+}
+
+export async function sendAssessmentInvitationEmail(
+  payload: AssessmentInvitationPayload
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const {
+    to,
+    studentName,
+    registerNumber = '',
+    className = 'Information Technology',
+    classYear,
+    trackTitle,
+    cutoffPercentage,
+    durationMins,
+    questionCount,
+    deadline,
+    customInstructions,
+    senderName,
+    senderRole,
+    portalUrl
+  } = payload;
+
+  const subject = `🎯 OFFICIAL ASSESSMENT: ${trackTitle} — VSBEC Placement Cell`;
+  const portalLink = getCanonicalPortalUrl(portalUrl);
+  const formattedDeadline = deadline
+    ? new Date(deadline).toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Kolkata' })
+    : 'Mandatory Placement Evaluation — Submit Immediately';
+
+  const publisher = senderRole === 'HOD'
+    ? 'Head of the Department (HOD)'
+    : senderRole === 'SUPREME_ADMIN'
+    ? 'Supreme Administrator / Head of Department'
+    : (senderName ? `${senderName} (${senderRole === 'CLASS_ADVISOR' ? 'Class Advisor' : (senderRole || 'Coordinator')})` : 'Placement & Training Cell');
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${trackTitle} - Skill Assessment Invitation</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155;">
+
+  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 640px; margin: 30px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.3); border: 1px solid #e2e8f0;">
+    
+    <!-- Top Decorative Header -->
+    <tr>
+      <td style="background: linear-gradient(135deg, #09090b 0%, #1e1b4b 50%, #312e81 100%); padding: 32px 28px; text-align: center; border-bottom: 3px solid #6366f1;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td style="text-align: center;">
+              <img src="${COLLEGE_LOGO_URL}" alt="VSBEC Crest" width="68" height="68" style="display: block; margin: 0 auto 14px auto; background: #ffffff; border-radius: 14px; padding: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" />
+              <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 800; color: #a5b4fc; text-transform: uppercase; letter-spacing: 0.14em;">
+                VSB Engineering College (Autonomous)
+              </p>
+              <h1 style="margin: 0 0 6px 0; font-size: 21px; font-weight: 900; color: #ffffff; letter-spacing: -0.02em;">
+                Department of Information Technology
+              </h1>
+              <span style="display: inline-block; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(165, 180, 252, 0.4); color: #e0e7ff; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em;">
+                🎯 Official Placement Benchmark & Mock Test
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Body Content -->
+    <tr>
+      <td style="padding: 32px 28px;">
+        
+        <!-- Candidate Greeting -->
+        <p style="margin: 0 0 8px 0; font-size: 16px; font-weight: 700; color: #0f172a;">
+          Dear ${studentName},
+        </p>
+        <p style="margin: 0 0 20px 0; font-size: 13.5px; color: #475569; line-height: 1.6;">
+          You have been designated by the <strong>${publisher}</strong> to undertake the mandatory proctored placement evaluation: <strong style="color: #312e81;">"${trackTitle}"</strong>.
+        </p>
+
+        <!-- Candidate Meta Pill -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 24px; padding: 12px 16px;">
+          <tr>
+            <td style="font-size: 12px; color: #64748b;">
+              <strong>Register No:</strong> <span style="color: #0f172a; font-family: monospace;">${registerNumber || 'N/A'}</span> &nbsp;•&nbsp;
+              <strong>Cohort:</strong> <span style="color: #0f172a; font-weight: 600;">${className}${classYear ? ` (Year ${classYear})` : ''}</span>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Assessment Specifications Card -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%); border: 1.5px solid #86efac; border-radius: 14px; margin-bottom: 24px; overflow: hidden;">
+          <tr>
+            <td style="padding: 20px 22px;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="padding-bottom: 14px; border-bottom: 1px dashed #cbd5e1;" colspan="2">
+                    <span style="font-size: 10.5px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 4px;">
+                      Selected Track Specification
+                    </span>
+                    <span style="font-size: 18px; font-weight: 800; color: #0f172a;">
+                      ${trackTitle}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-top: 14px; width: 50%; vertical-align: top;">
+                    <p style="margin: 0 0 2px 0; font-size: 11.5px; color: #64748b;">Target Cutoff Mark</p>
+                    <p style="margin: 0; font-size: 16px; font-weight: 800; color: #16a34a;">${cutoffPercentage}%</p>
+                  </td>
+                  <td style="padding-top: 14px; width: 50%; vertical-align: top;">
+                    <p style="margin: 0 0 2px 0; font-size: 11.5px; color: #64748b;">Duration & Questions</p>
+                    <p style="margin: 0; font-size: 14px; font-weight: 700; color: #0f172a;">${durationMins} Mins • ${questionCount} Questions</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-top: 12px;" colspan="2">
+                    <p style="margin: 0 0 2px 0; font-size: 11.5px; color: #64748b;">Deadline</p>
+                    <p style="margin: 0; font-size: 13px; font-weight: 700; color: #b91c1c;">⏰ ${formattedDeadline}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        ${customInstructions ? `
+        <!-- Custom Instructions from Faculty -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 8px; margin-bottom: 24px; padding: 14px 18px;">
+          <tr>
+            <td>
+              <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 800; color: #b45309; text-transform: uppercase;">
+                📌 Special Instructions from ${publisher}:
+              </p>
+              <p style="margin: 0; font-size: 13px; color: #78350f; line-height: 1.5;">
+                ${customInstructions}
+              </p>
+            </td>
+          </tr>
+        </table>
+        ` : ''}
+
+        <!-- Strict Proctoring Security Rules -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; border-radius: 12px; margin-bottom: 28px; padding: 16px 20px;">
+          <tr>
+            <td>
+              <p style="margin: 0 0 10px 0; font-size: 12px; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.05em;">
+                🛡️ Proctored Assessment Protocols
+              </p>
+              <ul style="margin: 0; padding-left: 18px; font-size: 12.5px; color: #475569; line-height: 1.6;">
+                <li><strong>Webcam Identity Verification:</strong> A live webcam snapshot must be verified before entering the room.</li>
+                <li><strong>Full-screen Lockdown:</strong> The test runs in full-screen lockdown. Leaving full-screen or switching browser tabs logs a violation.</li>
+                <li><strong>Instant Feedback:</strong> Your official scorecard and topic gap breakdown will be generated instantly and dispatched via Telegram.</li>
+              </ul>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Call to Action Button -->
+        <div style="text-align: center; margin: 32px 0 20px 0;">
+          <a href="${portalLink}" style="display: inline-block; background: linear-gradient(135deg, #09090b 0%, #1e1b4b 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 800; padding: 14px 34px; border-radius: 12px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25); letter-spacing: 0.02em;">
+            🚀 Start Proctored Assessment Now →
+          </a>
+        </div>
+        <p style="text-align: center; font-size: 11.5px; color: #94a3b8; margin: 0 0 24px 0;">
+          Direct Link: <a href="${portalLink}" style="color: #6366f1; text-decoration: underline;">${portalLink}</a>
+        </p>
+
+        ${getTelegramCommunityBoxHtml()}
+
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style="background-color: #f8fafc; padding: 22px 28px; border-top: 1px solid #e2e8f0; text-align: center;">
+        <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 700; color: #1e293b;">
+          Placement & Training Cell • Department of Information Technology
+        </p>
+        <p style="margin: 0 0 6px 0; font-size: 11px; color: #64748b;">
+          VSB Engineering College, NH-67 Covai Road, Karur, Tamil Nadu 639111
+        </p>
+        <p style="margin: 0; font-size: 10.5px; color: #94a3b8;">
+          This is an automated institutional notification dispatched via VSBEC IT Task Manager.
+        </p>
+      </td>
+    </tr>
+
+  </table>
+
+</body>
+</html>
+  `;
+
+  return await dispatchEmailThroughPool(
+    to,
+    studentName,
+    subject,
+    htmlContent,
+    'VSBEC Placement Cell'
+  );
+}
+
+export async function triggerAssessmentCampaignEmails(params: {
+  track_type: string;
+  track_title?: string;
+  target_year?: string;
+  target_class_id?: string;
+  custom_instructions?: string;
+  deadline?: string;
+  senderRole?: string;
+  senderName?: string;
+}): Promise<{ totalTargeted: number; totalDispatched: number; failedCount: number; errors: string[] }> {
+  try {
+    const {
+      track_type,
+      track_title: passedTitle,
+      target_year = 'ALL',
+      target_class_id = 'ALL',
+      custom_instructions,
+      deadline,
+      senderRole,
+      senderName
+    } = params;
+
+    // 1. Fetch Track Metadata
+    const trackRes = await pool.query(`
+      SELECT 
+        track_type,
+        COALESCE(MAX(track_title), 'General Aptitude Benchmark') as track_title,
+        COUNT(id)::int as question_count,
+        COALESCE(MAX(cutoff_percentage), 60.00) as cutoff_percentage,
+        CASE 
+          WHEN track_type = 'GENERAL_APTITUDE' THEN 15
+          WHEN track_type = 'TECHNICAL_CORE' THEN 15
+          ELSE 15
+        END as duration_mins
+      FROM assessment_questions
+      WHERE is_active = true AND track_type = $1
+      GROUP BY track_type
+    `, [track_type]);
+
+    const track = trackRes.rows[0] || {
+      track_type,
+      track_title: passedTitle || 'Placement Skill Benchmark',
+      question_count: 5,
+      cutoff_percentage: 60,
+      duration_mins: 15
+    };
+
+    // 2. Query target students matching Year and Class
+    let query = `
+      SELECT u.id, u.full_name, u.register_number, u.email, u.telegram_chat_id,
+             c.name as class_name, c.year as class_year
+      FROM users u
+      JOIN classes c ON c.id = u.class_id
+      WHERE u.role = 'STUDENT'
+        AND u.email IS NOT NULL AND TRIM(u.email) != ''
+    `;
+    const values: any[] = [];
+    let idx = 1;
+
+    if (target_year && target_year !== 'ALL') {
+      query += ` AND c.year = $${idx++}`;
+      values.push(parseInt(target_year, 10));
+    }
+
+    if (target_class_id && target_class_id !== 'ALL') {
+      query += ` AND c.id = $${idx++}`;
+      values.push(target_class_id);
+    }
+
+    query += ` ORDER BY c.year ASC, c.name ASC, u.register_number ASC`;
+
+    const studentsRes = await pool.query(query, values);
+    const students = studentsRes.rows;
+
+    if (students.length === 0) {
+      return { totalTargeted: 0, totalDispatched: 0, failedCount: 0, errors: [] };
+    }
+
+    console.log(`[EmailService] 📢 Initiating Assessment Campaign for "${track.track_title}" to ${students.length} students (Target Year: ${target_year}, Class: ${target_class_id})...`);
+
+    let sentCount = 0;
+    let failedCount = 0;
+    const errors: string[] = [];
+
+    // Safe rate-controlled dispatch: batch size 2 with 250ms spacing
+    const BATCH_SIZE = 2;
+    for (let i = 0; i < students.length; i += BATCH_SIZE) {
+      const chunk = students.slice(i, i + BATCH_SIZE);
+      const promises = chunk.map(async (student) => {
+        try {
+          const res = await sendAssessmentInvitationEmail({
+            to: student.email,
+            studentName: student.full_name || 'Student',
+            registerNumber: student.register_number || '',
+            className: student.class_name || 'IT',
+            classYear: student.class_year,
+            trackTitle: track.track_title,
+            trackType: track.track_type,
+            cutoffPercentage: Number(track.cutoff_percentage),
+            durationMins: Number(track.duration_mins),
+            questionCount: Number(track.question_count),
+            deadline,
+            customInstructions: custom_instructions,
+            senderName,
+            senderRole
+          });
+
+          if (res.success) {
+            sentCount++;
+            // Insert in-app notification
+            await pool.query(`
+              INSERT INTO notifications (user_id, message, type)
+              VALUES ($1, $2, 'ASSESSMENT_INVITATION')
+            `, [student.id, `🎯 New Placement Assessment Assigned: "${track.track_title}". Cutoff: ${track.cutoff_percentage}%.`]);
+          } else {
+            failedCount++;
+            if (res.error) errors.push(`${student.email}: ${res.error}`);
+          }
+        } catch (err: any) {
+          failedCount++;
+          errors.push(`${student.email}: ${err.message || 'Unknown error'}`);
+        }
+      });
+
+      await Promise.all(promises);
+      if (i + BATCH_SIZE < students.length) {
+        await new Promise(r => setTimeout(r, 250));
+      }
+    }
+
+    console.log(`[EmailService] ✅ Completed Assessment Campaign: ${sentCount}/${students.length} dispatched successfully.`);
+    return {
+      totalTargeted: students.length,
+      totalDispatched: sentCount,
+      failedCount,
+      errors: errors.slice(0, 10)
+    };
+  } catch (err: any) {
+    console.error('[EmailService] Error in triggerAssessmentCampaignEmails:', err.message);
+    return { totalTargeted: 0, totalDispatched: 0, failedCount: 0, errors: [err.message] };
+  }
+}
+
