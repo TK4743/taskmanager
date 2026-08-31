@@ -7256,7 +7256,7 @@ export default function App() {
     ];
 
     return (
-      <div className="min-h-screen bg-[#F5F5F4] flex items-center justify-center p-4">
+      <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -8022,7 +8022,7 @@ export default function App() {
 
   if (isWakingServer) {
     return (
-      <div className="min-h-screen bg-[#F5F5F4] flex items-center justify-center p-4">
+      <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center p-4">
         <Card className="p-8 text-center max-w-md w-full flex flex-col items-center gap-4">
           <div className="w-16 h-16 bg-zinc-50 text-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-2 border border-zinc-200">
             <Loader2 className="w-8 h-8 text-black animate-spin" />
@@ -8041,7 +8041,7 @@ export default function App() {
 
   if (hasError) {
     return (
-      <div className="min-h-screen bg-[#F5F5F4] flex items-center justify-center p-4">
+      <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center p-4">
         <Card className="p-8 text-center max-w-md w-full">
           <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <AlertTriangle size={32} />
@@ -8067,7 +8067,7 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-[#F5F5F4] font-sans text-zinc-900 overflow-hidden">
+      <div className="flex min-h-screen min-h-[100dvh] h-screen bg-white font-sans text-zinc-900 overflow-hidden">
         {/* Sidebar Skeleton (hidden on mobile, matches desktop sidebar) */}
         <div className="hidden lg:flex w-64 bg-white border-r border-zinc-200 flex-col shrink-0">
           <div className="p-4 border-b border-zinc-100 flex items-center gap-3 shrink-0 h-20">
@@ -10463,7 +10463,7 @@ export default function App() {
 
   return (
     <FooterContext.Provider value={setShowFooterModal}>
-      <div className="h-screen bg-[#F5F5F4] flex overflow-hidden">
+      <div className="h-screen min-h-[100dvh] bg-[#F5F5F4] flex overflow-hidden">
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         {renderAssignTargetModal()}
         {renderTelegramLinkModal()}
