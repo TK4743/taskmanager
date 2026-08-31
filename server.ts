@@ -5086,9 +5086,9 @@ async function startServer() {
 
       // Authorization checks:
       const isSelf = currentUser.id?.toString() === targetUserId.toString();
-      const isAdmin = currentUser.role === 'ADMIN';
+      const isAdmin = currentUser.role === 'ADMIN' || currentUser.role === 'SUPREME_ADMIN';
       const isHOD = currentUser.role === 'HOD';
-      const isAdvisorOrCoordinator = (currentUser.role === 'ADVISOR' || currentUser.role === 'COORDINATOR' || currentUser.is_coordinator) &&
+      const isAdvisorOrCoordinator = (currentUser.role === 'ADVISOR' || currentUser.role === 'CLASS_ADVISOR' || currentUser.role === 'COORDINATOR' || currentUser.is_coordinator) &&
         currentUser.class_id?.toString() === academic.class_id?.toString();
       const isYearCoordinator = currentUser.is_year_coordinator && currentUser.year_scope === academic.year;
 
@@ -5119,6 +5119,143 @@ async function startServer() {
         achievements: achieveRes.rows,
         languages: langRes.rows,
         career_preferences: careerRes.rows[0] || null
+      });
+    } finally {
+      client.release();
+    }
+  }));
+
+  // ── Bulk Student Profiles Export Endpoint (HOD / Advisor / Supreme Admin) ─
+  app.post('/api/student/bulk-profiles', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR']), asyncHandler(async (req: any, res: Response) => {
+    const { student_ids, class_id } = req.body;
+    const currentUser = req.user;
+    const client = await pool.connect();
+
+    try {
+      let targetUserIds: number[] = [];
+
+      if (Array.isArray(student_ids) && student_ids.length > 0) {
+        targetUserIds = student_ids.map((id: any) => Number(id)).filter((id: number) => !isNaN(id));
+      } else if (class_id) {
+        const classStudents = await client.query('SELECT id FROM users WHERE class_id = $1 AND role = \'STUDENT\'', [class_id]);
+        targetUserIds = classStudents.rows.map(r => r.id);
+      } else if (currentUser.role === 'CLASS_ADVISOR' && currentUser.class_id) {
+        const classStudents = await client.query('SELECT id FROM users WHERE class_id = $1 AND role = \'STUDENT\'', [currentUser.class_id]);
+        targetUserIds = classStudents.rows.map(r => r.id);
+      } else {
+        // HOD / Admin with no specific filter: default to first 100 students
+        const allStudents = await client.query('SELECT id FROM users WHERE role = \'STUDENT\' ORDER BY register_number ASC LIMIT 100');
+        targetUserIds = allStudents.rows.map(r => r.id);
+      }
+
+      if (targetUserIds.length === 0) {
+        return res.status(400).json({ error: 'No valid students found for bulk export' });
+      }
+
+      // Security check for class advisor: only allow students in their class
+      if (currentUser.role === 'CLASS_ADVISOR' && currentUser.class_id) {
+        const allowed = await client.query('SELECT id FROM users WHERE id = ANY($1::int[]) AND class_id = $2', [targetUserIds, currentUser.class_id]);
+        targetUserIds = allowed.rows.map(r => r.id);
+      }
+
+      if (targetUserIds.length === 0) {
+        return res.status(403).json({ error: 'No authorized students found for export' });
+      }
+
+      // Fetch all academic records in batch
+      const [
+        usersRes,
+        personalRes,
+        skillsRes,
+        projectsRes,
+        internshipsRes,
+        certsRes,
+        codingRes,
+        resumeRes,
+        achieveRes,
+        langRes,
+        careerRes
+      ] = await Promise.all([
+        client.query(`
+          SELECT u.id, u.full_name, u.register_number, u.email, u.gender, u.role, u.avatar_url,
+                 u.department_id, u.class_id, d.name as department_name, c.name as class_name, c.batch, c.year
+          FROM users u
+          LEFT JOIN departments d ON u.department_id = d.id
+          LEFT JOIN classes c ON u.class_id = c.id
+          WHERE u.id = ANY($1::int[]) AND u.role = 'STUDENT'
+          ORDER BY u.register_number ASC, u.full_name ASC
+        `, [targetUserIds]),
+        client.query('SELECT * FROM student_profiles WHERE user_id = ANY($1::int[])', [targetUserIds]),
+        client.query('SELECT * FROM student_skills WHERE user_id = ANY($1::int[]) ORDER BY created_at DESC', [targetUserIds]),
+        client.query('SELECT * FROM student_projects WHERE user_id = ANY($1::int[]) ORDER BY created_at DESC', [targetUserIds]),
+        client.query('SELECT * FROM student_internships WHERE user_id = ANY($1::int[]) ORDER BY created_at DESC', [targetUserIds]),
+        client.query('SELECT * FROM student_certifications WHERE user_id = ANY($1::int[]) ORDER BY created_at DESC', [targetUserIds]),
+        client.query('SELECT * FROM student_coding_profiles WHERE user_id = ANY($1::int[])', [targetUserIds]),
+        client.query('SELECT * FROM student_resumes WHERE user_id = ANY($1::int[])', [targetUserIds]),
+        client.query('SELECT * FROM student_achievements WHERE user_id = ANY($1::int[]) ORDER BY created_at DESC', [targetUserIds]),
+        client.query('SELECT * FROM student_languages WHERE user_id = ANY($1::int[]) ORDER BY created_at DESC', [targetUserIds]),
+        client.query('SELECT * FROM student_career_preferences WHERE user_id = ANY($1::int[])', [targetUserIds])
+      ]);
+
+      const personalMap = new Map(personalRes.rows.map(r => [r.user_id, r]));
+      const codingMap = new Map(codingRes.rows.map(r => [r.user_id, r]));
+      const resumeMap = new Map(resumeRes.rows.map(r => [r.user_id, r]));
+      const careerMap = new Map(careerRes.rows.map(r => [r.user_id, r]));
+
+      const skillsMap = new Map<number, any[]>();
+      skillsRes.rows.forEach(r => {
+        if (!skillsMap.has(r.user_id)) skillsMap.set(r.user_id, []);
+        skillsMap.get(r.user_id)!.push(r);
+      });
+
+      const projectsMap = new Map<number, any[]>();
+      projectsRes.rows.forEach(r => {
+        if (!projectsMap.has(r.user_id)) projectsMap.set(r.user_id, []);
+        projectsMap.get(r.user_id)!.push(r);
+      });
+
+      const internshipsMap = new Map<number, any[]>();
+      internshipsRes.rows.forEach(r => {
+        if (!internshipsMap.has(r.user_id)) internshipsMap.set(r.user_id, []);
+        internshipsMap.get(r.user_id)!.push(r);
+      });
+
+      const certsMap = new Map<number, any[]>();
+      certsRes.rows.forEach(r => {
+        if (!certsMap.has(r.user_id)) certsMap.set(r.user_id, []);
+        certsMap.get(r.user_id)!.push(r);
+      });
+
+      const achieveMap = new Map<number, any[]>();
+      achieveRes.rows.forEach(r => {
+        if (!achieveMap.has(r.user_id)) achieveMap.set(r.user_id, []);
+        achieveMap.get(r.user_id)!.push(r);
+      });
+
+      const langMap = new Map<number, any[]>();
+      langRes.rows.forEach(r => {
+        if (!langMap.has(r.user_id)) langMap.set(r.user_id, []);
+        langMap.get(r.user_id)!.push(r);
+      });
+
+      const fullProfiles = usersRes.rows.map(u => ({
+        academic: u,
+        personal: personalMap.get(u.id) || null,
+        skills: skillsMap.get(u.id) || [],
+        projects: projectsMap.get(u.id) || [],
+        internships: internshipsMap.get(u.id) || [],
+        certifications: certsMap.get(u.id) || [],
+        coding_profiles: codingMap.get(u.id) || null,
+        resume: resumeMap.get(u.id) || null,
+        achievements: achieveMap.get(u.id) || [],
+        languages: langMap.get(u.id) || [],
+        career_preferences: careerMap.get(u.id) || null
+      }));
+
+      res.json({
+        success: true,
+        count: fullProfiles.length,
+        profiles: fullProfiles
       });
     } finally {
       client.release();

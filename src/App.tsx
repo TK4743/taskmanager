@@ -10,6 +10,7 @@ import { API_URL } from './config';
 import SkillAssessmentView from './SkillAssessmentView';
 import PlacementReadinessView from './PlacementReadinessView';
 import LiveTeachingHubView from './LiveTeachingHubView';
+import { generateStudentResumePdf, downloadStudentResumePdf } from './studentProfilePdfGenerator';
 import PWAInstallOverlay from './PWAInstallOverlay';
 import PushNotificationPromptModal from './PushNotificationPromptModal';
 import {
@@ -44,6 +45,7 @@ import {
   Camera,
   Upload,
   FileDown,
+  Download,
   UserPlus,
   X,
   Info,
@@ -1483,17 +1485,10 @@ function StudentProfileView({
   // Form states for Coding Profiles
   const [codingGithub, setCodingGithub] = useState('');
   const [codingLeetcode, setCodingLeetcode] = useState('');
-  const [codingHackerrank, setCodingHackerrank] = useState('');
-  const [codingCodechef, setCodingCodechef] = useState('');
   const [codingGfg, setCodingGfg] = useState('');
   const [codingLinkedin, setCodingLinkedin] = useState('');
   const [codingPortfolio, setCodingPortfolio] = useState('');
   const [savingCoding, setSavingCoding] = useState(false);
-
-  // Form states for Resume
-  const [resumeUrl, setResumeUrl] = useState('');
-  const [resumeFileName, setResumeFileName] = useState('');
-  const [savingResume, setSavingResume] = useState(false);
 
   // Form states for Achievements
   const [newAchTitle, setNewAchTitle] = useState('');
@@ -1501,19 +1496,6 @@ function StudentProfileView({
   const [newAchDesc, setNewAchDesc] = useState('');
   const [newAchDate, setNewAchDate] = useState('');
   const [addingAch, setAddingAch] = useState(false);
-
-  // Form states for Languages
-  const [newLangName, setNewLangName] = useState('');
-  const [newLangProf, setNewLangProf] = useState('Fluent');
-  const [addingLang, setAddingLang] = useState(false);
-
-  // Form states for Career Preferences
-  const [prefRole, setPrefRole] = useState('');
-  const [prefDomain, setPrefDomain] = useState('');
-  const [prefLocation, setPrefLocation] = useState('');
-  const [prefRelocate, setPrefRelocate] = useState(true);
-  const [prefWorkMode, setPrefWorkMode] = useState('Hybrid');
-  const [savingCareer, setSavingCareer] = useState(false);
 
   const fetchProfileData = async () => {
     try {
@@ -1539,22 +1521,9 @@ function StudentProfileView({
         if (data.coding_profiles) {
           setCodingGithub(data.coding_profiles.github || '');
           setCodingLeetcode(data.coding_profiles.leetcode || '');
-          setCodingHackerrank(data.coding_profiles.hackerrank || '');
-          setCodingCodechef(data.coding_profiles.codechef || '');
           setCodingGfg(data.coding_profiles.geeksforgeeks || '');
           setCodingLinkedin(data.coding_profiles.linkedin || '');
           setCodingPortfolio(data.coding_profiles.portfolio || '');
-        }
-        if (data.resume) {
-          setResumeUrl(data.resume.resume_url || '');
-          setResumeFileName(data.resume.file_name || 'Resume.pdf');
-        }
-        if (data.career_preferences) {
-          setPrefRole(data.career_preferences.preferred_role || '');
-          setPrefDomain(data.career_preferences.preferred_domain || '');
-          setPrefLocation(data.career_preferences.preferred_location || '');
-          setPrefRelocate(data.career_preferences.willing_to_relocate ?? true);
-          setPrefWorkMode(data.career_preferences.work_mode || 'Hybrid');
         }
       }
     } catch (e) {
@@ -1830,8 +1799,6 @@ function StudentProfileView({
         body: JSON.stringify({
           github: codingGithub,
           leetcode: codingLeetcode,
-          hackerrank: codingHackerrank,
-          codechef: codingCodechef,
           geeksforgeeks: codingGfg,
           linkedin: codingLinkedin,
           portfolio: codingPortfolio
@@ -1845,27 +1812,6 @@ function StudentProfileView({
       addToast('Failed to save coding profiles', 'error');
     } finally {
       setSavingCoding(false);
-    }
-  };
-
-  const handleSaveResume = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resumeUrl.trim()) return;
-    setSavingResume(true);
-    try {
-      const res = await fetch(`${API_URL}/api/student/profile/resume`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ resume_url: resumeUrl, file_name: resumeFileName || 'Resume.pdf' })
-      });
-      if (res.ok) {
-        addToast('Resume updated!', 'success');
-        fetchProfileData();
-      }
-    } catch {
-      addToast('Failed to update resume', 'error');
-    } finally {
-      setSavingResume(false);
     }
   };
 
@@ -1907,65 +1853,6 @@ function StudentProfileView({
     } catch { }
   };
 
-  const handleAddLanguage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newLangName.trim()) return;
-    setAddingLang(true);
-    try {
-      const res = await fetch(`${API_URL}/api/student/profile/languages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ language: newLangName, proficiency: newLangProf })
-      });
-      if (res.ok) {
-        addToast('Language added!', 'success');
-        setNewLangName('');
-        fetchProfileData();
-      }
-    } catch {
-      addToast('Failed to add language', 'error');
-    } finally {
-      setAddingLang(false);
-    }
-  };
-
-  const handleDeleteLanguage = async (id: string) => {
-    try {
-      await fetch(`${API_URL}/api/student/profile/languages/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      addToast('Language removed', 'info');
-      fetchProfileData();
-    } catch { }
-  };
-
-  const handleSaveCareer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingCareer(true);
-    try {
-      const res = await fetch(`${API_URL}/api/student/profile/career-preferences`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          preferred_role: prefRole,
-          preferred_domain: prefDomain,
-          preferred_location: prefLocation,
-          willing_to_relocate: prefRelocate,
-          work_mode: prefWorkMode
-        })
-      });
-      if (res.ok) {
-        addToast('Career preferences saved!', 'success');
-        fetchProfileData();
-      }
-    } catch {
-      addToast('Failed to save career preferences', 'error');
-    } finally {
-      setSavingCareer(false);
-    }
-  };
-
   if (loading) {
     return (
       <PageLayout>
@@ -1984,10 +1871,7 @@ function StudentProfileView({
     { id: 'internships', label: '4. Internships', icon: Briefcase },
     { id: 'certifications', label: '5. Certifications', icon: Award },
     { id: 'coding', label: '6. Coding Profiles', icon: Globe },
-    { id: 'resume', label: '7. Resume', icon: FileText },
-    { id: 'achievements', label: '8. Achievements', icon: Sparkles },
-    { id: 'languages', label: '9. Languages', icon: Languages },
-    { id: 'career', label: '10. Career Preferences', icon: Compass },
+    { id: 'achievements', label: '7. Achievements', icon: Sparkles },
   ];
 
   const acad = {
@@ -2005,39 +1889,56 @@ function StudentProfileView({
   return (
     <PageLayout>
       <div className="space-y-6 pb-12">
-        {/* Title Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
+        {/* Title & Action Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
           <div>
-            <h1 className="text-2xl font-extrabold text-zinc-900 tracking-tight flex items-center gap-2">
-              <GraduationCap size={28} className="text-indigo-600" /> Student Academic Profile
+            <h1 className="text-2xl font-extrabold text-zinc-900 tracking-tight flex items-center gap-2.5">
+              <GraduationCap size={28} className="text-indigo-600 shrink-0" />
+              <span>Student Academic Profile</span>
             </h1>
-            <p className="text-xs text-zinc-500 font-semibold">
+            <p className="text-xs text-zinc-500 font-semibold mt-0.5">
               Official records for {acad.full_name} ({acad.register_number})
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (profile) {
+                downloadStudentResumePdf(profile);
+                addToast('Downloading your Profile Resume (PDF)...', 'success');
+              } else {
+                addToast('Profile data is still loading, please wait...', 'info');
+              }
+            }}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-2 shrink-0 cursor-pointer self-start sm:self-auto"
+            title="Download your profile formatted as a professional resume PDF"
+          >
+            <Download size={14} />
+            <span>Download Resume (PDF)</span>
+          </button>
+        </div>
 
-          {/* Section Pill Selectors */}
-          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 custom-scrollbar">
-            {sections.map(s => {
-              const SIcon = s.icon;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setActiveSection(s.id)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0",
-                    activeSection === s.id
-                      ? "bg-black text-white shadow-md"
-                      : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"
-                  )}
-                >
-                  <SIcon size={13} />
-                  <span>{s.label}</span>
-                </button>
-              );
-            })}
-          </div>
+        {/* Section Navigation Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 custom-scrollbar">
+          {sections.map(s => {
+            const SIcon = s.icon;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setActiveSection(s.id)}
+                className={cn(
+                  "px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 shrink-0 cursor-pointer",
+                  activeSection === s.id
+                    ? "bg-zinc-900 text-white shadow-sm"
+                    : "bg-white text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border border-zinc-200"
+                )}
+              >
+                <SIcon size={14} />
+                <span>{s.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* 1. PERSONAL INFORMATION */}
@@ -2548,14 +2449,6 @@ function StudentProfileView({
                   <Input type="url" placeholder="https://leetcode.com/username" value={codingLeetcode} onChange={e => setCodingLeetcode(e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">HackerRank</label>
-                  <Input type="url" placeholder="https://hackerrank.com/username" value={codingHackerrank} onChange={e => setCodingHackerrank(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">CodeChef</label>
-                  <Input type="url" placeholder="https://codechef.com/users/username" value={codingCodechef} onChange={e => setCodingCodechef(e.target.value)} />
-                </div>
-                <div>
                   <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">GeeksforGeeks</label>
                   <Input type="url" placeholder="https://geeksforgeeks.org/user/username" value={codingGfg} onChange={e => setCodingGfg(e.target.value)} />
                 </div>
@@ -2579,57 +2472,7 @@ function StudentProfileView({
           </Card>
         )}
 
-        {/* 7. RESUME */}
-        {activeSection === 'resume' && (
-          <Card className="p-5 md:p-6 bg-white border-zinc-200">
-            <h3 className="text-sm font-bold text-zinc-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <FileText size={16} className="text-indigo-600" /> Student Resume & CV
-            </h3>
-
-            <form onSubmit={handleSaveResume} className="space-y-4 max-w-lg">
-              <div>
-                <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">Resume File Link / PDF URL</label>
-                <Input
-                  type="url"
-                  placeholder="https://drive.google.com/... or Cloudinary PDF URL"
-                  value={resumeUrl}
-                  onChange={e => setResumeUrl(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">Display File Name</label>
-                <Input
-                  type="text"
-                  placeholder="e.g. John_Doe_Resume_2026.pdf"
-                  value={resumeFileName}
-                  onChange={e => setResumeFileName(e.target.value)}
-                />
-              </div>
-
-              {profile?.resume && (
-                <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 flex items-center justify-between text-xs">
-                  <div>
-                    <p className="font-bold text-zinc-900">{profile.resume.file_name || 'Resume.pdf'}</p>
-                    <p className="text-[10px] text-zinc-400">Last Updated: {new Date(profile.resume.last_updated).toLocaleString()}</p>
-                  </div>
-                  <a href={profile.resume.resume_url} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-black text-white rounded-lg font-bold hover:bg-zinc-800 flex items-center gap-1">
-                    <ExternalLink size={12} /> View Resume
-                  </a>
-                </div>
-              )}
-
-              <div className="pt-2">
-                <Button type="submit" disabled={savingResume} variant="primary" className="px-6">
-                  {savingResume ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
-                  <span>Save Resume</span>
-                </Button>
-              </div>
-            </form>
-          </Card>
-        )}
-
-        {/* 8. ACHIEVEMENTS */}
+        {/* 7. ACHIEVEMENTS */}
         {activeSection === 'achievements' && (
           <Card className="p-5 md:p-6 bg-white border-zinc-200 space-y-6">
             <h3 className="text-sm font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-2">
@@ -2681,97 +2524,6 @@ function StudentProfileView({
           </Card>
         )}
 
-        {/* 9. LANGUAGES */}
-        {activeSection === 'languages' && (
-          <Card className="p-5 md:p-6 bg-white border-zinc-200">
-            <h3 className="text-sm font-bold text-zinc-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Languages size={16} className="text-indigo-600" /> Languages Spoken
-            </h3>
-
-            <form onSubmit={handleAddLanguage} className="flex flex-col sm:flex-row gap-3 mb-6 p-3 bg-zinc-50 rounded-xl border border-zinc-200">
-              <Input placeholder="Language (e.g. English, Tamil, Hindi)" value={newLangName} onChange={e => setNewLangName(e.target.value)} required className="flex-1" />
-              <Select value={newLangProf} onChange={e => setNewLangProf(e.target.value)} className="sm:w-44">
-                <option value="Basic">Basic</option>
-                <option value="Conversational">Conversational</option>
-                <option value="Fluent">Fluent</option>
-                <option value="Native">Native / Bilingual</option>
-              </Select>
-              <Button type="submit" disabled={addingLang} variant="primary">
-                {addingLang ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                <span>Add Language</span>
-              </Button>
-            </form>
-
-            <div className="flex flex-wrap gap-2">
-              {(profile?.languages || []).length === 0 ? (
-                <p className="text-xs text-zinc-400 py-4">No languages added yet.</p>
-              ) : (
-                profile.languages.map((l: any) => (
-                  <div key={l.id} className="flex items-center gap-2 px-3.5 py-1.5 bg-zinc-100 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900">
-                    <span>{l.language}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-200 text-zinc-700 font-bold uppercase">{l.proficiency}</span>
-                    <button type="button" onClick={() => handleDeleteLanguage(l.id)} className="text-zinc-400 hover:text-red-600 ml-1">
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
-        )}
-
-        {/* 10. CAREER PREFERENCES */}
-        {activeSection === 'career' && (
-          <Card className="p-5 md:p-6 bg-white border-zinc-200">
-            <h3 className="text-sm font-bold text-zinc-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Compass size={16} className="text-indigo-600" /> Career Preferences
-            </h3>
-
-            <form onSubmit={handleSaveCareer} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">Preferred Role</label>
-                  <Input placeholder="e.g. Software Engineer, Data Analyst" value={prefRole} onChange={e => setPrefRole(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">Preferred Domain</label>
-                  <Input placeholder="e.g. Web Development, AI/ML, Cloud" value={prefDomain} onChange={e => setPrefDomain(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">Preferred Location</label>
-                  <Input placeholder="e.g. Chennai, Bangalore, Hyderabad" value={prefLocation} onChange={e => setPrefLocation(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">Work Mode Preference</label>
-                  <Select value={prefWorkMode} onChange={e => setPrefWorkMode(e.target.value)}>
-                    <option value="On-site">On-site</option>
-                    <option value="Remote">Remote</option>
-                    <option value="Hybrid">Hybrid</option>
-                  </Select>
-                </div>
-                <div className="sm:col-span-2 flex items-center gap-3 pt-1">
-                  <input
-                    type="checkbox"
-                    id="relocateCheck"
-                    checked={prefRelocate}
-                    onChange={e => setPrefRelocate(e.target.checked)}
-                    className="w-4 h-4 rounded border-zinc-300 text-black focus:ring-black"
-                  />
-                  <label htmlFor="relocateCheck" className="text-xs font-bold text-zinc-800 cursor-pointer">
-                    Willing to Relocate to job location
-                  </label>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <Button type="submit" disabled={savingCareer} variant="primary" className="px-6">
-                  {savingCareer ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                  <span>Save Career Preferences</span>
-                </Button>
-              </div>
-            </form>
-          </Card>
-        )}
       </div>
     </PageLayout>
   );
@@ -3115,8 +2867,8 @@ function SettingsView({
                 <h3 className="text-base font-black text-zinc-900 flex items-center gap-2">
                   Mobile & Lock Screen Notifications (PWA)
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${pushSubscribed
-                      ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                      : 'bg-zinc-100 text-zinc-600 border-zinc-200'
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                    : 'bg-zinc-100 text-zinc-600 border-zinc-200'
                     }`}>
                     {pushSubscribed ? '🟢 Active & Subscribed' : '⚪ Inactive'}
                   </span>
@@ -3156,8 +2908,8 @@ function SettingsView({
                   <Button
                     variant={pushSubscribed ? 'outline' : 'primary'}
                     className={`text-xs py-2.5 px-4 font-bold ${pushSubscribed
-                        ? 'border-zinc-300 text-zinc-700 hover:bg-zinc-100'
-                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20'
+                      ? 'border-zinc-300 text-zinc-700 hover:bg-zinc-100'
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20'
                       }`}
                     disabled={pushLoading || pushPermission === 'denied'}
                     onClick={handleTogglePush}
@@ -3566,10 +3318,7 @@ function StaffStudentProfileModal({
     { id: 'internships', label: '4. Internships', icon: Briefcase },
     { id: 'certifications', label: '5. Certifications', icon: Award },
     { id: 'coding', label: '6. Coding Profiles', icon: Globe },
-    { id: 'resume', label: '7. Resume', icon: FileText },
-    { id: 'achievements', label: '8. Achievements', icon: Sparkles },
-    { id: 'languages', label: '9. Languages', icon: Languages },
-    { id: 'career', label: '10. Career Preferences', icon: Compass },
+    { id: 'achievements', label: '7. Achievements', icon: Sparkles },
   ];
 
   return (
@@ -3600,9 +3349,23 @@ function StaffStudentProfileModal({
             </div>
           </div>
 
-          <button onClick={onClose} className="p-1.5 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-zinc-800 transition-colors border border-transparent hover:border-zinc-200 cursor-pointer">
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (profile) {
+                  downloadStudentResumePdf(profile);
+                }
+              }}
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0"
+              title="Download this student's profile as a formatted Resume PDF"
+            >
+              <Download size={13} /> <span>Download Resume (PDF)</span>
+            </button>
+            <button onClick={onClose} className="p-1.5 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-zinc-800 transition-colors border border-transparent hover:border-zinc-200 cursor-pointer">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Section Pill Selectors */}
@@ -3905,29 +3668,6 @@ function StaffStudentProfileModal({
                 </div>
               )}
 
-              {activeSection === 'resume' && (
-                <div>
-                  {profile.resume ? (
-                    <div className="p-5 bg-zinc-50/50 rounded-2xl border border-zinc-200/60 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 shrink-0">
-                          <FileText size={24} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-zinc-900">{profile.resume.file_name || 'Resume.pdf'}</p>
-                          <p className="text-[10px] text-zinc-400 font-semibold">Last updated: {new Date(profile.resume.last_updated).toLocaleString()}</p>
-                        </div>
-                      </div>
-                      <a href={profile.resume.resume_url} target="_blank" rel="noreferrer" className="px-4 py-2 bg-zinc-900 hover:bg-black text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors shrink-0 shadow-sm shadow-black/10">
-                        <ExternalLink size={13} /> Open PDF
-                      </a>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-zinc-400 py-8 text-center">No resume uploaded.</p>
-                  )}
-                </div>
-              )}
-
               {activeSection === 'achievements' && (
                 <div className="space-y-4">
                   {(profile.achievements || []).length === 0 ? (
@@ -3951,56 +3691,6 @@ function StaffStudentProfileModal({
                 </div>
               )}
 
-              {activeSection === 'languages' && (
-                <div className="flex flex-wrap gap-2.5">
-                  {(profile.languages || []).length === 0 ? (
-                    <p className="text-xs text-zinc-400 py-8 text-center">No languages recorded.</p>
-                  ) : (
-                    profile.languages.map((l: any) => (
-                      <div key={l.id} className="px-3 py-2 bg-zinc-50 rounded-xl border border-zinc-200/80 text-xs font-semibold flex items-center gap-2">
-                        <Languages size={13} className="text-zinc-500" />
-                        <span className="text-zinc-800">{l.language}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-200/60 text-zinc-600 font-bold uppercase">{l.proficiency}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-
-              {activeSection === 'career' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-4 bg-zinc-50/50 rounded-2xl border border-zinc-200/60 flex gap-3 items-center">
-                    <Briefcase size={16} className="text-zinc-400 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Preferred Role</p>
-                      <p className="text-xs font-bold text-zinc-900 truncate">{profile.career_preferences?.preferred_role || 'N/A'}</p>
-                    </div>
-                  </div>
-                  <div className="p-4 bg-zinc-50/50 rounded-2xl border border-zinc-200/60 flex gap-3 items-center">
-                    <Compass size={16} className="text-zinc-400 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Preferred Domain</p>
-                      <p className="text-xs font-bold text-zinc-900 truncate">{profile.career_preferences?.preferred_domain || 'N/A'}</p>
-                    </div>
-                  </div>
-                  <div className="p-4 bg-zinc-50/50 rounded-2xl border border-zinc-200/60 flex gap-3 items-center">
-                    <MapPin size={16} className="text-zinc-400 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Preferred Location</p>
-                      <p className="text-xs font-bold text-zinc-900 truncate">{profile.career_preferences?.preferred_location || 'N/A'}</p>
-                    </div>
-                  </div>
-                  <div className="p-4 bg-zinc-50/50 rounded-2xl border border-zinc-200/60 flex gap-3 items-center">
-                    <Globe size={16} className="text-zinc-400 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Work Mode & Relocation</p>
-                      <p className="text-xs font-bold text-zinc-900 truncate">
-                        {profile.career_preferences?.work_mode || 'Hybrid'} • {profile.career_preferences?.willing_to_relocate ? 'Willing to Relocate' : 'No Relocation'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>
@@ -4551,6 +4241,70 @@ export default function App() {
   const [telegramStats, setTelegramStats] = useState<any>(null);
   const [sendingTest, setSendingTest] = useState(false);
   const [showManualTelegramInput, setShowManualTelegramInput] = useState(false);
+
+  // Student Profile Completion Prompt Modal State
+  const [showProfilePromptModal, setShowProfilePromptModal] = useState(false);
+  const [studentProfileCompletion, setStudentProfileCompletion] = useState<{
+    percentage: number;
+    missingSections: string[];
+    isLoaded: boolean;
+  }>({ percentage: 0, missingSections: [], isLoaded: false });
+
+  const checkStudentProfileCompletion = async () => {
+    if (!token || user?.role !== 'STUDENT') return;
+    try {
+      const res = await fetch(`${API_URL}/api/student/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const missing: string[] = [];
+        let score = 0;
+
+        // 1. Personal & Contact (25%)
+        const hasPersonal = Boolean(data.personal?.mobile_number && data.personal?.about_me);
+        if (hasPersonal) score += 25;
+        else missing.push('Personal Bio & Contact');
+
+        // 2. Skills (25%)
+        const hasSkills = Array.isArray(data.skills) && data.skills.length > 0;
+        if (hasSkills) score += 25;
+        else missing.push('Technical Skills');
+
+        // 3. Projects (25%)
+        const hasProjects = Array.isArray(data.projects) && data.projects.length > 0;
+        if (hasProjects) score += 25;
+        else missing.push('Academic / Personal Projects');
+
+        // 4. Coding Profiles (25%)
+        const hasCoding = Boolean(data.coding_profiles?.github || data.coding_profiles?.leetcode || data.coding_profiles?.linkedin);
+        if (hasCoding) score += 25;
+        else missing.push('GitHub & Coding Profiles');
+
+        setStudentProfileCompletion({
+          percentage: score,
+          missingSections: missing,
+          isLoaded: true
+        });
+
+        // Prompt student if profile is incomplete (<100%) and not dismissed in this session
+        const isDismissed = sessionStorage.getItem('student_profile_prompt_dismissed_v1');
+        if (score < 100 && !isDismissed) {
+          setTimeout(() => {
+            setShowProfilePromptModal(true);
+          }, 800);
+        }
+      }
+    } catch (err) {
+      console.error('Error checking student profile completion:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.role === 'STUDENT' && token) {
+      checkStudentProfileCompletion();
+    }
+  }, [user?.role, user?.id, token]);
 
   const fetchTelegramStatus = async () => {
     if (!token) return;
@@ -5239,7 +4993,7 @@ export default function App() {
         sessionStorage.setItem('app_cache_classes', JSON.stringify(sortedClasses));
         sessionStorage.setItem('app_cache_tasks', JSON.stringify(sortedTasks));
         sessionStorage.setItem('app_cache_submissions', JSON.stringify(submissions));
-      } catch {}
+      } catch { }
 
       if (savedUser) {
         // Refresh user data from server to avoid stale session flags
@@ -6384,6 +6138,81 @@ export default function App() {
     } else {
       const data = await res.json();
       alert(data.error || 'Failed to delete task');
+    }
+  };
+
+  const [isExportingBulkResumes, setIsExportingBulkResumes] = useState(false);
+
+  const handleBulkDownloadProfiles = async (customClassId?: string) => {
+    try {
+      setIsExportingBulkResumes(true);
+      addToast('Querying student profiles for bulk download...', 'info');
+
+      const effectiveClassId = customClassId || userClassFilter || myClass?.id || '';
+
+      // Determine target student IDs from visible users if available
+      const studentUsers = users.filter(u => u.role === 'STUDENT' && (
+        !effectiveClassId || String(u.class_id) === String(effectiveClassId)
+      ));
+      const targetIds = studentUsers.map(u => u.id);
+
+      const res = await fetch(`${API_URL}/api/student/bulk-profiles`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          student_ids: targetIds.length > 0 ? targetIds : undefined,
+          class_id: effectiveClassId || undefined
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to fetch student profiles for export');
+      }
+
+      const data = await res.json();
+      const profiles: any[] = data.profiles || [];
+      if (profiles.length === 0) {
+        addToast('No student profile data found to export', 'warning');
+        return;
+      }
+
+      addToast(`Compiling Resume PDFs for ${profiles.length} students...`, 'info');
+
+      const zip = new JSZip();
+      for (const p of profiles) {
+        try {
+          const doc = generateStudentResumePdf(p);
+          const pdfBlob = doc.output('blob');
+          const regNo = p.academic?.register_number || 'Student';
+          const name = (p.academic?.full_name || 'Profile').trim().replace(/\s+/g, '_');
+          zip.file(`${regNo}_${name}_Resume.pdf`, pdfBlob);
+        } catch (docErr) {
+          console.warn('Failed to generate PDF for student:', p.academic?.register_number, docErr);
+        }
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      const classObj = classes.find(c => String(c.id) === String(effectiveClassId));
+      const classLabel = classObj?.name ? `_${classObj.name.replace(/\s+/g, '_')}` : '';
+      link.download = `VSBEC_IT_Student_Resumes${classLabel}_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      addToast(`Successfully downloaded ${profiles.length} student resumes (.zip)!`, 'success');
+    } catch (err: any) {
+      console.error('Bulk download error:', err);
+      addToast(err.message || 'Failed to bulk download student resumes', 'error');
+    } finally {
+      setIsExportingBulkResumes(false);
     }
   };
 
@@ -10175,23 +10004,18 @@ export default function App() {
         </>
       </nav>
 
-      <div className="p-4 border-t border-zinc-100 shrink-0 bg-white">
-        <div className="px-4 py-2 mb-4 bg-zinc-50 rounded-xl">
-          <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Logged in as</p>
-          <p className="text-sm font-semibold text-zinc-900 truncate">{user?.full_name}</p>
-          <p className="text-xs text-zinc-500 font-medium mt-0.5">
-            {user?.is_year_coordinator ? `Year ${user.year_scope} Coordinator` : user?.role}
-            {user?.department_name ? ` • ${user.department_name}` : ''}
-          </p>
+      <div className="p-3 border-t border-zinc-100 shrink-0 bg-white">
+        <div className="px-3 py-2 mb-2 bg-zinc-50 rounded-xl">
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Logged in as</p>
+          <p className="text-xs font-bold text-zinc-900 truncate">{user?.full_name}</p>
         </div>
         <button
           onClick={() => { handleLogout(); setIsMobileSidebarOpen(false); }}
-          className="flex items-center gap-3 w-full px-4 py-2.5 text-zinc-600 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all font-semibold text-sm group"
+          className="flex items-center gap-2.5 w-full px-3 py-2 text-zinc-600 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all font-semibold text-xs group"
         >
-          <LogOut size={20} className="text-rose-500 group-hover:text-rose-600 transition-colors" />
+          <LogOut size={16} className="text-rose-500 group-hover:text-rose-600 transition-colors" />
           <span>Logout</span>
         </button>
-
       </div>
     </div>
   );
@@ -10251,7 +10075,7 @@ export default function App() {
 
             {/* Content Body */}
             <div className="flex-1 overflow-y-auto space-y-5 pr-1 custom-scrollbar min-h-0">
-              
+
               {/* Task Summary Banner */}
               <div className="bg-gradient-to-r from-zinc-900 to-indigo-950 rounded-2xl p-5 text-white shadow-sm border border-zinc-800">
                 <div className="flex items-center justify-between gap-3 mb-2">
@@ -10355,8 +10179,8 @@ export default function App() {
                               node.status === 'HEALTHY'
                                 ? "bg-white border-emerald-200/80 text-zinc-800"
                                 : node.status === 'QUOTA_EXHAUSTED'
-                                ? "bg-red-50/50 border-red-200 text-red-900"
-                                : "bg-amber-50/50 border-amber-200 text-amber-900"
+                                  ? "bg-red-50/50 border-red-200 text-red-900"
+                                  : "bg-amber-50/50 border-amber-200 text-amber-900"
                             )}
                           >
                             <div className="min-w-0 pr-2">
@@ -10367,8 +10191,8 @@ export default function App() {
                                     node.status === 'HEALTHY'
                                       ? "bg-emerald-500 shadow-xs shadow-emerald-500/50"
                                       : node.status === 'QUOTA_EXHAUSTED'
-                                      ? "bg-red-500"
-                                      : "bg-amber-500"
+                                        ? "bg-red-500"
+                                        : "bg-amber-500"
                                   )}
                                 />
                                 <span className="font-extrabold truncate text-[11px]">{node.nodeId}</span>
@@ -10385,8 +10209,8 @@ export default function App() {
                                 {typeof node.credits === 'number'
                                   ? `${node.credits} left`
                                   : node.status === 'HEALTHY'
-                                  ? 'Active Relay'
-                                  : node.status}
+                                    ? 'Active Relay'
+                                    : node.status}
                               </span>
                               <span className="text-[9px] text-zinc-400 font-semibold block">
                                 {node.planType || node.provider}
@@ -10505,12 +10329,145 @@ export default function App() {
     );
   };
 
+  const renderProfilePromptModal = () => {
+    if (!showProfilePromptModal || user?.role !== 'STUDENT') return null;
+
+    const handleDismiss = () => {
+      sessionStorage.setItem('student_profile_prompt_dismissed_v1', 'true');
+      setShowProfilePromptModal(false);
+    };
+
+    const handleGoToProfile = () => {
+      sessionStorage.setItem('student_profile_prompt_dismissed_v1', 'true');
+      setShowProfilePromptModal(false);
+      setView('profile');
+    };
+
+    const pct = studentProfileCompletion.percentage;
+
+    return (
+      <AnimatePresence>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[220] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ scale: 0.92, opacity: 0, y: 15 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.92, opacity: 0, y: 15 }}
+            className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-xl shadow-2xl relative overflow-hidden border border-zinc-100 max-h-[92vh] overflow-y-auto"
+          >
+            {/* Gradient accent top bar */}
+            <div className="absolute top-0 left-0 right-0 h-2.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className="absolute top-5 right-5 p-2 text-zinc-400 hover:text-zinc-700 rounded-full hover:bg-zinc-100 transition-all cursor-pointer"
+              title="Close"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Header */}
+            <div className="flex items-start gap-4 mb-5 pt-2">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 shadow-sm">
+                <Sparkles size={24} />
+              </div>
+              <div className="pr-6">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
+                    Profile Incomplete
+                  </span>
+                  <span className="text-xs font-bold text-zinc-500">
+                    Placement Readiness
+                  </span>
+                </div>
+                <h3 className="text-xl font-extrabold text-zinc-900 tracking-tight">
+                  Complete Your Student Profile
+                </h3>
+                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                  Hi <strong className="text-zinc-800">{user?.full_name || 'Student'}</strong>! Filling your profile details enhances your placement readiness rating and generates your verified institutional resume for recruiters.
+                </p>
+              </div>
+            </div>
+
+            {/* Progress Meter */}
+            <div className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-4 mb-5 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-zinc-700">Profile Completion Status</span>
+                <span className={cn(pct >= 75 ? "text-emerald-600 font-extrabold" : "text-indigo-600 font-extrabold")}>
+                  {pct}% Completed
+                </span>
+              </div>
+              <div className="w-full h-2.5 bg-zinc-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 transition-all duration-500 rounded-full"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Checklist of what's missing */}
+            {studentProfileCompletion.missingSections.length > 0 && (
+              <div className="mb-6 space-y-2.5">
+                <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                  Pending Sections to Fill:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {studentProfileCompletion.missingSections.map((sec, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-center gap-2.5 text-xs font-bold text-amber-900"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                      <span>{sec}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Benefits box */}
+            <div className="p-3.5 bg-indigo-50/60 border border-indigo-100 rounded-2xl mb-6 text-xs text-indigo-900 space-y-1">
+              <p className="font-extrabold flex items-center gap-1.5 text-indigo-950">
+                <Target size={14} className="text-indigo-600 shrink-0" /> Why fill your profile?
+              </p>
+              <ul className="list-disc list-inside text-[11px] text-indigo-800 space-y-0.5 ml-1">
+                <li>Instant 1-click generation of professional institutional Resume PDF</li>
+                <li>Visibility to department coordinators for placement drives & hackathons</li>
+                <li>Automatic synchronization with coding statistics & verified benchmarks</li>
+              </ul>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-zinc-100">
+              <button
+                type="button"
+                onClick={handleDismiss}
+                className="px-4 py-2.5 text-xs font-bold text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-xl transition cursor-pointer"
+              >
+                Remind Me Later
+              </button>
+              <button
+                type="button"
+                onClick={handleGoToProfile}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition flex items-center gap-2 cursor-pointer"
+              >
+                <span>Fill My Profile Now</span>
+                <ChevronRight size={15} />
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </AnimatePresence>
+    );
+  };
+
   return (
     <FooterContext.Provider value={setShowFooterModal}>
       <div className="h-screen bg-[#F5F5F4] flex overflow-hidden">
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         {renderAssignTargetModal()}
         {renderTelegramLinkModal()}
+        {renderProfilePromptModal()}
         {renderHistoryDetailsModal()}
         {renderTaskPendingEmailModal()}
         {/* Rejection Modal */}
@@ -11448,10 +11405,23 @@ export default function App() {
                     </ContentCard>
 
                     {myClass && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <StatCard title="Class Name" value={myClass.name as any} icon={<Building2 />} color="bg-blue-500" />
-                        <StatCard title="Year" value={myClass.year as any} icon={<ClipboardList />} color="bg-emerald-500" />
-                        <StatCard title="Batch" value={myClass.batch as any} icon={<Users />} color="bg-purple-500" />
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <StatCard title="Class Name" value={myClass.name as any} icon={<Building2 />} color="bg-blue-500" />
+                          <StatCard title="Year" value={myClass.year as any} icon={<ClipboardList />} color="bg-emerald-500" />
+                          <StatCard title="Batch" value={myClass.batch as any} icon={<Users />} color="bg-purple-500" />
+                        </div>
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleBulkDownloadProfiles(myClass.id?.toString())}
+                            disabled={isExportingBulkResumes}
+                            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-2 cursor-pointer"
+                          >
+                            {isExportingBulkResumes ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                            <span>{isExportingBulkResumes ? 'Compiling Class Resumes...' : `Download All ${myClass.name} Resumes (.zip)`}</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </PageLayout>
@@ -11586,9 +11556,26 @@ export default function App() {
                           </select>
                         </div>
                       )}
+
+                      {(isAdvisor || isHOD || isAdmin) && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleBulkDownloadProfiles()}
+                            disabled={isExportingBulkResumes}
+                            className="h-11 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-2 cursor-pointer shrink-0"
+                            title="Download all student profiles in current view as formatted Resume PDFs in a ZIP archive"
+                          >
+                            {isExportingBulkResumes ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <Download size={16} />
+                            )}
+                            <span>{isExportingBulkResumes ? 'Compiling Resumes...' : 'Bulk Download Resumes (.zip)'}</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
-
-
 
                     <Table className="min-w-[700px] md:min-w-0">
                       <THead>
