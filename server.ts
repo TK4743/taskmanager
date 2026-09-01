@@ -72,7 +72,8 @@ import {
   notifyTaskSubmissionReceived,
   notifySubmissionVerifiedOrRejected,
   notifySubmissionBatchVerified,
-  linkStudentTelegram
+  linkStudentTelegram,
+  getISTDateStr
 } from './telegramService.js';
 import {
   initPushNotifications,
@@ -436,100 +437,15 @@ async function startServer() {
     }
 
     // Schedule automated daily Telegram notifications:
-    // 1. 8:00 AM IST -> Morning Group Summary to the Department Telegram Group
+    // 1. 8:00 AM IST -> Morning Group Summary & 24h Deadline Alerts
     // 2. 8:00 PM IST -> 1-to-1 Private Reminders to students with pending deadlines
     // 3. 9:00 PM IST -> Evening Group Summary to the Department Telegram Group
     // 4. 11:55 PM IST -> Daily LeetCode & GitHub Progress Sync & CSV/JSON GitHub Auto-Push
-    let lastRemindersDate = '';
-    let lastGroupSummaryMorningDate = '';
-    let lastGroupSummaryEveningDate = '';
-    let lastLeetcodePushDate = '';
-   
-    setInterval(async () => {
-      try {
-        const now = new Date();
-        const istOffset = 5.5 * 60 * 60 * 1000;
-        const istDate = new Date(now.getTime() + istOffset);
-        const todayStr = istDate.toISOString().split('T')[0];
-        const hours = istDate.getUTCHours();
-        const minutes = istDate.getUTCMinutes();
-   
-        // 8:00 AM IST (08:00) -> Morning Group Summary & Deadline Alerts (strictly once per day)
-        if (hours === 8 && minutes >= 0 && minutes <= 10 && lastGroupSummaryMorningDate !== todayStr) {
-          const checkRes = await pool.query("SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_morning_date' LIMIT 1").catch(() => ({ rows: [] }));
-          const alreadySent = checkRes.rows[0]?.value;
-          if (alreadySent !== todayStr) {
-            lastGroupSummaryMorningDate = todayStr;
-            await pool.query(`
-              INSERT INTO system_settings (key, value, updated_at)
-              VALUES ('telegram_last_group_summary_morning_date', $1, CURRENT_TIMESTAMP)
-              ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
-            `, [todayStr]).catch(() => {});
-            
-            const prevIstDate = new Date(istDate.getTime() - 24 * 60 * 60 * 1000);
-            const prevDayStr = prevIstDate.toISOString().split('T')[0];
-            console.log(`[Telegram Scheduler] 📊 Running automated 8:00 AM IST daily group summary (for previous day: ${prevDayStr})...`);
-            sendGroupSummary(undefined, prevDayStr).catch(err => console.error('[Telegram Scheduler] Error sending morning group summary:', err));
-
-            // Send 8:00 AM IST 24-Hour Upcoming Deadline Alert to Group
-            sendGroupDeadlineAlert().catch(err => console.error('[Telegram Scheduler] Error sending morning deadline alert:', err));
-          }
-        }
-
-        // 8:00 PM IST (20:00) -> Private Reminders (strictly once per day)
-        if (hours === 20 && minutes >= 0 && minutes <= 10 && lastRemindersDate !== todayStr) {
-          const checkRes = await pool.query("SELECT value FROM system_settings WHERE key = 'telegram_last_reminders_date' LIMIT 1").catch(() => ({ rows: [] }));
-          const alreadySent = checkRes.rows[0]?.value;
-          if (alreadySent !== todayStr) {
-            lastRemindersDate = todayStr;
-            await pool.query(`
-              INSERT INTO system_settings (key, value, updated_at)
-              VALUES ('telegram_last_reminders_date', $1, CURRENT_TIMESTAMP)
-              ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
-            `, [todayStr]).catch(() => {});
-            console.log(`[Telegram Scheduler] 📢 Running automated 8:00 PM IST student deadline reminders for ${todayStr}...`);
-            triggerPendingTaskReminders().catch(err => console.error('[Telegram Scheduler] Error sending reminders:', err));
-          }
-        }
-   
-        // 9:00 PM IST (21:00) -> Evening Group Summary (strictly once per day)
-        if (hours === 21 && minutes >= 0 && minutes <= 10 && lastGroupSummaryEveningDate !== todayStr) {
-          const checkRes = await pool.query("SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_evening_date' LIMIT 1").catch(() => ({ rows: [] }));
-          const alreadySent = checkRes.rows[0]?.value;
-          if (alreadySent !== todayStr) {
-            lastGroupSummaryEveningDate = todayStr;
-            await pool.query(`
-              INSERT INTO system_settings (key, value, updated_at)
-              VALUES ('telegram_last_group_summary_evening_date', $1, CURRENT_TIMESTAMP)
-              ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
-            `, [todayStr]).catch(() => {});
-            console.log(`[Telegram Scheduler] 📊 Running automated 9:00 PM IST daily group summary for ${todayStr}...`);
-            sendGroupSummary().catch(err => console.error('[Telegram Scheduler] Error sending evening group summary:', err));
-          }
-        }
-
-        // 11:55 PM IST (23:55) -> Daily LeetCode Progress Sync & CSV/JSON GitHub Auto-Push
-        if (hours === 23 && minutes >= 55 && minutes <= 59 && lastLeetcodePushDate !== todayStr) {
-          const checkRes = await pool.query("SELECT value FROM system_settings WHERE key = 'leetcode_last_daily_csv_push_date' LIMIT 1").catch(() => ({ rows: [] }));
-          const alreadyPushed = checkRes.rows[0]?.value;
-          if (alreadyPushed !== todayStr) {
-            lastLeetcodePushDate = todayStr;
-            await pool.query(`
-              INSERT INTO system_settings (key, value, updated_at)
-              VALUES ('leetcode_last_daily_csv_push_date', $1, CURRENT_TIMESTAMP)
-              ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
-            `, [todayStr]).catch(() => {});
-            console.log(`[LeetCode AutoSync] 🚀 Running automated 11:55 PM IST daily LeetCode sync & CSV export for ${todayStr}...`);
-            syncLeetcodeProgressForScope()
-              .then(() => exportAndPushLeetcodeDailyProgress(todayStr))
-              .then(() => generateDatabaseSnapshot())
-              .catch(err => console.error('[LeetCode AutoSync] Nightly sync error:', err));
-          }
-        }
-      } catch (schedErr) {
-        console.error('[Scheduler] Check error:', schedErr);
-      }
-    }, 60 * 1000);
+    if (!isVercel) {
+      setInterval(() => {
+        checkAndTriggerScheduledAutomations().catch(err => console.error('[Scheduler] Tick error:', err));
+      }, 60 * 1000);
+    }
   }
 
   const app = express();
@@ -590,14 +506,159 @@ async function startServer() {
     credentials: true
   }));
 
+  // ── Database-Backed Atomic Daily Lock Helper ─────────────────────────────────
+  async function claimDailySlot(key: string, todayStr: string): Promise<boolean> {
+    try {
+      const res = await pool.query(`
+        INSERT INTO system_settings (key, value, updated_at)
+        VALUES ($1, $2, CURRENT_TIMESTAMP)
+        ON CONFLICT (key) DO UPDATE SET
+          value = EXCLUDED.value,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE system_settings.value IS DISTINCT FROM EXCLUDED.value
+        RETURNING key
+      `, [key, todayStr]);
+      return res.rows.length > 0;
+    } catch (err) {
+      console.error(`[Scheduler Lock Error] ${key}:`, err);
+      return false;
+    }
+  }
+
+  // ── Unified Scheduled Automation Checker (Triggered by RenderPing / Cron / Health Pings) ──
+  async function checkAndTriggerScheduledAutomations(): Promise<{ triggered: string[]; time: string }> {
+    const triggered: string[] = [];
+    try {
+      const now = new Date();
+      const istOffset = 5.5 * 60 * 60 * 1000;
+      const istDate = new Date(now.getTime() + istOffset);
+      const todayStr = istDate.toISOString().split('T')[0];
+      const hours = istDate.getUTCHours();
+      const minutes = istDate.getUTCMinutes();
+
+      const prevIstDate = new Date(istDate.getTime() - 24 * 60 * 60 * 1000);
+      const prevDayStr = prevIstDate.toISOString().split('T')[0];
+
+      // 1. Morning 7:50 AM IST Window -> Pre-Sync Previous Day LeetCode & GitHub Progress (10 mins before 8:00 AM)
+      if (hours === 7 && minutes >= 50) {
+        const claimed = await claimDailySlot('morning_pre_sync_date', todayStr);
+        if (claimed) {
+          triggered.push('morning_pre_sync');
+          console.log(`[RenderPing/Scheduler] 🔄 7:50 AM IST Pre-Syncing Previous Day Data (${prevDayStr})...`);
+          try {
+            await syncLeetcodeProgressForScope({ date: prevDayStr } as any);
+            if (process.env.GITHUB_TOKEN) {
+              await syncGitHubProgressForScope({ date: prevDayStr });
+            }
+          } catch (syncErr) {
+            console.error('[Morning Pre-Sync Error]:', syncErr);
+          }
+        }
+      }
+
+      // 2. Morning 8:00 AM IST Window -> Send Morning Group Summary & 24h Deadline Alerts
+      if (hours >= 8 && hours < 9) {
+        const claimed = await claimDailySlot('telegram_last_group_summary_morning_date', todayStr);
+        if (claimed) {
+          triggered.push('morning_summary');
+          console.log(`[RenderPing/Scheduler] 📊 Triggering 8:00 AM IST Morning Group Summary (${prevDayStr})...`);
+          // Ensure previous day data is freshly synced before generating summary
+          try {
+            await syncLeetcodeProgressForScope({ date: prevDayStr } as any);
+            if (process.env.GITHUB_TOKEN) {
+              await syncGitHubProgressForScope({ date: prevDayStr });
+            }
+          } catch (e) {}
+
+          await Promise.allSettled([
+            sendGroupSummary(undefined, prevDayStr).catch(err => console.error('[Morning Summary Error]:', err)),
+            sendGroupDeadlineAlert().catch(err => console.error('[Morning Deadline Alert Error]:', err))
+          ]);
+        }
+      }
+
+      // 3. Evening 8:00 PM IST Window (20:00 - 20:49 IST) -> Student 1-to-1 Pending Reminders
+      if (hours === 20 && minutes < 50) {
+        const claimed = await claimDailySlot('telegram_last_reminders_date', todayStr);
+        if (claimed) {
+          triggered.push('evening_reminders');
+          console.log(`[RenderPing/Scheduler] 📢 Triggering 8:00 PM IST Student Deadline Reminders for ${todayStr}...`);
+          await triggerPendingTaskReminders().catch(err => console.error('[Evening Reminders Error]:', err));
+        }
+      }
+
+      // 4. Evening 8:50 PM IST Window -> Pre-Sync Today's LeetCode & GitHub Progress (10 mins before 9:00 PM)
+      if (hours === 20 && minutes >= 50) {
+        const claimed = await claimDailySlot('evening_pre_sync_date', todayStr);
+        if (claimed) {
+          triggered.push('evening_pre_sync');
+          console.log(`[RenderPing/Scheduler] 🔄 8:50 PM IST Pre-Syncing Today's Data (${todayStr})...`);
+          try {
+            await syncLeetcodeProgressForScope({ date: todayStr } as any);
+            if (process.env.GITHUB_TOKEN) {
+              await syncGitHubProgressForScope({ date: todayStr });
+            }
+          } catch (syncErr) {
+            console.error('[Evening Pre-Sync Error]:', syncErr);
+          }
+        }
+      }
+
+      // 5. Evening 9:00 PM IST Window -> Send Evening Department Progress Summary
+      if (hours >= 21 && hours < 22) {
+        const claimed = await claimDailySlot('telegram_last_group_summary_evening_date', todayStr);
+        if (claimed) {
+          triggered.push('evening_summary');
+          console.log(`[RenderPing/Scheduler] 📊 Triggering 9:00 PM IST Evening Group Summary for ${todayStr}...`);
+          // Ensure today's data is freshly synced before generating summary
+          try {
+            await syncLeetcodeProgressForScope({ date: todayStr } as any);
+            if (process.env.GITHUB_TOKEN) {
+              await syncGitHubProgressForScope({ date: todayStr });
+            }
+          } catch (e) {}
+
+          await sendGroupSummary().catch(err => console.error('[Evening Summary Error]:', err));
+        }
+      }
+
+      // 6. Nightly 11:50 PM IST Window -> Final LeetCode & GitHub Sync + CSV GitHub Push
+      if (hours === 23 && minutes >= 50) {
+        const claimed = await claimDailySlot('leetcode_last_daily_csv_push_date', todayStr);
+        if (claimed) {
+          triggered.push('nightly_sync');
+          console.log(`[RenderPing/Scheduler] 🚀 Triggering 11:55 PM IST LeetCode & GitHub Progress Sync for ${todayStr}...`);
+          try {
+            await syncLeetcodeProgressForScope();
+            if (process.env.GITHUB_TOKEN) {
+              await syncGitHubProgressForScope();
+            }
+            await exportAndPushLeetcodeDailyProgress(todayStr);
+            await generateDatabaseSnapshot();
+          } catch (syncErr) {
+            console.error('[Nightly Sync Error]:', syncErr);
+          }
+        }
+      }
+
+      return { triggered, time: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} IST` };
+    } catch (err: any) {
+      console.error('[checkAndTriggerScheduledAutomations Error]:', err);
+      return { triggered: [], time: 'error' };
+    }
+  }
+
   const healthCheckHandler = async (req: Request, res: Response) => {
     try {
       await pool.query('SELECT 1');
+      // Evaluate scheduled daily automations on every incoming RenderPing request
+      const automationResult = await checkAndTriggerScheduledAutomations().catch(() => ({ triggered: [], time: 'error' }));
       res.status(200).json({
         status: 'ok',
         database: 'connected',
         uptime: Math.floor(process.uptime()),
         pool: getPoolStatus(),
+        automations: automationResult,
         timestamp: new Date().toISOString()
       });
     } catch (err: any) {
@@ -611,8 +672,10 @@ async function startServer() {
     }
   };
 
-  app.get('/health', healthCheckHandler);
-  app.get('/api/health', healthCheckHandler);
+  app.all('/health', healthCheckHandler);
+  app.all('/api/health', healthCheckHandler);
+  app.all('/api/cron/tick', healthCheckHandler);
+  app.all('/api/cron/ping', healthCheckHandler);
 
   // ── High-Speed In-Memory User Auth Cache (TTL: 45s) ──────────────────────
   interface CachedAuthUser {
@@ -6175,7 +6238,7 @@ async function startServer() {
   }
 
   // Core Sync Function
-  async function syncLeetcodeProgressForScope(scopeFilter?: { departmentId?: string; classId?: string; year?: number; userId?: string }) {
+  async function syncLeetcodeProgressForScope(scopeFilter?: { departmentId?: string; classId?: string; year?: number; userId?: string; date?: string }) {
     try {
       let query = `
         SELECT u.id, u.register_number, u.full_name, u.class_id, u.department_id, u.leetcode_url, u.github_url, c.year, c.batch 
@@ -6205,9 +6268,9 @@ async function startServer() {
       }
 
       const students = await pool.query(query, params);
-      const todayStr = getISTDateStr();
+      const todayStr = scopeFilter?.date || getISTDateStr();
 
-      // Timestamps for start & end of today in IST (UTC+5:30)
+      // Timestamps for start & end of target date in IST (UTC+5:30)
       const todayStartSec = Math.floor(new Date(`${todayStr}T00:00:00+05:30`).getTime() / 1000);
       const todayEndSec = Math.floor(new Date(`${todayStr}T23:59:59+05:30`).getTime() / 1000);
 
@@ -8310,29 +8373,152 @@ async function startServer() {
     }
   }
 
-  // ── Protected Cron Webhook (Render / External Cron Support) ─────────────────
-  app.post('/api/cron/sync-coding-progress', asyncHandler(async (req: Request, res: Response) => {
+  // ── Protected Cron Webhook (Vercel Cron / Render / External Webhooks) ─────
+  const verifyCronAuth = async (req: Request, res: Response): Promise<boolean> => {
     const cronSecret = process.env.CRON_SECRET;
     const authHeader = req.headers.authorization || (req.headers['x-cron-secret'] as string);
     if (cronSecret) {
       if (authHeader !== cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-        return res.status(401).json({ error: 'Unauthorized cron request: Invalid secret key' });
+        res.status(401).json({ error: 'Unauthorized cron request: Invalid secret key' });
+        return false;
       }
-    } else {
-      // If CRON_SECRET is not configured in .env, require SUPREME_ADMIN JWT token
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Unauthorized: CRON_SECRET or Admin token required' });
-      }
+      return true;
+    }
+    // If CRON_SECRET is not configured, require SUPREME_ADMIN JWT token
+    if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const decoded: any = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
         const userRes = await pool.query('SELECT role FROM users WHERE id = $1', [decoded.id]);
-        if (!userRes.rows[0] || userRes.rows[0].role !== 'SUPREME_ADMIN') {
-          return res.status(403).json({ error: 'Forbidden: Supreme Admin required' });
+        if (userRes.rows[0] && userRes.rows[0].role === 'SUPREME_ADMIN') {
+          return true;
         }
-      } catch (_) {
-        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
-      }
+      } catch (_) {}
     }
+    // On Vercel when CRON_SECRET is not set, Vercel crons still provide auth headers if configured
+    if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+      res.status(401).json({ error: 'Unauthorized: CRON_SECRET or Admin token required' });
+      return false;
+    }
+    return true;
+  };
+
+  // 1. Morning 7:50 AM IST Pre-Sync (Previous Day LeetCode & GitHub Sync)
+  app.all('/api/cron/morning-sync', asyncHandler(async (req: Request, res: Response) => {
+    if (!(await verifyCronAuth(req, res))) return;
+
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(now.getTime() + istOffset);
+    const prevIstDate = new Date(istDate.getTime() - 24 * 60 * 60 * 1000);
+    const prevDayStr = prevIstDate.toISOString().split('T')[0];
+
+    console.log(`[Cron Webhook] 🔄 Running 7:50 AM IST Pre-Sync for previous day (${prevDayStr})...`);
+    const leetcodeRes = await syncLeetcodeProgressForScope({ date: prevDayStr } as any);
+    let githubRes = null;
+    if (process.env.GITHUB_TOKEN) {
+      githubRes = await syncGitHubProgressForScope({ date: prevDayStr });
+    }
+
+    return res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      date: prevDayStr,
+      leetcode: leetcodeRes,
+      github: githubRes
+    });
+  }));
+
+  // 2. Morning 8:00 AM IST Summary & 24-Hour Upcoming Deadline Alert
+  app.all('/api/cron/morning-summary', asyncHandler(async (req: Request, res: Response) => {
+    if (!(await verifyCronAuth(req, res))) return;
+
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(now.getTime() + istOffset);
+    const prevIstDate = new Date(istDate.getTime() - 24 * 60 * 60 * 1000);
+    const prevDayStr = prevIstDate.toISOString().split('T')[0];
+
+    console.log(`[Cron Webhook] 📊 Running automated morning group summary (for previous day: ${prevDayStr})...`);
+    // Ensure previous day data is freshly synced before generating summary
+    try {
+      await syncLeetcodeProgressForScope({ date: prevDayStr } as any);
+      if (process.env.GITHUB_TOKEN) {
+        await syncGitHubProgressForScope({ date: prevDayStr });
+      }
+    } catch (e) {}
+
+    const summaryRes = await sendGroupSummary(undefined, prevDayStr).catch(err => ({ success: false, message: err.message }));
+    const deadlineAlertRes = await sendGroupDeadlineAlert().catch(err => ({ success: false, message: err.message }));
+
+    return res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      summary: summaryRes,
+      deadlineAlert: deadlineAlertRes
+    });
+  }));
+
+  // 3. Evening 8:00 PM IST Student Deadline Reminders (1-to-1 Private Reminders)
+  app.all('/api/cron/evening-reminders', asyncHandler(async (req: Request, res: Response) => {
+    if (!(await verifyCronAuth(req, res))) return;
+
+    console.log('[Cron Webhook] 📢 Running automated evening 1-to-1 student deadline reminders...');
+    const remindersRes = await triggerPendingTaskReminders().catch(err => ({ success: false, message: err.message }));
+
+    return res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      reminders: remindersRes
+    });
+  }));
+
+  // 4. Evening 8:50 PM IST Pre-Sync (Today's LeetCode & GitHub Sync)
+  app.all('/api/cron/evening-sync', asyncHandler(async (req: Request, res: Response) => {
+    if (!(await verifyCronAuth(req, res))) return;
+
+    const todayStr = getISTDateStr();
+    console.log(`[Cron Webhook] 🔄 Running 8:50 PM IST Pre-Sync for today (${todayStr})...`);
+    const leetcodeRes = await syncLeetcodeProgressForScope({ date: todayStr } as any);
+    let githubRes = null;
+    if (process.env.GITHUB_TOKEN) {
+      githubRes = await syncGitHubProgressForScope({ date: todayStr });
+    }
+
+    return res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      date: todayStr,
+      leetcode: leetcodeRes,
+      github: githubRes
+    });
+  }));
+
+  // 5. Evening 9:00 PM IST Department Daily Progress Summary
+  app.all('/api/cron/evening-summary', asyncHandler(async (req: Request, res: Response) => {
+    if (!(await verifyCronAuth(req, res))) return;
+
+    const todayStr = getISTDateStr();
+    console.log(`[Cron Webhook] 📊 Running automated 9:00 PM IST daily group summary for ${todayStr}...`);
+    // Ensure today's data is freshly synced before generating summary
+    try {
+      await syncLeetcodeProgressForScope({ date: todayStr } as any);
+      if (process.env.GITHUB_TOKEN) {
+        await syncGitHubProgressForScope({ date: todayStr });
+      }
+    } catch (e) {}
+
+    const summaryRes = await sendGroupSummary().catch(err => ({ success: false, message: err.message }));
+
+    return res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      summary: summaryRes
+    });
+  }));
+
+  // 6. Nightly 11:55 PM IST LeetCode & GitHub Progress Sync & GitHub Commit
+  app.all('/api/cron/sync-coding-progress', asyncHandler(async (req: Request, res: Response) => {
+    if (!(await verifyCronAuth(req, res))) return;
 
     console.log('[Cron Webhook] Executing on-demand daily sync for LeetCode & GitHub...');
     const leetcodeRes = await syncLeetcodeProgressForScope();

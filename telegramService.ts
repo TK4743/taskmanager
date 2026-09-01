@@ -25,11 +25,11 @@ export async function fetchBotUsername(): Promise<string> {
 }
 
 export function getBotToken(): string {
-  return process.env.TELEGRAM_BOT_TOKEN || '';
+  return (process.env.TELEGRAM_BOT_TOKEN || '').trim().replace(/^["']|["']$/g, '');
 }
 
 export function getAdminChatId(): string {
-  return process.env.TELEGRAM_ADMIN_CHAT_ID || '';
+  return (process.env.TELEGRAM_ADMIN_CHAT_ID || '').trim().replace(/^["']|["']$/g, '');
 }
 
 export function getPortalUrl(): string {
@@ -84,7 +84,8 @@ export async function getGroupChatId(): Promise<string | null> {
   } catch (err) {
     console.warn('[Telegram] Could not read group chat ID from system_settings:', err);
   }
-  _cachedGroupChatId = process.env.TELEGRAM_GROUP_CHAT_ID || null;
+  const envGroupId = (process.env.TELEGRAM_GROUP_CHAT_ID || '').trim().replace(/^["']|["']$/g, '');
+  _cachedGroupChatId = envGroupId || null;
   _cachedGroupChatIdAt = Date.now();
   return _cachedGroupChatId;
 }
