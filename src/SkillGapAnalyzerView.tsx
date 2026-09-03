@@ -88,7 +88,13 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
   const [newSkillLevel, setNewSkillLevel] = useState<string>('Intermediate');
   const [isAddingSkill, setIsAddingSkill] = useState<boolean>(false);
 
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  const getAuthHeaders = useCallback(() => {
+    const activeToken = token || localStorage.getItem('token') || '';
+    return {
+      'Content-Type': 'application/json',
+      ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {})
+    };
+  }, [token]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -97,12 +103,12 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
 
   const fetchPostings = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/postings`, { headers });
+      const res = await fetch(`${API}/api/postings`, { headers: getAuthHeaders() });
       if (res.ok) {
         const data: Posting[] = await res.json();
         setPostings(data);
-        if (data.length > 0 && !selectedPostingId) {
-          setSelectedPostingId(data[0].id);
+        if (data.length > 0) {
+          setSelectedPostingId(prev => prev || data[0].id);
         }
       } else {
         setErrorMsg('Failed to load active career postings.');
@@ -111,29 +117,29 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
       console.error('Failed to fetch postings for skill analyzer', err);
       setErrorMsg('Network error fetching career opportunities.');
     }
-  }, [headers, selectedPostingId]);
+  }, [getAuthHeaders]);
 
   const fetchDemand = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/admin/skill-demand`, { headers });
+      const res = await fetch(`${API}/api/admin/skill-demand`, { headers: getAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
         setSkillDemand(data);
       }
     } catch (_) {}
-  }, [headers]);
+  }, [getAuthHeaders]);
 
   const analyzeGap = useCallback(async (pId: string) => {
     if (!pId) return;
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await fetch(`${API}/api/student/skill-gap/${pId}`, { headers });
+      const res = await fetch(`${API}/api/student/skill-gap/${pId}`, { headers: getAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
         setGapData(data);
       } else {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         setErrorMsg(err.error || 'Unable to compute skill gap analysis.');
       }
     } catch (err) {
@@ -142,12 +148,12 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, [getAuthHeaders]);
 
   useEffect(() => {
     fetchPostings();
     fetchDemand();
-  }, []);
+  }, [fetchPostings, fetchDemand]);
 
   useEffect(() => {
     if (selectedPostingId) {
@@ -162,7 +168,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
     try {
       const res = await fetch(`${API}/api/student/profile/skills`, {
         method: 'POST',
-        headers,
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           skill_name: newSkillName.trim(),
           level: newSkillLevel,

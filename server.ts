@@ -9532,10 +9532,6 @@ async function startServer() {
     return 2;
   }
 
-  function normalizeSkillLevel(level: string): number {
-    return SKILL_LEVEL_MAP[level?.toLowerCase()] ?? 2;
-  }
-
   const LEARNING_RESOURCES: Record<string, { title: string; platform: string; url: string; duration: string }[]> = {
     'react': [{ title: 'React Official Docs', platform: 'react.dev', url: 'https://react.dev/learn', duration: '20 hrs' }, { title: 'Full React Course', platform: 'freeCodeCamp', url: 'https://www.youtube.com/watch?v=bMknfKXIFA8', duration: '12 hrs' }],
     'node.js': [{ title: 'Node.js Docs', platform: 'nodejs.org', url: 'https://nodejs.org/en/docs', duration: '15 hrs' }, { title: 'Node.js Crash Course', platform: 'Traversy Media', url: 'https://www.youtube.com/watch?v=fBNz5xF-Kx4', duration: '90 min' }],
@@ -11653,7 +11649,7 @@ async function startServer() {
     sendUnifiedNotification({
       targetRole: 'STUDENT',
       targetClassId: assignment.student_id,
-      eventType: 'TASK_VERIFIED',
+      eventType: 'SKILL_ASSESSMENT_COMPLETED',
       title: `✅ Assessment Submitted: ${assignment.assessment_title}`,
       message: `Your Short Coding Assessment has been recorded with a score of ${assignment.final_score}. Your verified skill intelligence matrix has been updated.`,
       referenceType: 'CODING_ASSESSMENT',
