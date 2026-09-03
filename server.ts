@@ -9479,15 +9479,53 @@ async function startServer() {
   // 🏭 SIH26044: ACADEMIA–INDUSTRY COLLABORATION PLATFORM ENDPOINTS
   // ════════════════════════════════════════════════════════════════════════════
 
-  // ── AI Skill Intelligence Engine ─────────────────────────────────────────
+  // ── Native AI Skill Intelligence & Career Match Engine (100% Self-Contained, Zero External API Dependency) ──
 
   const SKILL_LEVEL_MAP: Record<string, number> = {
-    'beginner': 1, 'basic': 1,
-    'intermediate': 2, 'medium': 2,
-    'advanced': 3,
-    'expert': 4,
+    'beginner': 1, 'basic': 1, 'novice': 1,
+    'intermediate': 2, 'medium': 2, 'competent': 2,
+    'advanced': 3, 'proficient': 3,
+    'expert': 4, 'senior': 4,
     'master': 5, 'professional': 5,
   };
+
+  const SKILL_ALIASES: Record<string, string> = {
+    'reactjs': 'react', 'react.js': 'react',
+    'nodejs': 'node.js', 'node': 'node.js',
+    'postgresql': 'sql', 'postgres': 'sql', 'mysql': 'sql', 'sqlite': 'sql', 'relational database': 'sql',
+    'cpp': 'c++', 'c plus plus': 'c++',
+    'python3': 'python', 'py': 'python',
+    'javascript': 'js', 'typescript': 'ts',
+    'golang': 'go',
+    'k8s': 'kubernetes',
+    'docker': 'docker', 'containerization': 'docker',
+    'aws': 'aws', 'amazon web services': 'aws', 'cloud architecture': 'aws', 'cloud computing': 'aws',
+    'dsa': 'data structures', 'algorithms': 'data structures', 'problem solving': 'data structures',
+    'machine learning': 'ml', 'deep learning': 'ml', 'artificial intelligence': 'ml', 'ai': 'ml',
+    'rest api': 'apis', 'restful api': 'apis', 'rest apis': 'apis', 'api': 'apis'
+  };
+
+  function normalizeSkillKey(skill: string): string {
+    const clean = (skill || '').trim().toLowerCase().replace(/[^\w.+]/g, '');
+    return SKILL_ALIASES[clean] || clean;
+  }
+
+  function normalizeSkillLevel(level: any, proficiency?: number): number {
+    if (typeof level === 'number') return Math.min(Math.max(level, 1), 5);
+    if (typeof level === 'string') {
+      const l = level.trim().toLowerCase();
+      if (SKILL_LEVEL_MAP[l]) return SKILL_LEVEL_MAP[l];
+      const parsed = parseInt(l, 10);
+      if (!isNaN(parsed)) return Math.min(Math.max(parsed, 1), 5);
+    }
+    if (typeof proficiency === 'number') {
+      if (proficiency >= 85) return 4;
+      if (proficiency >= 70) return 3;
+      if (proficiency >= 50) return 2;
+      return 1;
+    }
+    return 2;
+  }
 
   function normalizeSkillLevel(level: string): number {
     return SKILL_LEVEL_MAP[level?.toLowerCase()] ?? 2;
@@ -9541,51 +9579,271 @@ async function startServer() {
       }));
   }
 
+  interface MatchedSkill {
+    skill: string;
+    studentLevel: number;
+    requiredLevel: number;
+    matchPercentage: number;
+    source?: string;
+  }
+
+  interface GapSkill {
+    skill: string;
+    requiredLevel: number;
+    currentLevel: number;
+    impact: number;
+    severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  }
+
   interface MatchResult {
     score: number;
-    matched: { skill: string; studentLevel: number; requiredLevel: number }[];
-    gaps: { skill: string; requiredLevel: number; impact: number }[];
-    recommendations: ReturnType<typeof deriveRecommendations>;
+    skill_score: number;
+    cgpa_bonus: number;
+    leetcode_bonus: number;
+    matched: MatchedSkill[];
+    gaps: GapSkill[];
+    recommendations: {
+      skill: string;
+      priority: 'HIGH' | 'MEDIUM' | 'LOW';
+      resources: { title: string; platform: string; url: string; duration: string }[];
+    }[];
+    ai_insights: {
+      readiness_summary: string;
+      estimated_prep_weeks: number;
+      recommended_projects: string[];
+      key_takeaway: string;
+    };
   }
 
   function computeMatchScore(
-    studentSkills: { name: string; level: number }[],
-    requiredSkills: { skill: string; level: number; weight: number }[],
+    studentSkills: { name: string; level: number; source?: string }[],
+    rawRequiredSkills: any[],
     cgpa: number = 0,
     leetcodeSolved: number = 0
   ): MatchResult {
-    if (!requiredSkills || requiredSkills.length === 0) {
-      return { score: 70, matched: [], gaps: [], recommendations: [] };
+    // Normalize required skills safely handling both object & string formats
+    let requiredList: { skill: string; level: number; weight: number }[] = [];
+    if (Array.isArray(rawRequiredSkills)) {
+      requiredList = rawRequiredSkills.map((r: any) => {
+        if (typeof r === 'string') {
+          return { skill: r.trim(), level: 2, weight: 1 };
+        }
+        return {
+          skill: (r.skill || r.name || '').trim(),
+          level: typeof r.level === 'number' ? r.level : normalizeSkillLevel(r.level),
+          weight: typeof r.weight === 'number' ? r.weight : 1
+        };
+      }).filter(r => r.skill.length > 0);
     }
-    let totalWeight = 0;
-    let earnedScore = 0;
-    const matched: MatchResult['matched'] = [];
-    const gaps: MatchResult['gaps'] = [];
 
-    for (const req of requiredSkills) {
+    if (requiredList.length === 0) {
+      return {
+        score: 75,
+        skill_score: 75,
+        cgpa_bonus: 0,
+        leetcode_bonus: 0,
+        matched: [],
+        gaps: [],
+        recommendations: [],
+        ai_insights: {
+          readiness_summary: "General Competency Baseline. No specific prerequisites mandated for this position.",
+          estimated_prep_weeks: 0,
+          recommended_projects: ["Core Fullstack Portfolio Showcase"],
+          key_takeaway: "Maintain steady progress across your coursework and coding targets."
+        }
+      };
+    }
+
+    const totalWeight = requiredList.reduce((acc, r) => acc + (r.weight || 1), 0);
+    let earnedWeight = 0;
+    const matched: MatchedSkill[] = [];
+    const gaps: GapSkill[] = [];
+
+    for (const req of requiredList) {
       const w = req.weight || 1;
-      totalWeight += w;
-      const studentSkill = studentSkills.find(s => s.name.toLowerCase() === req.skill.toLowerCase());
+      const reqKey = normalizeSkillKey(req.skill);
+
+      // Match against student's multi-source normalized skills
+      const studentSkill = studentSkills.find(s => {
+        const sKey = normalizeSkillKey(s.name);
+        return sKey === reqKey || sKey.includes(reqKey) || reqKey.includes(sKey);
+      });
+
       if (studentSkill) {
-        const ratio = Math.min(studentSkill.level / (req.level || 2), 1.0);
-        earnedScore += ratio * w;
-        matched.push({ skill: req.skill, studentLevel: studentSkill.level, requiredLevel: req.level });
+        const reqLvl = req.level || 2;
+        const stuLvl = studentSkill.level || 2;
+        const ratio = Math.min(stuLvl / reqLvl, 1.0);
+        earnedWeight += ratio * w;
+        matched.push({
+          skill: req.skill,
+          studentLevel: stuLvl,
+          requiredLevel: reqLvl,
+          matchPercentage: Math.round(ratio * 100),
+          source: studentSkill.source
+        });
+
+        // If level is below required, register as a minor gap
+        if (stuLvl < reqLvl) {
+          gaps.push({
+            skill: req.skill,
+            requiredLevel: reqLvl,
+            currentLevel: stuLvl,
+            impact: parseFloat(((reqLvl - stuLvl) / reqLvl * (w / totalWeight)).toFixed(2)),
+            severity: 'LOW'
+          });
+        }
       } else {
-        gaps.push({ skill: req.skill, requiredLevel: req.level, impact: w / (requiredSkills.reduce((s, r) => s + (r.weight || 1), 0)) });
+        const impact = parseFloat((w / totalWeight).toFixed(2));
+        gaps.push({
+          skill: req.skill,
+          requiredLevel: req.level || 2,
+          currentLevel: 0,
+          impact,
+          severity: impact >= 0.25 ? 'HIGH' : impact >= 0.15 ? 'MEDIUM' : 'LOW'
+        });
       }
     }
 
-    const skillScore = totalWeight > 0 ? (earnedScore / totalWeight) : 0;
-    const cgpaBonus = Math.min((cgpa / 10) * 0.10, 0.10);
-    const lcBonus = Math.min((leetcodeSolved / 500) * 0.10, 0.10);
-    const finalScore = Math.min(100, Math.round((skillScore * 0.80 + cgpaBonus + lcBonus) * 100));
+    // Weighted skill score: 75%
+    const rawSkillRatio = totalWeight > 0 ? (earnedWeight / totalWeight) : 0;
+    const skillScore = Math.round(rawSkillRatio * 75);
 
-    return { score: finalScore, matched, gaps, recommendations: deriveRecommendations(gaps) };
+    // Academic CGPA bonus: up to 15%
+    const cgpaRatio = Math.min(Math.max(cgpa, 0) / 10, 1.0);
+    const cgpaBonus = Math.round(cgpaRatio * 15);
+
+    // LeetCode / Coding Vigor bonus: up to 10%
+    const lcRatio = Math.min(Math.max(leetcodeSolved, 0) / 300, 1.0);
+    const lcBonus = Math.round(lcRatio * 10);
+
+    const finalScore = Math.min(100, Math.max(0, skillScore + cgpaBonus + lcBonus));
+
+    // Sort gaps by severity and impact
+    gaps.sort((a, b) => b.impact - a.impact);
+
+    // Native Curated Learning Recommendations
+    const recommendations = gaps.map(g => {
+      const key = g.skill.toLowerCase().trim();
+      const directResource = LEARNING_RESOURCES[key] || LEARNING_RESOURCES[normalizeSkillKey(key)];
+      return {
+        skill: g.skill,
+        priority: g.severity,
+        resources: directResource || [
+          { title: `${g.skill} Developer Roadmap & Guide`, platform: 'roadmap.sh', url: `https://roadmap.sh`, duration: '10 hrs' },
+          { title: `${g.skill} Documentation & Hands-On Tutorial`, platform: 'Docs', url: `https://www.google.com/search?q=${encodeURIComponent(g.skill + ' documentation tutorial')}`, duration: 'Self-paced' }
+        ]
+      };
+    });
+
+    // Native Algorithmic AI Insights (100% self-contained, no external API keys)
+    const topMissing = gaps.slice(0, 3).map(g => g.skill);
+    let readinessSummary = "";
+    if (finalScore >= 80) {
+      readinessSummary = `Outstanding candidate profile. You satisfy ${matched.length} of ${requiredList.length} prerequisite competencies (${finalScore}% match score). Your academic standing (CGPA: ${cgpa || 'N/A'}) and problem-solving track record position you strongly for direct technical interviews.`;
+    } else if (finalScore >= 55) {
+      readinessSummary = `Competitive baseline profile with ${finalScore}% role compatibility. You have proven capabilities in ${matched.map(m => m.skill).slice(0, 2).join(', ') || 'foundational computing'}, with targeted gaps in ${topMissing.join(', ')}. Addressing these will elevate you into the primary recruitment pool.`;
+    } else {
+      readinessSummary = `Developing profile with ${finalScore}% compatibility for this role. Key prerequisites requiring focused upskilling include ${topMissing.join(', ')}. Completing the recommended bridge projects will substantially increase your qualification percentage.`;
+    }
+
+    // Dynamic tailored project recommendations based on missing skills
+    const projectSuggestions: string[] = [];
+    const missingLower = gaps.map(g => g.skill.toLowerCase());
+
+    if (missingLower.some(s => s.includes('docker') || s.includes('kubernetes') || s.includes('aws') || s.includes('cloud'))) {
+      projectSuggestions.push("Cloud Infrastructure Showcase: Containerize a multi-service application with Docker Compose, automated GitHub Actions CI/CD, and deploy to AWS/Cloud.");
+    }
+    if (missingLower.some(s => s.includes('react') || s.includes('node') || s.includes('api') || s.includes('web'))) {
+      projectSuggestions.push("Full-Stack Enterprise CRUD: Develop an authenticated RESTful dashboard with real-time state updates, role-based access, and relational DB persistence.");
+    }
+    if (missingLower.some(s => s.includes('sql') || s.includes('postgres') || s.includes('mongo') || s.includes('database'))) {
+      projectSuggestions.push("Database Engineering Benchmark: Design a normalized transactional schema with optimized indexing, aggregated reporting queries, and caching.");
+    }
+    if (missingLower.some(s => s.includes('python') || s.includes('ml') || s.includes('data') || s.includes('ai'))) {
+      projectSuggestions.push("Applied ML Pipeline: Build an automated data ingestion, cleaning, and predictive inference pipeline with performance metrics.");
+    }
+    if (projectSuggestions.length === 0) {
+      projectSuggestions.push("Integrated Capstone Portfolio: Consolidate your core skills into a production-grade web project with complete documentation and live deployment link.");
+    }
+
+    const estimatedWeeks = gaps.length === 0 ? 0 : Math.max(1, Math.min(8, Math.round(gaps.reduce((acc, g) => acc + (g.severity === 'HIGH' ? 2 : 1), 0))));
+
+    const aiInsights = {
+      readiness_summary: readinessSummary,
+      estimated_prep_weeks: estimatedWeeks,
+      recommended_projects: projectSuggestions.slice(0, 3),
+      key_takeaway: gaps.length === 0 
+        ? "All prerequisites fulfilled. Review company tech stack specifics and prepare for system design rounds."
+        : `Prioritize ${topMissing[0] || 'core gaps'} first to unlock maximum placement score improvement.`
+    };
+
+    return {
+      score: finalScore,
+      skill_score: skillScore,
+      cgpa_bonus: cgpaBonus,
+      leetcode_bonus: lcBonus,
+      matched,
+      gaps,
+      recommendations,
+      ai_insights: aiInsights
+    };
   }
 
   async function getStudentSkillsForMatch(studentId: string) {
-    const skillsRes = await pool.query(`SELECT skill_name as name, level FROM student_skills WHERE user_id = $1`, [studentId]);
-    return skillsRes.rows.map((r: any) => ({ name: r.name, level: normalizeSkillLevel(r.level) }));
+    const skillMap = new Map<string, { name: string; level: number; source: string; proficiency?: number }>();
+
+    // 1. Explicit verified skills
+    try {
+      const skillsRes = await pool.query(
+        `SELECT skill_name as name, level, proficiency, verified FROM student_skills WHERE user_id = $1`,
+        [studentId]
+      );
+      for (const r of skillsRes.rows) {
+        const key = normalizeSkillKey(r.name);
+        const lvl = normalizeSkillLevel(r.level, r.proficiency);
+        skillMap.set(key, { name: r.name, level: lvl, source: 'Verified Assessment', proficiency: r.proficiency });
+      }
+    } catch (_) {}
+
+    // 2. Project Portfolio Tech Stack
+    try {
+      const projRes = await pool.query(
+        `SELECT tech_stack, project_name FROM student_projects WHERE user_id = $1 AND tech_stack IS NOT NULL`,
+        [studentId]
+      );
+      for (const p of projRes.rows) {
+        const tokens = (p.tech_stack || '').split(/[,|;/]+/);
+        for (const token of tokens) {
+          const clean = token.trim();
+          if (!clean) continue;
+          const key = normalizeSkillKey(clean);
+          if (!skillMap.has(key)) {
+            skillMap.set(key, { name: clean, level: 2, source: `Project: ${p.project_name}` });
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 3. Certifications
+    try {
+      const certRes = await pool.query(
+        `SELECT certificate_name FROM student_certifications WHERE user_id = $1 AND certificate_name IS NOT NULL`,
+        [studentId]
+      );
+      for (const c of certRes.rows) {
+        const tokens = (c.certificate_name || '').split(/[,|;/]+/);
+        for (const token of tokens) {
+          const clean = token.trim();
+          if (!clean) continue;
+          const key = normalizeSkillKey(clean);
+          if (!skillMap.has(key)) {
+            skillMap.set(key, { name: clean, level: 2, source: 'Certification' });
+          }
+        }
+      }
+    } catch (_) {}
+
+    return Array.from(skillMap.values());
   }
 
   async function getStudentMetrics(studentId: string) {
@@ -9602,20 +9860,38 @@ async function startServer() {
     return { cgpa: parseFloat(profileRes.rows[0]?.cgpa || '0'), leetcodeSolved: lcSolved };
   }
 
-  // ── Skill Gap AI Analyzer Endpoints ─────────────────────────────────────────
+  // ── Skill Gap AI Analyzer Endpoints (100% Native, Zero External AI Dependency) ──
   app.get('/api/student/skill-gap/:postingId', authenticate, asyncHandler(async (req: Request, res: Response) => {
-    const studentId = (req as any).user.id;
+    const userRole = (req as any).user.role;
+    let targetStudentId = (req as any).user.id;
+    if (['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR'].includes(userRole) && req.query.studentId) {
+      targetStudentId = req.query.studentId as string;
+    }
+
     const { postingId } = req.params;
+    let posting: any = null;
 
-    const postingRes = await pool.query(
-      `SELECT ip.*, cp.company_name FROM industry_postings ip JOIN company_profiles cp ON cp.id = ip.company_id WHERE ip.id = $1`,
-      [postingId]
-    );
-    if (postingRes.rowCount === 0) return res.status(404).json({ error: 'Posting not found' });
-    const posting = postingRes.rows[0];
+    if (postingId && postingId !== 'default') {
+      const postingRes = await pool.query(
+        `SELECT ip.*, cp.company_name, cp.industry_sector, cp.logo_url FROM industry_postings ip JOIN company_profiles cp ON cp.id = ip.company_id WHERE ip.id = $1`,
+        [postingId]
+      );
+      if (postingRes.rowCount) posting = postingRes.rows[0];
+    }
 
-    const studentSkills = await getStudentSkillsForMatch(studentId);
-    const { cgpa, leetcodeSolved } = await getStudentMetrics(studentId);
+    if (!posting) {
+      const defaultRes = await pool.query(
+        `SELECT ip.*, cp.company_name, cp.industry_sector, cp.logo_url FROM industry_postings ip JOIN company_profiles cp ON cp.id = ip.company_id WHERE ip.status = 'OPEN' ORDER BY ip.created_at DESC LIMIT 1`
+      );
+      if (defaultRes.rowCount) posting = defaultRes.rows[0];
+    }
+
+    if (!posting) {
+      return res.status(404).json({ error: 'No active industry postings available for analysis' });
+    }
+
+    const studentSkills = await getStudentSkillsForMatch(targetStudentId);
+    const { cgpa, leetcodeSolved } = await getStudentMetrics(targetStudentId);
     const requiredSkills = Array.isArray(posting.required_skills) ? posting.required_skills : [];
 
     const analysis = computeMatchScore(studentSkills, requiredSkills, cgpa, leetcodeSolved);
@@ -9823,18 +10099,7 @@ async function startServer() {
     res.json(scored);
   }));
 
-  // ── Skill-gap detail for student ──────────────────────────────────────────
-  app.get('/api/student/skill-gap/:postingId', authenticate, authorize(['STUDENT']), asyncHandler(async (req: Request, res: Response) => {
-    const studentId = (req as any).user.id;
-    const { postingId } = req.params;
-    const postingRes = await pool.query(`SELECT ip.*, cp.company_name FROM industry_postings ip JOIN company_profiles cp ON cp.id=ip.company_id WHERE ip.id=$1`, [postingId]);
-    if (postingRes.rowCount === 0) return res.status(404).json({ error: 'Posting not found' });
-    const requiredSkills: { skill: string; level: number; weight: number }[] = postingRes.rows[0].required_skills || [];
-    const studentSkills = await getStudentSkillsForMatch(studentId);
-    const { cgpa, leetcodeSolved } = await getStudentMetrics(studentId);
-    const match = computeMatchScore(studentSkills, requiredSkills, cgpa, leetcodeSolved);
-    res.json({ posting: postingRes.rows[0], analysis: match, studentSkills });
-  }));
+  // (Skill-gap consolidated above in unified route handler)
 
   // ── Industry: Ranked Candidates for a Posting ─────────────────────────────
   app.get('/api/industry/postings/:id/ranking', authenticate, authorize(['INDUSTRY', 'HOD', 'SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
