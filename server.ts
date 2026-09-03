@@ -11647,8 +11647,8 @@ async function startServer() {
     const studentName = studentUserRes.rows[0]?.full_name || 'Candidate';
 
     sendUnifiedNotification({
+      userId: assignment.student_id,
       targetRole: 'STUDENT',
-      targetClassId: assignment.student_id,
       eventType: 'SKILL_ASSESSMENT_COMPLETED',
       title: `✅ Assessment Submitted: ${assignment.assessment_title}`,
       message: `Your Short Coding Assessment has been recorded with a score of ${assignment.final_score}. Your verified skill intelligence matrix has been updated.`,
