@@ -215,7 +215,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100">
+              <div className="p-2 bg-zinc-100 text-zinc-900 rounded-xl border border-zinc-200">
                 <BrainCircuit size={22} />
               </div>
               <h1 className="text-xl font-black text-zinc-900 tracking-tight">
@@ -229,7 +229,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowAddSkillModal(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Plus size={14} /> Add Skill to Profile
             </button>
@@ -245,7 +245,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
         <div className="bg-white border border-zinc-200/80 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex-1 w-full">
             <label className="text-[11px] font-black text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
-              <Target size={13} className="text-indigo-600" />
+              <Target size={13} className="text-zinc-700" />
               <span>Target Industry Role / Benchmark Opportunity</span>
             </label>
             {postings.length === 0 ? (
@@ -256,7 +256,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
               <select
                 value={selectedPostingId}
                 onChange={e => setSelectedPostingId(e.target.value)}
-                className="w-full bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-200 rounded-xl px-4 py-2.5 text-xs font-bold text-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer"
+                className="w-full bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-200 rounded-xl px-4 py-2.5 text-xs font-bold text-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all cursor-pointer"
               >
                 {postings.map(p => (
                   <option key={p.id} value={p.id}>
@@ -290,7 +290,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
         {/* Loading Spinner */}
         {loading && (
           <div className="bg-white border border-zinc-200 rounded-2xl p-12 text-center shadow-xs">
-            <div className="inline-block w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+            <div className="inline-block w-8 h-8 border-3 border-zinc-900 border-t-transparent rounded-full animate-spin mb-3"></div>
             <div className="text-xs font-black text-zinc-800">Computing AI Skill Intelligence Matrix...</div>
             <p className="text-[11px] text-zinc-400 mt-1">Cross-referencing verified skills, portfolio projects, CGPA, and LeetCode problem solving</p>
           </div>
@@ -301,73 +301,71 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
           <>
             {/* AI Executive Assessment Banner */}
             {gapData.analysis.ai_insights && (
-              <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden border border-indigo-800/50 space-y-6">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-indigo-800/60 pb-6">
+              <div className="bg-white text-zinc-900 rounded-3xl p-6 md:p-8 shadow-xs border border-zinc-200/90 space-y-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-zinc-100 pb-6">
                   <div className="space-y-1">
-                    <span className="text-[11px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-1.5">
-                      <Sparkles size={14} className="text-indigo-400" />
+                    <span className="text-[11px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-amber-500" />
                       <span>Executive Role Match Analysis</span>
                     </span>
-                    <h2 className="text-lg md:text-xl font-black text-white">
+                    <h2 className="text-lg md:text-xl font-black text-zinc-900">
                       {gapData.posting.title}
                     </h2>
-                    <p className="text-xs text-indigo-200/80 font-medium">
+                    <p className="text-xs text-zinc-500 font-medium">
                       {gapData.posting.company_name} · {gapData.posting.mode} · {gapData.posting.location}
                     </p>
                   </div>
 
                   {/* Compatibility Score Pill */}
-                  <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/15 shrink-0">
+                  <div className="flex items-center gap-3 bg-zinc-50 px-5 py-3 rounded-2xl border border-zinc-200 shrink-0">
                     <div className="text-right">
-                      <span className="text-[10px] font-bold text-indigo-300 uppercase block tracking-wider">Overall Match</span>
-                      <span className="text-2xl font-black text-white">{gapData.analysis.score}%</span>
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase block tracking-wider">Overall Match</span>
+                      <span className="text-2xl font-black text-zinc-900">{gapData.analysis.score}%</span>
                     </div>
                     <div className={`w-3 h-3 rounded-full ${
-                      gapData.analysis.score >= 75 ? 'bg-emerald-400 shadow-lg shadow-emerald-400/50 animate-pulse' :
-                      gapData.analysis.score >= 55 ? 'bg-amber-400 shadow-lg shadow-amber-400/50' : 'bg-rose-400'
+                      gapData.analysis.score >= 75 ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse' :
+                      gapData.analysis.score >= 55 ? 'bg-amber-500 shadow-sm shadow-amber-500/50' : 'bg-rose-500'
                     }`} />
                   </div>
                 </div>
 
                 {/* Mathematical Model Weights (MAUT Formulation: S = 0.70*Skills + 0.15*CGPA + 0.15*Coding) */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-1.5">
-                    <div className="flex justify-between items-center text-[11px] font-bold text-indigo-200">
+                  <div className="bg-zinc-50/80 border border-zinc-200/80 rounded-2xl p-4 space-y-1.5">
+                    <div className="flex justify-between items-center text-[11px] font-bold text-zinc-600">
                       <span>Technical Competency Vector (70%)</span>
-                      <span className="text-white font-black">{gapData.analysis.skill_score || 0} / 70</span>
+                      <span className="text-zinc-900 font-black">{gapData.analysis.skill_score || 0} / 70</span>
                     </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2 bg-zinc-200 rounded-full overflow-hidden">
                       <div
                         style={{ width: `${((gapData.analysis.skill_score || 0) / 70) * 100}%` }}
-                        className="h-full bg-indigo-400 rounded-full transition-all duration-700"
+                        className="h-full bg-zinc-900 rounded-full transition-all duration-700"
                       />
                     </div>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-1.5">
-                    <div className="flex justify-between items-center text-[11px] font-bold text-indigo-200">
+                  <div className="bg-zinc-50/80 border border-zinc-200/80 rounded-2xl p-4 space-y-1.5">
+                    <div className="flex justify-between items-center text-[11px] font-bold text-zinc-600">
                       <span>Academic Rigor Index (15%)</span>
-                      <span className="text-white font-black">{gapData.analysis.cgpa_bonus || 0} / 15</span>
+                      <span className="text-zinc-900 font-black">{gapData.analysis.cgpa_bonus || 0} / 15</span>
                     </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2 bg-zinc-200 rounded-full overflow-hidden">
                       <div
                         style={{ width: `${((gapData.analysis.cgpa_bonus || 0) / 15) * 100}%` }}
-                        className="h-full bg-emerald-400 rounded-full transition-all duration-700"
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-700"
                       />
                     </div>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-1.5">
-                    <div className="flex justify-between items-center text-[11px] font-bold text-indigo-200">
+                  <div className="bg-zinc-50/80 border border-zinc-200/80 rounded-2xl p-4 space-y-1.5">
+                    <div className="flex justify-between items-center text-[11px] font-bold text-zinc-600">
                       <span>Problem-Solving Vigor (15%)</span>
-                      <span className="text-white font-black">{gapData.analysis.leetcode_bonus || 0} / 15</span>
+                      <span className="text-zinc-900 font-black">{gapData.analysis.leetcode_bonus || 0} / 15</span>
                     </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2 bg-zinc-200 rounded-full overflow-hidden">
                       <div
                         style={{ width: `${((gapData.analysis.leetcode_bonus || 0) / 15) * 100}%` }}
-                        className="h-full bg-amber-400 rounded-full transition-all duration-700"
+                        className="h-full bg-amber-500 rounded-full transition-all duration-700"
                       />
                     </div>
                   </div>
@@ -375,60 +373,60 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
 
                 {/* Mathematical Vector Similarity & Alignment Metrics */}
                 {gapData.analysis.math_metrics && (
-                  <div className="bg-black/30 border border-white/10 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                  <div className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                     <div>
-                      <span className="text-[10px] text-indigo-300 uppercase block font-bold tracking-wider">Cosine Similarity</span>
-                      <span className="text-base font-black text-white font-mono">
+                      <span className="text-[10px] text-zinc-500 uppercase block font-bold tracking-wider">Cosine Similarity</span>
+                      <span className="text-base font-black text-zinc-900 font-mono">
                         {(gapData.analysis.math_metrics.cosine_similarity).toFixed(3)}
                       </span>
-                      <span className="text-[9px] text-indigo-200/60 block">cos(θ) Vector Alignment</span>
+                      <span className="text-[9px] text-zinc-400 block font-medium">cos(θ) Vector Alignment</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-indigo-300 uppercase block font-bold tracking-wider">Jaccard Index</span>
-                      <span className="text-base font-black text-white font-mono">
+                      <span className="text-[10px] text-zinc-500 uppercase block font-bold tracking-wider">Jaccard Index</span>
+                      <span className="text-base font-black text-zinc-900 font-mono">
                         {(gapData.analysis.math_metrics.jaccard_index).toFixed(3)}
                       </span>
-                      <span className="text-[9px] text-indigo-200/60 block">Set Intersection Ratio</span>
+                      <span className="text-[9px] text-zinc-400 block font-medium">Set Intersection Ratio</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-indigo-300 uppercase block font-bold tracking-wider">Competency Ratio</span>
-                      <span className="text-base font-black text-emerald-400 font-mono">
+                      <span className="text-[10px] text-zinc-500 uppercase block font-bold tracking-wider">Competency Ratio</span>
+                      <span className="text-base font-black text-emerald-600 font-mono">
                         {(gapData.analysis.math_metrics.skill_competency_ratio * 100).toFixed(1)}%
                       </span>
-                      <span className="text-[9px] text-indigo-200/60 block">Weighted Level Fulfillment</span>
+                      <span className="text-[9px] text-zinc-400 block font-medium">Weighted Level Fulfillment</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-indigo-300 uppercase block font-bold tracking-wider">Deficit Gap Loss</span>
-                      <span className="text-base font-black text-rose-400 font-mono">
+                      <span className="text-[10px] text-zinc-500 uppercase block font-bold tracking-wider">Deficit Gap Loss</span>
+                      <span className="text-base font-black text-rose-600 font-mono">
                         {(gapData.analysis.math_metrics.total_deficit_loss * 100).toFixed(1)}%
                       </span>
-                      <span className="text-[9px] text-indigo-200/60 block">Partition of Unity Deficit</span>
+                      <span className="text-[9px] text-zinc-400 block font-medium">Partition of Unity Deficit</span>
                     </div>
                   </div>
                 )}
 
                 {/* AI Executive Summary & Timeline */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
-                  <div className="md:col-span-3 bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-300 block">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-1">
+                  <div className="md:col-span-3 bg-zinc-50 border border-zinc-200/80 rounded-2xl p-4 space-y-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-zinc-500 block">
                       Readiness Summary
                     </span>
-                    <p className="text-xs text-indigo-100 font-medium leading-relaxed">
+                    <p className="text-xs text-zinc-700 font-medium leading-relaxed">
                       {gapData.analysis.ai_insights.readiness_summary}
                     </p>
-                    <div className="pt-2 border-t border-white/10 text-[11px] text-indigo-300 flex items-center gap-1.5 font-bold">
-                      <span>💡 Strategy:</span>
-                      <span className="text-white">{gapData.analysis.ai_insights.key_takeaway}</span>
+                    <div className="pt-2.5 border-t border-zinc-200 text-[11px] text-zinc-600 flex items-center gap-1.5 font-medium">
+                      <span className="font-bold text-zinc-800">💡 Strategy:</span>
+                      <span className="text-zinc-900 font-bold">{gapData.analysis.ai_insights.key_takeaway}</span>
                     </div>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center space-y-1">
-                    <Clock size={20} className="text-amber-400 mb-1" />
-                    <span className="text-[10px] font-bold text-indigo-300 uppercase">Est. Prep Time</span>
-                    <span className="text-lg font-black text-white">
+                  <div className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-4 flex flex-col justify-center items-center text-center space-y-1">
+                    <Clock size={20} className="text-amber-500 mb-1" />
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Est. Prep Time</span>
+                    <span className="text-xl font-black text-zinc-900">
                       ~{gapData.analysis.ai_insights.estimated_prep_weeks} Weeks
                     </span>
-                    <span className="text-[10px] text-indigo-200/70 font-semibold">To Target Role Readiness</span>
+                    <span className="text-[10px] text-zinc-500 font-semibold">To Target Role Readiness</span>
                   </div>
                 </div>
               </div>
@@ -453,7 +451,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
                     <p className="text-xs text-zinc-500 font-semibold">No direct skills matched yet.</p>
                     <button
                       onClick={() => setShowAddSkillModal(true)}
-                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
+                      className="text-xs font-bold text-zinc-900 hover:underline cursor-pointer"
                     >
                       + Add your technical skills to improve this score
                     </button>
@@ -538,7 +536,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
             {gapData.analysis.ai_insights?.recommended_projects && gapData.analysis.ai_insights.recommended_projects.length > 0 && (
               <div className="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs space-y-4">
                 <div className="flex items-center gap-2">
-                  <Code2 size={18} className="text-indigo-600" />
+                  <Code2 size={18} className="text-zinc-900" />
                   <h3 className="text-sm font-black text-zinc-900">
                     Recommended Hands-On Portfolio Projects
                   </h3>
@@ -551,15 +549,15 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
                   {gapData.analysis.ai_insights.recommended_projects.map((proj, idx) => (
                     <div
                       key={idx}
-                      className="p-4 bg-indigo-50/40 rounded-2xl border border-indigo-100 flex flex-col justify-between space-y-3"
+                      className="p-4 bg-zinc-50/80 rounded-2xl border border-zinc-200 flex flex-col justify-between space-y-3"
                     >
                       <div className="space-y-1.5">
-                        <span className="text-[10px] font-black text-indigo-700 bg-white px-2 py-0.5 rounded-full border border-indigo-200 w-fit block">
+                        <span className="text-[10px] font-black text-zinc-800 bg-white px-2 py-0.5 rounded-full border border-zinc-200 w-fit block">
                           Project #{idx + 1}
                         </span>
                         <p className="text-xs font-semibold text-zinc-800 leading-snug">{proj}</p>
                       </div>
-                      <div className="text-[10px] font-bold text-indigo-600 flex items-center gap-1">
+                      <div className="text-[10px] font-bold text-zinc-900 flex items-center gap-1">
                         <span>Showcases skill integration</span>
                         <ChevronRight size={12} />
                       </div>
@@ -573,7 +571,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
             {gapData.analysis.recommendations.length > 0 && (
               <div className="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs space-y-4">
                 <div className="flex items-center gap-2">
-                  <BookOpen size={18} className="text-indigo-600" />
+                  <BookOpen size={18} className="text-zinc-900" />
                   <h3 className="text-sm font-black text-zinc-900">
                     Curated Learning Roadmaps & Resources
                   </h3>
@@ -602,9 +600,9 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
                             href={res.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="block bg-white border border-zinc-200 hover:border-indigo-400 rounded-xl p-3 transition-all group shadow-2xs"
+                            className="block bg-white border border-zinc-200 hover:border-zinc-400 rounded-xl p-3 transition-all group shadow-2xs"
                           >
-                            <div className="text-xs font-bold text-indigo-600 group-hover:text-indigo-800 flex items-center gap-1 mb-1">
+                            <div className="text-xs font-bold text-zinc-900 group-hover:text-black flex items-center gap-1 mb-1">
                               <span>🔗</span> {res.title}
                               <ExternalLink size={11} className="opacity-60" />
                             </div>
@@ -627,7 +625,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
         <div className="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <BarChart3 size={18} className="text-indigo-600" />
+              <BarChart3 size={18} className="text-zinc-900" />
               <h3 className="text-xs font-black text-zinc-900 uppercase tracking-wider">
                 High-Demand Industry Skills
               </h3>
@@ -642,10 +640,10 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
               {skillDemand.map((sd, i) => (
                 <div
                   key={i}
-                  className="bg-indigo-50/60 border border-indigo-100 px-3 py-1.5 rounded-xl text-xs font-bold text-zinc-800 flex items-center gap-2"
+                  className="bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-xl text-xs font-bold text-zinc-800 flex items-center gap-2"
                 >
                   <span>{sd.skill}</span>
-                  <span className="bg-white text-indigo-700 text-[10px] font-black px-1.5 py-0.2 rounded-md border border-indigo-200">
+                  <span className="bg-white text-zinc-900 text-[10px] font-black px-1.5 py-0.2 rounded-md border border-zinc-200">
                     {sd.count} Postings
                   </span>
                 </div>
@@ -661,7 +659,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-zinc-200 space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-zinc-100">
               <h3 className="text-sm font-black text-zinc-900 flex items-center gap-2">
-                <Plus className="text-indigo-600" size={16} />
+                <Plus className="text-zinc-900" size={16} />
                 <span>Add Skill to Your Profile</span>
               </h3>
               <button
@@ -681,7 +679,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
                   type="text"
                   required
                   placeholder="e.g. React, Docker, Python, SQL..."
-                  className="w-full p-2.5 rounded-xl border border-zinc-300 text-xs font-bold text-zinc-800 outline-none focus:border-indigo-500"
+                  className="w-full p-2.5 rounded-xl border border-zinc-300 text-xs font-bold text-zinc-800 outline-none focus:border-zinc-900"
                   value={newSkillName}
                   onChange={e => setNewSkillName(e.target.value)}
                   autoFocus
@@ -693,7 +691,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
                   Proficiency Level
                 </label>
                 <select
-                  className="w-full p-2.5 rounded-xl border border-zinc-300 text-xs font-bold text-zinc-800 outline-none focus:border-indigo-500 cursor-pointer"
+                  className="w-full p-2.5 rounded-xl border border-zinc-300 text-xs font-bold text-zinc-800 outline-none focus:border-zinc-900 cursor-pointer"
                   value={newSkillLevel}
                   onChange={e => setNewSkillLevel(e.target.value)}
                 >
@@ -715,7 +713,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
                 <button
                   type="submit"
                   disabled={isAddingSkill}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-xs shadow-sm disabled:opacity-50 cursor-pointer"
+                  className="px-5 py-2 bg-zinc-900 hover:bg-zinc-800 text-white font-black rounded-xl text-xs shadow-xs disabled:opacity-50 cursor-pointer"
                 >
                   {isAddingSkill ? 'Adding...' : 'Add Skill & Re-Analyze'}
                 </button>
