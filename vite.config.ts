@@ -7,9 +7,6 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
     plugins: [react(), tailwindcss()],
-    define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
@@ -40,9 +37,6 @@ export default defineConfig(({ mode }) => {
               }
               if (id.includes('exceljs') || id.includes('xlsx')) {
                 return 'vendor-excel';
-              }
-              if (id.includes('@google/genai')) {
-                return 'vendor-genai';
               }
               if (id.includes('zod')) {
                 return 'vendor-zod';
