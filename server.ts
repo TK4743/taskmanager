@@ -778,8 +778,12 @@ async function startServer() {
 
   // Auth Middleware - Fetches dynamic permissions with 45s in-memory caching
   const authenticate = async (req: any, res: any, next: any) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'Unauthorized: No token provided' });
+    const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+    if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
+      return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    }
     try {
       const decoded: any = jwt.verify(token, JWT_SECRET);
       const userId = decoded.id;
@@ -1589,10 +1593,7 @@ async function startServer() {
     res.json({ success: true });
   });
 
-  app.get('/api/my-class', authenticate, authorize(['CLASS_ADVISOR', 'STUDENT']), async (req: any, res) => {
-    if (req.user.role === 'STUDENT' && !req.user.is_coordinator) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+  app.get('/api/my-class', authenticate, authorize(['CLASS_ADVISOR', 'STUDENT', 'HOD', 'SUPREME_ADMIN']), async (req: any, res) => {
     if (!req.user.class_id) return res.json(null);
     const cacheKey = `my_class_${req.user.class_id}`;
     const cached = getApiCache(cacheKey);
@@ -3674,8 +3675,12 @@ async function startServer() {
   });
 
   app.get('/api/stats/coordinator', authenticate, async (req: any, res) => {
-    if (req.user.role !== 'STUDENT' || !req.user.is_coordinator)
+    if (req.user.role === 'STUDENT' && !req.user.is_coordinator) {
       return res.status(403).json({ error: 'Only coordinators can access these stats' });
+    }
+    if (!['STUDENT', 'CLASS_ADVISOR', 'HOD', 'SUPREME_ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
 
     const classId = req.user.class_id;
     const deptId = req.user.department_id;

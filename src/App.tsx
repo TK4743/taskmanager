@@ -5079,34 +5079,42 @@ export default function App() {
             setUser(freshUser);
             localStorage.setItem('user', JSON.stringify(freshUser));
             if (freshUser.role === 'SUPREME_ADMIN') {
-              fetchSupremeStats();
+              fetchSupremeStats(activeToken);
               fetchIndustryData(activeToken);
             }
             if (freshUser.role === 'HOD') {
-              fetchHODStats();
+              fetchHODStats(activeToken);
               fetchIndustryData(activeToken);
             }
             if (freshUser.role === 'CLASS_ADVISOR' || (freshUser.role === 'STUDENT' && freshUser.is_coordinator)) {
-              if (freshUser.role === 'CLASS_ADVISOR') fetchAdvisorStats();
-              if (freshUser.role === 'STUDENT' && freshUser.is_coordinator) fetchCoordinatorStats();
-              fetchMyClass();
+              if (freshUser.role === 'CLASS_ADVISOR') fetchAdvisorStats(activeToken);
+              if (freshUser.role === 'STUDENT' && freshUser.is_coordinator) fetchCoordinatorStats(activeToken);
+              fetchMyClass(activeToken);
             }
             if (freshUser.role === 'STUDENT') {
-              fetchStudentStats();
+              fetchStudentStats(activeToken);
               fetchMyTeamsAndInvitations();
             }
           } else {
             // Fallback to saved user if refresh fails
             setUser(savedUser);
             if (savedUser.role === 'SUPREME_ADMIN') {
-              fetchSupremeStats();
+              fetchSupremeStats(activeToken);
               fetchIndustryData(activeToken);
             }
             if (savedUser.role === 'HOD') {
-              fetchHODStats();
+              fetchHODStats(activeToken);
               fetchIndustryData(activeToken);
             }
-            if (savedUser.role === 'STUDENT') fetchMyTeamsAndInvitations();
+            if (savedUser.role === 'CLASS_ADVISOR' || (savedUser.role === 'STUDENT' && savedUser.is_coordinator)) {
+              if (savedUser.role === 'CLASS_ADVISOR') fetchAdvisorStats(activeToken);
+              if (savedUser.role === 'STUDENT' && savedUser.is_coordinator) fetchCoordinatorStats(activeToken);
+              fetchMyClass(activeToken);
+            }
+            if (savedUser.role === 'STUDENT') {
+              fetchStudentStats(activeToken);
+              fetchMyTeamsAndInvitations();
+            }
           }
         } catch (err) {
           setUser(savedUser);
@@ -5223,44 +5231,56 @@ export default function App() {
     } catch (e) { }
   };
 
-  const fetchSupremeStats = async () => {
+  const fetchSupremeStats = async (overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
     try {
-      const res = await fetch(`${API_URL}/api/stats/supreme`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/api/stats/supreme`, { headers: { Authorization: `Bearer ${activeTok}` } });
       if (res.ok) setSupremeStats(await res.json());
     } catch (e) { }
   };
 
-  const fetchHODStats = async () => {
+  const fetchHODStats = async (overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
     try {
-      const res = await fetch(`${API_URL}/api/stats/hod`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/api/stats/hod`, { headers: { Authorization: `Bearer ${activeTok}` } });
       if (res.ok) setHodStats(await res.json());
     } catch (e) { }
   };
 
-  const fetchAdvisorStats = async () => {
+  const fetchAdvisorStats = async (overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
     try {
-      const res = await fetch(`${API_URL}/api/stats/advisor`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/api/stats/advisor`, { headers: { Authorization: `Bearer ${activeTok}` } });
       if (res.ok) setAdvisorStats(await res.json());
     } catch (e) { }
   };
 
-  const fetchCoordinatorStats = async () => {
+  const fetchCoordinatorStats = async (overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
     try {
-      const res = await fetch(`${API_URL}/api/stats/coordinator`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/api/stats/coordinator`, { headers: { Authorization: `Bearer ${activeTok}` } });
       if (res.ok) setCoordinatorStats(await res.json());
     } catch (e) { }
   };
 
-  const fetchMyClass = async () => {
+  const fetchMyClass = async (overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
     try {
-      const res = await fetch(`${API_URL}/api/my-class`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/api/my-class`, { headers: { Authorization: `Bearer ${activeTok}` } });
       if (res.ok) setMyClass(await res.json());
     } catch (e) { }
   };
 
-  const fetchNotifications = async (isInitial = false) => {
+  const fetchNotifications = async (isInitial = false, overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
     try {
-      const res = await fetch(`${API_URL}/api/notifications`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/api/notifications`, { headers: { Authorization: `Bearer ${activeTok}` } });
       if (res.ok) {
         const data: Notification[] = await res.json();
 
@@ -5359,9 +5379,11 @@ export default function App() {
     }
   };
 
-  const fetchStudentStats = async () => {
+  const fetchStudentStats = async (overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
     try {
-      const res = await fetch(`${API_URL}/api/stats/student`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/api/stats/student`, { headers: { Authorization: `Bearer ${activeTok}` } });
       if (res.ok) setStudentStats(await res.json());
     } catch (e) { }
   };
