@@ -55,6 +55,7 @@ import {
   X,
   Info,
   RotateCcw,
+  RotateCw,
   AlertTriangle,
   Loader2,
   CalendarRange,
@@ -4830,6 +4831,8 @@ export default function App() {
     }
   };
 
+  const [syncingMyGithub, setSyncingMyGithub] = useState(false);
+
   const fetchMyGithubProgress = async () => {
     try {
       const res = await fetch(`${API_URL}/api/github/progress/my`, {
@@ -4838,6 +4841,32 @@ export default function App() {
       if (res.ok) setMyGithubProgress(await res.json());
     } catch (err) {
       console.error('Error fetching personal GitHub progress:', err);
+    }
+  };
+
+  const handleSyncMyGithub = async () => {
+    setSyncingMyGithub(true);
+    try {
+      const res = await fetch(`${API_URL}/api/github/sync/my`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({})
+      });
+      if (res.ok) {
+        const data = await res.json();
+        addToast(data.message || 'GitHub daily commits synced successfully', 'success');
+        await fetchMyGithubProgress();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        addToast(data.error || 'Failed to sync GitHub progress', 'error');
+      }
+    } catch (err) {
+      addToast('Network error syncing GitHub progress', 'error');
+    } finally {
+      setSyncingMyGithub(false);
     }
   };
 
@@ -4955,18 +4984,20 @@ export default function App() {
 
   useEffect(() => {
     if (token && (view === 'leetcode-targets' || view === 'coding-progress' || view === 'leetcode_targets' || view === 'coding_progress')) {
+      if (user?.role === 'STUDENT') {
+        fetchMyLeetcodeProgress();
+        fetchMyGithubProgress();
+      }
       if (codingPlatformTab === 'LEETCODE') {
         Promise.all([
           fetchLeetcodeStats(),
           fetchLeetcodeProgress(),
-          fetchLeetcodeTargets(),
-          ...(user?.role === 'STUDENT' ? [fetchMyLeetcodeProgress()] : [])
+          fetchLeetcodeTargets()
         ]);
       } else if (codingPlatformTab === 'GITHUB') {
         Promise.all([
           fetchGithubStats(),
-          fetchGithubProgress(),
-          ...(user?.role === 'STUDENT' ? [fetchMyGithubProgress()] : [])
+          fetchGithubProgress()
         ]);
       } else {
         Promise.all([
@@ -4975,8 +5006,7 @@ export default function App() {
           fetchLeetcodeProgress(),
           fetchLeetcodeTargets(),
           fetchGithubStats(),
-          fetchGithubProgress(),
-          ...(user?.role === 'STUDENT' ? [fetchMyLeetcodeProgress(), fetchMyGithubProgress()] : [])
+          fetchGithubProgress()
         ]);
       }
     }
@@ -8707,11 +8737,23 @@ export default function App() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5"><Github size={16} className="text-zinc-900" /> GitHub Daily Commits</span>
-                  {myGithubProgress?.commitsToday > 0 ? (
-                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">ACTIVE</span>
-                  ) : (
-                    <span className="bg-zinc-100 text-zinc-600 text-[10px] font-bold px-2 py-0.5 rounded-full">NO COMMITS</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSyncMyGithub}
+                      disabled={syncingMyGithub}
+                      className="text-xs flex items-center gap-1 px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                      title="Sync today's GitHub commits"
+                    >
+                      <RotateCw size={12} className={syncingMyGithub ? "animate-spin text-zinc-900" : "text-zinc-600"} />
+                      <span>{syncingMyGithub ? 'Syncing...' : 'Sync'}</span>
+                    </button>
+                    {myGithubProgress?.commitsToday > 0 ? (
+                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">ACTIVE</span>
+                    ) : (
+                      <span className="bg-zinc-100 text-zinc-600 text-[10px] font-bold px-2 py-0.5 rounded-full">NO COMMITS</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-5xl font-black text-zinc-900">{myGithubProgress?.commitsToday ?? 0}</span>
@@ -8720,10 +8762,17 @@ export default function App() {
               </div>
               <div className="pt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-500 font-semibold">
                 <span>Total this week: <strong className="text-zinc-900 font-bold">{myGithubProgress?.commitsThisWeek ?? 0}</strong> commits</span>
-                {myGithubProgress?.githubUrl && (
-                  <a href={myGithubProgress.githubUrl} target="_blank" rel="noreferrer" className="text-blue-600 font-bold hover:underline flex items-center gap-1">
+                {myGithubProgress?.githubUrl ? (
+                  <a
+                    href={myGithubProgress.githubUrl.startsWith('http') ? myGithubProgress.githubUrl : `https://github.com/${myGithubProgress.githubUrl.replace(/^@/, '')}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 font-bold hover:underline flex items-center gap-1"
+                  >
                     Profile <ExternalLink size={11} />
                   </a>
+                ) : (
+                  <span className="text-zinc-400 text-[11px] italic">Profile not set</span>
                 )}
               </div>
             </Card>

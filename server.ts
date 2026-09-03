@@ -6627,9 +6627,12 @@ async function startServer() {
     const studentId = req.user.id;
     const dateStr = getISTDateStr();
     const stdRes = await pool.query(`
-      SELECT u.id, u.register_number, u.full_name, u.class_id, u.department_id, c.year
+      SELECT u.id, u.register_number, u.full_name, u.class_id, u.department_id, c.year,
+             COALESCE(NULLIF(scp.leetcode, ''), NULLIF(u.leetcode_url, ''), '') AS leetcode_url,
+             COALESCE(NULLIF(scp.github, ''), NULLIF(u.github_url, ''), '') AS github_url
       FROM users u
       LEFT JOIN classes c ON u.class_id = c.id
+      LEFT JOIN student_coding_profiles scp ON u.id = scp.user_id
       WHERE u.id = $1 LIMIT 1
     `, [studentId]);
 
@@ -6972,12 +6975,16 @@ async function startServer() {
   // Utility: Extract GitHub username from profile URL or raw username
   function extractGitHubUsername(urlOrUsername: string): string {
     if (!urlOrUsername || !urlOrUsername.trim()) return '';
-    const clean = urlOrUsername.trim().replace(/\/$/, '');
-    const match = clean.match(/github\.com\/([^/?#]+)/);
-    return match && match[1] ? match[1] : clean;
+    let clean = urlOrUsername.trim();
+    clean = clean.split('?')[0].split('#')[0].replace(/\/+$/, '');
+    const match = clean.match(/github\.com\/([^/?#]+)/i);
+    if (match && match[1]) {
+      return match[1].replace(/^@/, '');
+    }
+    return clean.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/^github\.com\//i, '').replace(/^@/, '').trim();
   }
 
-  // Utility: Fetch GitHub total commits for a student on a specific date (GraphQL)
+  // Utility: Fetch GitHub total commits for a student on a specific date (GraphQL with REST fallback)
   async function fetchGitHubDailyCommits(usernameOrUrl: string, dateStr: string): Promise<number | null> {
     const username = extractGitHubUsername(usernameOrUrl);
     if (!username) return null;
@@ -7041,7 +7048,7 @@ async function startServer() {
         const data: any = await response.json();
         if (data.errors) {
           const notFound = data.errors.some((e: any) => e.type === 'NOT_FOUND' || e.message?.includes('Could not resolve'));
-          if (notFound) return null;
+          if (notFound) return 0;
           if (attempt < 3) {
             await new Promise(res => setTimeout(res, 1500));
             continue;
@@ -7050,7 +7057,7 @@ async function startServer() {
         }
 
         const user = data?.data?.user;
-        if (!user) return null;
+        if (!user) return 0;
 
         // Extract total commits made on the target date
         let dailyCommitCount = 0;
@@ -7084,9 +7091,12 @@ async function startServer() {
 
     try {
       let query = `
-        SELECT u.id, u.register_number, u.full_name, u.class_id, u.department_id, u.leetcode_url, u.github_url, c.year, c.name as class_name
+        SELECT u.id, u.register_number, u.full_name, u.class_id, u.department_id, u.leetcode_url,
+               COALESCE(NULLIF(scp.github, ''), NULLIF(u.github_url, ''), '') AS github_url,
+               c.year, c.name as class_name
         FROM users u
         LEFT JOIN classes c ON u.class_id = c.id
+        LEFT JOIN student_coding_profiles scp ON u.id = scp.user_id
         WHERE u.role = 'STUDENT'
       `;
       const params: any[] = [];
@@ -7211,6 +7221,10 @@ async function startServer() {
     }, timeUntilSync);
   }
 
+  // Trigger startup GitHub commits sync & activate scheduler
+  syncDailyGitHubCommits().catch(err => console.error('[GitHub Daily Sync] Startup sync error:', err));
+  scheduleGitHubDailySync();
+
   // Alias for backward compatibility
   const syncGitHubProgressForScope = syncDailyGitHubCommits;
 
@@ -7322,13 +7336,35 @@ async function startServer() {
     const studentId = req.user.id;
     const dateStr = getISTDateStr();
     const stdRes = await pool.query(`
-      SELECT u.id, u.register_number, u.full_name, u.class_id, u.department_id, c.year, c.name as class_name
-      FROM users u LEFT JOIN classes c ON u.class_id = c.id
+      SELECT u.id, u.register_number, u.full_name, u.class_id, u.department_id, c.year, c.name as class_name,
+             COALESCE(NULLIF(scp.github, ''), NULLIF(u.github_url, ''), '') AS github_url
+      FROM users u 
+      LEFT JOIN classes c ON u.class_id = c.id
+      LEFT JOIN student_coding_profiles scp ON u.id = scp.user_id
       WHERE u.id = $1 LIMIT 1
     `, [studentId]);
     if (stdRes.rowCount === 0) return res.status(404).json({ error: 'Student not found' });
 
-    const enriched = (await enrichStudentGitHubDailyCommitsBatch([stdRes.rows[0]], dateStr))[0];
+    const student = stdRes.rows[0];
+    const rawGithub = student.github_url || '';
+    const githubUsername = extractGitHubUsername(rawGithub);
+
+    // If student has a GitHub handle configured and no record exists for today, run on-the-fly single-student sync
+    if (githubUsername) {
+      const checkDaily = await pool.query(`
+        SELECT student_id FROM github_daily_commits WHERE student_id = $1 AND date = $2 LIMIT 1
+      `, [studentId, dateStr]);
+
+      if (checkDaily.rowCount === 0) {
+        try {
+          await syncDailyGitHubCommits({ studentId });
+        } catch (e) {
+          console.warn(`[GitHub Progress My] On-demand sync note for student ${student.register_number}:`, e);
+        }
+      }
+    }
+
+    const enriched = (await enrichStudentGitHubDailyCommitsBatch([student], dateStr))[0];
 
     const historyRes = await pool.query(`
       SELECT date, daily_commit_count, updated_at
@@ -7352,8 +7388,11 @@ async function startServer() {
     const { studentId } = req.params;
     const dateStr = getISTDateStr();
     const stdRes = await pool.query(`
-      SELECT u.id, u.register_number, u.full_name, u.class_id, u.department_id, c.year, c.name as class_name
-      FROM users u LEFT JOIN classes c ON u.class_id = c.id
+      SELECT u.id, u.register_number, u.full_name, u.class_id, u.department_id, c.year, c.name as class_name,
+             COALESCE(NULLIF(scp.github, ''), NULLIF(u.github_url, ''), '') AS github_url
+      FROM users u 
+      LEFT JOIN classes c ON u.class_id = c.id
+      LEFT JOIN student_coding_profiles scp ON u.id = scp.user_id
       WHERE u.id = $1 LIMIT 1
     `, [studentId]);
     if (stdRes.rowCount === 0) return res.status(404).json({ error: 'Student not found' });
@@ -7445,7 +7484,19 @@ async function startServer() {
     });
   }));
 
-  // 7. Trigger Daily GitHub Commits Sync (All or Scoped)
+  // 7. Student Self-Service GitHub Sync (Student syncs their own profile)
+  app.post(['/api/github/sync/my', '/api/github/sync/self'], authenticate, asyncHandler(async (req: any, res: Response) => {
+    const studentId = req.user.id;
+    const { date } = req.body || {};
+    const summary = await syncDailyGitHubCommits({ studentId, date });
+    res.json({
+      success: true,
+      message: `Your GitHub daily commits have been synchronized.`,
+      summary
+    });
+  }));
+
+  // 8. Trigger Daily GitHub Commits Sync (All or Scoped) - Staff or Admin
   app.post(['/api/github/sync/daily-commits', '/api/github/sync'], authenticate, authorizeTargetManagement, asyncHandler(async (req: any, res: Response) => {
     const { departmentId, classId, year, studentId, userId, date } = req.body || {};
     const scope = enforceUserScopeFilter(req.user, { departmentId, classId, year, studentId, userId });
@@ -7459,9 +7510,14 @@ async function startServer() {
     });
   }));
 
-  // 8. Trigger Daily GitHub Commits Sync for a Specific Student
-  app.post('/api/github/sync/daily-commits/:studentId', authenticate, authorizeTargetManagement, asyncHandler(async (req: any, res: Response) => {
+  // 9. Trigger Daily GitHub Commits Sync for a Specific Student (Staff or Student themselves)
+  app.post('/api/github/sync/daily-commits/:studentId', authenticate, asyncHandler(async (req: any, res: Response) => {
     const { studentId } = req.params;
+    const isSelf = String(req.user.id) === String(studentId);
+    const isAuthorized = req.user.role === 'SUPREME_ADMIN' || req.user.role === 'HOD' || req.user.role === 'CLASS_ADVISOR' || req.user.is_coordinator;
+    if (!isSelf && !isAuthorized) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permissions to sync other students' });
+    }
     const { date } = req.body || {};
     const summary = await syncDailyGitHubCommits({ studentId, date });
     res.json({
@@ -7471,7 +7527,7 @@ async function startServer() {
     });
   }));
 
-  // 9. Stub for deprecated target routes to maintain clean backward compatibility
+  // 10. Stub for deprecated target routes to maintain clean backward compatibility
   app.get('/api/github/targets', authenticate, authorizeTargetManagement, asyncHandler(async (_req: any, res: Response) => {
     res.json([]);
   }));
