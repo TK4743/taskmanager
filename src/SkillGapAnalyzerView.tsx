@@ -37,11 +37,21 @@ interface GapSkill {
   severity?: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
+interface MathematicalMetrics {
+  cosine_similarity: number;
+  jaccard_index: number;
+  skill_competency_ratio: number;
+  academic_index: number;
+  problem_solving_vigor: number;
+  total_deficit_loss: number;
+}
+
 interface MatchResult {
   score: number;
   skill_score?: number;
   cgpa_bonus?: number;
   leetcode_bonus?: number;
+  math_metrics?: MathematicalMetrics;
   matched: MatchedSkill[];
   gaps: GapSkill[];
   recommendations: {
@@ -315,16 +325,16 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
                   </div>
                 </div>
 
-                {/* Score Breakdown Bars */}
+                {/* Mathematical Model Weights (MAUT Formulation: S = 0.70*Skills + 0.15*CGPA + 0.15*Coding) */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-1.5">
                     <div className="flex justify-between items-center text-[11px] font-bold text-indigo-200">
-                      <span>Core Skills Weight (75%)</span>
-                      <span className="text-white font-black">{gapData.analysis.skill_score || 0} / 75</span>
+                      <span>Technical Competency Vector (70%)</span>
+                      <span className="text-white font-black">{gapData.analysis.skill_score || 0} / 70</span>
                     </div>
                     <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                       <div
-                        style={{ width: `${((gapData.analysis.skill_score || 0) / 75) * 100}%` }}
+                        style={{ width: `${((gapData.analysis.skill_score || 0) / 70) * 100}%` }}
                         className="h-full bg-indigo-400 rounded-full transition-all duration-700"
                       />
                     </div>
@@ -332,7 +342,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
 
                   <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-1.5">
                     <div className="flex justify-between items-center text-[11px] font-bold text-indigo-200">
-                      <span>Academic CGPA (15%)</span>
+                      <span>Academic Rigor Index (15%)</span>
                       <span className="text-white font-black">{gapData.analysis.cgpa_bonus || 0} / 15</span>
                     </div>
                     <div className="h-2 bg-white/10 rounded-full overflow-hidden">
@@ -345,17 +355,51 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
 
                   <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-1.5">
                     <div className="flex justify-between items-center text-[11px] font-bold text-indigo-200">
-                      <span>LeetCode & DSA (10%)</span>
-                      <span className="text-white font-black">{gapData.analysis.leetcode_bonus || 0} / 10</span>
+                      <span>Problem-Solving Vigor (15%)</span>
+                      <span className="text-white font-black">{gapData.analysis.leetcode_bonus || 0} / 15</span>
                     </div>
                     <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                       <div
-                        style={{ width: `${((gapData.analysis.leetcode_bonus || 0) / 10) * 100}%` }}
+                        style={{ width: `${((gapData.analysis.leetcode_bonus || 0) / 15) * 100}%` }}
                         className="h-full bg-amber-400 rounded-full transition-all duration-700"
                       />
                     </div>
                   </div>
                 </div>
+
+                {/* Mathematical Vector Similarity & Alignment Metrics */}
+                {gapData.analysis.math_metrics && (
+                  <div className="bg-black/30 border border-white/10 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                    <div>
+                      <span className="text-[10px] text-indigo-300 uppercase block font-bold tracking-wider">Cosine Similarity</span>
+                      <span className="text-base font-black text-white font-mono">
+                        {(gapData.analysis.math_metrics.cosine_similarity).toFixed(3)}
+                      </span>
+                      <span className="text-[9px] text-indigo-200/60 block">cos(θ) Vector Alignment</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-indigo-300 uppercase block font-bold tracking-wider">Jaccard Index</span>
+                      <span className="text-base font-black text-white font-mono">
+                        {(gapData.analysis.math_metrics.jaccard_index).toFixed(3)}
+                      </span>
+                      <span className="text-[9px] text-indigo-200/60 block">Set Intersection Ratio</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-indigo-300 uppercase block font-bold tracking-wider">Competency Ratio</span>
+                      <span className="text-base font-black text-emerald-400 font-mono">
+                        {(gapData.analysis.math_metrics.skill_competency_ratio * 100).toFixed(1)}%
+                      </span>
+                      <span className="text-[9px] text-indigo-200/60 block">Weighted Level Fulfillment</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-indigo-300 uppercase block font-bold tracking-wider">Deficit Gap Loss</span>
+                      <span className="text-base font-black text-rose-400 font-mono">
+                        {(gapData.analysis.math_metrics.total_deficit_loss * 100).toFixed(1)}%
+                      </span>
+                      <span className="text-[9px] text-indigo-200/60 block">Partition of Unity Deficit</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* AI Executive Summary & Timeline */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
