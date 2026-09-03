@@ -7316,7 +7316,7 @@ export default function App() {
                   <div>
                     <label className="text-sm font-medium text-zinc-700 mb-1 block">Email ID / Register Number</label>
                     <Input
-                      placeholder="e.g. 922524205171 or student@gmail.com"
+                      placeholder="Enter Email ID or Register Number"
                       value={loginData.username}
                       onChange={e => setLoginData(prev => ({ ...prev, username: e.target.value }))}
                       required
@@ -7426,7 +7426,7 @@ export default function App() {
                           Email ID or Register Number
                         </label>
                         <Input
-                          placeholder="e.g. 922524205171 or student@gmail.com"
+                          placeholder="Enter Email ID or Register Number"
                           value={forgotIdentifier}
                           onChange={e => setForgotIdentifier(e.target.value)}
                           required

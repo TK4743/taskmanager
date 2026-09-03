@@ -3100,7 +3100,7 @@ export function startTelegramPoller(): void {
                 // Not yet linked
                 await sendTelegramMessage(
                   applicantChatId,
-                  `👋 <b>GROUP JOIN REQUEST RECEIVED</b>\n──────────────────────────────\nHello <b>${escapeHtml(applicant.first_name || 'Student')}</b>!\n\nYour request to join <b>${escapeHtml(groupTitle)}</b> has been received.\n\n💡 <i>To verify your identity and get approved fast, please link your student account here by sending:</i>\n<code>/link YOUR_REGISTER_NUMBER</code>\n\n<i>(Example: <code>/link 922524205171</code>)</i>\n${getWatermarkHtml()}`
+                  `👋 <b>GROUP JOIN REQUEST RECEIVED</b>\n──────────────────────────────\nHello <b>${escapeHtml(applicant.first_name || 'Student')}</b>!\n\nYour request to join <b>${escapeHtml(groupTitle)}</b> has been received.\n\n💡 <i>To verify your identity and get approved fast, please link your student account here by sending:</i>\n<code>/link YOUR_REGISTER_NUMBER</code>\n\n<i>(Example: <code>/link 9225XXXXXXXX</code>)</i>\n${getWatermarkHtml()}`
                 );
               }
             } catch (err: any) {
@@ -3188,7 +3188,7 @@ export function startTelegramPoller(): void {
             } else if (cbData === 'cb_search_help') {
               await sendTelegramMessage(
                 cbChatId,
-                `🔎 <b>STUDENT SEARCH GUIDE</b>\n\nTo check any student's scorecard instantly, simply reply with their 12-digit Register Number or Username:\n<code>/check 922524205171</code>\n\n<i>You can also directly send the register number into the chat without any command prefix!</i>\n${getWatermarkHtml()}`,
+                `🔎 <b>STUDENT SEARCH GUIDE</b>\n\nTo check any student's scorecard instantly, simply reply with their 12-digit Register Number or Username:\n<code>/check 9225XXXXXXXX</code>\n\n<i>You can also directly send the register number into the chat without any command prefix!</i>\n${getWatermarkHtml()}`,
                 { reply_markup: getInteractiveMenuKeyboard(user?.role) }
               );
             } else if (cbData === 'cb_group_link') {
@@ -3443,7 +3443,7 @@ export function startTelegramPoller(): void {
             } else {
               await sendTelegramMessage(
                 chatId,
-                `ℹ <b>Usage:</b>\n• Student: <code>/check 922524205171</code>\n• Class: <code>/check 3itc</code> or <code>/check 2ita</code>\n• Year: <code>/check 3it</code> or <code>/check 2it</code>\n• Department: <code>/check dept</code>\n${getWatermarkHtml()}`
+                `ℹ <b>Usage:</b>\n• Student: <code>/check 9225XXXXXXXX</code>\n• Class: <code>/check 3itc</code> or <code>/check 2ita</code>\n• Year: <code>/check 3it</code> or <code>/check 2it</code>\n• Department: <code>/check dept</code>\n${getWatermarkHtml()}`
               );
               return;
             }
