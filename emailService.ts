@@ -12,7 +12,6 @@
 
 import nodemailer from 'nodemailer';
 import { pool } from './db.js';
-import { constantStudentByRegNoMap } from './studentDirectoryService.js';
 
 const COLLEGE_LOGO_URL = 'https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png';
 
@@ -354,7 +353,7 @@ export async function getLiveEmailNodesStatus(): Promise<{
 /**
  * ⚡ Intelligent Multi-Node Email Dispatcher (Round-Robin Load Balancing + Instant Quota Failover)
  */
-async function dispatchEmailThroughPool(
+export async function dispatchEmailThroughPool(
   to: string,
   recipientName: string,
   subject: string,
@@ -1087,7 +1086,7 @@ export async function sendTaskStatusEmail(payload: EmailNotificationPayload): Pr
         </div>
 
         <p style="margin: 20px 0 0 0; font-size: 12px; color: #64748b; line-height: 1.5; text-align: center;">
-          For any academic inquiries regarding this evaluation, kindly contact your designated <b>Class Advisor</b> or <b>Year Coordinator</b>.
+          For any academic inquiries regarding this evaluation, kindly contact your designated <b>Class Advisor</b>.
         </p>
         ${getTelegramCommunityBoxHtml()}
 
@@ -2170,13 +2169,6 @@ export async function notifyNoticeBoardAnnouncementEmail(notice: {
 
     for (const st of rawStudents) {
       let email = st.email ? st.email.trim() : '';
-      const regKey = st.register_number ? st.register_number.toLowerCase().trim() : '';
-      if ((!email || !email.includes('@') || email.endsWith('@vsbec.ac.in')) && regKey) {
-        const dir = constantStudentByRegNoMap.get(regKey);
-        if (dir && dir.email && dir.email.includes('@')) {
-          email = dir.email.trim();
-        }
-      }
 
       if (email && email.includes('@') && !seenEmails.has(email.toLowerCase())) {
         seenEmails.add(email.toLowerCase());

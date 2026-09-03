@@ -10,6 +10,11 @@ import { API_URL } from './config';
 import SkillAssessmentView from './SkillAssessmentView';
 import PlacementReadinessView from './PlacementReadinessView';
 import LiveTeachingHubView from './LiveTeachingHubView';
+import IndustryPortalView from './IndustryPortalView';
+import StudentOpportunitiesView from './StudentOpportunitiesView';
+import SkillGapAnalyzerView from './SkillGapAnalyzerView';
+import FacultyIndustryHubView from './FacultyIndustryHubView';
+import StudentCodingAssessmentView from './StudentCodingAssessmentView';
 import { generateStudentResumePdf, downloadStudentResumePdf } from './studentProfilePdfGenerator';
 import PWAInstallOverlay from './PWAInstallOverlay';
 import PushNotificationPromptModal from './PushNotificationPromptModal';
@@ -139,7 +144,7 @@ interface YearStats {
 interface User {
   id: string | number;
   username: string;
-  role: 'SUPREME_ADMIN' | 'HOD' | 'CLASS_ADVISOR' | 'STUDENT';
+  role: 'SUPREME_ADMIN' | 'HOD' | 'CLASS_ADVISOR' | 'STUDENT' | 'INDUSTRY';
   full_name: string;
   department_id: string | number | null;
   department_name?: string;
@@ -159,8 +164,6 @@ interface User {
   year?: number | string;
   batch?: string;
   is_coordinator?: boolean;
-  is_year_coordinator?: boolean;
-  year_scope?: number | null;
   is_active?: boolean;
   created_at?: string;
 }
@@ -3828,6 +3831,16 @@ export default function App() {
   const [forgotCountdown, setForgotCountdown] = useState(600);
   const [forgotResendCooldown, setForgotResendCooldown] = useState(0);
 
+  // Industry Self-Registration Modal State
+  const [showIndustryRegModal, setShowIndustryRegModal] = useState(false);
+  const [indRegData, setIndRegData] = useState({
+    username: '', password: '', full_name: '', email: '',
+    company_name: '', industry_sector: 'Information Technology', website: '', hq_location: '', description: ''
+  });
+  const [indRegLoading, setIndRegLoading] = useState(false);
+  const [indRegMsg, setIndRegMsg] = useState('');
+  const [indRegError, setIndRegError] = useState('');
+
   // Data State
   const [departments, setDepartments] = useState<Department[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -3838,7 +3851,6 @@ export default function App() {
   const [advisorStats, setAdvisorStats] = useState<AdvisorStats | null>(null);
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
   const [coordinatorStats, setCoordinatorStats] = useState<CoordinatorStats | null>(null);
-  const [yearStats, setYearStats] = useState<YearStats | null>(null);
   const [supremeStats, setSupremeStats] = useState<any>(null);
   const [myClass, setMyClass] = useState<Class | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -3897,9 +3909,6 @@ export default function App() {
         if (user.department_id) setSelectedLeetcodeDeptId(user.department_id.toString());
         const userClassObj = classes.find(c => String(c.id) === String(user.class_id));
         if (userClassObj?.year) setSelectedLeetcodeYear(String(userClassObj.year));
-      } else if (user.is_year_coordinator) {
-        if (user.year_scope || user.year) setSelectedLeetcodeYear(String(user.year_scope || user.year));
-        if (user.department_id) setSelectedLeetcodeDeptId(user.department_id.toString());
       } else if (user.role === 'HOD') {
         if (user.department_id) setSelectedLeetcodeDeptId(user.department_id.toString());
       }
@@ -4241,6 +4250,62 @@ export default function App() {
   const [telegramStats, setTelegramStats] = useState<any>(null);
   const [sendingTest, setSendingTest] = useState(false);
   const [showManualTelegramInput, setShowManualTelegramInput] = useState(false);
+
+  // Industry Approvals & Partner Management State
+  const [pendingIndustryList, setPendingIndustryList] = useState<any[]>([]);
+  const [allIndustryList, setAllIndustryList] = useState<any[]>([]);
+  const [industryActionLoading, setIndustryActionLoading] = useState<string | null>(null);
+  const [industryRejectModal, setIndustryRejectModal] = useState<any | null>(null);
+  const [industryRejectReason, setIndustryRejectReason] = useState('');
+  const [industrySearchTerm, setIndustrySearchTerm] = useState('');
+  const [industryActiveTab, setIndustryActiveTab] = useState<'PENDING' | 'ALL'>('PENDING');
+
+  const fetchIndustryData = async (passedToken?: string) => {
+    try {
+      const activeToken = passedToken || token || localStorage.getItem('token');
+      if (!activeToken) return;
+      const headers = { Authorization: `Bearer ${activeToken}` };
+      const [pendingRes, listRes] = await Promise.all([
+        fetch(`${API_URL}/api/admin/industry/pending`, { headers }),
+        fetch(`${API_URL}/api/admin/industry/list`, { headers })
+      ]);
+      if (pendingRes.ok) {
+        const pendingData = await pendingRes.json();
+        setPendingIndustryList(Array.isArray(pendingData) ? pendingData : []);
+      }
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        setAllIndustryList(Array.isArray(listData) ? listData : []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch industry partner data', e);
+    }
+  };
+
+  const handleApproveIndustry = async (userId: string, approved: boolean, reason?: string) => {
+    setIndustryActionLoading(userId);
+    try {
+      const activeToken = token || localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/admin/industry/approve/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${activeToken}` },
+        body: JSON.stringify({ approved, rejection_reason: reason })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addToast(approved ? '🎉 Corporate Partner verified and approved successfully!' : 'Industry account application rejected.', approved ? 'success' : 'info');
+        setIndustryRejectModal(null);
+        setIndustryRejectReason('');
+        await fetchIndustryData();
+      } else {
+        addToast(data.error || 'Approval action failed', 'error');
+      }
+    } catch (e) {
+      addToast('Network error while processing request', 'error');
+    } finally {
+      setIndustryActionLoading(null);
+    }
+  };
 
   // Student Profile Completion Prompt Modal State
   const [showProfilePromptModal, setShowProfilePromptModal] = useState(false);
@@ -4596,6 +4661,7 @@ export default function App() {
   const isHOD = user?.role === 'HOD';
   const isAdvisor = user?.role === 'CLASS_ADVISOR';
   const isStudent = user?.role === 'STUDENT';
+  const isIndustry = user?.role === 'INDUSTRY';
   const isCoordinator = Boolean(user?.role === 'STUDENT' && user?.is_coordinator);
 
   // Deep Link Handling for Shared Tasks (?taskId=... or ?task=...)
@@ -4844,10 +4910,10 @@ export default function App() {
 
   useEffect(() => {
     runHealthCheckWithRetries();
-    if (token) {
-      fetchInitialData();
+    if (token || localStorage.getItem('token')) {
+      fetchInitialData(token || localStorage.getItem('token') || undefined);
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (token) {
@@ -4856,6 +4922,7 @@ export default function App() {
         if (document.visibilityState === 'visible') {
           fetchRefresh();
           if (user?.role === 'STUDENT') fetchMyTeamsAndInvitations();
+          if (user?.role === 'SUPREME_ADMIN' || user?.role === 'HOD') fetchIndustryData();
         }
       }, 25000);
 
@@ -4863,6 +4930,7 @@ export default function App() {
       const handleFocusOrVisible = () => {
         if (document.visibilityState === 'visible') {
           fetchRefresh();
+          if (user?.role === 'SUPREME_ADMIN' || user?.role === 'HOD') fetchIndustryData();
         }
       };
 
@@ -4914,10 +4982,15 @@ export default function App() {
     }
   }, [view, codingPlatformTab, leetcodeViewType, leetcodeDate, leetcodeStatusFilter, leetcodeSearch, selectedLeetcodeDeptId, selectedLeetcodeYear, selectedLeetcodeClassId, token, user?.role]);
 
-  const fetchInitialData = async () => {
+  const fetchInitialData = async (passedToken?: string) => {
     try {
       setHasError(false);
-      const headers = { Authorization: `Bearer ${token}` };
+      const activeToken = passedToken || token || localStorage.getItem('token');
+      if (!activeToken) {
+        setIsLoading(false);
+        return;
+      }
+      const headers = { Authorization: `Bearer ${activeToken}` };
 
       const savedUserStr = localStorage.getItem('user');
       const savedUser = savedUserStr ? JSON.parse(savedUserStr) : null;
@@ -4999,14 +5072,20 @@ export default function App() {
         // Refresh user data from server to avoid stale session flags
         try {
           const meRes = await fetch(`${API_URL}/api/auth/me`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${activeToken}` }
           });
           if (meRes.ok) {
             const freshUser = await meRes.json();
             setUser(freshUser);
             localStorage.setItem('user', JSON.stringify(freshUser));
-            if (freshUser.role === 'SUPREME_ADMIN') fetchSupremeStats();
-            if (freshUser.role === 'HOD') fetchHODStats();
+            if (freshUser.role === 'SUPREME_ADMIN') {
+              fetchSupremeStats();
+              fetchIndustryData(activeToken);
+            }
+            if (freshUser.role === 'HOD') {
+              fetchHODStats();
+              fetchIndustryData(activeToken);
+            }
             if (freshUser.role === 'CLASS_ADVISOR' || (freshUser.role === 'STUDENT' && freshUser.is_coordinator)) {
               if (freshUser.role === 'CLASS_ADVISOR') fetchAdvisorStats();
               if (freshUser.role === 'STUDENT' && freshUser.is_coordinator) fetchCoordinatorStats();
@@ -5016,11 +5095,17 @@ export default function App() {
               fetchStudentStats();
               fetchMyTeamsAndInvitations();
             }
-            if (freshUser.is_year_coordinator) fetchYearStats();
           } else {
             // Fallback to saved user if refresh fails
             setUser(savedUser);
-            if (savedUser.role === 'SUPREME_ADMIN') fetchSupremeStats();
+            if (savedUser.role === 'SUPREME_ADMIN') {
+              fetchSupremeStats();
+              fetchIndustryData(activeToken);
+            }
+            if (savedUser.role === 'HOD') {
+              fetchHODStats();
+              fetchIndustryData(activeToken);
+            }
             if (savedUser.role === 'STUDENT') fetchMyTeamsAndInvitations();
           }
         } catch (err) {
@@ -5173,13 +5258,6 @@ export default function App() {
     } catch (e) { }
   };
 
-  const fetchYearStats = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/stats/year`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setYearStats(await res.json());
-    } catch (e) { }
-  };
-
   const fetchNotifications = async (isInitial = false) => {
     try {
       const res = await fetch(`${API_URL}/api/notifications`, { headers: { Authorization: `Bearer ${token}` } });
@@ -5281,38 +5359,6 @@ export default function App() {
     }
   };
 
-
-
-  const toggleYearCoordinator = async (id: number, isYearCoord: boolean, currentYear?: number) => {
-    let year_scope = currentYear;
-    let is_year_coordinator = !isYearCoord;
-
-    if (is_year_coordinator) {
-      const year = prompt('Enter the Year Scope (1-4):', currentYear?.toString() || '1');
-      if (year === null) return;
-      const yrNum = parseInt(year);
-      if (isNaN(yrNum) || yrNum < 1 || yrNum > 4) {
-        addToast('Invalid year scope. Please enter 1-4.', 'error');
-        return;
-      }
-      year_scope = yrNum;
-    }
-
-    const res = await fetch(`${API_URL}/api/users/${id}/year-coordinator`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ is_year_coordinator, year_scope })
-    });
-
-    if (res.ok) {
-      fetchUsers();
-      addToast(is_year_coordinator ? 'Year Coordinator assigned successfully.' : 'Year Coordinator role removed.', 'success');
-    } else {
-      const data = await res.json();
-      addToast(data.error || 'Failed to update Year Coordinator status', 'error');
-    }
-  };
-
   const fetchStudentStats = async () => {
     try {
       const res = await fetch(`${API_URL}/api/stats/student`, { headers: { Authorization: `Bearer ${token}` } });
@@ -5335,6 +5381,7 @@ export default function App() {
         localStorage.setItem('user', JSON.stringify(data.user));
         setToken(data.token);
         setUser(data.user);
+        fetchInitialData(data.token);
 
         const pendingTaskId = sessionStorage.getItem('pendingTaskId');
         const pendingNoticeId = sessionStorage.getItem('pendingNoticeId');
@@ -5353,6 +5400,8 @@ export default function App() {
           }
           sessionStorage.removeItem('pendingNoticeBoard');
           addToast('Redirected to Digital Notice Board!', 'info');
+        } else if (data.user?.role === 'INDUSTRY') {
+          setView('industry-portal');
         } else {
           setView('dashboard');
         }
@@ -5492,7 +5541,6 @@ export default function App() {
     setAdvisorStats(null);
     setStudentStats(null);
     setCoordinatorStats(null);
-    setYearStats(null);
     setSupremeStats(null);
     setMyClass(null);
     setNotifications([]);
@@ -6219,7 +6267,6 @@ export default function App() {
   const exportToExcel = async (filters?: { classIds?: string[]; taskId?: string; year?: string; status?: string; }) => {
     const isAdminRole = user?.role === 'SUPREME_ADMIN';
     const isHODRole = user?.role === 'HOD';
-    const isYearCoordRole = user?.is_year_coordinator;
     const isClsRole = user?.role === 'CLASS_ADVISOR' || (user?.role === 'STUDENT' && user?.is_coordinator);
     const selectedClassIds = filters?.classIds || [];
     const selectedYear = filters?.year || '';
@@ -6470,12 +6517,9 @@ export default function App() {
       if (u.role !== 'STUDENT') return false;
 
       let inScope = true;
-      if (isClsRole && !isAdminRole && !isHODRole && !isYearCoordRole) {
+      if (isClsRole && !isAdminRole && !isHODRole) {
         const cid = (user?.class_id || myClass?.id)?.toString();
         inScope = cid ? u.class_id?.toString() === cid : false;
-      } else if (isYearCoordRole && !isAdminRole && !isHODRole) {
-        const sc = classes.find(c => c.id.toString() === u.class_id?.toString());
-        inScope = u.department_id?.toString() === user?.department_id?.toString() && Number(sc?.year) === Number(user?.year_scope);
       } else if (isHODRole && !isAdminRole) {
         inScope = u.department_id?.toString() === user?.department_id?.toString();
       }
@@ -6506,7 +6550,7 @@ export default function App() {
     } else {
       targetTasks = tasks.filter(t => {
         if (isAdminRole) return true;
-        if (isHODRole || isYearCoordRole) {
+        if (isHODRole) {
           return t.department_id?.toString() === user?.department_id?.toString() || (!t.department_id && (!t.class_ids || !t.class_ids.length));
         }
         const userClassId = (user?.class_id || myClass?.id)?.toString();
@@ -6873,7 +6917,7 @@ export default function App() {
     ];
 
     const dateTag = new Date().toISOString().split('T')[0];
-    const roleTag = isAdminRole ? 'SuperAdmin' : isHODRole ? 'HOD' : isYearCoordRole ? `Year${user?.year_scope}_Coord` : 'Class';
+    const roleTag = isAdminRole ? 'SuperAdmin' : isHODRole ? 'HOD' : 'Class';
     const yearTag = selectedYear ? `Year${selectedYear}_` : '';
     const taskObj = tasks.find(t => t.id?.toString() === filters?.taskId);
     const taskTag = taskObj ? `${(taskObj.title || 'Task').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 18)}_` : '';
@@ -6919,13 +6963,6 @@ export default function App() {
         if (selectedClassIds.length > 0) return selectedClassIds.includes(u.class_id?.toString() || '');
         return true;
       }
-      if (user?.is_year_coordinator) {
-        const uClass = classes.find(c => c.id?.toString() === u.class_id?.toString());
-        const inYear = uClass && Number(uClass.year) === Number((user as any)?.year_scope || user?.year) && u.department_id?.toString() === user?.department_id?.toString();
-        if (!inYear) return false;
-        if (selectedClassIds.length > 0) return selectedClassIds.includes(u.class_id?.toString() || '');
-        return true;
-      }
       const userClassId = (user?.class_id || myClass?.id)?.toString();
       if (user?.role === 'CLASS_ADVISOR' || (user?.role === 'STUDENT' && user?.is_coordinator)) {
         return u.class_id?.toString() === userClassId;
@@ -6956,7 +6993,6 @@ export default function App() {
   ) => {
     const isAdminRole = user?.role === 'SUPREME_ADMIN';
     const isHODRole = user?.role === 'HOD';
-    const isYearCoordRole = user?.is_year_coordinator;
     const isClsRole = user?.role === 'CLASS_ADVISOR' || (user?.role === 'STUDENT' && user?.is_coordinator);
     const selectedClassIds = filters?.classIds || [];
     const selectedYear = filters?.year || '';
@@ -7005,14 +7041,6 @@ export default function App() {
           if (selectedClassIds.length > 0) return selectedClassIds.includes(u.class_id?.toString() || '');
           return true;
         }
-        if (isYearCoordRole) {
-          const userYear = (user as any)?.year_scope || user?.year;
-          const uClass = classes.find(c => c.id?.toString() === u.class_id?.toString());
-          const inYear = uClass && Number(uClass.year) === Number(userYear) && u.department_id?.toString() === user?.department_id?.toString();
-          if (!inYear) return false;
-          if (selectedClassIds.length > 0) return selectedClassIds.includes(u.class_id?.toString() || '');
-          return true;
-        }
         if (isClsRole) {
           const userClassId = (user?.class_id || myClass?.id)?.toString();
           return u.class_id?.toString() === userClassId;
@@ -7029,7 +7057,7 @@ export default function App() {
       } else {
         targetTasks = tasks.filter(t => {
           if (isAdminRole) return true;
-          if (isHODRole || isYearCoordRole) {
+          if (isHODRole) {
             return t.department_id?.toString() === user?.department_id?.toString() || (!t.department_id && (!t.class_ids || !t.class_ids.length));
           }
           const userClassId = (user?.class_id || myClass?.id)?.toString();
@@ -7221,7 +7249,7 @@ export default function App() {
       });
 
       const dateTag = new Date().toISOString().split('T')[0];
-      const roleTag = isAdminRole ? 'SuperAdmin' : isHODRole ? 'HOD' : isYearCoordRole ? `Year${user?.year_scope}_Coord` : 'Class';
+      const roleTag = isAdminRole ? 'SuperAdmin' : isHODRole ? 'HOD' : 'Class';
       const yearTag = selectedYear ? `Year${selectedYear}_` : '';
       const taskObj = tasks.find(t => t.id?.toString() === filters?.taskId);
       const taskTag = taskObj ? `${(taskObj.title || 'Task').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 18)}_` : '';
@@ -7286,9 +7314,9 @@ export default function App() {
 
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-zinc-700 mb-1 block">Email ID</label>
+                    <label className="text-sm font-medium text-zinc-700 mb-1 block">Email ID / Register Number</label>
                     <Input
-                      placeholder="student@gmail.com"
+                      placeholder="e.g. 922524205171 or student@gmail.com"
                       value={loginData.username}
                       onChange={e => setLoginData(prev => ({ ...prev, username: e.target.value }))}
                       required
@@ -7300,7 +7328,7 @@ export default function App() {
                     <div className="relative">
                       <Input
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="Enter Password"
+                        placeholder="Enter your password"
                         value={loginData.password}
                         onChange={e => setLoginData(prev => ({ ...prev, password: e.target.value }))}
                         required
@@ -7343,6 +7371,21 @@ export default function App() {
                     </motion.p>
                   )}
                   <Button className="w-full py-3 text-lg mt-2">Sign In</Button>
+
+                  <div className="pt-4 mt-4 border-t border-zinc-100 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIndRegError('');
+                        setIndRegMsg('');
+                        setShowIndustryRegModal(true);
+                      }}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <span>🏢 Corporate / Industry Partner?</span>
+                      <span className="font-bold underline">Register Company</span>
+                    </button>
+                  </div>
                 </form>
               </Card>
             </motion.div>
@@ -7533,6 +7576,199 @@ export default function App() {
               </div>
             )}
           </AnimatePresence>
+
+          {/* ── Industry Self-Registration Modal ─────────────────────────── */}
+          <AnimatePresence>
+            {showIndustryRegModal && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  className="bg-white rounded-[2rem] p-6 md:p-8 max-w-lg w-full shadow-2xl relative border border-zinc-100 max-h-[90vh] overflow-y-auto"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setShowIndustryRegModal(false)}
+                    className="absolute top-5 right-5 p-2 hover:bg-zinc-100 rounded-full transition-colors cursor-pointer"
+                  >
+                    <X size={20} className="text-zinc-400" />
+                  </button>
+
+                  <div className="mb-6">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                      <span>🏢</span> Corporate Partner
+                    </div>
+                    <h3 className="text-2xl font-black text-zinc-900 tracking-tight">Register Industry Account</h3>
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Post internships, live projects, campus jobs, and connect with talent
+                    </p>
+                  </div>
+
+                  {indRegMsg ? (
+                    <div className="text-center py-6 space-y-4">
+                      <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto ring-8 ring-emerald-50">
+                        <CheckCircle2 size={36} />
+                      </div>
+                      <h4 className="text-lg font-bold text-zinc-900">Registration Submitted!</h4>
+                      <p className="text-xs text-zinc-600 max-w-xs mx-auto">
+                        {indRegMsg}
+                      </p>
+                      <Button
+                        className="w-full rounded-xl mt-4"
+                        onClick={() => {
+                          setShowIndustryRegModal(false);
+                          setIndRegMsg('');
+                        }}
+                      >
+                        Back to Login
+                      </Button>
+                    </div>
+                  ) : (
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        setIndRegLoading(true);
+                        setIndRegError('');
+                        try {
+                          const res = await fetch(`${API_URL}/api/industry/register`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(indRegData),
+                          });
+                          const data = await res.json();
+                          if (res.ok) {
+                            setIndRegMsg('Your company registration has been submitted for administrative verification. You can sign in once verified.');
+                          } else {
+                            setIndRegError(data.error || 'Registration failed');
+                          }
+                        } catch (err: any) {
+                          setIndRegError('Network error during registration');
+                        } finally {
+                          setIndRegLoading(false);
+                        }
+                      }}
+                      className="space-y-3"
+                    >
+                      {indRegError && (
+                        <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl">
+                          ⚠️ {indRegError}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">Company Name *</label>
+                          <Input
+                            placeholder="e.g. Zoho Corporation / Tech Innovations"
+                            value={indRegData.company_name}
+                            onChange={e => setIndRegData(p => ({ ...p, company_name: e.target.value }))}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">Industry Sector</label>
+                          <select
+                            className="w-full h-10 px-3 border border-zinc-200 rounded-xl text-sm bg-white"
+                            value={indRegData.industry_sector}
+                            onChange={e => setIndRegData(p => ({ ...p, industry_sector: e.target.value }))}
+                          >
+                            <option value="Information Technology">Information Technology</option>
+                            <option value="Fintech & Banking">Fintech & Banking</option>
+                            <option value="AI & Robotics">AI & Robotics</option>
+                            <option value="Healthcare & BioTech">Healthcare & BioTech</option>
+                            <option value="Automotive & EV">Automotive & EV</option>
+                            <option value="Consulting & Analytics">Consulting & Analytics</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">HR / Recruiter Name *</label>
+                          <Input
+                            placeholder="e.g. Priya Sharma (Talent Acquisition Lead)"
+                            value={indRegData.full_name}
+                            onChange={e => setIndRegData(p => ({ ...p, full_name: e.target.value }))}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">Work Email *</label>
+                          <Input
+                            type="email"
+                            placeholder="hr@company.com or careers@org.in"
+                            value={indRegData.email}
+                            onChange={e => setIndRegData(p => ({ ...p, email: e.target.value, username: e.target.value }))}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">Password *</label>
+                          <Input
+                            type="password"
+                            placeholder="Create password (min 6 chars)"
+                            value={indRegData.password}
+                            onChange={e => setIndRegData(p => ({ ...p, password: e.target.value }))}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">Website URL</label>
+                          <Input
+                            placeholder="https://www.company.com"
+                            value={indRegData.website}
+                            onChange={e => setIndRegData(p => ({ ...p, website: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">HQ Location</label>
+                        <Input
+                          placeholder="e.g. Bengaluru / Chennai, India"
+                          value={indRegData.hq_location}
+                          onChange={e => setIndRegData(p => ({ ...p, hq_location: e.target.value }))}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">Company Description</label>
+                        <textarea
+                          className="w-full p-2.5 border border-zinc-200 rounded-xl text-xs resize-none"
+                          rows={2}
+                          placeholder="Brief overview of company focus, hiring domains, and internship opportunities..."
+                          value={indRegData.description}
+                          onChange={e => setIndRegData(p => ({ ...p, description: e.target.value }))}
+                        />
+                      </div>
+
+                      <div className="flex gap-3 pt-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1 rounded-xl"
+                          onClick={() => setShowIndustryRegModal(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700"
+                          disabled={indRegLoading}
+                        >
+                          {indRegLoading ? 'Submitting...' : 'Register Company'}
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     );
@@ -7542,25 +7778,18 @@ export default function App() {
     // Determine context
     const isGlobal = role === 'SUPREME_ADMIN';
     const isDept = role === 'HOD';
-    const isYear = role === 'YEAR_COORDINATOR';
     const isCls = role === 'CLASS_ADVISOR' || role === 'COORDINATOR';
 
     const currentDeptId = isGlobal ? adminDeptFilter : user?.department_id?.toString();
-    const currentYearScope = isYear ? Number(user?.year_scope) : null;
     const currentClassId = isCls ? (user?.class_id || myClass?.id)?.toString() : analyzerClassFilter;
 
     const deptStudents = users.filter(u => {
       if (u.role !== 'STUDENT') return false;
       if (isCls) return u.class_id?.toString() === currentClassId;
-      if (isYear) {
-        const studentClass = classes.find(c => c.id.toString() === u.class_id?.toString());
-        return u.department_id?.toString() === currentDeptId && Number(studentClass?.year) === currentYearScope;
-      }
       if (currentDeptId) return u.department_id?.toString() === currentDeptId;
       return true;
     }).filter(u => {
-      if (!isCls && !isYear && analyzerClassFilter) return u.class_id?.toString() === analyzerClassFilter;
-      if (isYear && analyzerClassFilter) return u.class_id?.toString() === analyzerClassFilter;
+      if (!isCls && analyzerClassFilter) return u.class_id?.toString() === analyzerClassFilter;
       // HOD year filter: when a year is selected but no specific class, filter students by year
       if (isDept && analyzerYearFilter && !analyzerClassFilter) {
         const studentClass = classes.find(c => c.id.toString() === u.class_id?.toString());
@@ -7735,7 +7964,6 @@ export default function App() {
                   {classes.filter(c => {
                     if (analyzerYearFilter && String(c.year) !== analyzerYearFilter) return false;
                     if (currentDeptId && c.department_id?.toString() !== currentDeptId) return false;
-                    if (isYear && Number(c.year) !== currentYearScope) return false;
                     return true;
                   }).sort((a, b) => (a.year || 0) - (b.year || 0) || (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })).map(c => (
                     <option key={c.id} value={c.id.toString()}>{c.name}</option>
@@ -8397,7 +8625,7 @@ export default function App() {
   };
 
   const renderLeetcodeTargetsView = () => {
-    const isStaff = ['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR'].includes(user?.role || '') || (user?.role === 'STUDENT' && (user?.is_coordinator || user?.is_year_coordinator));
+    const isStaff = ['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR'].includes(user?.role || '') || (user?.role === 'STUDENT' && user?.is_coordinator);
 
     if (!isStaff) {
       // Student View
@@ -8713,7 +8941,7 @@ export default function App() {
                 )}
 
                 {/* Section / Class Filter */}
-                {(isAdmin || isHOD || user?.is_year_coordinator) && (
+                {(isAdmin || isHOD) && (
                   <div className="flex items-center gap-1.5 border border-zinc-200 rounded-xl px-3 py-1.5 bg-zinc-50/50">
                     <Filter size={14} className="text-zinc-400" />
                     <select
@@ -8728,7 +8956,6 @@ export default function App() {
                           if (selectedLeetcodeYear && selectedLeetcodeYear !== 'ALL' && String(c.year) !== selectedLeetcodeYear) return false;
                           if (isAdmin) return true;
                           if (isHOD) return c.department_id?.toString() === user?.department_id?.toString();
-                          if (user?.is_year_coordinator) return c.department_id?.toString() === user?.department_id?.toString() && Number(c.year) === Number(user?.year_scope || user?.year);
                           if (isAdvisor || (user?.role === 'STUDENT' && user?.is_coordinator)) return String(c.id) === String(user?.class_id);
                           return c.department_id?.toString() === user?.department_id?.toString();
                         })
@@ -9094,7 +9321,7 @@ export default function App() {
                 )}
 
                 {/* Section / Class Filter */}
-                {(isAdmin || isHOD || user?.is_year_coordinator) && (
+                {(isAdmin || isHOD) && (
                   <div className="flex items-center gap-1.5 border border-zinc-200 rounded-xl px-3 py-1.5 bg-zinc-50/50">
                     <Filter size={14} className="text-zinc-400" />
                     <select
@@ -9109,7 +9336,6 @@ export default function App() {
                           if (selectedLeetcodeYear && selectedLeetcodeYear !== 'ALL' && String(c.year) !== selectedLeetcodeYear) return false;
                           if (isAdmin) return true;
                           if (isHOD) return c.department_id?.toString() === user?.department_id?.toString();
-                          if (user?.is_year_coordinator) return c.department_id?.toString() === user?.department_id?.toString() && Number(c.year) === Number(user?.year_scope || user?.year);
                           if (isAdvisor || (user?.role === 'STUDENT' && user?.is_coordinator)) return String(c.id) === String(user?.class_id);
                           return c.department_id?.toString() === user?.department_id?.toString();
                         })
@@ -9491,7 +9717,6 @@ export default function App() {
 
   const renderAssignTargetModal = () => {
     if (!showAssignTargetModal) return null;
-    const isYearCoordinator = user?.is_year_coordinator;
     const isAdvisor = user?.role === 'CLASS_ADVISOR' || (user?.role === 'STUDENT' && user?.is_coordinator);
 
     return (
@@ -9531,7 +9756,7 @@ export default function App() {
                 }}
                 className="w-full p-2.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 focus:outline-none bg-white cursor-pointer"
               >
-                {!isYearCoordinator && !isAdvisor && <option value="DEPARTMENT">Department-wide</option>}
+                {!isAdvisor && <option value="DEPARTMENT">Department-wide</option>}
                 {!isAdvisor && <option value="YEAR">Batch / Year-wide</option>}
                 <option value="CLASS">Class Section-wide</option>
                 <option value="STUDENT">Individual Student</option>
@@ -9849,11 +10074,11 @@ export default function App() {
           </div>
           <span className={cn(
             "font-bold px-2 py-0.5 rounded text-xs tracking-wider",
-            user?.is_year_coordinator
-              ? "bg-indigo-100 text-indigo-700"
+            isIndustry
+              ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
               : "text-zinc-900"
           )}>
-            {isAdmin ? 'SUPREME' : isHOD ? 'HOD PORTAL' : user?.is_year_coordinator ? 'YEAR COORD' : isAdvisor ? 'ADVISOR' : isCoordinator ? 'COORDINATOR' : 'STUDENT'}
+            {isAdmin ? 'SUPREME' : isHOD ? 'HOD PORTAL' : isIndustry ? 'CORPORATE HR' : isAdvisor ? 'ADVISOR' : isCoordinator ? 'COORDINATOR' : 'STUDENT'}
           </span>
         </div>
         <button
@@ -9865,143 +10090,226 @@ export default function App() {
       </div>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
-        <>
-          <SidebarItem
-            icon={<LayoutDashboard size={20} className="text-blue-500" />}
-            label="Dashboard"
-            active={view === 'dashboard'}
-            onClick={() => { setView('dashboard'); setIsMobileSidebarOpen(false); }}
-          />
-
-          <SidebarItem
-            icon={<ClipboardList size={20} className="text-indigo-500" />}
-            label="Tasks"
-            active={view === 'tasks'}
-            onClick={() => { setView('tasks'); setIsMobileSidebarOpen(false); }}
-          />
-
-          <SidebarItem
-            icon={<Code size={20} className="text-amber-500" />}
-            label="Coding Progress"
-            active={view === 'leetcode-targets' || view === 'coding-progress'}
-            onClick={() => { setView('leetcode-targets'); setIsMobileSidebarOpen(false); }}
-          />
-
-          <SidebarItem
-            icon={<Megaphone size={20} className="text-rose-500" />}
-            label="Notice Board"
-            active={view === 'notice-board'}
-            onClick={() => { setView('notice-board'); fetchNotices(); setIsMobileSidebarOpen(false); }}
-          />
-
-          <SidebarItem
-            icon={<Sparkles size={20} className="text-purple-500" />}
-            label="Skill Assessment"
-            badge="SIH Demo"
-            active={view === 'skill-assessment'}
-            onClick={() => { setView('skill-assessment'); setIsMobileSidebarOpen(false); }}
-          />
-
-          <SidebarItem
-            icon={<Target size={20} className="text-cyan-500" />}
-            label="Placement Rating"
-            badge="SIH Demo"
-            active={view === 'placement-readiness'}
-            onClick={() => { setView('placement-readiness'); setIsMobileSidebarOpen(false); }}
-          />
-
-          <SidebarItem
-            icon={<Radio size={20} className="text-emerald-500 animate-pulse" />}
-            label="Live Teaching Hub"
-            badge="SIH Demo"
-            active={view === 'live-teaching-hub'}
-            onClick={() => { setView('live-teaching-hub'); setIsMobileSidebarOpen(false); }}
-          />
-
-          {isAdmin && (
-            <>
-              <SidebarItem
-                icon={<Building2 size={20} className="text-violet-500" />}
-                label="Departments"
-                active={view === 'departments'}
-                onClick={() => { setView('departments'); setIsMobileSidebarOpen(false); }}
-              />
-              <SidebarItem
-                icon={<Users size={20} className="text-sky-500" />}
-                label="HOD Accounts"
-                active={view === 'users'}
-                onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
-              />
-            </>
-          )}
-
-          {isHOD && (
-            <>
-              <SidebarItem
-                icon={<Building2 size={20} className="text-violet-500" />}
-                label="Classes"
-                active={view === 'classes'}
-                onClick={() => { setView('classes'); setIsMobileSidebarOpen(false); }}
-              />
-              <SidebarItem
-                icon={<Users size={20} className="text-sky-500" />}
-                label="Users"
-                active={view === 'users'}
-                onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
-              />
-            </>
-          )}
-
-          {isAdvisor && (
-            <>
-              <SidebarItem
-                icon={<Building2 size={20} className="text-violet-500" />}
-                label="My Class"
-                active={view === 'my-class'}
-                onClick={() => { setView('my-class'); setIsMobileSidebarOpen(false); }}
-              />
-              <SidebarItem
-                icon={<Users size={20} className="text-sky-500" />}
-                label="Students"
-                active={view === 'users'}
-                onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
-              />
-            </>
-          )}
-
-          {(isAdvisor || isHOD || isAdmin || isCoordinator) && (
+        {isIndustry ? (
+          <>
             <SidebarItem
-              icon={<ShieldCheck size={20} className="text-emerald-600" />}
-              label="Verifications"
-              active={view === 'verifications'}
-              onClick={() => { setView('verifications'); setIsMobileSidebarOpen(false); }}
+              icon={<Building2 size={20} className="text-indigo-500" />}
+              label="Hiring & Assessments"
+              badge="Portal"
+              active={view === 'industry-portal' || view === 'dashboard'}
+              onClick={() => { setView('industry-portal'); setIsMobileSidebarOpen(false); }}
             />
-          )}
+            <SidebarItem
+              icon={<Users size={20} className="text-sky-500" />}
+              label="Candidate Pool"
+              badge="Talent"
+              active={view === 'users'}
+              onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
+            />
+            <SidebarItem
+              icon={<GraduationCap size={20} className="text-blue-500" />}
+              label="Faculty R&D Hub"
+              badge="Collab"
+              active={view === 'faculty-industry-hub'}
+              onClick={() => { setView('faculty-industry-hub'); setIsMobileSidebarOpen(false); }}
+            />
+            <SidebarItem
+              icon={<Settings size={20} className="text-slate-500" />}
+              label="Settings"
+              active={view === 'settings'}
+              onClick={() => { setView('settings'); setIsMobileSidebarOpen(false); }}
+            />
+          </>
+        ) : (
+          <>
+            <SidebarItem
+              icon={<LayoutDashboard size={20} className="text-blue-500" />}
+              label="Dashboard"
+              active={view === 'dashboard'}
+              onClick={() => { setView('dashboard'); setIsMobileSidebarOpen(false); }}
+            />
 
-          {isStudent && (
-            <>
-              <SidebarItem
-                icon={<CheckCircle2 size={20} className="text-teal-500" />}
-                label="My Submissions"
-                active={view === 'submissions'}
-                onClick={() => { setView('submissions'); setIsMobileSidebarOpen(false); }}
-              />
-              <SidebarItem
-                icon={<User size={20} className="text-blue-600" />}
-                label="Profile"
-                active={view === 'profile'}
-                onClick={() => { setView('profile'); setIsMobileSidebarOpen(false); }}
-              />
-            </>
-          )}
+            <SidebarItem
+              icon={<ClipboardList size={20} className="text-indigo-500" />}
+              label="Tasks"
+              active={view === 'tasks'}
+              onClick={() => { setView('tasks'); setIsMobileSidebarOpen(false); }}
+            />
 
-          <SidebarItem
-            icon={<Settings size={20} className="text-slate-500" />}
-            label="Settings"
-            active={view === 'settings'}
-            onClick={() => { setView('settings'); setIsMobileSidebarOpen(false); }}
-          />
-        </>
+            <SidebarItem
+              icon={<Code size={20} className="text-amber-500" />}
+              label="Coding Progress"
+              active={view === 'leetcode-targets' || view === 'coding-progress'}
+              onClick={() => { setView('leetcode-targets'); setIsMobileSidebarOpen(false); }}
+            />
+
+            <SidebarItem
+              icon={<Megaphone size={20} className="text-rose-500" />}
+              label="Notice Board"
+              active={view === 'notice-board'}
+              onClick={() => { setView('notice-board'); fetchNotices(); setIsMobileSidebarOpen(false); }}
+            />
+
+            <SidebarItem
+              icon={<Sparkles size={20} className="text-purple-500" />}
+              label="Skill Assessment"
+              badge="SIH Demo"
+              active={view === 'skill-assessment'}
+              onClick={() => { setView('skill-assessment'); setIsMobileSidebarOpen(false); }}
+            />
+
+            <SidebarItem
+              icon={<Target size={20} className="text-cyan-500" />}
+              label="Placement Rating"
+              badge="SIH Demo"
+              active={view === 'placement-readiness'}
+              onClick={() => { setView('placement-readiness'); setIsMobileSidebarOpen(false); }}
+            />
+
+            <SidebarItem
+              icon={<Radio size={20} className="text-emerald-500 animate-pulse" />}
+              label="Live Teaching Hub"
+              badge="SIH Demo"
+              active={view === 'live-teaching-hub'}
+              onClick={() => { setView('live-teaching-hub'); setIsMobileSidebarOpen(false); }}
+            />
+
+            {/* SIH26044 Academia-Industry Innovation Navigation */}
+            {isStudent && (
+              <>
+                <SidebarItem
+                  icon={<Briefcase size={20} className="text-teal-400" />}
+                  label="Opportunities"
+                  badge="Industry"
+                  active={view === 'opportunities'}
+                  onClick={() => { setView('opportunities'); setIsMobileSidebarOpen(false); }}
+                />
+                <SidebarItem
+                  icon={<Code size={20} className="text-indigo-500" />}
+                  label="Coding Tests"
+                  badge="Industry"
+                  active={view === 'student-coding-assessments'}
+                  onClick={() => { setView('student-coding-assessments'); setIsMobileSidebarOpen(false); }}
+                />
+                <SidebarItem
+                  icon={<Zap size={20} className="text-amber-400" />}
+                  label="Skill Gap AI"
+                  badge="AI"
+                  active={view === 'skill-gap-analyzer'}
+                  onClick={() => { setView('skill-gap-analyzer'); setIsMobileSidebarOpen(false); }}
+                />
+              </>
+            )}
+
+            {(isAdvisor || isHOD) && (
+              <SidebarItem
+                icon={<GraduationCap size={20} className="text-blue-400" />}
+                label="Faculty Hub"
+                badge="Collab"
+                active={view === 'faculty-industry-hub'}
+                onClick={() => { setView('faculty-industry-hub'); setIsMobileSidebarOpen(false); }}
+              />
+            )}
+
+            {isAdmin && (
+              <>
+                <SidebarItem
+                  icon={<Briefcase size={20} className="text-emerald-500" />}
+                  label="Industry Partners"
+                  badge={pendingIndustryList.length > 0 ? `${pendingIndustryList.length} Pending` : undefined}
+                  active={view === 'industry-approvals'}
+                  onClick={() => { setView('industry-approvals'); setIsMobileSidebarOpen(false); }}
+                />
+                <SidebarItem
+                  icon={<Building2 size={20} className="text-violet-500" />}
+                  label="Departments"
+                  active={view === 'departments'}
+                  onClick={() => { setView('departments'); setIsMobileSidebarOpen(false); }}
+                />
+                <SidebarItem
+                  icon={<Users size={20} className="text-sky-500" />}
+                  label="HOD Accounts"
+                  active={view === 'users'}
+                  onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
+                />
+              </>
+            )}
+
+            {isHOD && (
+              <>
+                <SidebarItem
+                  icon={<Briefcase size={20} className="text-emerald-500" />}
+                  label="Industry Partners"
+                  badge={pendingIndustryList.length > 0 ? `${pendingIndustryList.length} Pending` : undefined}
+                  active={view === 'industry-approvals'}
+                  onClick={() => { setView('industry-approvals'); setIsMobileSidebarOpen(false); }}
+                />
+                <SidebarItem
+                  icon={<Building2 size={20} className="text-violet-500" />}
+                  label="Classes"
+                  active={view === 'classes'}
+                  onClick={() => { setView('classes'); setIsMobileSidebarOpen(false); }}
+                />
+                <SidebarItem
+                  icon={<Users size={20} className="text-sky-500" />}
+                  label="Users"
+                  active={view === 'users'}
+                  onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
+                />
+              </>
+            )}
+
+            {isAdvisor && (
+              <>
+                <SidebarItem
+                  icon={<Building2 size={20} className="text-violet-500" />}
+                  label="My Class"
+                  active={view === 'my-class'}
+                  onClick={() => { setView('my-class'); setIsMobileSidebarOpen(false); }}
+                />
+                <SidebarItem
+                  icon={<Users size={20} className="text-sky-500" />}
+                  label="Students"
+                  active={view === 'users'}
+                  onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
+                />
+              </>
+            )}
+
+            {(isAdvisor || isHOD || isAdmin || isCoordinator) && (
+              <SidebarItem
+                icon={<ShieldCheck size={20} className="text-emerald-600" />}
+                label="Verifications"
+                active={view === 'verifications'}
+                onClick={() => { setView('verifications'); setIsMobileSidebarOpen(false); }}
+              />
+            )}
+
+            {isStudent && (
+              <>
+                <SidebarItem
+                  icon={<CheckCircle2 size={20} className="text-teal-500" />}
+                  label="My Submissions"
+                  active={view === 'submissions'}
+                  onClick={() => { setView('submissions'); setIsMobileSidebarOpen(false); }}
+                />
+                <SidebarItem
+                  icon={<User size={20} className="text-blue-600" />}
+                  label="Profile"
+                  active={view === 'profile'}
+                  onClick={() => { setView('profile'); setIsMobileSidebarOpen(false); }}
+                />
+              </>
+            )}
+
+            <SidebarItem
+              icon={<Settings size={20} className="text-slate-500" />}
+              label="Settings"
+              active={view === 'settings'}
+              onClick={() => { setView('settings'); setIsMobileSidebarOpen(false); }}
+            />
+          </>
+        )}
       </nav>
 
       <div className="p-3 border-t border-zinc-100 shrink-0 bg-white">
@@ -10710,7 +11018,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* Sidebar - Desktop */}
-        <aside className="w-64 bg-white border-r border-zinc-200 shrink-0 hidden md:flex md:flex-col h-full">
+        <aside className="w-80 bg-white border-r border-zinc-200 shrink-0 hidden md:flex md:flex-col h-full">
           {renderSidebarContent()}
         </aside>
 
@@ -10730,7 +11038,7 @@ export default function App() {
                 animate={{ x: 0 }}
                 exit={{ x: '-100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="relative w-64 max-w-xs bg-white h-full flex flex-col border-r border-zinc-200 shadow-2xl z-10"
+                className="relative w-80 max-w-xs bg-white h-full flex flex-col border-r border-zinc-200 shadow-2xl z-10"
               >
                 {renderSidebarContent()}
               </motion.aside>
@@ -10751,12 +11059,14 @@ export default function App() {
               <div className="min-w-0">
                 <h2 className="text-xl font-bold text-zinc-900 tracking-tight truncate">
                   {(() => {
+                    if (isIndustry && (view === 'industry-portal' || view === 'dashboard')) return 'Corporate Hiring & Assessments Portal';
                     if (view === 'leetcode-targets' || view === 'coding-progress') {
                       if (codingPlatformTab === 'LEETCODE') return 'LeetCode';
                       if (codingPlatformTab === 'GITHUB') return 'GitHub';
                       return 'Combined Coding Progress';
                     }
                     if (view === 'departments') return 'Departments';
+                    if (view === 'industry-approvals') return 'Corporate & Industry Partner Approvals';
                     if (view === 'my-class') return 'My Class';
                     if (view === 'notice-board') return 'Notice Board';
                     if (view === 'analyzer') return 'Student Progress Analyzer';
@@ -10773,7 +11083,7 @@ export default function App() {
               </div>
             </div>
             <div className="flex items-center gap-4 shrink-0">
-              {(isAdmin || isHOD || isAdvisor || isCoordinator || user?.is_year_coordinator) && (
+              {(isAdmin || isHOD || isAdvisor || isCoordinator) && (
                 <Button variant="success" className="flex items-center gap-2" onClick={() => (view === 'leetcode-targets' || view === 'coding-progress') ? handleDownloadCombinedExcel() : setShowExportModal(true)}>
                   <FileDown size={18} /> {isAdmin || isHOD ? 'Export Custom Report' : 'Export Class Report'}
                 </Button>
@@ -10925,7 +11235,22 @@ export default function App() {
 
           <div className="flex-1 min-h-0 bg-[#F5F5F4] relative">
             <AnimatePresence mode="wait">
-              {view === 'dashboard' && (
+              {view === 'dashboard' && isIndustry && (
+                <motion.div
+                  key="industry-portal-dash"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="relative w-full h-full min-h-0 overflow-y-auto custom-scrollbar"
+                >
+                  <IndustryPortalView
+                    user={user}
+                    token={token}
+                  />
+                </motion.div>
+              )}
+
+              {view === 'dashboard' && !isIndustry && (
                 <motion.div
                   key="dashboard"
                   initial={{ opacity: 0, y: 10 }}
@@ -10935,7 +11260,33 @@ export default function App() {
                 >
                   <PageLayout>
                     {isAdmin ? (
-                      <UnifiedAnalyzer role="SUPREME_ADMIN" title="Global System Analyzer" />
+                      <div className="flex flex-col gap-6">
+                        {pendingIndustryList.length > 0 && (
+                          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/15 to-orange-500/10 border border-amber-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
+                                <Building2 size={20} />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-2">
+                                  <span>{pendingIndustryList.length} Corporate Partner Application{pendingIndustryList.length > 1 ? 's' : ''} Pending Approval</span>
+                                  <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider animate-pulse">Action Required</span>
+                                </h4>
+                                <p className="text-xs text-zinc-600 mt-0.5">
+                                  {pendingIndustryList.map(p => p.company_name).join(', ')} registered and {pendingIndustryList.length > 1 ? 'are' : 'is'} awaiting verification to post campus internships & jobs.
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              onClick={() => setView('industry-approvals')}
+                              className="rounded-xl bg-zinc-900 hover:bg-black text-white text-xs font-bold shrink-0 shadow-sm"
+                            >
+                              Review & Approve →
+                            </Button>
+                          </div>
+                        )}
+                        <UnifiedAnalyzer role="SUPREME_ADMIN" title="Global System Analyzer" />
+                      </div>
                     ) : isHOD ? (
                       <div className="flex flex-col gap-10">
                         {/* Premium Header Stats */}
@@ -10951,35 +11302,6 @@ export default function App() {
                         <div className="w-full">
                           <UnifiedAnalyzer role="HOD" title="Class Analyzer" />
                         </div>
-                      </div>
-                    ) : user?.is_year_coordinator ? (
-                      <div className="flex flex-col gap-10">
-                        {/* Coordinator Header Stats */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <StatCard title={`Oversight for Year ${user.year_scope}`} value={yearStats?.total_classes || 0} icon={<Building2 />} color="blue" />
-                          <StatCard title="Total Students in Year" value={yearStats?.total_students || 0} icon={<Users />} color="indigo" />
-                          <StatCard title="Active Year-wide Tasks" value={yearStats?.taskStats?.length || 0} icon={<ClipboardList />} color="orange" />
-                        </div>
-
-                        <UnifiedAnalyzer role="YEAR_COORDINATOR" title={`Year ${user.year_scope} Oversight Analyzer`} />
-
-                        {/* Secondary Class View if Advisor */}
-                        {isAdvisor && (
-                          <div className="mt-10 pt-10 border-t border-zinc-200">
-                            <div className="flex items-center gap-4 mb-8">
-                              <div className="w-1 h-8 bg-zinc-300 rounded-full" />
-                              <h3 className="text-xl font-bold text-zinc-600">My Class Dashboard</h3>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                              <StatCard title="Class Students" value={coordinatorStats?.total_students || 0} icon={<Users />} color="bg-blue-500" />
-                              <StatCard title="Submitted" value={coordinatorStats?.pending_reviews || 0} icon={<Clock />} color="bg-orange-500" />
-                              <StatCard title="Verified" value={coordinatorStats?.verified_submissions || 0} icon={<CheckCircle2 />} color="bg-emerald-500" />
-                            </div>
-                            <div className="mt-8">
-                              <UnifiedAnalyzer role="CLASS_ADVISOR" title="Class Performance Analyzer" />
-                            </div>
-                          </div>
-                        )}
                       </div>
                     ) : isAdvisor ? (() => {
                       const activeClassId = user?.class_id || myClass?.id;
@@ -11262,6 +11584,324 @@ export default function App() {
                       </div>
                     </ContentCard>
                   </PageLayout>
+                </motion.div>
+              )}
+
+              {view === 'industry-approvals' && (isAdmin || isHOD) && (
+                <motion.div
+                  key="industry-approvals"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="w-full h-full flex flex-col min-h-0"
+                >
+                  <PageLayout>
+                    {/* Header Stats */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                      <Card className="p-5 border-amber-200 bg-amber-50/50">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">Pending Approvals</p>
+                            <p className="text-3xl font-black text-amber-900 mt-1">{pendingIndustryList.length}</p>
+                          </div>
+                          <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm">
+                            <Clock size={22} />
+                          </div>
+                        </div>
+                      </Card>
+
+                      <Card className="p-5 border-emerald-200 bg-emerald-50/50">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Verified Partners</p>
+                            <p className="text-3xl font-black text-emerald-900 mt-1">
+                              {allIndustryList.filter(c => c.is_verified).length}
+                            </p>
+                          </div>
+                          <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-sm">
+                            <CheckCircle2 size={22} />
+                          </div>
+                        </div>
+                      </Card>
+
+                      <Card className="p-5 border-indigo-200 bg-indigo-50/50">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Total Registered</p>
+                            <p className="text-3xl font-black text-indigo-900 mt-1">{allIndustryList.length}</p>
+                          </div>
+                          <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-sm">
+                            <Building2 size={22} />
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+
+                    {/* Tab Navigation */}
+                    <div className="flex items-center gap-2 border-b border-zinc-200 pb-3 mb-6">
+                      <button
+                        onClick={() => setIndustryActiveTab('PENDING')}
+                        className={cn(
+                          "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
+                          industryActiveTab === 'PENDING'
+                            ? "bg-zinc-900 text-white shadow-sm"
+                            : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"
+                        )}
+                      >
+                        <Clock size={15} />
+                        <span>Pending Approvals</span>
+                        {pendingIndustryList.length > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 text-[10px] font-black">
+                            {pendingIndustryList.length}
+                          </span>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => setIndustryActiveTab('ALL')}
+                        className={cn(
+                          "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
+                          industryActiveTab === 'ALL'
+                            ? "bg-zinc-900 text-white shadow-sm"
+                            : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"
+                        )}
+                      >
+                        <Building2 size={15} />
+                        <span>All Industry Partners</span>
+                        <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 text-[10px] font-black">
+                          {allIndustryList.length}
+                        </span>
+                      </button>
+                    </div>
+
+                    {/* Tab Content: Pending */}
+                    {industryActiveTab === 'PENDING' && (
+                      <div>
+                        {pendingIndustryList.length === 0 ? (
+                          <Card className="p-12 text-center bg-white border-dashed border-2 border-zinc-200 rounded-3xl">
+                            <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+                              <CheckCircle2 size={32} />
+                            </div>
+                            <h3 className="text-lg font-bold text-zinc-900">No Pending Approvals</h3>
+                            <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+                              All registered corporate accounts have been verified. New industry registrations will appear here for review.
+                            </p>
+                          </Card>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {pendingIndustryList.map((company) => (
+                              <Card key={company.id} className="p-6 border-zinc-200 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                                <div className="space-y-4">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center font-black text-lg shrink-0">
+                                        {(company.company_name || 'C').charAt(0).toUpperCase()}
+                                      </div>
+                                      <div>
+                                        <h4 className="font-black text-lg text-zinc-900 leading-tight">
+                                          {company.company_name}
+                                        </h4>
+                                        <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold tracking-wider uppercase">
+                                          {company.industry_sector || 'Information Technology'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200 shrink-0">
+                                      Pending Approval
+                                    </span>
+                                  </div>
+
+                                  <div className="space-y-2 text-xs text-zinc-600 bg-zinc-50 p-3.5 rounded-xl">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-semibold text-zinc-500">Recruiter / HR:</span>
+                                      <span className="font-bold text-zinc-900">{company.full_name || '—'}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-semibold text-zinc-500">Work Email:</span>
+                                      <a href={`mailto:${company.email}`} className="font-bold text-indigo-600 hover:underline">
+                                        {company.email || company.username}
+                                      </a>
+                                    </div>
+                                    {company.hq_location && (
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-semibold text-zinc-500">Location:</span>
+                                        <span className="font-medium text-zinc-700">{company.hq_location}</span>
+                                      </div>
+                                    )}
+                                    {company.website && (
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-semibold text-zinc-500">Website:</span>
+                                        <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`} target="_blank" rel="noreferrer" className="font-bold text-indigo-600 hover:underline truncate max-w-[200px]">
+                                          {company.website}
+                                        </a>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {company.description && (
+                                    <p className="text-xs text-zinc-600 bg-white border border-zinc-100 p-3 rounded-xl line-clamp-3">
+                                      {company.description}
+                                    </p>
+                                  )}
+
+                                  {company.registered_at && (
+                                    <p className="text-[11px] text-zinc-400">
+                                      Registered: {new Date(company.registered_at).toLocaleString()}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className="flex gap-3 pt-5 mt-4 border-t border-zinc-100">
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => setIndustryRejectModal(company)}
+                                    disabled={industryActionLoading === company.user_id}
+                                    className="flex-1 rounded-xl text-rose-600 border-rose-200 hover:bg-rose-50 font-bold text-xs"
+                                  >
+                                    Deny / Reject
+                                  </Button>
+                                  <Button
+                                    onClick={() => handleApproveIndustry(company.user_id, true)}
+                                    disabled={industryActionLoading === company.user_id}
+                                    className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm"
+                                  >
+                                    {industryActionLoading === company.user_id ? 'Approving...' : '✓ Approve Company'}
+                                  </Button>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Tab Content: All Partners Directory */}
+                    {industryActiveTab === 'ALL' && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <Input
+                            placeholder="🔍 Search company name, recruiter, email, sector..."
+                            value={industrySearchTerm}
+                            onChange={e => setIndustrySearchTerm(e.target.value)}
+                            className="max-w-md bg-white rounded-xl"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {allIndustryList
+                            .filter(c => {
+                              if (!industrySearchTerm.trim()) return true;
+                              const s = industrySearchTerm.toLowerCase();
+                              return (
+                                (c.company_name || '').toLowerCase().includes(s) ||
+                                (c.full_name || '').toLowerCase().includes(s) ||
+                                (c.email || '').toLowerCase().includes(s) ||
+                                (c.industry_sector || '').toLowerCase().includes(s) ||
+                                (c.hq_location || '').toLowerCase().includes(s)
+                              );
+                            })
+                            .map(company => (
+                              <Card key={company.id} className="p-5 bg-white rounded-2xl border-zinc-200 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+                                <div>
+                                  <div className="flex items-start justify-between gap-2 mb-3">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <div className="w-10 h-10 rounded-xl bg-zinc-100 font-bold text-zinc-700 flex items-center justify-center shrink-0">
+                                        {(company.company_name || 'C').charAt(0).toUpperCase()}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <h4 className="font-bold text-sm text-zinc-900 truncate">{company.company_name}</h4>
+                                        <p className="text-[11px] text-zinc-500 truncate">{company.industry_sector || 'General'}</p>
+                                      </div>
+                                    </div>
+                                    <span className={cn(
+                                      "px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0",
+                                      company.is_verified ? "bg-emerald-100 text-emerald-800" : (company.rejection_reason ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800")
+                                    )}>
+                                      {company.is_verified ? 'Verified' : (company.rejection_reason ? 'Rejected' : 'Pending')}
+                                    </span>
+                                  </div>
+
+                                  <div className="space-y-1 text-xs text-zinc-600 bg-zinc-50 p-3 rounded-xl mb-3">
+                                    <p className="truncate"><b>Contact:</b> {company.full_name || '—'}</p>
+                                    <p className="truncate"><b>Email:</b> <a href={`mailto:${company.email}`} className="text-indigo-600 hover:underline">{company.email}</a></p>
+                                    {company.hq_location && <p className="truncate"><b>HQ:</b> {company.hq_location}</p>}
+                                    {company.website && (
+                                      <p className="truncate">
+                                        <b>Web:</b> <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">{company.website}</a>
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="pt-2 flex gap-2">
+                                  {!company.is_verified ? (
+                                    <Button
+                                      onClick={() => handleApproveIndustry(company.user_id, true)}
+                                      disabled={industryActionLoading === company.user_id}
+                                      className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
+                                    >
+                                      {industryActionLoading === company.user_id ? 'Approving...' : 'Approve'}
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => setIndustryRejectModal(company)}
+                                      disabled={industryActionLoading === company.user_id}
+                                      className="w-full rounded-xl text-rose-600 border-rose-200 hover:bg-rose-50 text-xs font-bold"
+                                    >
+                                      Revoke / Reject
+                                    </Button>
+                                  )}
+                                </div>
+                              </Card>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </PageLayout>
+
+                  {/* Rejection Reason Modal */}
+                  {industryRejectModal && (
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-zinc-200"
+                      >
+                        <h3 className="text-lg font-bold text-zinc-900">Deny Industry Application</h3>
+                        <p className="text-xs text-zinc-500 mt-1">
+                          Denying registration for <b>{industryRejectModal.company_name}</b>. You can optionally provide a reason for the recruiter.
+                        </p>
+
+                        <div className="mt-4">
+                          <label className="text-xs font-bold text-zinc-700 block mb-1">Reason for Rejection (Optional)</label>
+                          <textarea
+                            className="w-full p-3 border border-zinc-200 rounded-xl text-xs resize-none"
+                            rows={3}
+                            placeholder="e.g. Incomplete corporate verification credentials or company domain mismatch."
+                            value={industryRejectReason}
+                            onChange={e => setIndustryRejectReason(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="flex gap-3 mt-5">
+                          <Button
+                            variant="outline"
+                            className="flex-1 rounded-xl"
+                            onClick={() => { setIndustryRejectModal(null); setIndustryRejectReason(''); }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            className="flex-1 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold"
+                            disabled={industryActionLoading === industryRejectModal.user_id}
+                            onClick={() => handleApproveIndustry(industryRejectModal.user_id, false, industryRejectReason)}
+                          >
+                            {industryActionLoading === industryRejectModal.user_id ? 'Rejecting...' : 'Confirm Rejection'}
+                          </Button>
+                        </div>
+                      </motion.div>
+                    </div>
+                  )}
                 </motion.div>
               )}
 
@@ -11605,7 +12245,7 @@ export default function App() {
                               return true;
                             })
                             .filter(u => {
-                              if (!isAdmin && !isHOD && !user?.is_year_coordinator) {
+                              if (!isAdmin && !isHOD) {
                                 const userClassId = (user?.class_id || myClass?.id)?.toString();
                                 if (userClassId && u.class_id?.toString() !== userClassId) return false;
                               }
@@ -11653,12 +12293,6 @@ export default function App() {
                                   <TD className="font-medium text-zinc-900 break-words">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       {u.full_name}
-                                      {u.is_year_coordinator && (
-                                        <Badge variant="primary" className="bg-indigo-600 text-white border-none shadow-sm px-3 py-1 rounded-full">
-                                          <CalendarRange size={12} />
-                                          Year {u.year_scope} Overall Coord
-                                        </Badge>
-                                      )}
                                       {!!u.is_coordinator && (
                                         <Badge variant="warning">Class Coord</Badge>
                                       )}
@@ -11690,7 +12324,7 @@ export default function App() {
                                           onClick={() => {
                                             const activeClassId = (user?.class_id || myClass?.id)?.toString();
                                             const isMyClassStudent = activeClassId && u.class_id?.toString() === activeClassId;
-                                            if (isAdmin || isHOD || isMyClassStudent || user?.is_year_coordinator) {
+                                            if (isAdmin || isHOD || isMyClassStudent) {
                                               setViewingStudentProfileId(u.id);
                                             } else {
                                               addToast('Class Advisors can only view profiles of students in their assigned class', 'error');
@@ -11709,16 +12343,6 @@ export default function App() {
                                           title={u.is_coordinator ? "Remove Coordinator" : "Make Coordinator"}
                                         >
                                           <ShieldCheck size={18} />
-                                        </Button>
-                                      )}
-                                      {isHOD && u.role === 'CLASS_ADVISOR' && (
-                                        <Button
-                                          variant="ghost"
-                                          className={cn("p-2", u.is_year_coordinator ? "text-indigo-600" : "text-zinc-400")}
-                                          onClick={() => toggleYearCoordinator(u.id, u.is_year_coordinator || false, u.year_scope)}
-                                          title={u.is_year_coordinator ? "Remove Year Coordinator" : "Assign Year Coordinator"}
-                                        >
-                                          <CalendarRange size={18} />
                                         </Button>
                                       )}
                                       <Button
@@ -11883,20 +12507,12 @@ export default function App() {
                     )}
 
                     {(isAdmin || isHOD || isAdvisor || isCoordinator) && (
-                      <ContentCard className={cn(
-                        user?.is_year_coordinator ? "border-indigo-100 bg-indigo-50/10" : ""
-                      )}>
-                        <h3 className={cn(
-                          "text-xl font-bold mb-6 flex items-center gap-3",
-                          user?.is_year_coordinator ? "text-indigo-900" : "text-zinc-900"
-                        )}>
-                          <div className={cn(
-                            "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
-                            user?.is_year_coordinator ? "bg-indigo-600 text-white" : "bg-black text-white"
-                          )}>
+                      <ContentCard>
+                        <h3 className="text-xl font-bold mb-6 flex items-center gap-3 text-zinc-900">
+                          <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-black text-white">
                             <Plus size={20} />
                           </div>
-                          {user?.is_year_coordinator ? `Post Year ${user.year_scope} Task` : 'Post New Task'}
+                          Post New Task
                         </h3>
                         <form onSubmit={handleTaskPreview} className="space-y-4 w-full">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0">
@@ -12062,37 +12678,16 @@ export default function App() {
                               </div>
                             )}
 
-                            {user?.is_year_coordinator && (
-                              <div className="w-full p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
-                                <p className="text-sm font-bold text-indigo-700 mb-1 flex items-center gap-2">
-                                  <CalendarRange size={16} /> Year {user.year_scope} Coordinator Scope
-                                </p>
-                                <p className="text-xs text-indigo-600 font-medium">
-                                  This task will be automatically assigned to all classes in Year {user.year_scope}.
-                                </p>
-                              </div>
-                            )}
-
-                            {(isAdmin || isHOD || user?.is_year_coordinator) && (
+                            {(isAdmin || isHOD) && (
                               <div className="w-full bg-white border border-zinc-200 rounded-lg p-3 md:col-span-2 min-w-0">
                                 <div className="flex items-center justify-between mb-3">
                                   <label className="text-xs font-bold text-zinc-600 uppercase tracking-widest block">
-                                    {isAdmin ? 'Select Specific Classes (Optional)' :
-                                      user?.is_year_coordinator ? `Classes in Year ${user.year_scope}` :
-                                        'Assign to Classes'}
+                                    {isAdmin ? 'Select Specific Classes (Optional)' : 'Assign to Classes'}
                                   </label>
                                   {(() => {
                                     const availClasses = classes.filter(c => {
                                       if (isAdmin) {
                                         return !newTask.department_id || String(c.department_id) === String(newTask.department_id);
-                                      }
-                                      if (user?.is_year_coordinator) {
-                                        const isYearMatch = !user?.year_scope && !user?.year ? true : Number(c.year) === Number(user.year_scope || user.year);
-                                        const isDeptMatch = !user?.department_id || String(c.department_id) === String(user.department_id);
-                                        return isYearMatch && isDeptMatch;
-                                      }
-                                      if (isHOD) {
-                                        return !user?.department_id || String(c.department_id) === String(user?.department_id);
                                       }
                                       return !user?.department_id || String(c.department_id) === String(user?.department_id);
                                     });
@@ -12123,14 +12718,6 @@ export default function App() {
                                       if (isAdmin) {
                                         return !newTask.department_id || String(c.department_id) === String(newTask.department_id);
                                       }
-                                      if (user?.is_year_coordinator) {
-                                        const isYearMatch = !user?.year_scope && !user?.year ? true : Number(c.year) === Number(user.year_scope || user.year);
-                                        const isDeptMatch = !user?.department_id || String(c.department_id) === String(user.department_id);
-                                        return isYearMatch && isDeptMatch;
-                                      }
-                                      if (isHOD) {
-                                        return !user?.department_id || String(c.department_id) === String(user?.department_id);
-                                      }
                                       return !user?.department_id || String(c.department_id) === String(user?.department_id);
                                     })
                                     .sort((a, b) => (a.year || 0) - (b.year || 0) || (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }))
@@ -12155,8 +12742,7 @@ export default function App() {
                                 <p className="text-xs text-zinc-500 mt-3 bg-zinc-50 p-2 rounded min-h-[2.5rem] flex items-center font-medium">
                                   {(newTask.class_ids || []).length === 0 ? (
                                     <>
-                                      <Info size={14} className="inline mr-1 text-zinc-400 shrink-0" /> {user?.is_year_coordinator ? `No specific classes selected. This task will be automatically assigned to ALL Year ${user.year_scope} classes.` :
-                                        `No specific classes selected. This task will act as a ${newTask.department_id ? 'Class-Wide' : 'Global'} broadcast to everyone applicable.`}
+                                      <Info size={14} className="inline mr-1 text-zinc-400 shrink-0" /> No specific classes selected. This task will act as a {newTask.department_id ? 'Class-Wide' : 'Global'} broadcast to everyone applicable.
                                     </>
                                   ) : (
                                     <>
@@ -12953,7 +13539,7 @@ export default function App() {
                                 if (verificationTaskFilter && s.task_id?.toString() !== verificationTaskFilter) return false;
                                 const std = users.find(u => u.id === s.user_id);
                                 const subClassId = s.class_id?.toString() || std?.class_id?.toString();
-                                if (!isAdmin && !isHOD && !user?.is_year_coordinator) {
+                                if (!isAdmin && !isHOD) {
                                   const userClassId = user?.class_id?.toString();
                                   return userClassId ? subClassId === userClassId : true;
                                 }
@@ -13011,7 +13597,7 @@ export default function App() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-start">
-                      <div className={cn((isHOD || isAdmin || user?.is_year_coordinator) ? "md:col-span-2" : "md:col-span-3", "relative self-start")}>
+                      <div className={cn((isHOD || isAdmin) ? "md:col-span-2" : "md:col-span-3", "relative self-start")}>
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
                         <Input
                           placeholder="Search submissions by student name or register number..."
@@ -13021,7 +13607,7 @@ export default function App() {
                         />
                       </div>
 
-                      {(isHOD || isAdmin || user?.is_year_coordinator) && (
+                      {(isHOD || isAdmin) && (
                         <div className="flex flex-wrap items-center gap-2">
                           {isAdmin && (
                             <Select
@@ -13065,7 +13651,6 @@ export default function App() {
                               if (verificationYearFilter && String(c.year) !== verificationYearFilter) return false;
                               if (isAdmin) return true;
                               if (isHOD) return c.department_id?.toString() === user?.department_id?.toString();
-                              if (user?.is_year_coordinator) return c.department_id?.toString() === user?.department_id?.toString() && Number(c.year) === Number(user?.year_scope || user?.year);
                               if (isAdvisor || (user?.role === 'STUDENT' && user?.is_coordinator)) return String(c.id) === String(user?.class_id);
                               return c.department_id?.toString() === user?.department_id?.toString();
                             }).sort((a, b) => (a.year || 0) - (b.year || 0) || (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })).map(c => (
@@ -13119,7 +13704,7 @@ export default function App() {
                         }
 
                         // 3. Filter by Class
-                        if (!isAdmin && !isHOD && !user?.is_year_coordinator) {
+                        if (!isAdmin && !isHOD) {
                           const userClassId = user?.class_id?.toString();
                           const matchesTeamClass = sub.class_id?.toString() === userClassId;
                           const leaderUser = users.find(u => u.id === sub.leader_id || u.register_number === sub.leader_regno);
@@ -13144,11 +13729,6 @@ export default function App() {
                               sub.members?.some(m => users.find(u => u.id === m.id || u.register_number === m.register_number)?.class_id?.toString() === verificationClassFilter);
                             if (!matchesClass) return false;
                           }
-                        } else if (user?.is_year_coordinator) {
-                          const leaderUser = users.find(u => u.id === sub.leader_id || u.register_number === sub.leader_regno);
-                          const subClassId = sub.class_id?.toString() || leaderUser?.class_id?.toString();
-                          const subClass = classes.find(c => c.id.toString() === subClassId);
-                          if (subClass && Number(subClass.year) !== Number(user?.year_scope)) return false;
                         }
 
                         return true;
@@ -13306,7 +13886,7 @@ export default function App() {
                               const std = users.find(u => u.id === s.user_id);
                               const subClassId = s.class_id?.toString() || std?.class_id?.toString();
 
-                              if (!isAdmin && !isHOD && !user?.is_year_coordinator) {
+                              if (!isAdmin && !isHOD) {
                                 const userClassId = user?.class_id?.toString();
                                 return userClassId ? subClassId === userClassId : true;
                               }
@@ -13322,10 +13902,6 @@ export default function App() {
                               }
                               if (verificationClassFilter) {
                                 return subClassId === verificationClassFilter;
-                              }
-                              if (user?.is_year_coordinator) {
-                                const subClass = classes.find(c => c.id.toString() === subClassId);
-                                return subClass ? Number(subClass.year) === Number(user?.year_scope) : true;
                               }
                               return true;
                             })
@@ -13904,7 +14480,7 @@ export default function App() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="relative w-full h-full min-h-0"
+                    className="relative w-full h-full min-h-0 overflow-y-auto custom-scrollbar"
                   >
                     <SkillAssessmentView
                       user={user}
@@ -13922,7 +14498,7 @@ export default function App() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="relative w-full h-full min-h-0"
+                    className="relative w-full h-full min-h-0 overflow-y-auto custom-scrollbar"
                   >
                     <PlacementReadinessView
                       user={user}
@@ -13941,12 +14517,97 @@ export default function App() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="relative w-full h-full min-h-0"
+                    className="relative w-full h-full min-h-0 overflow-y-auto custom-scrollbar"
                   >
                     <LiveTeachingHubView
                       user={user}
                       token={token}
                       addToast={addToast}
+                    />
+                  </motion.div>
+                )
+              }
+
+              {
+                view === 'opportunities' && (
+                  <motion.div
+                    key="opportunities"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="relative w-full h-full min-h-0 overflow-y-auto custom-scrollbar"
+                  >
+                    <StudentOpportunitiesView
+                      user={user}
+                      token={token}
+                    />
+                  </motion.div>
+                )
+              }
+
+              {
+                view === 'student-coding-assessments' && (
+                  <motion.div
+                    key="student-coding-assessments"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="relative w-full h-full min-h-0 overflow-y-auto custom-scrollbar"
+                  >
+                    <StudentCodingAssessmentView
+                      user={user}
+                      token={token}
+                    />
+                  </motion.div>
+                )
+              }
+
+              {
+                view === 'skill-gap-analyzer' && (
+                  <motion.div
+                    key="skill-gap-analyzer"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="relative w-full h-full min-h-0 overflow-y-auto custom-scrollbar"
+                  >
+                    <SkillGapAnalyzerView
+                      user={user}
+                      token={token}
+                    />
+                  </motion.div>
+                )
+              }
+
+              {
+                view === 'faculty-industry-hub' && (
+                  <motion.div
+                    key="faculty-industry-hub"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="relative w-full h-full min-h-0 overflow-y-auto custom-scrollbar"
+                  >
+                    <FacultyIndustryHubView
+                      user={user}
+                      token={token}
+                    />
+                  </motion.div>
+                )
+              }
+
+              {
+                (view === 'industry-portal' || (isIndustry && view === 'dashboard')) && (
+                  <motion.div
+                    key="industry-portal"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="relative w-full h-full min-h-0 overflow-y-auto custom-scrollbar"
+                  >
+                    <IndustryPortalView
+                      user={user}
+                      token={token}
                     />
                   </motion.div>
                 )
@@ -13972,7 +14633,7 @@ export default function App() {
 
                   <h3 className="text-2xl font-black text-zinc-900 tracking-tight pr-8">Report Studio</h3>
                   <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mt-1.5 mb-6">
-                    {isAdmin ? 'System-Wide Report' : isHOD ? 'Department Report' : user?.is_year_coordinator ? `Year ${user?.year_scope} Report` : `Class Report — ${user?.class_name || 'My Class'}`}
+                    {isAdmin ? 'System-Wide Report' : isHOD ? 'Department Report' : `Class Report — ${user?.class_name || 'My Class'}`}
                   </p>
 
                   <div className="space-y-4">
@@ -14052,51 +14713,8 @@ export default function App() {
                       );
                     })()}
 
-                    {/* Year Coordinator: multi-class checkbox picker */}
-                    {user?.is_year_coordinator && !isAdmin && !isHOD && (() => {
-                      const availableClasses = classes.filter(c => Number(c.year) === Number(user?.year_scope) && c.department_id?.toString() === user?.department_id?.toString());
-                      return (
-                        <div>
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2 flex items-center gap-1.5">
-                            <Users size={11} />
-                            Select Classes <span className="normal-case text-zinc-300 font-medium">(pick multiple)</span>
-                          </label>
-                          <div className="max-h-40 overflow-y-auto border border-zinc-100 rounded-2xl bg-zinc-50 p-3 flex flex-col gap-2">
-                            {availableClasses.slice().sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })).map((c: any) => {
-                              const cid = c.id.toString();
-                              const checked = reportFilters.classIds.includes(cid);
-                              return (
-                                <label key={cid} className="flex items-center gap-3 cursor-pointer group">
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={() => setReportFilters(prev => ({
-                                      ...prev,
-                                      classIds: checked
-                                        ? prev.classIds.filter(id => id !== cid)
-                                        : [...prev.classIds, cid]
-                                    }))}
-                                    className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
-                                  />
-                                  <span className={`text-sm font-bold transition-colors ${checked ? 'text-blue-700' : 'text-zinc-700 group-hover:text-zinc-900'}`}>{c.name}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                          {reportFilters.classIds.length > 0 && (
-                            <p className="text-[10px] font-bold text-blue-600 mt-1.5">
-                              {reportFilters.classIds.length} class{reportFilters.classIds.length > 1 ? 'es' : ''} selected — report will combine all selected classes
-                            </p>
-                          )}
-                          {reportFilters.classIds.length === 0 && (
-                            <p className="text-[10px] font-medium text-zinc-400 mt-1.5">No class selected — will include all year classes</p>
-                          )}
-                        </div>
-                      );
-                    })()}
-
                     {/* Class Advisor & Student Coordinator: assigned class indicator */}
-                    {(isAdvisor || isCoordinator) && !isAdmin && !isHOD && !user?.is_year_coordinator && (
+                    {(isAdvisor || isCoordinator) && !isAdmin && !isHOD && (
                       <div>
                         <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2 block">Assigned Class</label>
                         <div className="p-3 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-800">
@@ -15113,23 +15731,23 @@ function SidebarItem({ icon, label, active, onClick, badge }: { icon: React.Reac
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all font-semibold text-sm text-left group",
+        "flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl transition-all font-semibold text-xs leading-none text-left group",
         active
-          ? "bg-zinc-900 text-white shadow-lg shadow-zinc-900/20"
+          ? "bg-zinc-900 text-white shadow-md shadow-zinc-900/20"
           : "text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900"
       )}
     >
       <span className="shrink-0 transition-transform group-hover:scale-110 flex items-center justify-center">{icon}</span>
-      <span className="truncate whitespace-nowrap">{label}</span>
+      <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis min-w-0">{label}</span>
       {badge && (
         <span className={cn(
-          "ml-auto text-[9px] font-extrabold px-2 py-0.5 rounded-full shrink-0 tracking-wide uppercase",
+          "ml-1.5 text-[8px] font-black px-1.5 py-0.5 rounded-md shrink-0 uppercase tracking-tighter",
           active ? "bg-amber-400 text-black shadow-xs" : "bg-amber-100 text-amber-900 border border-amber-300"
         )}>
           {badge}
         </span>
       )}
-      {active && !badge && <ChevronRight size={16} className="ml-auto opacity-50 shrink-0" />}
+      {active && !badge && <ChevronRight size={14} className="ml-1 opacity-50 shrink-0" />}
     </button>
   );
 }

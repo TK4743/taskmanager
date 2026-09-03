@@ -118,8 +118,8 @@ export function loadDirectoryFromDisk() {
   }
 }
 
-// Immediately initialize in-memory directory cache from disk on startup
-loadDirectoryFromDisk();
+// In-memory directory disk load disabled in favor of pure Supabase data architecture
+// loadDirectoryFromDisk();
 
 /**
  * Fetches all constant student details from Supabase/PostgreSQL,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import ExcelJS from 'exceljs';
 import {
   Sparkles,
@@ -38,7 +39,8 @@ import {
   HelpCircle,
   Lightbulb,
   X,
-  Mail
+  Mail,
+  GripVertical
 } from 'lucide-react';
 import { API_URL } from './config';
 
@@ -1369,11 +1371,25 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
         )}
 
         {/* ═════════════════════════════════════════════════════════════════════
-            LIVE WEBCAM PICTURE-IN-PICTURE (Shown during active test)
+            LIVE WEBCAM PICTURE-IN-PICTURE (Draggable Anywhere on Screen)
             ═════════════════════════════════════════════════════════════════════ */}
         {isLockdownActive && isCameraActive && (
-          <div className="fixed bottom-5 right-5 z-[999999] w-40 sm:w-48 bg-white/95 backdrop-blur-md p-2 rounded-2xl shadow-2xl border-2 border-emerald-500 space-y-1.5 flex flex-col items-center">
-            <div className="relative w-full h-28 sm:h-32 rounded-xl overflow-hidden bg-black">
+          <motion.div
+            drag
+            dragMomentum={false}
+            whileDrag={{ scale: 1.05 }}
+            className="fixed bottom-5 right-5 z-[999999] w-44 sm:w-52 bg-white/95 backdrop-blur-md p-2.5 rounded-2xl shadow-2xl border-2 border-emerald-500 space-y-1.5 flex flex-col items-center cursor-move select-none"
+            title="Click & drag to position camera anywhere on screen"
+          >
+            {/* Drag Header Bar */}
+            <div className="flex items-center justify-between w-full px-1 text-[10px] font-bold text-zinc-600 border-b border-zinc-100 pb-1 cursor-grab active:cursor-grabbing">
+              <span className="flex items-center gap-1 text-zinc-800">
+                <GripVertical size={13} className="text-zinc-400" /> Move Camera
+              </span>
+              <span className="text-[9px] text-zinc-400 font-semibold">(Drag anywhere)</span>
+            </div>
+
+            <div className="relative w-full h-28 sm:h-32 rounded-xl overflow-hidden bg-black shadow-inner">
               <video
                 ref={pipVideoRef}
                 autoPlay
@@ -1381,16 +1397,21 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                 muted
                 className="w-full h-full object-cover transform -scale-x-100"
               />
-              <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-xs text-[9px] font-bold text-white flex items-center gap-1.5">
+              <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-xs text-[9px] font-bold text-white flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span>PROCTORING</span>
               </div>
             </div>
+
             <div className="flex items-center justify-between w-full px-1 text-[10px] font-bold text-zinc-600">
-              <span>Webcam Active</span>
-              <span className="text-emerald-600 font-extrabold text-[9px]">● LIVE</span>
+              <span className="flex items-center gap-1 text-emerald-700">
+                <ShieldCheck size={12} /> Camera Active
+              </span>
+              <span className="text-emerald-700 font-extrabold text-[9px] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                ● LIVE
+              </span>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* ═════════════════════════════════════════════════════════════════════

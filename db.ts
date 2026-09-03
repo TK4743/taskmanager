@@ -123,8 +123,6 @@ export async function initDB() {
         email VARCHAR(255),
         register_number VARCHAR(255),
         is_coordinator BOOLEAN DEFAULT FALSE,
-        is_year_coordinator BOOLEAN DEFAULT FALSE,
-        year_scope INT DEFAULT NULL,
         gender VARCHAR(20),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -222,8 +220,54 @@ export async function initDB() {
         message TEXT NOT NULL,
         type VARCHAR(100) NOT NULL,
         is_read BOOLEAN DEFAULT FALSE,
+        event_type VARCHAR(100),
+        channel VARCHAR(50) DEFAULT 'IN_APP',
+        title TEXT,
+        status VARCHAR(50) DEFAULT 'SENT',
+        reference_type VARCHAR(100),
+        reference_id VARCHAR(255),
+        error_message TEXT,
+        sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS event_type VARCHAR(100);
+      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS channel VARCHAR(50) DEFAULT 'IN_APP';
+      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS title TEXT;
+      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'SENT';
+      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS reference_type VARCHAR(100);
+      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS reference_id VARCHAR(255);
+      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS error_message TEXT;
+      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS notification_preferences (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE NOT NULL,
+        email_enabled BOOLEAN DEFAULT TRUE,
+        telegram_enabled BOOLEAN DEFAULT TRUE,
+        in_app_enabled BOOLEAN DEFAULT TRUE,
+        application_notifications BOOLEAN DEFAULT TRUE,
+        interview_notifications BOOLEAN DEFAULT TRUE,
+        selection_notifications BOOLEAN DEFAULT TRUE,
+        system_notifications BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS report_download_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+        company_id UUID REFERENCES company_profiles(id) ON DELETE SET NULL,
+        report_type VARCHAR(100) NOT NULL,
+        format VARCHAR(20) NOT NULL,
+        filters JSONB,
+        record_count INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
@@ -995,6 +1039,337 @@ export async function initDB() {
       }
       console.log('[Assessment] Seeded 10 standard aptitude questions successfully.');
     }
+
+    // ─── 🏭 SIH26044: Academia–Industry Collaboration Tables ─────────────────
+
+    // Table 1: Company Profiles (linked to INDUSTRY role users)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS company_profiles (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        company_name VARCHAR(255) NOT NULL,
+        industry_sector VARCHAR(255),
+        company_size VARCHAR(100),
+        website VARCHAR(500),
+        description TEXT,
+        logo_url VARCHAR(1000),
+        logo_cloudinary_public_id VARCHAR(255),
+        hq_location VARCHAR(255),
+        is_verified BOOLEAN DEFAULT FALSE,
+        verified_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        verified_at TIMESTAMP,
+        rejection_reason TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Table 2: Industry Postings (Jobs / Internships / Training / Workshops / FDP / Research)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS industry_postings (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID REFERENCES company_profiles(id) ON DELETE CASCADE,
+        posting_type VARCHAR(50) NOT NULL DEFAULT 'INTERNSHIP',
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        location VARCHAR(255),
+        mode VARCHAR(50) DEFAULT 'Hybrid',
+        stipend_or_salary VARCHAR(100),
+        duration VARCHAR(100),
+        required_skills JSONB DEFAULT '[]',
+        min_cgpa NUMERIC(4,2) DEFAULT 0,
+        min_year INT DEFAULT 1,
+        max_year INT DEFAULT 4,
+        eligibility_notes TEXT,
+        application_deadline TIMESTAMP,
+        start_date VARCHAR(100),
+        total_seats INT,
+        status VARCHAR(50) DEFAULT 'OPEN',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Table 3: Student Applications to Industry Postings (full lifecycle)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS posting_applications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        posting_id UUID REFERENCES industry_postings(id) ON DELETE CASCADE,
+        student_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        match_score NUMERIC(5,2) DEFAULT 0,
+        matched_skills JSONB DEFAULT '[]',
+        gap_skills JSONB DEFAULT '[]',
+        cover_note TEXT,
+        status VARCHAR(50) DEFAULT 'APPLIED',
+        shortlisted_at TIMESTAMP,
+        interview_date TIMESTAMP,
+        interview_notes TEXT,
+        decision_at TIMESTAMP,
+        decision_note TEXT,
+        mentor_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        progress_notes TEXT,
+        completion_date TIMESTAMP,
+        certificate_url VARCHAR(1000),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (posting_id, student_id)
+      );
+    `);
+
+    // Table 4: Faculty–Industry Opportunities (FDP, Consultancy, Research, Guest Lectures, etc.)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS faculty_industry_opportunities (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID REFERENCES company_profiles(id) ON DELETE CASCADE,
+        opportunity_type VARCHAR(100) NOT NULL DEFAULT 'FDP',
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        compensation VARCHAR(255),
+        duration VARCHAR(100),
+        location VARCHAR(255),
+        mode VARCHAR(50) DEFAULT 'Hybrid',
+        application_deadline TIMESTAMP,
+        status VARCHAR(50) DEFAULT 'OPEN',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Table 5: Faculty Applications to Industry Opportunities
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS faculty_opportunity_applications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        opportunity_id UUID REFERENCES faculty_industry_opportunities(id) ON DELETE CASCADE,
+        faculty_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        proposal TEXT,
+        status VARCHAR(50) DEFAULT 'APPLIED',
+        decision_note TEXT,
+        decision_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (opportunity_id, faculty_id)
+      );
+    `);
+
+    // Table 6: Industry Collaboration Projects (powers Live Teaching Hub rebranding)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS industry_projects (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID REFERENCES company_profiles(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        required_skills JSONB DEFAULT '[]',
+        max_students INT DEFAULT 5,
+        status VARCHAR(50) DEFAULT 'OPEN',
+        start_date TIMESTAMP,
+        end_date TIMESTAMP,
+        evaluation_notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Table 6b: Industry Project Members
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS industry_project_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        project_id UUID REFERENCES industry_projects(id) ON DELETE CASCADE,
+        student_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        status VARCHAR(50) DEFAULT 'ACTIVE',
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (project_id, student_id)
+      );
+    `);
+
+    // Table 7: Skill Gap Recommendations Cache (pre-computed per student+posting pair)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS skill_gap_recommendations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        student_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        posting_id UUID REFERENCES industry_postings(id) ON DELETE CASCADE,
+        match_score NUMERIC(5,2),
+        matched_skills JSONB DEFAULT '[]',
+        gap_skills JSONB DEFAULT '[]',
+        recommendations JSONB DEFAULT '[]',
+        computed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (student_id, posting_id)
+      );
+    `);
+
+    // Indexes for SIH26044 industry tables
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_company_profiles_user ON company_profiles(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_company_profiles_verified ON company_profiles(is_verified);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_industry_postings_company ON industry_postings(company_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_industry_postings_type_status ON industry_postings(posting_type, status);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_industry_postings_deadline ON industry_postings(application_deadline);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_posting_applications_posting ON posting_applications(posting_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_posting_applications_student ON posting_applications(student_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_posting_applications_status ON posting_applications(status);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_posting_applications_score ON posting_applications(posting_id, match_score DESC);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_faculty_opptys_company ON faculty_industry_opportunities(company_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_faculty_opptys_type_status ON faculty_industry_opportunities(opportunity_type, status);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_faculty_oppty_apps_opp ON faculty_opportunity_applications(opportunity_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_faculty_oppty_apps_faculty ON faculty_opportunity_applications(faculty_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_industry_projects_company ON industry_projects(company_id, status);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_industry_project_members ON industry_project_members(project_id, student_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_skill_gap_recs ON skill_gap_recommendations(student_id, posting_id);`);
+
+    // ─── 💻 Short Industry Coding Assessment Tables ─────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS coding_assessments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID REFERENCES company_profiles(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        duration_minutes INT DEFAULT 60,
+        question_pool_size INT DEFAULT 10,
+        questions_per_student INT DEFAULT 2,
+        passing_score NUMERIC(5,2) DEFAULT 60.00,
+        start_at TIMESTAMP,
+        end_at TIMESTAMP,
+        status VARCHAR(50) DEFAULT 'DRAFT',
+        allowed_languages JSONB DEFAULT '["c","cpp","java","python"]',
+        proctoring_config JSONB DEFAULT '{"camera_required":true,"fullscreen_required":true,"tab_monitoring":true}',
+        target_departments JSONB DEFAULT '[]',
+        target_classes JSONB DEFAULT '[]',
+        created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS coding_questions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        assessment_id UUID REFERENCES coding_assessments(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        problem_statement TEXT NOT NULL,
+        input_format TEXT,
+        output_format TEXT,
+        constraints TEXT,
+        difficulty VARCHAR(50) DEFAULT 'MEDIUM',
+        marks INT DEFAULT 50,
+        skills JSONB DEFAULT '[]',
+        allowed_languages JSONB DEFAULT '["c","cpp","java","python"]',
+        display_order INT DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS coding_test_cases (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        question_id UUID REFERENCES coding_questions(id) ON DELETE CASCADE,
+        input_data TEXT NOT NULL,
+        expected_output TEXT NOT NULL,
+        is_hidden BOOLEAN DEFAULT FALSE,
+        weight NUMERIC(5,2) DEFAULT 1.0,
+        explanation TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS coding_assignments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        assessment_id UUID REFERENCES coding_assessments(id) ON DELETE CASCADE,
+        student_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        assigned_question_ids JSONB NOT NULL DEFAULT '[]',
+        started_at TIMESTAMP,
+        submitted_at TIMESTAMP,
+        status VARCHAR(50) DEFAULT 'NOT_STARTED',
+        final_score NUMERIC(5,2) DEFAULT 0.00,
+        is_passed BOOLEAN DEFAULT FALSE,
+        proctoring_summary JSONB DEFAULT '{"camera_interruptions":0,"tab_switches":0,"fullscreen_exits":0,"face_alerts":0}',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (assessment_id, student_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS coding_submissions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        assignment_id UUID REFERENCES coding_assignments(id) ON DELETE CASCADE,
+        question_id UUID REFERENCES coding_questions(id) ON DELETE CASCADE,
+        student_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        language VARCHAR(50) NOT NULL,
+        source_code TEXT NOT NULL,
+        status VARCHAR(50) DEFAULT 'ACCEPTED',
+        score NUMERIC(5,2) DEFAULT 0.00,
+        max_marks INT DEFAULT 50,
+        public_tests_passed INT DEFAULT 0,
+        public_tests_total INT DEFAULT 0,
+        hidden_tests_passed INT DEFAULT 0,
+        hidden_tests_total INT DEFAULT 0,
+        execution_time_ms INT DEFAULT 0,
+        memory_used_kb INT DEFAULT 0,
+        compiler_output TEXT,
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS coding_proctoring_events (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        assignment_id UUID REFERENCES coding_assignments(id) ON DELETE CASCADE,
+        student_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        event_type VARCHAR(100) NOT NULL,
+        severity VARCHAR(50) DEFAULT 'LOW',
+        metadata JSONB DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS coding_assignment_questions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        assignment_id UUID REFERENCES coding_assignments(id) ON DELETE CASCADE,
+        question_id UUID REFERENCES coding_questions(id) ON DELETE CASCADE,
+        question_order INT DEFAULT 1,
+        score NUMERIC(5,2) DEFAULT 0.00,
+        status VARCHAR(50) DEFAULT 'NOT_STARTED',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (assignment_id, question_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS coding_code_drafts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        assignment_id UUID REFERENCES coding_assignments(id) ON DELETE CASCADE,
+        question_id UUID REFERENCES coding_questions(id) ON DELETE CASCADE,
+        student_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        language VARCHAR(50) NOT NULL,
+        source_code TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (assignment_id, question_id)
+      );
+    `);
+
+    // Add deadline_at column to coding_assignments if not exists
+    await client.query(`ALTER TABLE coding_assignments ADD COLUMN IF NOT EXISTS deadline_at TIMESTAMP;`);
+
+    // Purge legacy year coordinator columns from users table
+    await client.query(`ALTER TABLE users DROP COLUMN IF EXISTS is_year_coordinator;`);
+    await client.query(`ALTER TABLE users DROP COLUMN IF EXISTS year_scope;`);
+
+    // Ensure student_skills has proficiency, verified, updated_at, and unique constraint
+    await client.query(`ALTER TABLE student_skills ADD COLUMN IF NOT EXISTS proficiency INT DEFAULT 70;`);
+    await client.query(`ALTER TABLE student_skills ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT FALSE;`);
+    await client.query(`ALTER TABLE student_skills ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`);
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'student_skills_user_skill_key'
+        ) THEN
+          ALTER TABLE student_skills ADD CONSTRAINT student_skills_user_skill_key UNIQUE (user_id, skill_name);
+        END IF;
+      EXCEPTION WHEN OTHERS THEN
+        NULL;
+      END $$;
+    `);
+
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_coding_assessments_company ON coding_assessments(company_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_coding_assessments_status ON coding_assessments(status);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_coding_questions_assessment ON coding_questions(assessment_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_coding_test_cases_question ON coding_test_cases(question_id, is_hidden);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_coding_assignments_student ON coding_assignments(student_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_coding_assignments_assessment ON coding_assignments(assessment_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_coding_assignment_questions_assign ON coding_assignment_questions(assignment_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_coding_code_drafts_assign_q ON coding_code_drafts(assignment_id, question_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_coding_submissions_assignment ON coding_submissions(assignment_id, question_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_coding_proctoring_assignment ON coding_proctoring_events(assignment_id);`);
+
+    console.log('[SIH26044] Industry Short Coding Assessment tables initialized successfully.');
 
     // ─── 🛡️ Supabase Security & Row Level Security (RLS) Auto-Enforcement ───
     try {

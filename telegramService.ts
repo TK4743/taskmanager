@@ -3,7 +3,6 @@ dotenv.config();
 
 import { pool } from './db.js';
 import ExcelJS from 'exceljs';
-import { constantStudentByRegNoMap } from './studentDirectoryService.js';
 import { sendTaskStatusEmail } from './emailService.js';
 
 let cachedBotUsername = process.env.TELEGRAM_BOT_USERNAME || 'IT_TaskManager_Alerts_bot';
@@ -46,10 +45,13 @@ export function getWatermarkHtml(): string {
 }
 
 export function getISTDateStr(): string {
-  const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const istDate = new Date(now.getTime() + istOffset);
-  return istDate.toISOString().split('T')[0];
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  return formatter.format(new Date());
 }
 
 export function getWeekRange(dateStr: string) {
@@ -1115,10 +1117,8 @@ export async function getProfileCard(user: any): Promise<{ html: string; keyboar
     const p = profileRes.rows[0] || user;
     const s = statsRes.rows[0] || {};
 
-    const regKey = p.register_number ? p.register_number.toLowerCase().trim() : '';
-    const dir = regKey ? constantStudentByRegNoMap.get(regKey) : null;
-    const effectiveLc = p.leetcode_url || dir?.leetcode || 'Not set';
-    const effectiveGh = p.github_url || dir?.github || 'Not set';
+    const effectiveLc = p.leetcode_url || p.leetcode_username || 'Not set';
+    const effectiveGh = p.github_url || p.github_username || 'Not set';
 
     let html = `👤 <b>STUDENT COMPREHENSIVE PROFILE</b>  🎓\n──────────────────────────────\n`;
     html += `<blockquote>📌 <b>Full Name:</b> <b>${escapeHtml(p.full_name)}</b>\n`;
