@@ -432,39 +432,54 @@ async function startServer() {
   // Initialize Web Push VAPID Notification Service in non-blocking fashion
   initPushNotifications().catch(err => console.error('[WebPush] Startup init warning:', err));
 
-  if (!isVercel) {
-    // Trigger initial 30-day screenshot cleanup and schedule daily background execution (every 24 hours)
-    cleanupOnlyTaskScreenshots().catch(err => console.error('[ImageCleanup] Startup cleanup warning:', err));
-    setInterval(() => {
-      cleanupOnlyTaskScreenshots().catch(err => console.error('[ImageCleanup] Scheduled cleanup warning:', err));
-    }, 24 * 60 * 60 * 1000);
+  // Trigger initial 30-day screenshot cleanup and schedule daily background execution (every 24 hours)
+  cleanupOnlyTaskScreenshots().catch(err => console.error('[ImageCleanup] Startup cleanup warning:', err));
+  setInterval(() => {
+    cleanupOnlyTaskScreenshots().catch(err => console.error('[ImageCleanup] Scheduled cleanup warning:', err));
+  }, 24 * 60 * 60 * 1000);
 
-    // Initialize Telegram Bot update poller for automated student 1-click account linking
-    try {
-      startTelegramPoller();
-    } catch (tgErr) {
-      console.error('[Telegram] Failed to start poller:', tgErr);
-    }
-
-    // Schedule automated daily Telegram notifications:
-    // 1. 8:00 AM IST -> Morning Group Summary & 24h Deadline Alerts
-    // 2. 8:00 PM IST -> 1-to-1 Private Reminders to students with pending deadlines
-    // 3. 9:00 PM IST -> Evening Group Summary to the Department Telegram Group
-    // 4. 11:55 PM IST -> Daily LeetCode & GitHub Progress Sync & CSV/JSON GitHub Auto-Push
-    if (!isVercel) {
-      setInterval(() => {
-        checkAndTriggerScheduledAutomations().catch(err => console.error('[Scheduler] Tick error:', err));
-      }, 60 * 1000);
-    }
-  } else {
-    // On Vercel serverless runtime: Auto-ensure Telegram Webhook is active
-    setTelegramWebhook().catch(err => console.error('[Telegram Webhook Init Warning]:', err));
+  // Initialize Telegram Bot update poller for automated interactive commands & 1-click student account linking
+  try {
+    startTelegramPoller();
+  } catch (tgErr) {
+    console.error('[Telegram] Failed to start poller:', tgErr);
   }
+
+  // ── Continuous In-Server Automation Scheduler ──────────────────────────────
+  // Ticks every 30 seconds to evaluate exact IST schedules backed by atomic DB locks:
+  // 1. 7:50 AM IST  -> Pre-Sync Previous Day LeetCode & GitHub Progress
+  // 2. 8:00 AM IST  -> Morning Department Summary & 24h Deadline Alerts (for previous day)
+  // 3. 8:00 PM IST  -> 1-to-1 Private Reminders to students with pending deadlines
+  // 4. 8:50 PM IST  -> Pre-Sync Today's LeetCode & GitHub Progress
+  // 5. 9:00 PM IST  -> Evening Department Group Summary
+  // 6. 11:55 PM IST -> Daily LeetCode & GitHub Progress Sync & CSV/JSON GitHub Auto-Push
+  setInterval(() => {
+    checkAndTriggerScheduledAutomations().catch(err => console.error('[In-Server Scheduler] Tick error:', err));
+  }, 30 * 1000);
+
+  // Initial trigger 5 seconds after server start
+  setTimeout(() => {
+    checkAndTriggerScheduledAutomations().catch(err => console.error('[In-Server Scheduler] Startup tick error:', err));
+  }, 5000);
+
+  // Auto-ensure Telegram Webhook is active if configured
+  setTelegramWebhook().catch(err => console.error('[Telegram Webhook Init Warning]:', err));
 
   const app = express();
   app.disable('x-powered-by');
   app.set('etag', 'strong');
   app.set('json spaces', 0);
+
+  // Throttle variable for in-request opportunistic scheduler check
+  let lastInRequestTick = 0;
+  app.use((req, _res, next) => {
+    const now = Date.now();
+    if (now - lastInRequestTick > 30000) {
+      lastInRequestTick = now;
+      checkAndTriggerScheduledAutomations().catch(err => console.error('[Opportunistic Scheduler] Tick error:', err));
+    }
+    next();
+  });
 
   // Enable trust proxy so express-rate-limit correctly identifies individual client IPs behind reverse proxies (Render, Cloudflare, Nginx)
   app.set('trust proxy', 1);
@@ -567,8 +582,8 @@ async function startServer() {
     try {
       const { todayStr, prevDayStr, hours, minutes } = getISTTimeParts();
 
-      // 1. Morning 7:50 AM - 7:59 AM IST Window -> Pre-Sync Previous Day LeetCode & GitHub Progress
-      if (hours === 7 && minutes >= 50) {
+      // 1. Morning Pre-Sync Window (7:50 AM IST onwards) -> Pre-Sync Previous Day LeetCode & GitHub Progress
+      if ((hours === 7 && minutes >= 50) || (hours >= 8 && hours < 14)) {
         const claimed = await claimDailySlot('morning_pre_sync_date', todayStr);
         if (claimed) {
           triggered.push('morning_pre_sync');
@@ -584,8 +599,8 @@ async function startServer() {
         }
       }
 
-      // 2. Morning 8:00 AM - 8:49 AM IST Window -> Send Morning Group Summary & 24h Deadline Alerts
-      if (hours >= 8 && hours < 9) {
+      // 2. Morning Group Summary Window (8:00 AM IST to 2:00 PM IST) -> Send Morning Group Summary & 24h Deadline Alerts
+      if (hours >= 8 && hours < 14) {
         const claimed = await claimDailySlot('telegram_last_group_summary_morning_date', todayStr);
         if (claimed) {
           triggered.push('morning_summary');
@@ -616,22 +631,22 @@ async function startServer() {
         }
       }
 
-      // 3. Evening 8:00 PM IST Window (20:00 - 20:49 IST) -> Student 1-to-1 Pending Reminders
-      if (hours === 20 && minutes < 50) {
+      // 3. Evening Reminders Window (7:00 PM to 8:49 PM IST) -> Student 1-to-1 Pending Reminders
+      if (hours >= 19 && (hours < 20 || (hours === 20 && minutes < 50))) {
         const claimed = await claimDailySlot('telegram_last_reminders_date', todayStr);
         if (claimed) {
           triggered.push('evening_reminders');
-          console.log(`[RenderPing/Scheduler] 📢 Triggering 8:00 PM IST Student Deadline Reminders for ${todayStr}...`);
+          console.log(`[Scheduler] 📢 Triggering Evening Student Deadline Reminders for ${todayStr}...`);
           await triggerPendingTaskReminders().catch(err => console.error('[Evening Reminders Error]:', err));
         }
       }
 
-      // 4. Evening 8:50 PM IST Window -> Pre-Sync Today's LeetCode & GitHub Progress (10 mins before 9:00 PM)
-      if (hours === 20 && minutes >= 50) {
+      // 4. Evening Pre-Sync Window (8:50 PM IST onwards) -> Pre-Sync Today's LeetCode & GitHub Progress
+      if ((hours === 20 && minutes >= 50) || (hours >= 21 && hours < 24)) {
         const claimed = await claimDailySlot('evening_pre_sync_date', todayStr);
         if (claimed) {
           triggered.push('evening_pre_sync');
-          console.log(`[RenderPing/Scheduler] 🔄 8:50 PM IST Pre-Syncing Today's Data (${todayStr})...`);
+          console.log(`[Scheduler] 🔄 8:50 PM IST Pre-Syncing Today's Data (${todayStr})...`);
           try {
             await syncLeetcodeProgressForScope({ date: todayStr } as any);
             if (process.env.GITHUB_TOKEN) {
@@ -643,12 +658,12 @@ async function startServer() {
         }
       }
 
-      // 5. Evening 9:00 PM IST Window -> Send Evening Department Progress Summary
-      if (hours >= 21 && hours < 22) {
+      // 5. Evening Group Summary Window (9:00 PM to 11:49 PM IST) -> Send Evening Department Progress Summary
+      if (hours >= 21 && (hours < 23 || (hours === 23 && minutes < 50))) {
         const claimed = await claimDailySlot('telegram_last_group_summary_evening_date', todayStr);
         if (claimed) {
           triggered.push('evening_summary');
-          console.log(`[RenderPing/Scheduler] 📊 Triggering 9:00 PM IST Evening Group Summary for ${todayStr}...`);
+          console.log(`[Scheduler] 📊 Triggering 9:00 PM IST Evening Group Summary for ${todayStr}...`);
           // Ensure today's data is freshly synced before generating summary
           try {
             await syncLeetcodeProgressForScope({ date: todayStr } as any);
@@ -659,10 +674,10 @@ async function startServer() {
 
           const summaryRes = await sendGroupSummary().catch(err => {
             console.error('[Evening Summary Error]:', err);
-            return { success: false, message: err.message };
+            return { success: false, message: err?.message || 'Error' };
           });
 
-          // If delivery failed, rollback the daily lock so the next RenderPing tick can retry
+          // If delivery failed, rollback the daily lock so the next tick can retry
           if (!summaryRes || !summaryRes.success) {
             console.warn('[Evening Summary Failed] Rolling back lock for retry:', summaryRes?.message);
             await pool.query(
@@ -673,12 +688,12 @@ async function startServer() {
         }
       }
 
-      // 6. Nightly 11:50 PM IST Window -> Final LeetCode & GitHub Sync + CSV GitHub Push
+      // 6. Nightly Final Window (11:50 PM IST onwards) -> Final LeetCode & GitHub Sync + CSV GitHub Push
       if (hours === 23 && minutes >= 50) {
         const claimed = await claimDailySlot('leetcode_last_daily_csv_push_date', todayStr);
         if (claimed) {
           triggered.push('nightly_sync');
-          console.log(`[RenderPing/Scheduler] 🚀 Triggering 11:55 PM IST LeetCode & GitHub Progress Sync for ${todayStr}...`);
+          console.log(`[Scheduler] 🚀 Triggering 11:55 PM IST LeetCode & GitHub Progress Sync for ${todayStr}...`);
           try {
             await syncLeetcodeProgressForScope();
             if (process.env.GITHUB_TOKEN) {
@@ -706,17 +721,15 @@ async function startServer() {
   const healthCheckHandler = async (req: Request, res: Response) => {
     try {
       await pool.query('SELECT 1');
-      // Run automations non-blocking in the background so RenderPing gets an immediate fast response (<5ms)
-      const isManualSync = req.query.sync === 'true' || req.query.wait === 'true';
-      let automationResult: any = { status: 'triggered_in_background' };
+      const isCronTick = req.path.includes('/cron/') || req.query.sync === 'true' || req.query.wait === 'true';
+      let automationResult: any = { status: 'triggered' };
       
-      if (isManualSync) {
-        automationResult = await checkAndTriggerScheduledAutomations().catch(() => ({ triggered: [], time: 'error' }));
+      if (isCronTick) {
+        // In serverless / cron tick, await execution so lambda doesn't terminate prematurely
+        automationResult = await checkAndTriggerScheduledAutomations().catch((err) => ({ triggered: [], time: 'error', error: err?.message }));
       } else {
-        // Fire in background asynchronously
-        setImmediate(() => {
-          checkAndTriggerScheduledAutomations().catch(err => console.error('[RenderPing Automation Error]:', err));
-        });
+        // Standard lightweight health check
+        automationResult = { status: 'idle' };
       }
 
       res.status(200).json({
