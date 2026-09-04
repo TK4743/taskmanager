@@ -6836,6 +6836,14 @@ export default function App() {
               ? (sub?.rejection_reason || '—')
               : '—';
 
+          const participatingVal = rawStatus === 'REJECTED'
+            ? 'Rejected'
+            : (rawStatus === 'VERIFIED' || rawStatus === 'SUBMITTED')
+              ? 'Yes'
+              : isNotParticipating
+                ? 'No'
+                : '—';
+
           if (include) {
             detailedRows.push({
               'S.No': sno++,
@@ -6843,7 +6851,7 @@ export default function App() {
               'Reg No': student.register_number || '—',
               'Mail ID': student.email || '—',
               'Task Name': task.title,
-              'Participating / Interested': isParticipating ? 'Yes' : isNotParticipating ? 'No' : '—',
+              'Participating / Interested': participatingVal,
               'Task Status': statusLabel,
               'Custom Field': customFieldValue,
               'Proof Screenshot': screenshotVal,
