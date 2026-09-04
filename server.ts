@@ -4397,54 +4397,6 @@ async function startServer() {
     res.json({ success: true });
   });
 
-  // ── Web Push Notification Endpoints ─────────────────────────────────────────
-  app.get('/api/push/public-key', authenticate, async (_req: any, res) => {
-    try {
-      const publicKey = getVapidPublicKey();
-      res.json({ publicKey });
-    } catch (err: any) {
-      res.status(500).json({ error: 'Failed to retrieve VAPID key' });
-    }
-  });
-
-  app.post('/api/push/subscribe', authenticate, async (req: any, res) => {
-    try {
-      const { subscription, userAgent } = req.body || {};
-      if (!subscription) return res.status(400).json({ error: 'PushSubscription is required' });
-      await savePushSubscription(req.user.id, subscription, userAgent);
-      res.json({ success: true, message: 'Push notifications subscribed successfully' });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to save push subscription' });
-    }
-  });
-
-  app.post('/api/push/unsubscribe', authenticate, async (req: any, res) => {
-    try {
-      const { endpoint } = req.body || {};
-      if (!endpoint) return res.status(400).json({ error: 'Endpoint is required' });
-      await removePushSubscription(req.user.id, endpoint);
-      res.json({ success: true, message: 'Unsubscribed from push notifications' });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to unsubscribe' });
-    }
-  });
-
-  app.post('/api/push/test', authenticate, async (req: any, res) => {
-    try {
-      const result = await sendPushToUser(req.user.id, {
-        title: '🔔 VSBEC IT TaskManager',
-        body: '✅ Native lock-screen push notification test succeeded on this device!',
-        icon: '/icon-192.png',
-        badge: '/badge.png',
-        url: '/',
-        tag: `test-push-${Date.now()}`
-      });
-      res.json({ success: true, message: `Test push sent to ${result.sent} device(s).` });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to send test push' });
-    }
-  });
-
   // ── Batched Refresh Endpoint (replaces 3 polling calls with 1) ────────────
   // 300 users × 25s polling → this single endpoint handles it all in parallel
   // from in-memory cache. ~0.1ms response when cached, vs 3× DB queries before.
@@ -10736,33 +10688,11 @@ async function startServer() {
 
 
   // ── Notification Center Endpoints ──────────────────────────────────────────
-  app.get('/api/notifications', authenticate, asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user.id;
-    const [notifsRes, countRes] = await Promise.all([
-      pool.query(`SELECT * FROM notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`, [userId]),
-      pool.query(`SELECT COUNT(*) as unread_count FROM notifications WHERE user_id=$1 AND is_read=FALSE`, [userId])
-    ]);
-    res.json({
-      notifications: notifsRes.rows,
-      unreadCount: parseInt(countRes.rows[0]?.unread_count || '0', 10)
-    });
-  }));
-
   app.put('/api/notifications/read-all', authenticate, asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
     await pool.query(`UPDATE notifications SET is_read=TRUE, updated_at=NOW() WHERE user_id=$1 AND is_read=FALSE`, [userId]);
+    invalidateApiCache(`notifs_${userId}`);
     res.json({ success: true, message: 'All notifications marked as read' });
-  }));
-
-  app.patch('/api/notifications/read', authenticate, asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user.id;
-    const { notification_id } = req.body || {};
-    if (notification_id) {
-      await pool.query(`UPDATE notifications SET is_read=TRUE, updated_at=NOW() WHERE id=$1 AND user_id=$2`, [notification_id, userId]);
-    } else {
-      await pool.query(`UPDATE notifications SET is_read=TRUE, updated_at=NOW() WHERE user_id=$1 AND is_read=FALSE`, [userId]);
-    }
-    res.json({ success: true, message: 'Notification(s) marked as read' });
   }));
 
   app.put('/api/notifications/:id/read', authenticate, asyncHandler(async (req: Request, res: Response) => {
@@ -11146,18 +11076,7 @@ async function startServer() {
     res.json({ funnel: funnel.rows[0], by_type: byType.rows });
   }));
 
-  app.get('/api/admin/skill-demand', authenticate, authorize(['HOD', 'SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
-    const postings = await pool.query(`SELECT required_skills FROM industry_postings WHERE status='OPEN' AND required_skills IS NOT NULL`);
-    const skillCount: Record<string, number> = {};
-    for (const row of postings.rows) {
-      const skills: { skill: string }[] = row.required_skills || [];
-      for (const s of skills) {
-        if (s.skill) skillCount[s.skill] = (skillCount[s.skill] || 0) + 1;
-      }
-    }
-    const sorted = Object.entries(skillCount).sort((a, b) => b[1] - a[1]).map(([skill, count]) => ({ skill, count }));
-    res.json(sorted.slice(0, 30));
-  }));
+
 
   app.get('/api/admin/industry/analytics', authenticate, authorize(['HOD', 'SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
     const [companies, postings, applications, projects] = await Promise.all([
