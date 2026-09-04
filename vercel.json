@@ -9,32 +9,6 @@
       "memory": 1536
     }
   },
-  "crons": [
-    {
-      "path": "/api/cron/morning-sync",
-      "schedule": "20 2 * * *"
-    },
-    {
-      "path": "/api/cron/morning-summary",
-      "schedule": "30 2 * * *"
-    },
-    {
-      "path": "/api/cron/evening-reminders",
-      "schedule": "30 14 * * *"
-    },
-    {
-      "path": "/api/cron/evening-sync",
-      "schedule": "20 15 * * *"
-    },
-    {
-      "path": "/api/cron/evening-summary",
-      "schedule": "30 15 * * *"
-    },
-    {
-      "path": "/api/cron/sync-coding-progress",
-      "schedule": "25 18 * * *"
-    }
-  ],
   "headers": [
     {
       "source": "/assets/(.*)",

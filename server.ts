@@ -7239,49 +7239,8 @@ async function startServer() {
     }
   }
 
-  // Nightly scheduler for GitHub daily commits sync (11:55 PM IST and 8:00 AM IST)
-  function scheduleGitHubDailySync() {
-    const now = new Date();
-    const nowIST = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-    const hours = nowIST.getUTCHours();
-    const minutes = nowIST.getUTCMinutes();
-
-    const target8AM = new Date(nowIST.getTime());
-    target8AM.setUTCHours(8, 0, 0, 0);
-
-    const target1155PM = new Date(nowIST.getTime());
-    target1155PM.setUTCHours(23, 55, 0, 0);
-
-    let nextTarget: Date;
-    if (hours < 8) {
-      nextTarget = target8AM;
-    } else if (hours < 23 || (hours === 23 && minutes < 55)) {
-      nextTarget = target1155PM;
-    } else {
-      const tomorrow = new Date(nowIST.getTime() + 24 * 60 * 60 * 1000);
-      tomorrow.setUTCHours(8, 0, 0, 0);
-      nextTarget = tomorrow;
-    }
-
-    const timeUntilSync = nextTarget.getTime() - nowIST.getTime();
-    const targetTimeStr = `${nextTarget.getUTCHours().toString().padStart(2, '0')}:${nextTarget.getUTCMinutes().toString().padStart(2, '0')}`;
-    console.log(`[GitHub Daily Sync Daemon] Scheduled next commit sync at ${targetTimeStr} IST (in ${Math.round(timeUntilSync / 1000 / 60)} minutes).`);
-
-    setTimeout(async () => {
-      console.log(`[GitHub Daily Sync Daemon] Running scheduled GitHub commit sync...`);
-      try {
-        await syncDailyGitHubCommits();
-        console.log('[GitHub Daily Sync Daemon] Sync completed.');
-      } catch (err) {
-        console.error('[GitHub Daily Sync Daemon] Scheduled sync failed:', err);
-      }
-      scheduleGitHubDailySync();
-    }, timeUntilSync);
-  }
-
-  // Trigger startup GitHub commits sync & activate scheduler
+  // Trigger startup GitHub commits sync
   syncDailyGitHubCommits().catch(err => console.error('[GitHub Daily Sync] Startup sync error:', err));
-  scheduleGitHubDailySync();
 
   // Alias for backward compatibility
   const syncGitHubProgressForScope = syncDailyGitHubCommits;
@@ -8101,21 +8060,135 @@ async function startServer() {
     }
   }
 
-  if (!process.env.VERCEL) {
-    // GitHub startup sync + schedule daemon
-    if (process.env.GITHUB_TOKEN) {
-      syncGitHubProgressForScope().catch(err => console.error('[GitHub Sync] Startup sync error:', err));
-      scheduleGitHubDailySync();
-    }
+  // ── ⏰ Autonomous In-Server Scheduler Daemon (IST Timezone Based) ──────────────
+  // Executes all daily workflows without requiring external cron jobs:
+  // - 07:50 AM IST: Morning pre-sync for previous day (LeetCode + GitHub)
+  // - 08:00 AM IST: Morning Telegram summary & 24h deadline alert
+  // - 08:00 PM IST (20:00): Evening 1-to-1 task reminders to pending students
+  // - 08:50 PM IST (20:50): Evening pre-sync for today (LeetCode + GitHub)
+  // - 09:00 PM IST (21:00): Evening Telegram daily progress group summary
+  // - 11:55 PM IST (23:55): Nightly LeetCode daily reports push to GitHub + Full DB backup snapshot to GitHub
 
-    // Telegram Bot startup poller
-    if (process.env.TELEGRAM_BOT_TOKEN) {
+  const executedDailyScheduleKeys = new Set<string>();
+
+  function startInternalAutomationDaemon() {
+    console.log('[Automation Daemon] 🚀 Autonomous In-Server IST Scheduler Daemon started.');
+
+    const checkSchedule = async () => {
       try {
-        startTelegramPoller();
-        console.log('[Telegram Bot] Background poller started successfully.');
+        const now = new Date();
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const istDate = new Date(now.getTime() + istOffset);
+        const hours = istDate.getUTCHours();
+        const minutes = istDate.getUTCMinutes();
+        const todayStr = istDate.toISOString().split('T')[0];
+        const prevIstDate = new Date(istDate.getTime() - 24 * 60 * 60 * 1000);
+        const prevDayStr = prevIstDate.toISOString().split('T')[0];
+
+        // 1. Morning 07:50 AM IST (Previous Day Pre-Sync)
+        if (hours === 7 && minutes === 50) {
+          const key = `${todayStr}_07:50`;
+          if (!executedDailyScheduleKeys.has(key)) {
+            executedDailyScheduleKeys.add(key);
+            console.log(`[Automation Daemon] ⏰ Triggering 07:50 AM IST Pre-Sync for ${prevDayStr}...`);
+            await syncLeetcodeProgressForScope({ date: prevDayStr } as any).catch(e => console.error('[07:50 Sync] LC error:', e));
+            if (process.env.GITHUB_TOKEN) {
+              await syncGitHubProgressForScope({ date: prevDayStr }).catch(e => console.error('[07:50 Sync] GH error:', e));
+            }
+          }
+        }
+
+        // 2. Morning 08:00 AM IST (Summary & Deadline Alerts)
+        if (hours === 8 && minutes === 0) {
+          const key = `${todayStr}_08:00`;
+          if (!executedDailyScheduleKeys.has(key)) {
+            executedDailyScheduleKeys.add(key);
+            console.log(`[Automation Daemon] ⏰ Triggering 08:00 AM IST Morning Summary & Deadline Alerts for ${prevDayStr}...`);
+            await syncLeetcodeProgressForScope({ date: prevDayStr } as any).catch(() => {});
+            if (process.env.GITHUB_TOKEN) {
+              await syncGitHubProgressForScope({ date: prevDayStr }).catch(() => {});
+            }
+            await sendGroupSummary(undefined, prevDayStr).catch(e => console.error('[08:00 Summary] Error:', e));
+            await sendGroupDeadlineAlert().catch(e => console.error('[08:00 Alert] Error:', e));
+          }
+        }
+
+        // 3. Evening 08:00 PM IST / 20:00 (1-to-1 Student Reminders)
+        if (hours === 20 && minutes === 0) {
+          const key = `${todayStr}_20:00`;
+          if (!executedDailyScheduleKeys.has(key)) {
+            executedDailyScheduleKeys.add(key);
+            console.log(`[Automation Daemon] ⏰ Triggering 08:00 PM IST 1-to-1 Student Deadline Reminders...`);
+            await triggerPendingTaskReminders().catch(e => console.error('[20:00 Reminders] Error:', e));
+          }
+        }
+
+        // 4. Evening 08:50 PM IST / 20:50 (Today Pre-Sync)
+        if (hours === 20 && minutes === 50) {
+          const key = `${todayStr}_20:50`;
+          if (!executedDailyScheduleKeys.has(key)) {
+            executedDailyScheduleKeys.add(key);
+            console.log(`[Automation Daemon] ⏰ Triggering 08:50 PM IST Evening Pre-Sync for ${todayStr}...`);
+            await syncLeetcodeProgressForScope({ date: todayStr } as any).catch(e => console.error('[20:50 Sync] LC error:', e));
+            if (process.env.GITHUB_TOKEN) {
+              await syncGitHubProgressForScope({ date: todayStr }).catch(e => console.error('[20:50 Sync] GH error:', e));
+            }
+          }
+        }
+
+        // 5. Evening 09:00 PM IST / 21:00 (Daily Group Summary)
+        if (hours === 21 && minutes === 0) {
+          const key = `${todayStr}_21:00`;
+          if (!executedDailyScheduleKeys.has(key)) {
+            executedDailyScheduleKeys.add(key);
+            console.log(`[Automation Daemon] ⏰ Triggering 09:00 PM IST Daily Group Summary for ${todayStr}...`);
+            await syncLeetcodeProgressForScope({ date: todayStr } as any).catch(() => {});
+            if (process.env.GITHUB_TOKEN) {
+              await syncGitHubProgressForScope({ date: todayStr }).catch(() => {});
+            }
+            await sendGroupSummary().catch(e => console.error('[21:00 Summary] Error:', e));
+          }
+        }
+
+        // 6. Nightly 11:55 PM IST / 23:55 (LeetCode Reports + DB Backup to GitHub)
+        if (hours === 23 && minutes === 55) {
+          const key = `${todayStr}_23:55`;
+          if (!executedDailyScheduleKeys.has(key)) {
+            executedDailyScheduleKeys.add(key);
+            console.log(`[Automation Daemon] ⏰ Triggering 11:55 PM IST Nightly LeetCode Reports & DB Snapshot to GitHub...`);
+            await syncLeetcodeProgressForScope().catch(e => console.error('[23:55 Sync] LC error:', e));
+            if (process.env.GITHUB_TOKEN) {
+              await syncGitHubProgressForScope().catch(e => console.error('[23:55 Sync] GH error:', e));
+            }
+            await exportAndPushLeetcodeDailyProgress(todayStr).catch(e => console.error('[23:55 Push] LeetCode export error:', e));
+            await generateDatabaseSnapshot().catch(e => console.error('[23:55 Push] DB snapshot error:', e));
+          }
+        }
+
+        // Cleanup stale keys older than 3 days
+        if (executedDailyScheduleKeys.size > 50) {
+          executedDailyScheduleKeys.clear();
+        }
       } catch (err) {
-        console.error('[Telegram Bot] Failed to start poller:', err);
+        console.error('[Automation Daemon] Execution error:', err);
       }
+    };
+
+    // Check every 30 seconds for accurate minute matching
+    setInterval(checkSchedule, 30 * 1000);
+    checkSchedule();
+  }
+
+  // Start internal automation daemon
+  startInternalAutomationDaemon();
+
+  // Telegram Bot startup poller
+  if (process.env.TELEGRAM_BOT_TOKEN) {
+    try {
+      startTelegramPoller();
+      console.log('[Telegram Bot] Background poller started successfully.');
+    } catch (err) {
+      console.error('[Telegram Bot] Failed to start poller:', err);
     }
   }
 
