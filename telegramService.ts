@@ -3024,6 +3024,719 @@ export async function linkStudentTelegram(
 /**
  * 🤖 Ultra-Fast Concurrent Poller for Interactive Telegram Commands & Callbacks
  */
+/**
+ * 🌐 Set Telegram Webhook for Vercel/Production
+ */
+export async function setTelegramWebhook(webhookUrl?: string): Promise<{ ok: boolean; description?: string; result?: any }> {
+  const token = getBotToken();
+  if (!token) {
+    return { ok: false, description: 'No TELEGRAM_BOT_TOKEN configured in environment variables.' };
+  }
+
+  const portalUrl = getPortalUrl();
+  const url = webhookUrl || `${portalUrl}/api/telegram/webhook`;
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url,
+        allowed_updates: ['message', 'edited_message', 'callback_query', 'chat_join_request']
+      })
+    });
+    const data = await res.json();
+    console.log(`[Telegram Webhook] setWebhook URL=${url} response:`, data);
+    return data;
+  } catch (err: any) {
+    console.error('[Telegram Webhook] setWebhook error:', err);
+    return { ok: false, description: err.message };
+  }
+}
+
+/**
+ * 🌐 Get Telegram Webhook Info
+ */
+export async function getTelegramWebhookInfo(): Promise<any> {
+  const token = getBotToken();
+  if (!token) return { ok: false, description: 'No bot token configured' };
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`);
+    return await res.json();
+  } catch (err: any) {
+    return { ok: false, description: err.message };
+  }
+}
+
+/**
+ * 🌐 Delete Telegram Webhook (to switch to polling mode or clear queue)
+ */
+export async function deleteTelegramWebhook(dropPendingUpdates = false): Promise<any> {
+  const token = getBotToken();
+  if (!token) return { ok: false, description: 'No bot token configured' };
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/deleteWebhook?drop_pending_updates=${dropPendingUpdates}`);
+    return await res.json();
+  } catch (err: any) {
+    return { ok: false, description: err.message };
+  }
+}
+
+/**
+ * 🤖 Process a single Telegram Update (Used by both Webhook and Long-Polling)
+ */
+export async function processTelegramUpdate(update: any): Promise<void> {
+  if (!update) return;
+
+  const token = getBotToken();
+  if (!token) return;
+
+  try {
+    // ── Handle Chat Join Requests (Group Request to Join) ──────────────
+    if (update.chat_join_request) {
+      const joinReq = update.chat_join_request;
+      const applicant = joinReq.from;
+      const applicantChatId = joinReq.user_chat_id || applicant.id;
+      const groupTitle = joinReq.chat?.title || 'IT Department Community';
+      const groupUsername = joinReq.chat?.username || 'it_taskmanager';
+
+      console.log(`[Telegram Group] 📥 Received Chat Join Request from User ID ${applicant.id} (${applicant.first_name || ''} @${applicant.username || ''}) for ${groupTitle}`);
+
+      try {
+        const userRes = await pool.query(
+          `SELECT id, full_name, register_number, role, class_id FROM users WHERE telegram_chat_id = $1 LIMIT 1`,
+          [String(applicant.id)]
+        );
+        const user = userRes.rows[0];
+
+        if (user) {
+          let autoApproved = false;
+          try {
+            const approveResp = await fetch(`https://api.telegram.org/bot${token}/approveChatJoinRequest`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: joinReq.chat.id, user_id: applicant.id })
+            });
+            const approveData = await approveResp.json();
+            if (approveData.ok) {
+              autoApproved = true;
+              console.log(`[Telegram Group] ✅ Auto-approved verified student ${user.full_name} (${user.register_number}) into ${groupTitle}`);
+            }
+          } catch (err: any) {
+            console.warn('[Telegram Group] Auto-approve attempt note:', err.message);
+          }
+
+          if (autoApproved) {
+            await sendTelegramMessage(
+              applicantChatId,
+              `🎉 <b>WELCOME TO THE DEPARTMENT GROUP!</b>\n──────────────────────────────\n<blockquote>👤 <b>Student:</b> <b>${escapeHtml(user.full_name)}</b>\n🆔 <b>Reg No:</b> <code>${escapeHtml(user.register_number)}</code></blockquote>\n\n✅ <i>Your join request has been verified and approved! You are now a member of <b>${escapeHtml(groupTitle)}</b>.</i>\n\n👉 <a href="https://t.me/${groupUsername}">Tap here to open the group chat!</a>${getWatermarkHtml()}`
+            );
+          } else {
+            await sendTelegramMessage(
+              applicantChatId,
+              `⏳ <b>GROUP JOIN REQUEST SUBMITTED</b>\n──────────────────────────────\n<blockquote>👤 <b>Student:</b> <b>${escapeHtml(user.full_name)}</b>\n🆔 <b>Reg No:</b> <code>${escapeHtml(user.register_number)}</code></blockquote>\n\n📌 <i>Your request to join <b>${escapeHtml(groupTitle)}</b> has been submitted. The admin will approve your request shortly!</i>${getWatermarkHtml()}`
+            );
+          }
+        } else {
+          await sendTelegramMessage(
+            applicantChatId,
+            `👋 <b>GROUP JOIN REQUEST RECEIVED</b>\n──────────────────────────────\nHello <b>${escapeHtml(applicant.first_name || 'Student')}</b>!\n\nYour request to join <b>${escapeHtml(groupTitle)}</b> has been received.\n\n💡 <i>To verify your identity and get approved fast, please link your student account here by sending:</i>\n<code>/link YOUR_REGISTER_NUMBER</code>\n\n<i>(Example: <code>/link 9225XXXXXXXX</code>)</i>${getWatermarkHtml()}`
+          );
+        }
+      } catch (err: any) {
+        console.error('[Telegram Group] Error processing chat_join_request:', err.message);
+      }
+      return;
+    }
+
+    // ── Handle Callback Queries (Inline Keyboards) ───────────────────
+    if (update.callback_query) {
+      const cb = update.callback_query;
+      const cbData = cb.data;
+      const cbChatId = cb.message?.chat?.id;
+      const cbUserId = cb.from?.id;
+
+      if (!cbChatId || !cbUserId) return;
+
+      const cbIsGroup = cb.message?.chat?.type === 'group' || cb.message?.chat?.type === 'supergroup';
+      const personalCallbackKeys = ['cb_tasks', 'view_tasks', 'cb_leetcode', 'cb_github', 'cb_stats', 'cb_profile'];
+
+      if (cbIsGroup && personalCallbackKeys.includes(cbData)) {
+        if (cb.id) {
+          await answerCallbackQuery(cb.id, '⚠️ Personal actions are private. Please message @' + (cachedBotUsername || 'the bot') + ' directly to view your tasks or scorecard!', true);
+        }
+        return;
+      }
+
+      // Fire answerCallbackQuery immediately to dismiss loading spinner
+      if (cb.id) {
+        answerCallbackQuery(cb.id).catch(() => { });
+      }
+
+      const userRes = await pool.query(`
+        SELECT u.id, u.full_name, u.register_number, u.role, u.class_id, u.leetcode_url, u.github_url, c.name as class_name
+        FROM users u
+        LEFT JOIN classes c ON u.class_id = c.id
+        WHERE u.telegram_chat_id = $1
+        LIMIT 1
+      `, [String(cbUserId)]);
+
+      const user = userRes.rows[0];
+
+      // Only require a connected student profile for personal actions
+      if (!user && personalCallbackKeys.includes(cbData)) {
+        if (cbIsGroup) {
+          if (cb.id) {
+            await answerCallbackQuery(cb.id, 'ℹ Please message @' + (cachedBotUsername || 'the bot') + ' privately to link your student profile.', true);
+          }
+        } else {
+          await sendTelegramMessage(
+            cbChatId,
+            `ℹ Your Telegram is not yet connected to a student profile.\n\nReply with <code>/link YOUR_REGISTER_NUMBER</code> to connect!\n${getWatermarkHtml()}`
+          );
+        }
+        return;
+      }
+
+      if (cbData === 'cb_tasks' || cbData === 'view_tasks') {
+        const card = await getTasksCard(user);
+        await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
+      } else if (cbData === 'cb_leetcode') {
+        const card = await getStudentLeetCodeCard(user);
+        await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
+      } else if (cbData === 'cb_github') {
+        const card = await getStudentGitHubCard(user);
+        await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
+      } else if (cbData === 'cb_stats') {
+        const card = await getStudentStatsCard(user);
+        await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
+      } else if (cbData === 'cb_profile') {
+        const card = await getProfileCard(user);
+        await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
+      } else if (cbData === 'cb_leaderboard') {
+        const card = await getLeaderboardCard();
+        await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
+      } else if (cbData === 'cb_defaulters') {
+        const card = await getDefaultersCard();
+        await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
+      } else if (cbData === 'cb_summary') {
+        await sendGroupSummary(String(cbChatId));
+      } else if (cbData === 'cb_deadlines') {
+        await sendGroupDeadlineAlert(String(cbChatId));
+      } else if (cbData === 'cb_task_status') {
+        const card = await getFacultyTaskStatusCard();
+        await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
+      } else if (cbData === 'cb_search_help') {
+        await sendTelegramMessage(
+          cbChatId,
+          `🔎 <b>STUDENT SEARCH GUIDE</b>\n\nTo check any student's scorecard instantly, simply reply with their 12-digit Register Number or Username:\n<code>/check 9225XXXXXXXX</code>\n\n<i>You can also directly send the register number into the chat without any command prefix!</i>\n${getWatermarkHtml()}`,
+          { reply_markup: getInteractiveMenuKeyboard(user?.role) }
+        );
+      } else if (cbData === 'cb_group_link') {
+        const card = await getGroupRecommendationCard();
+        await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
+      } else if (cbData === 'cb_menu') {
+        const keyboard = getInteractiveMenuKeyboard(user?.role);
+        await sendTelegramMessage(
+          cbChatId,
+          `📱 <b>IT TASK MANAGER — QUICK ACTIONS</b>\n\nHello <b>${escapeHtml(user?.full_name || 'there')}</b>! Tap any button below for instant updates:\n${getWatermarkHtml()}`,
+          { reply_markup: keyboard }
+        );
+      }
+      return;
+    }
+
+    // ── Handle Text Messages & Commands ──────────────────────────────
+    const msg = update.message || update.edited_message;
+    if (!msg) return;
+
+    const chatId = msg.chat?.id;
+    const isGroup = msg.chat?.type === 'group' || msg.chat?.type === 'supergroup';
+    const senderUserId = msg.from?.id || chatId;
+    const fromUsername = msg.from?.username || '';
+    const senderName = msg.from?.first_name || 'there';
+    const text = (msg.text || '').trim();
+
+    if (!text && !isGroup) return;
+
+    // Auto-register group chat ID when active in a group
+    if (isGroup && chatId) {
+      getGroupChatId().then(currentSavedGroup => {
+        if (!currentSavedGroup) setGroupChatId(String(chatId));
+      }).catch(() => { });
+    }
+
+    // Command: /id
+    if (text.startsWith('/id')) {
+      await sendTelegramMessage(
+        chatId,
+        `ℹ <b>Chat Details:</b>\n• Chat ID: <code>${chatId}</code>\n• Chat Type: <code>${msg.chat?.type}</code>\n• Your User ID: <code>${senderUserId}</code>\n${getWatermarkHtml()}`
+      );
+      return;
+    }
+
+    // Command: /group, /join, /community
+    if (text.startsWith('/group') || text.startsWith('/join') || text.startsWith('/community')) {
+      const card = await getGroupRecommendationCard();
+      await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
+      return;
+    }
+
+    // Command: /start <param> or /link <param>
+    if (text.startsWith('/start') || text.startsWith('/link')) {
+      const cleanText = text.replace(/@\w+/g, '');
+      const parts = cleanText.split(/\s+/);
+      const param = parts.slice(1).join(' ').trim();
+
+      if (param) {
+        // Check if param is a class or year query (e.g. 2ita, 3itc, 2it, 3it, year3, 4it, 1ita, itc, ita, itb)
+        const cleanParam = param.toLowerCase().replace(/[@#/_]/g, '').trim();
+        const isClassOrYear =
+          /^(?:link)?\s*(?:year|y)?\s*([1-4])\s*(?:it|year|yr)?$/i.test(cleanParam) ||
+          /^(?:link)?\s*([1-4])\s*(?:it)?\s*([a-d])$/i.test(cleanParam) ||
+          /^(?:link)?\s*(?:it)?\s*([1-4])\s*([a-d])$/i.test(cleanParam) ||
+          /^(?:class)?\s*([1-4])\s*(?:it)?\s*([a-d])$/i.test(cleanParam) ||
+          /^(?:link)?\s*(?:it)?\s*([a-d])$/i.test(cleanParam) ||
+          /^(?:iii|ii|iv|i)\s*(?:it)?\s*([a-d])?$/i.test(cleanParam) ||
+          cleanParam.startsWith('year') ||
+          cleanParam.startsWith('class');
+
+        if (isClassOrYear) {
+          const card = await getClassOrYearAnalysisCard(param, chatId);
+          await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
+          return;
+        }
+
+        // Otherwise link student account with register number / username
+        if (isGroup) {
+          await sendPrivateActionWarning(chatId);
+          return;
+        }
+
+        const linkResult = await linkStudentTelegram(param, senderUserId, fromUsername);
+        if (linkResult.success) {
+          const groupInviteUrl = await getGroupInviteLink();
+          let welcomeHtml = `🎉 <b>ACCOUNT LINKED SUCCESSFULLY!</b>  ✅\n──────────────────────────────\n`;
+          welcomeHtml += `<blockquote>👤 <b>Student:</b> <b>${escapeHtml(linkResult.studentName)}</b>\n`;
+          welcomeHtml += `✨ <i>Your Telegram is now securely connected to IT TaskManager! You will receive private deadline alerts and evaluation notices here.</i></blockquote>\n\n`;
+          welcomeHtml += `👥 <b>RECOMMENDED NEXT STEP:</b>\n`;
+          welcomeHtml += `Join our <b>Official Department Telegram Group</b> to receive daily coding leaderboards, class briefs, and announcements!\n`;
+          welcomeHtml += getWatermarkHtml();
+
+          const keyboard: any = {
+            inline_keyboard: []
+          };
+
+          if (groupInviteUrl) {
+            keyboard.inline_keyboard.push([
+              { text: '👥 Join Official Telegram Group', url: groupInviteUrl }
+            ]);
+          } else {
+            keyboard.inline_keyboard.push([
+              { text: '👥 Join Official Telegram Group', callback_data: 'cb_group_link' }
+            ]);
+          }
+
+          keyboard.inline_keyboard.push([
+            { text: '📋 My Tasks', callback_data: 'cb_tasks' },
+            { text: '📊 My Scorecard', callback_data: 'cb_stats' }
+          ]);
+          keyboard.inline_keyboard.push([
+            { text: '📱 Main Menu', callback_data: 'cb_menu' },
+            { text: '🌐 Open Portal', url: getPortalUrl() }
+          ]);
+
+          await sendTelegramMessage(chatId, welcomeHtml, { reply_markup: keyboard });
+        } else {
+          await sendTelegramMessage(
+            chatId,
+            `⚠️ <b>Could Not Link Account</b>\n\n${escapeHtml(linkResult.message)}\n\nPlease check your Register Number or connect via the IT TaskManager portal.\n${getWatermarkHtml()}`
+          );
+        }
+      } else {
+        if (isGroup) {
+          await sendTelegramMessage(
+            chatId,
+            `👋 <b>Welcome to IT TASK MANAGER!</b>\n\n📌 <b>Group ID:</b> <code>${chatId}</code>\n\nThis group receives automated daily task reports and department announcements.\n\n💡 <i>Students: To link your account for private alerts, message @${cachedBotUsername} directly or use 1-Click Connect from the portal!</i>\n${getWatermarkHtml()}`
+          );
+        } else {
+          const groupInviteUrl = await getGroupInviteLink();
+          let greetingHtml = `👋 <b>WELCOME TO IT TASK MANAGER</b>  🎓\n──────────────────────────────\n`;
+          greetingHtml += `<blockquote>Hello <b>${escapeHtml(senderName)}</b>!\n`;
+          greetingHtml += `Stay connected and never miss an assignment deadline or coding goal!</blockquote>\n\n`;
+          greetingHtml += `📌 <b>LINK YOUR ACCOUNT:</b>\n`;
+          greetingHtml += `Reply with your 12-digit Register Number:\n<code>/link YOUR_REGISTER_NUMBER</code>\n<i>(Or simply send your Register Number directly into the chat!)</i>\n\n`;
+          greetingHtml += `👥 <b>OFFICIAL DEPARTMENT COMMUNITY:</b>\n`;
+          greetingHtml += `Make sure to join our official Telegram group for daily coding podiums, class briefs, and announcements!\n`;
+          greetingHtml += getWatermarkHtml();
+
+          const keyboard: any = {
+            inline_keyboard: []
+          };
+
+          if (groupInviteUrl) {
+            keyboard.inline_keyboard.push([
+              { text: '👥 Join Official Telegram Group', url: groupInviteUrl }
+            ]);
+          } else {
+            keyboard.inline_keyboard.push([
+              { text: '👥 Join Official Telegram Group', callback_data: 'cb_group_link' }
+            ]);
+          }
+
+          keyboard.inline_keyboard.push([
+            { text: '🌐 Open Web Portal', url: getPortalUrl() }
+          ]);
+
+          await sendTelegramMessage(chatId, greetingHtml, { reply_markup: keyboard });
+        }
+      }
+      return;
+    }
+
+    // Fetch sender's student account for authenticated commands
+    const userRes = await pool.query(`
+      SELECT u.id, u.full_name, u.register_number, u.role, u.class_id, u.leetcode_url, u.github_url, c.name as class_name
+      FROM users u
+      LEFT JOIN classes c ON u.class_id = c.id
+      WHERE u.telegram_chat_id = $1
+      LIMIT 1
+    `, [String(senderUserId)]);
+    const user = userRes.rows[0];
+
+    // Command: /menu or /help
+    if (text.startsWith('/menu') || text.startsWith('/help')) {
+      const keyboard = getInteractiveMenuKeyboard(user?.role);
+      let helpHtml = `📱 <b>IT TASK MANAGER MENU</b>  ⚡\n──────────────────────────────\n`;
+      if (user) {
+        helpHtml += `<blockquote>👤 <b>Connected:</b> <b>${escapeHtml(user.full_name)}</b>\n🆔 <b>Reg No:</b> <code>${escapeHtml(user.register_number)}</code>\n🏫 <b>Class:</b> <code>${escapeHtml(user.class_name || 'IT Department')}</code></blockquote>\n\n`;
+      }
+      helpHtml += `<b>Available Commands:</b>\n`;
+      helpHtml += `• <code>/check &lt;Reg_No&gt;</code> - Complete student scorecard (Tasks + LC + GH)\n`;
+      helpHtml += `• <code>/3ita</code>, <code>/3itb</code>, <code>/3itc</code>, <code>/2ita</code> - Instant class analysis\n`;
+      helpHtml += `• <code>/year3</code>, <code>/year2</code> - Year-wise department analysis\n`;
+      helpHtml += `• <code>/tasks</code> - View assigned tasks\n`;
+      helpHtml += `• <code>/deadlines</code> - 24-hour upcoming deadlines\n`;
+      helpHtml += `• <code>/leetcode</code> - Daily LeetCode progress\n`;
+      helpHtml += `• <code>/github</code> - Daily GitHub commits\n`;
+      helpHtml += `• <code>/stats</code> - Full performance scorecard\n`;
+      helpHtml += `• <code>/leaderboard</code> - Daily coding rankings\n`;
+      helpHtml += `• <code>/group</code> - Join official department Telegram group\n`;
+      helpHtml += `• <code>/status</code> - Connected profile info\n`;
+      helpHtml += `• <code>/unlink</code> - Disconnect account\n`;
+
+      if (user?.role === 'SUPREME_ADMIN' || user?.role === 'STAFF' || user?.role === 'COORDINATOR' || user?.role === 'HOD' || user?.role === 'CLASS_ADVISOR') {
+        helpHtml += `\n<b>Staff / Coordinator Commands:</b>\n`;
+        helpHtml += `• <code>/defaulters [class]</code> - Target defaulters report\n`;
+        helpHtml += `• <code>/broadcast &lt;msg&gt;</code> - Announcement to all students\n`;
+        helpHtml += `• <code>/summary</code> - Class daily brief\n`;
+      }
+
+      helpHtml += `\n👥 <i>Join our Department Telegram group for live podium alerts!</i>\n`;
+      helpHtml += getWatermarkHtml();
+      await sendTelegramMessage(chatId, helpHtml, { reply_markup: keyboard });
+      return;
+    }
+
+    // Command: /check <query>, /lookup <query>, /student <query>, /progress <query>, or /status <query>
+    if (
+      text.startsWith('/check') ||
+      text.startsWith('/lookup') ||
+      text.startsWith('/student') ||
+      (text.startsWith('/progress') && text.split(/\s+/).length > 1) ||
+      (text.startsWith('/status') && text.split(/\s+/).length > 1)
+    ) {
+      const parts = text.split(/\s+/);
+      const query = parts.slice(1).join(' ').trim();
+      if (query) {
+        const cleanQ = query.toLowerCase().replace(/[@#/_]/g, '').trim();
+
+        // 1. Check if department / group summary requested
+        if (cleanQ === 'dept' || cleanQ === 'department' || cleanQ === 'summary' || cleanQ === 'all' || cleanQ === 'group') {
+          await sendGroupSummary(String(chatId));
+          return;
+        }
+
+        // 2. Check if query is class or year (e.g. 3itc, 2ita, 3ita, 2itb, 3it, 2it, year3, year2, 3it a, ii it c, itc, ita, itb)
+        const isClassOrYear =
+          /^(?:link)?\s*(?:year|y)?\s*([1-4])\s*(?:it|year|yr)?$/i.test(cleanQ) ||
+          /^(?:link)?\s*([1-4])\s*(?:it)?\s*([a-d])$/i.test(cleanQ) ||
+          /^(?:link)?\s*(?:it)?\s*([1-4])\s*([a-d])$/i.test(cleanQ) ||
+          /^(?:class)?\s*([1-4])\s*(?:it)?\s*([a-d])$/i.test(cleanQ) ||
+          /^(?:link)?\s*(?:it)?\s*([a-d])$/i.test(cleanQ) ||
+          /^(?:iii|ii|iv|i)\s*(?:it)?\s*([a-d])?$/i.test(cleanQ) ||
+          cleanQ.startsWith('year') ||
+          cleanQ.startsWith('class');
+
+        if (isClassOrYear) {
+          const card = await getClassOrYearAnalysisCard(query, chatId);
+          await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
+          return;
+        }
+
+        // 3. Otherwise treat as student query (reg no or name/username)
+        if (isGroup) {
+          await sendPrivateActionWarning(chatId);
+          return;
+        }
+
+        const card = await getComprehensiveStudentProgressCard(query);
+        await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
+        return;
+      } else {
+        await sendTelegramMessage(
+          chatId,
+          `ℹ <b>Usage:</b>\n• Student: <code>/check 9225XXXXXXXX</code>\n• Class: <code>/check 3itc</code> or <code>/check 2ita</code>\n• Year: <code>/check 3it</code> or <code>/check 2it</code>\n• Department: <code>/check dept</code>\n${getWatermarkHtml()}`
+        );
+        return;
+      }
+    }
+
+    // ── Class & Year Analysis Reports (Direct Commands & Text) ─────────
+    // Supports: /3ita, /3itb, /3itc, /2ita, /2itb, /2itc, /itc, /ita, /itb, /year3, /year2, /class 3ita, etc.
+    const cleanNoMention = text.replace(/@\w+/g, '').trim();
+    const cleanCandidate = text.replace(/[@#]/g, '').trim();
+    const cleanDirectQ = text.toLowerCase().replace(/[@#/_]/g, '').trim();
+
+    const isClassOrYearShortcut =
+      text.startsWith('/class') ||
+      text.startsWith('/year') ||
+      /^\/(?:[1-4]\s*(?:it)?[a-d]|[1-4]\s*year|year\s*[1-4]|it[a-d])$/i.test(cleanNoMention) ||
+      /^(?:[1-4]\s*it[a-d]|[1-4]\s*year|year\s*[1-4]|it[a-d])$/i.test(cleanCandidate) ||
+      /^(?:[1-4]\s*(?:it)?[a-d]|[1-4]\s*it|[1-4]\s*year|year\s*[1-4]|it[a-d])$/i.test(cleanDirectQ) ||
+      /^(?:iii|ii|iv|i)\s*its*[a-d]$/i.test(cleanDirectQ) ||
+      cleanDirectQ === '3ita' || cleanDirectQ === '3itb' || cleanDirectQ === '3itc' ||
+      cleanDirectQ === '2ita' || cleanDirectQ === '2itb' || cleanDirectQ === '2itc' ||
+      cleanDirectQ === '1ita' || cleanDirectQ === '1itb' || cleanDirectQ === '1itc' ||
+      cleanDirectQ === '4ita' || cleanDirectQ === '4itb' || cleanDirectQ === '4itc' ||
+      cleanDirectQ === 'ita' || cleanDirectQ === 'itb' || cleanDirectQ === 'itc' || cleanDirectQ === 'itd';
+
+    if (isClassOrYearShortcut) {
+      let classQuery = cleanNoMention;
+      if (text.startsWith('/class') || text.startsWith('/year')) {
+        const parts = cleanNoMention.split(/\s+/);
+        classQuery = parts.slice(1).join(' ').trim() || parts[0];
+      }
+      const card = await getClassOrYearAnalysisCard(classQuery, chatId);
+      if (card.found || text.startsWith('/')) {
+        await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
+        return;
+      }
+    }
+
+    // ── Automatic Register Number / Username Lookup & Auto-Link ─────────
+    // If anyone in a private DM simply types a Register Number
+    if (!isGroup && !text.startsWith('/') && cleanCandidate.length >= 4 && cleanCandidate.length <= 25) {
+      const studentCheck = await pool.query(`
+        SELECT id, full_name, register_number, username, telegram_chat_id FROM users 
+        WHERE (REPLACE(LOWER(register_number), ' ', '') = $1 
+           OR LOWER(register_number) = $2 
+           OR REPLACE(LOWER(username), ' ', '') = $1
+           OR LOWER(username) = $2)
+          AND role = 'STUDENT'
+        LIMIT 1
+      `, [cleanCandidate.toLowerCase().replace(/\s+/g, ''), cleanCandidate.toLowerCase()]);
+
+      if (studentCheck.rows.length > 0) {
+        const matchedStudent = studentCheck.rows[0];
+        // If sender doesn't have an account linked yet, auto-link to this student account!
+        if (!user && (!matchedStudent.telegram_chat_id || matchedStudent.telegram_chat_id === String(senderUserId))) {
+          await linkStudentTelegram(cleanCandidate, senderUserId, fromUsername);
+        }
+        const card = await getComprehensiveStudentProgressCard(cleanCandidate);
+        if (card.found) {
+          await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
+          return;
+        }
+      }
+    }
+
+    // Command: /leaderboard or /top or /rank
+    if (text.startsWith('/leaderboard') || text.startsWith('/top') || text.startsWith('/rank')) {
+      try {
+        const card = await getLeaderboardCard();
+        await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
+      } catch (err: any) {
+        console.error('[Telegram] leaderboard command error:', err);
+        await sendTelegramMessage(chatId, `⚠️ Failed to fetch leaderboard: ${err.message}\n${getWatermarkHtml()}`);
+      }
+      return;
+    }
+
+    // Command: /leetcode or /lc
+    if (text.startsWith('/leetcode') || text.startsWith('/lc')) {
+      if (isGroup) {
+        await sendPrivateActionWarning(chatId);
+        return;
+      }
+      if (!user) {
+        await sendTelegramMessage(chatId, `ℹ Please link your student account first: <code>/link &lt;Register_Number&gt;</code>\n${getWatermarkHtml()}`);
+      } else {
+        const card = await getStudentLeetCodeCard(user);
+        await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
+      }
+      return;
+    }
+
+    // Command: /github or /gh
+    if (text.startsWith('/github') || text.startsWith('/gh')) {
+      if (isGroup) {
+        await sendPrivateActionWarning(chatId);
+        return;
+      }
+      if (!user) {
+        await sendTelegramMessage(chatId, `ℹ Please link your student account first: <code>/link &lt;Register_Number&gt;</code>\n${getWatermarkHtml()}`);
+      } else {
+        const card = await getStudentGitHubCard(user);
+        await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
+      }
+      return;
+    }
+
+    // Command: /stats or /myprogress or /progress
+    if (text.startsWith('/stats') || text.startsWith('/myprogress') || text.startsWith('/progress')) {
+      if (isGroup) {
+        await sendPrivateActionWarning(chatId);
+        return;
+      }
+      if (!user) {
+        await sendTelegramMessage(chatId, `ℹ Your Telegram is not yet linked to a student account.\n\nReply with <code>/link &lt;Your_Register_Number&gt;</code> to connect and view your personal scorecard!\n${getWatermarkHtml()}`);
+      } else {
+        const card = await getStudentStatsCard(user);
+        await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
+      }
+      return;
+    }
+
+    // Command: /defaulters or /pendingtargets
+    if (text.startsWith('/defaulters') || text.startsWith('/pendingtargets')) {
+      const parts = text.split(/\s+/);
+      const scopeFilter = parts.slice(1).join(' ');
+      const card = await getDefaultersCard(scopeFilter);
+      await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
+      return;
+    }
+
+    // Command: /broadcast <message> (Admin/Staff only)
+    if (text.startsWith('/broadcast')) {
+      if (!user || (user.role !== 'SUPREME_ADMIN' && user.role !== 'STAFF' && user.role !== 'COORDINATOR' && user.role !== 'HOD' && user.role !== 'CLASS_ADVISOR')) {
+        await sendTelegramMessage(chatId, `⚠️ You do not have permission to send broadcasts.\n${getWatermarkHtml()}`);
+        return;
+      }
+
+      const broadcastText = text.replace(/^\/broadcast\s*/i, '').trim();
+      if (!broadcastText) {
+        await sendTelegramMessage(chatId, `⚠️ Usage: <code>/broadcast Your message here</code>\n${getWatermarkHtml()}`);
+        return;
+      }
+
+      const studentsRes = await pool.query(`SELECT telegram_chat_id FROM users WHERE telegram_chat_id IS NOT NULL AND role = 'STUDENT'`);
+      const rawChatIds = studentsRes.rows.map(s => s.telegram_chat_id ? String(s.telegram_chat_id).trim() : '').filter(Boolean);
+      const studentChatIds = Array.from(new Set(rawChatIds)).filter(cid => !cid.startsWith('-'));
+      let count = 0;
+      const broadcastHtml = `📢 <b>DEPARTMENT ANNOUNCEMENT</b>\n\n${escapeHtml(broadcastText)}\n\n— <i>Sent by ${escapeHtml(user.full_name)} (${user.role})</i>${getWatermarkHtml()}`;
+
+      for (const cid of studentChatIds) {
+        await sendTelegramMessage(cid, broadcastHtml);
+        count++;
+        await new Promise(r => setTimeout(r, 40));
+      }
+
+      await sendTelegramMessage(chatId, `✅ <b>Broadcast sent to ${count} student(s) successfully!</b>\n${getWatermarkHtml()}`);
+      return;
+    }
+
+    // Command: /tasks or /pending or /mytasks
+    if (text.startsWith('/tasks') || text.startsWith('/pending') || text.startsWith('/mytasks')) {
+      if (isGroup) {
+        await sendPrivateActionWarning(chatId);
+        return;
+      }
+      if (!user) {
+        await sendTelegramMessage(chatId, `ℹ Please link your student account first: <code>/link &lt;Register_Number&gt;</code>\n${getWatermarkHtml()}`);
+      } else {
+        const card = await getTasksCard(user);
+        await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
+      }
+      return;
+    }
+
+    // Command: /unlink
+    if (text.startsWith('/unlink')) {
+      if (isGroup) {
+        await sendPrivateActionWarning(chatId);
+        return;
+      }
+      await pool.query(`
+        UPDATE users
+        SET telegram_chat_id = NULL, telegram_username = NULL, telegram_linked_at = NULL
+        WHERE telegram_chat_id = $1
+      `, [String(senderUserId)]);
+      await sendTelegramMessage(chatId, `✅ Your Telegram has been disconnected from your IT TaskManager student account.\n${getWatermarkHtml()}`);
+      return;
+    }
+
+    // Command: /status
+    if (text.startsWith('/status')) {
+      if (isGroup) {
+        await sendPrivateActionWarning(chatId);
+        return;
+      }
+      if (user) {
+        await sendTelegramMessage(
+          chatId,
+          `✅ <b>Connected Account:</b>\n• <b>Name:</b> ${escapeHtml(user.full_name)}\n• <b>Register No:</b> <code>${escapeHtml(user.register_number)}</code>\n• <b>Class:</b> ${escapeHtml(user.class_name || 'IT Section')}\n• <b>Role:</b> ${user.role}\n${getWatermarkHtml()}`,
+          { reply_markup: getInteractiveMenuKeyboard(user.role) }
+        );
+      } else {
+        await sendTelegramMessage(chatId, `ℹ This chat is not yet linked to any student profile. Send <code>/link &lt;Your_Register_Number&gt;</code> to link.\n${getWatermarkHtml()}`);
+      }
+      return;
+    }
+
+    // Command: /summary or /report
+    if (text.startsWith('/summary') || text.startsWith('/report')) {
+      const res = await sendGroupSummary(String(chatId));
+      if (!res.success) {
+        await sendTelegramMessage(chatId, `⚠️ ${escapeHtml(res.message)}\n${getWatermarkHtml()}`);
+      }
+      return;
+    }
+
+    // Command: /deadlines or /due
+    if (text.startsWith('/deadlines') || text.startsWith('/due')) {
+      const res = await sendGroupDeadlineAlert(String(chatId));
+      if (!res.success && res.message !== 'No tasks due within the next 24 hours.') {
+        await sendTelegramMessage(chatId, `⚠️ ${escapeHtml(res.message)}\n${getWatermarkHtml()}`);
+      } else if (res.count === 0) {
+        await sendTelegramMessage(chatId, `✅ <b>No assignments closing within the next 24 hours!</b>\n${getWatermarkHtml()}`);
+      }
+      return;
+    }
+
+    // Friendly Chat Handler for Private DMs
+    if (!isGroup && (text.toLowerCase() === 'hi' || text.toLowerCase() === 'hello' || text.toLowerCase() === 'hey')) {
+      const keyboard = getInteractiveMenuKeyboard(user?.role);
+      if (user) {
+        await sendTelegramMessage(
+          chatId,
+          `👋 <b>Hello ${escapeHtml(user.full_name)}!</b>\n\nWelcome back to IT TaskManager. What would you like to check today?\n${getWatermarkHtml()}`,
+          { reply_markup: keyboard }
+        );
+      } else {
+        await sendTelegramMessage(
+          chatId,
+          `🤖 <b>Welcome to IT TASK MANAGER!</b>\n\nHello! To receive private task deadline alerts and check your live coding progress, reply with:\n<code>/link YOUR_REGISTER_NUMBER</code>\n\n<i>Example:</i> <code>/link 922524205001</code>\n${getWatermarkHtml()}`
+        );
+      }
+    }
+  } catch (err: any) {
+    console.error('[Telegram processUpdate error]:', err?.message || err);
+  }
+}
+
+/**
+ * 🤖 Ultra-Fast Concurrent Poller for Interactive Telegram Commands & Callbacks
+ */
 let isPolling = false;
 let lastUpdateId = 0;
 
@@ -3050,648 +3763,10 @@ export function startTelegramPoller(): void {
 
         // Process all updates concurrently in parallel
         await Promise.allSettled(data.result.map(async (update: any) => {
-          // ── Handle Chat Join Requests (Group Request to Join) ──────────────
-          if (update.chat_join_request) {
-            const joinReq = update.chat_join_request;
-            const applicant = joinReq.from;
-            const applicantChatId = joinReq.user_chat_id || applicant.id;
-            const groupTitle = joinReq.chat?.title || 'IT Department Community';
-            const groupUsername = joinReq.chat?.username || 'it_taskmanager';
-
-            console.log(`[Telegram Group] 📥 Received Chat Join Request from User ID ${applicant.id} (${applicant.first_name || ''} @${applicant.username || ''}) for ${groupTitle}`);
-
-            try {
-              const userRes = await pool.query(
-                `SELECT id, full_name, register_number, role, class_id FROM users WHERE telegram_chat_id = $1 LIMIT 1`,
-                [String(applicant.id)]
-              );
-              const user = userRes.rows[0];
-
-              if (user) {
-                // Linked verified student: attempt auto-approval
-                let autoApproved = false;
-                try {
-                  const approveResp = await fetch(`https://api.telegram.org/bot${token}/approveChatJoinRequest`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: joinReq.chat.id, user_id: applicant.id })
-                  });
-                  const approveData = await approveResp.json();
-                  if (approveData.ok) {
-                    autoApproved = true;
-                    console.log(`[Telegram Group] ✅ Auto-approved verified student ${user.full_name} (${user.register_number}) into ${groupTitle}`);
-                  }
-                } catch (err: any) {
-                  console.warn('[Telegram Group] Auto-approve attempt note:', err.message);
-                }
-
-                if (autoApproved) {
-                  await sendTelegramMessage(
-                    applicantChatId,
-                    `🎉 <b>WELCOME TO THE DEPARTMENT GROUP!</b>\n──────────────────────────────\n<blockquote>👤 <b>Student:</b> <b>${escapeHtml(user.full_name)}</b>\n🆔 <b>Reg No:</b> <code>${escapeHtml(user.register_number)}</code></blockquote>\n\n✅ <i>Your join request has been verified and approved! You are now a member of <b>${escapeHtml(groupTitle)}</b>.</i>\n\n👉 <a href="https://t.me/${groupUsername}">Tap here to open the group chat!</a>\n${getWatermarkHtml()}`
-                  );
-                } else {
-                  await sendTelegramMessage(
-                    applicantChatId,
-                    `⏳ <b>GROUP JOIN REQUEST SUBMITTED</b>\n──────────────────────────────\n<blockquote>👤 <b>Student:</b> <b>${escapeHtml(user.full_name)}</b>\n🆔 <b>Reg No:</b> <code>${escapeHtml(user.register_number)}</code></blockquote>\n\n📌 <i>Your request to join <b>${escapeHtml(groupTitle)}</b> has been submitted. The admin will approve your request shortly!</i>\n${getWatermarkHtml()}`
-                  );
-                }
-              } else {
-                // Not yet linked
-                await sendTelegramMessage(
-                  applicantChatId,
-                  `👋 <b>GROUP JOIN REQUEST RECEIVED</b>\n──────────────────────────────\nHello <b>${escapeHtml(applicant.first_name || 'Student')}</b>!\n\nYour request to join <b>${escapeHtml(groupTitle)}</b> has been received.\n\n💡 <i>To verify your identity and get approved fast, please link your student account here by sending:</i>\n<code>/link YOUR_REGISTER_NUMBER</code>\n\n<i>(Example: <code>/link 9225XXXXXXXX</code>)</i>\n${getWatermarkHtml()}`
-                );
-              }
-            } catch (err: any) {
-              console.error('[Telegram Group] Error processing chat_join_request:', err.message);
-            }
-            return;
-          }
-
-          if (update.callback_query) {
-            const cb = update.callback_query;
-            const cbData = cb.data;
-            const cbChatId = cb.message?.chat?.id;
-            const cbUserId = cb.from?.id;
-
-            if (!cbChatId || !cbUserId) return;
-
-            const cbIsGroup = cb.message?.chat?.type === 'group' || cb.message?.chat?.type === 'supergroup';
-            const personalCallbackKeys = ['cb_tasks', 'view_tasks', 'cb_leetcode', 'cb_github', 'cb_stats', 'cb_profile'];
-
-            if (cbIsGroup && personalCallbackKeys.includes(cbData)) {
-              if (cb.id) {
-                await answerCallbackQuery(cb.id, '⚠️ Personal actions are private. Please message @' + (cachedBotUsername || 'the bot') + ' directly to view your tasks or scorecard!', true);
-              }
-              return;
-            }
-
-            // Fire answerCallbackQuery immediately to dismiss loading spinner
-            if (cb.id) {
-              answerCallbackQuery(cb.id).catch(() => { });
-            }
-
-            const userRes = await pool.query(`
-              SELECT u.id, u.full_name, u.register_number, u.role, u.class_id, u.leetcode_url, u.github_url, c.name as class_name
-              FROM users u
-              LEFT JOIN classes c ON u.class_id = c.id
-              WHERE u.telegram_chat_id = $1
-              LIMIT 1
-            `, [String(cbUserId)]);
-
-            const user = userRes.rows[0];
-
-            // Only require a connected student profile for personal actions
-            if (!user && personalCallbackKeys.includes(cbData)) {
-              if (cbIsGroup) {
-                if (cb.id) {
-                  await answerCallbackQuery(cb.id, 'ℹ Please message @' + (cachedBotUsername || 'the bot') + ' privately to link your student profile.', true);
-                }
-              } else {
-                await sendTelegramMessage(
-                  cbChatId,
-                  `ℹ Your Telegram is not yet connected to a student profile.\n\nReply with <code>/link YOUR_REGISTER_NUMBER</code> to connect!\n${getWatermarkHtml()}`
-                );
-              }
-              return;
-            }
-
-            if (cbData === 'cb_tasks' || cbData === 'view_tasks') {
-              const card = await getTasksCard(user);
-              await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
-            } else if (cbData === 'cb_leetcode') {
-              const card = await getStudentLeetCodeCard(user);
-              await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
-            } else if (cbData === 'cb_github') {
-              const card = await getStudentGitHubCard(user);
-              await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
-            } else if (cbData === 'cb_stats') {
-              const card = await getStudentStatsCard(user);
-              await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
-            } else if (cbData === 'cb_profile') {
-              const card = await getProfileCard(user);
-              await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
-            } else if (cbData === 'cb_leaderboard') {
-              const card = await getLeaderboardCard();
-              await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
-            } else if (cbData === 'cb_defaulters') {
-              const card = await getDefaultersCard();
-              await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
-            } else if (cbData === 'cb_summary') {
-              await sendGroupSummary(String(cbChatId));
-            } else if (cbData === 'cb_deadlines') {
-              await sendGroupDeadlineAlert(String(cbChatId));
-            } else if (cbData === 'cb_task_status') {
-              const card = await getFacultyTaskStatusCard();
-              await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
-            } else if (cbData === 'cb_search_help') {
-              await sendTelegramMessage(
-                cbChatId,
-                `🔎 <b>STUDENT SEARCH GUIDE</b>\n\nTo check any student's scorecard instantly, simply reply with their 12-digit Register Number or Username:\n<code>/check 9225XXXXXXXX</code>\n\n<i>You can also directly send the register number into the chat without any command prefix!</i>\n${getWatermarkHtml()}`,
-                { reply_markup: getInteractiveMenuKeyboard(user?.role) }
-              );
-            } else if (cbData === 'cb_group_link') {
-              const card = await getGroupRecommendationCard();
-              await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
-            } else if (cbData === 'cb_menu') {
-              const keyboard = getInteractiveMenuKeyboard(user?.role);
-              await sendTelegramMessage(
-                cbChatId,
-                `📱 <b>IT TASK MANAGER — QUICK ACTIONS</b>\n\nHello <b>${escapeHtml(user?.full_name || 'there')}</b>! Tap any button below for instant updates:\n${getWatermarkHtml()}`,
-                { reply_markup: keyboard }
-              );
-            }
-            return;
-          }
-
-          // ── Handle Text Messages & Commands ──────────────────────────────
-          const msg = update.message;
-          if (!msg) return;
-
-          const chatId = msg.chat?.id;
-          const isGroup = msg.chat?.type === 'group' || msg.chat?.type === 'supergroup';
-          const senderUserId = msg.from?.id || chatId;
-          const fromUsername = msg.from?.username || '';
-          const senderName = msg.from?.first_name || 'there';
-          const text = (msg.text || '').trim();
-
-          if (!text && !isGroup) return;
-
-          // Auto-register group chat ID when active in a group
-          if (isGroup && chatId) {
-            getGroupChatId().then(currentSavedGroup => {
-              if (!currentSavedGroup) setGroupChatId(String(chatId));
-            }).catch(() => { });
-          }
-
-          // Command: /id
-          if (text.startsWith('/id')) {
-            await sendTelegramMessage(
-              chatId,
-              `ℹ <b>Chat Details:</b>\n• Chat ID: <code>${chatId}</code>\n• Chat Type: <code>${msg.chat?.type}</code>\n• Your User ID: <code>${senderUserId}</code>\n${getWatermarkHtml()}`
-            );
-            return;
-          }
-
-          // Command: /group, /join, /community
-          if (text.startsWith('/group') || text.startsWith('/join') || text.startsWith('/community')) {
-            const card = await getGroupRecommendationCard();
-            await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
-            return;
-          }
-
-          // Command: /start <param> or /link <param>
-          if (text.startsWith('/start') || text.startsWith('/link')) {
-            const cleanText = text.replace(/@\w+/g, '');
-            const parts = cleanText.split(/\s+/);
-            const param = parts.slice(1).join(' ').trim() || text.replace(/^\/(?:start|link)[\s/]*/i, '').trim();
-
-            if (param) {
-              // Check if param is a class or year query (e.g. 2ita, 3itc, 2it, 3it, year3, 4it, 1ita)
-              const cleanParam = param.toLowerCase().replace(/[@#/_]/g, '').trim();
-              const isClassOrYear =
-                /^(?:link)?\s*(?:year|y)?\s*([1-4])\s*(?:it|year|yr)?$/i.test(cleanParam) ||
-                /^(?:link)?\s*([1-4])\s*(?:it)?\s*([a-d])$/i.test(cleanParam) ||
-                /^(?:link)?\s*(?:it)?\s*([1-4])\s*([a-d])$/i.test(cleanParam) ||
-                /^(?:class)?\s*([1-4])\s*(?:it)?\s*([a-d])$/i.test(cleanParam) ||
-                /^(?:iii|ii|iv|i)\s*(?:it)?\s*([a-d])?$/i.test(cleanParam) ||
-                cleanParam.startsWith('year') ||
-                cleanParam.startsWith('class');
-
-              if (isClassOrYear) {
-                const card = await getClassOrYearAnalysisCard(param, chatId);
-                await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
-                return;
-              }
-
-              // Otherwise link student account with register number / username
-              if (isGroup) {
-                await sendPrivateActionWarning(chatId);
-                return;
-              }
-
-              const linkResult = await linkStudentTelegram(param, senderUserId, fromUsername);
-              if (linkResult.success) {
-                const groupInviteUrl = await getGroupInviteLink();
-                let welcomeHtml = `🎉 <b>ACCOUNT LINKED SUCCESSFULLY!</b>  ✅\n──────────────────────────────\n`;
-                welcomeHtml += `<blockquote>👤 <b>Student:</b> <b>${escapeHtml(linkResult.studentName)}</b>\n`;
-                welcomeHtml += `✨ <i>Your Telegram is now securely connected to IT TaskManager! You will receive private deadline alerts and evaluation notices here.</i></blockquote>\n\n`;
-                welcomeHtml += `👥 <b>RECOMMENDED NEXT STEP:</b>\n`;
-                welcomeHtml += `Join our <b>Official Department Telegram Group</b> to receive daily coding leaderboards, class briefs, and announcements!\n`;
-                welcomeHtml += getWatermarkHtml();
-
-                const keyboard: any = {
-                  inline_keyboard: []
-                };
-
-                if (groupInviteUrl) {
-                  keyboard.inline_keyboard.push([
-                    { text: '👥 Join Official Telegram Group', url: groupInviteUrl }
-                  ]);
-                } else {
-                  keyboard.inline_keyboard.push([
-                    { text: '👥 Join Official Telegram Group', callback_data: 'cb_group_link' }
-                  ]);
-                }
-
-                keyboard.inline_keyboard.push([
-                  { text: '📋 My Tasks', callback_data: 'cb_tasks' },
-                  { text: '📊 My Scorecard', callback_data: 'cb_stats' }
-                ]);
-                keyboard.inline_keyboard.push([
-                  { text: '📱 Main Menu', callback_data: 'cb_menu' },
-                  { text: '🌐 Open Portal', url: getPortalUrl() }
-                ]);
-
-                await sendTelegramMessage(chatId, welcomeHtml, { reply_markup: keyboard });
-              } else {
-                await sendTelegramMessage(
-                  chatId,
-                  `⚠️ <b>Could Not Link Account</b>\n\n${escapeHtml(linkResult.message)}\n\nPlease check your Register Number or connect via the IT TaskManager portal.\n${getWatermarkHtml()}`
-                );
-              }
-            } else {
-              if (isGroup) {
-                await sendTelegramMessage(
-                  chatId,
-                  `👋 <b>Welcome to IT TASK MANAGER!</b>\n\n📌 <b>Group ID:</b> <code>${chatId}</code>\n\nThis group receives automated daily task reports and department announcements.\n\n💡 <i>Students: To link your account for private alerts, message @${cachedBotUsername} directly or use 1-Click Connect from the portal!</i>\n${getWatermarkHtml()}`
-                );
-              } else {
-                const groupInviteUrl = await getGroupInviteLink();
-                let greetingHtml = `👋 <b>WELCOME TO IT TASK MANAGER</b>  🎓\n──────────────────────────────\n`;
-                greetingHtml += `<blockquote>Hello <b>${escapeHtml(senderName)}</b>!\n`;
-                greetingHtml += `Stay connected and never miss an assignment deadline or coding goal!</blockquote>\n\n`;
-                greetingHtml += `📌 <b>LINK YOUR ACCOUNT:</b>\n`;
-                greetingHtml += `Reply with your 12-digit Register Number:\n<code>/link YOUR_REGISTER_NUMBER</code>\n<i>(Or simply send your Register Number directly into the chat!)</i>\n\n`;
-                greetingHtml += `👥 <b>OFFICIAL DEPARTMENT COMMUNITY:</b>\n`;
-                greetingHtml += `Make sure to join our official Telegram group for daily coding podiums, class briefs, and announcements!\n`;
-                greetingHtml += getWatermarkHtml();
-
-                const keyboard: any = {
-                  inline_keyboard: []
-                };
-
-                if (groupInviteUrl) {
-                  keyboard.inline_keyboard.push([
-                    { text: '👥 Join Official Telegram Group', url: groupInviteUrl }
-                  ]);
-                } else {
-                  keyboard.inline_keyboard.push([
-                    { text: '👥 Join Official Telegram Group', callback_data: 'cb_group_link' }
-                  ]);
-                }
-
-                keyboard.inline_keyboard.push([
-                  { text: '🌐 Open Web Portal', url: getPortalUrl() }
-                ]);
-
-                await sendTelegramMessage(chatId, greetingHtml, { reply_markup: keyboard });
-              }
-            }
-            return;
-          }
-
-          // Fetch sender's student account for authenticated commands
-          const userRes = await pool.query(`
-            SELECT u.id, u.full_name, u.register_number, u.role, u.class_id, u.leetcode_url, u.github_url, c.name as class_name
-            FROM users u
-            LEFT JOIN classes c ON u.class_id = c.id
-            WHERE u.telegram_chat_id = $1
-            LIMIT 1
-          `, [String(senderUserId)]);
-          const user = userRes.rows[0];
-
-          // Command: /menu or /help
-          if (text.startsWith('/menu') || text.startsWith('/help')) {
-            const keyboard = getInteractiveMenuKeyboard(user?.role);
-            let helpHtml = `📱 <b>IT TASK MANAGER MENU</b>  ⚡\n──────────────────────────────\n`;
-            if (user) {
-              helpHtml += `<blockquote>👤 <b>Connected:</b> <b>${escapeHtml(user.full_name)}</b>\n🆔 <b>Reg No:</b> <code>${escapeHtml(user.register_number)}</code>\n🏫 <b>Class:</b> <code>${escapeHtml(user.class_name || 'IT Department')}</code></blockquote>\n\n`;
-            }
-            helpHtml += `<b>Available Commands:</b>\n`;
-            helpHtml += `• <code>/check &lt;Reg_No&gt;</code> - Complete student scorecard (Tasks + LC + GH)\n`;
-            helpHtml += `• <code>/3ita</code>, <code>/3itb</code>, <code>/2ita</code> - Instant class analysis\n`;
-            helpHtml += `• <code>/year3</code>, <code>/year2</code> - Year-wise department analysis\n`;
-            helpHtml += `• <code>/tasks</code> - View assigned tasks\n`;
-            helpHtml += `• <code>/deadlines</code> - 24-hour upcoming deadlines\n`;
-            helpHtml += `• <code>/leetcode</code> - Daily LeetCode progress\n`;
-            helpHtml += `• <code>/github</code> - Daily GitHub commits\n`;
-            helpHtml += `• <code>/stats</code> - Full performance scorecard\n`;
-            helpHtml += `• <code>/leaderboard</code> - Daily coding rankings\n`;
-            helpHtml += `• <code>/group</code> - Join official department Telegram group\n`;
-            helpHtml += `• <code>/status</code> - Connected profile info\n`;
-            helpHtml += `• <code>/unlink</code> - Disconnect account\n`;
-
-            if (user?.role === 'SUPREME_ADMIN' || user?.role === 'STAFF' || user?.role === 'COORDINATOR' || user?.role === 'HOD' || user?.role === 'CLASS_ADVISOR') {
-              helpHtml += `\n<b>Staff / Coordinator Commands:</b>\n`;
-              helpHtml += `• <code>/defaulters [class]</code> - Target defaulters report\n`;
-              helpHtml += `• <code>/broadcast &lt;msg&gt;</code> - Announcement to all students\n`;
-              helpHtml += `• <code>/summary</code> - Class daily brief\n`;
-            }
-
-            helpHtml += `\n👥 <i>Join our Department Telegram group for live podium alerts!</i>\n`;
-            helpHtml += getWatermarkHtml();
-            await sendTelegramMessage(chatId, helpHtml, { reply_markup: keyboard });
-            return;
-          }
-
-          // Command: /check <query>, /lookup <query>, /student <query>, /progress <query>, or /status <query>
-          if (
-            text.startsWith('/check') ||
-            text.startsWith('/lookup') ||
-            text.startsWith('/student') ||
-            (text.startsWith('/progress') && text.split(/\s+/).length > 1) ||
-            (text.startsWith('/status') && text.split(/\s+/).length > 1)
-          ) {
-            const parts = text.split(/\s+/);
-            const query = parts.slice(1).join(' ').trim();
-            if (query) {
-              const cleanQ = query.toLowerCase().replace(/[@#/_]/g, '').trim();
-
-              // 1. Check if department / group summary requested
-              if (cleanQ === 'dept' || cleanQ === 'department' || cleanQ === 'summary' || cleanQ === 'all' || cleanQ === 'group') {
-                await sendGroupSummary(String(chatId));
-                return;
-              }
-
-              // 2. Check if query is class or year (e.g. 3itc, 2ita, 3ita, 2itb, 3it, 2it, year3, year2, 3it a, ii it c)
-              const isClassOrYear =
-                /^(?:link)?\s*(?:year|y)?\s*([1-4])\s*(?:it|year|yr)?$/i.test(cleanQ) ||
-                /^(?:link)?\s*([1-4])\s*(?:it)?\s*([a-d])$/i.test(cleanQ) ||
-                /^(?:link)?\s*(?:it)?\s*([1-4])\s*([a-d])$/i.test(cleanQ) ||
-                /^(?:class)?\s*([1-4])\s*(?:it)?\s*([a-d])$/i.test(cleanQ) ||
-                /^(?:iii|ii|iv|i)\s*(?:it)?\s*([a-d])?$/i.test(cleanQ) ||
-                cleanQ.startsWith('year') ||
-                cleanQ.startsWith('class');
-
-              if (isClassOrYear) {
-                const card = await getClassOrYearAnalysisCard(query, chatId);
-                await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
-                return;
-              }
-
-              // 3. Otherwise treat as student query (reg no or name/username)
-              if (isGroup) {
-                await sendPrivateActionWarning(chatId);
-                return;
-              }
-
-              const card = await getComprehensiveStudentProgressCard(query);
-              await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
-              return;
-            } else {
-              await sendTelegramMessage(
-                chatId,
-                `ℹ <b>Usage:</b>\n• Student: <code>/check 9225XXXXXXXX</code>\n• Class: <code>/check 3itc</code> or <code>/check 2ita</code>\n• Year: <code>/check 3it</code> or <code>/check 2it</code>\n• Department: <code>/check dept</code>\n${getWatermarkHtml()}`
-              );
-              return;
-            }
-          }
-
-          // ── Class & Year Analysis Reports (Direct Commands & Text) ─────────
-          // Supports: /3ita, /3itb, /3itc, /2ita, /2itb, /2itc, /year3, /year2, /class 3ita, etc.
-          const cleanNoMention = text.replace(/@\w+/g, '').trim();
-          const cleanCandidate = text.replace(/[@#]/g, '').trim();
-          const cleanDirectQ = text.toLowerCase().replace(/[@#/_]/g, '').trim();
-
-          const isClassOrYearShortcut =
-            text.startsWith('/class') ||
-            text.startsWith('/year') ||
-            /^\/(?:[1-4]\s*(?:it)?[a-d]|[1-4]\s*year|year\s*[1-4])$/i.test(cleanNoMention) ||
-            /^(?:[1-4]\s*it[a-d]|[1-4]\s*year|year\s*[1-4])$/i.test(cleanCandidate) ||
-            /^(?:[1-4]\s*(?:it)?[a-d]|[1-4]\s*it|[1-4]\s*year|year\s*[1-4])$/i.test(cleanDirectQ) ||
-            /^(?:iii|ii|iv|i)\s*it\s*[a-d]$/i.test(cleanDirectQ) ||
-            cleanDirectQ === '3ita' || cleanDirectQ === '3itb' || cleanDirectQ === '3itc' ||
-            cleanDirectQ === '2ita' || cleanDirectQ === '2itb' || cleanDirectQ === '2itc' ||
-            cleanDirectQ === '1ita' || cleanDirectQ === '1itb' || cleanDirectQ === '1itc' ||
-            cleanDirectQ === '4ita' || cleanDirectQ === '4itb' || cleanDirectQ === '4itc';
-
-          if (isClassOrYearShortcut) {
-            let classQuery = cleanNoMention;
-            if (text.startsWith('/class') || text.startsWith('/year')) {
-              const parts = cleanNoMention.split(/\s+/);
-              classQuery = parts.slice(1).join(' ').trim() || parts[0];
-            }
-            const card = await getClassOrYearAnalysisCard(classQuery, chatId);
-            if (card.found || text.startsWith('/')) {
-              await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
-              return;
-            }
-          }
-
-          // ── Automatic Register Number / Username Lookup & Auto-Link ─────────
-          // If anyone in a private DM simply types a Register Number
-          if (!isGroup && !text.startsWith('/') && cleanCandidate.length >= 4 && cleanCandidate.length <= 25) {
-            const studentCheck = await pool.query(`
-              SELECT id, full_name, register_number, username, telegram_chat_id FROM users 
-              WHERE (REPLACE(LOWER(register_number), ' ', '') = $1 
-                 OR LOWER(register_number) = $2 
-                 OR REPLACE(LOWER(username), ' ', '') = $1
-                 OR LOWER(username) = $2)
-                AND role = 'STUDENT'
-              LIMIT 1
-            `, [cleanCandidate.toLowerCase().replace(/\s+/g, ''), cleanCandidate.toLowerCase()]);
-
-            if (studentCheck.rows.length > 0) {
-              const matchedStudent = studentCheck.rows[0];
-              // If sender doesn't have an account linked yet, auto-link to this student account!
-              if (!user && (!matchedStudent.telegram_chat_id || matchedStudent.telegram_chat_id === String(senderUserId))) {
-                await linkStudentTelegram(cleanCandidate, senderUserId, fromUsername);
-              }
-              const card = await getComprehensiveStudentProgressCard(cleanCandidate);
-              if (card.found) {
-                await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
-                return;
-              }
-            }
-          }
-
-          // Command: /leaderboard or /top or /rank
-          if (text.startsWith('/leaderboard') || text.startsWith('/top') || text.startsWith('/rank')) {
-            try {
-              const card = await getLeaderboardCard();
-              await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
-            } catch (err: any) {
-              console.error('[Telegram] leaderboard command error:', err);
-              await sendTelegramMessage(chatId, `⚠️ Failed to fetch leaderboard: ${err.message}\n${getWatermarkHtml()}`);
-            }
-            return;
-          }
-
-          // Command: /leetcode or /lc
-          if (text.startsWith('/leetcode') || text.startsWith('/lc')) {
-            if (isGroup) {
-              await sendPrivateActionWarning(chatId);
-              return;
-            }
-            if (!user) {
-              await sendTelegramMessage(chatId, `ℹ Please link your student account first: <code>/link &lt;Register_Number&gt;</code>\n${getWatermarkHtml()}`);
-            } else {
-              const card = await getStudentLeetCodeCard(user);
-              await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
-            }
-            return;
-          }
-
-          // Command: /github or /gh
-          if (text.startsWith('/github') || text.startsWith('/gh')) {
-            if (isGroup) {
-              await sendPrivateActionWarning(chatId);
-              return;
-            }
-            if (!user) {
-              await sendTelegramMessage(chatId, `ℹ Please link your student account first: <code>/link &lt;Register_Number&gt;</code>\n${getWatermarkHtml()}`);
-            } else {
-              const card = await getStudentGitHubCard(user);
-              await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
-            }
-            return;
-          }
-
-          // Command: /stats or /myprogress or /progress
-          if (text.startsWith('/stats') || text.startsWith('/myprogress') || text.startsWith('/progress')) {
-            if (isGroup) {
-              await sendPrivateActionWarning(chatId);
-              return;
-            }
-            if (!user) {
-              await sendTelegramMessage(chatId, `ℹ Please link your student account first: <code>/link &lt;Register_Number&gt;</code>\n${getWatermarkHtml()}`);
-            } else {
-              const card = await getStudentStatsCard(user);
-              await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
-            }
-            return;
-          }
-
-          // Command: /defaulters or /pendingtargets
-          if (text.startsWith('/defaulters') || text.startsWith('/pendingtargets')) {
-            const parts = text.split(/\s+/);
-            const scopeFilter = parts.slice(1).join(' ');
-            const card = await getDefaultersCard(scopeFilter);
-            await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
-            return;
-          }
-
-          // Command: /broadcast <message> (Admin/Staff only)
-          if (text.startsWith('/broadcast')) {
-            if (!user || (user.role !== 'SUPREME_ADMIN' && user.role !== 'STAFF' && user.role !== 'COORDINATOR' && user.role !== 'HOD' && user.role !== 'CLASS_ADVISOR')) {
-              await sendTelegramMessage(chatId, `⚠️ You do not have permission to send broadcasts.\n${getWatermarkHtml()}`);
-              return;
-            }
-
-            const broadcastText = text.replace(/^\/broadcast\s*/i, '').trim();
-            if (!broadcastText) {
-              await sendTelegramMessage(chatId, `⚠️ Usage: <code>/broadcast Your message here</code>\n${getWatermarkHtml()}`);
-              return;
-            }
-
-            const studentsRes = await pool.query(`SELECT telegram_chat_id FROM users WHERE telegram_chat_id IS NOT NULL AND role = 'STUDENT'`);
-            const rawChatIds = studentsRes.rows.map(s => s.telegram_chat_id ? String(s.telegram_chat_id).trim() : '').filter(Boolean);
-            const studentChatIds = Array.from(new Set(rawChatIds)).filter(cid => !cid.startsWith('-'));
-            let count = 0;
-            const broadcastHtml = `📢 <b>DEPARTMENT ANNOUNCEMENT</b>\n\n${escapeHtml(broadcastText)}\n\n— <i>Sent by ${escapeHtml(user.full_name)} (${user.role})</i>${getWatermarkHtml()}`;
-
-            for (const cid of studentChatIds) {
-              await sendTelegramMessage(cid, broadcastHtml);
-              count++;
-              await new Promise(r => setTimeout(r, 40));
-            }
-
-            await sendTelegramMessage(chatId, `✅ <b>Broadcast sent to ${count} student(s) successfully!</b>\n${getWatermarkHtml()}`);
-            return;
-          }
-
-          // Command: /tasks or /pending or /mytasks
-          if (text.startsWith('/tasks') || text.startsWith('/pending') || text.startsWith('/mytasks')) {
-            if (isGroup) {
-              await sendPrivateActionWarning(chatId);
-              return;
-            }
-            if (!user) {
-              await sendTelegramMessage(chatId, `ℹ Please link your student account first: <code>/link &lt;Register_Number&gt;</code>\n${getWatermarkHtml()}`);
-            } else {
-              const card = await getTasksCard(user);
-              await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
-            }
-            return;
-          }
-
-          // Command: /unlink
-          if (text.startsWith('/unlink')) {
-            if (isGroup) {
-              await sendPrivateActionWarning(chatId);
-              return;
-            }
-            await pool.query(`
-              UPDATE users
-              SET telegram_chat_id = NULL, telegram_username = NULL, telegram_linked_at = NULL
-              WHERE telegram_chat_id = $1
-            `, [String(senderUserId)]);
-            await sendTelegramMessage(chatId, `✅ Your Telegram has been disconnected from your IT TaskManager student account.\n${getWatermarkHtml()}`);
-            return;
-          }
-
-          // Command: /status
-          if (text.startsWith('/status')) {
-            if (isGroup) {
-              await sendPrivateActionWarning(chatId);
-              return;
-            }
-            if (user) {
-              await sendTelegramMessage(
-                chatId,
-                `✅ <b>Connected Account:</b>\n• <b>Name:</b> ${escapeHtml(user.full_name)}\n• <b>Register No:</b> <code>${escapeHtml(user.register_number)}</code>\n• <b>Class:</b> ${escapeHtml(user.class_name || 'IT Section')}\n• <b>Role:</b> ${user.role}\n${getWatermarkHtml()}`,
-                { reply_markup: getInteractiveMenuKeyboard(user.role) }
-              );
-            } else {
-              await sendTelegramMessage(chatId, `ℹ This chat is not yet linked to any student profile. Send <code>/link &lt;Your_Register_Number&gt;</code> to link.\n${getWatermarkHtml()}`);
-            }
-            return;
-          }
-
-          // Command: /summary or /report
-          if (text.startsWith('/summary') || text.startsWith('/report')) {
-            const res = await sendGroupSummary(String(chatId));
-            if (!res.success) {
-              await sendTelegramMessage(chatId, `⚠️ ${escapeHtml(res.message)}\n${getWatermarkHtml()}`);
-            }
-            return;
-          }
-
-
-
-          // Command: /deadlines or /due
-          if (text.startsWith('/deadlines') || text.startsWith('/due')) {
-            const res = await sendGroupDeadlineAlert(String(chatId));
-            if (!res.success && res.message !== 'No tasks due within the next 24 hours.') {
-              await sendTelegramMessage(chatId, `⚠️ ${escapeHtml(res.message)}\n${getWatermarkHtml()}`);
-            } else if (res.count === 0) {
-              await sendTelegramMessage(chatId, `✅ <b>No assignments closing within the next 24 hours!</b>\n${getWatermarkHtml()}`);
-            }
-            return;
-          }
-
-          // Friendly Chat Handler for Private DMs
-          if (!isGroup && (text.toLowerCase() === 'hi' || text.toLowerCase() === 'hello')) {
-            const keyboard = getInteractiveMenuKeyboard(user?.role);
-            if (user) {
-              await sendTelegramMessage(
-                chatId,
-                `👋 <b>Hello ${escapeHtml(user.full_name)}!</b>\n\nWelcome back to IT TaskManager. What would you like to check today?\n${getWatermarkHtml()}`,
-                { reply_markup: keyboard }
-              );
-            } else {
-              await sendTelegramMessage(
-                chatId,
-                `🤖 <b>Welcome to IT TASK MANAGER!</b>\n\nHello! To receive private task deadline alerts and check your live coding progress, reply with:\n<code>/link YOUR_REGISTER_NUMBER</code>\n\n<i>Example:</i> <code>/link 922524205001</code>\n${getWatermarkHtml()}`
-              );
-            }
-          }
+          await processTelegramUpdate(update);
         }));
       }
     } catch (err: any) {
-      // Log poll errors so they are visible in server logs for debugging
       console.error('[Telegram Poll Error]:', err?.message || err);
     } finally {
       if (isPolling) {

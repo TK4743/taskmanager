@@ -63,6 +63,10 @@ export {
 };
 import {
   startTelegramPoller,
+  processTelegramUpdate,
+  setTelegramWebhook,
+  getTelegramWebhookInfo,
+  deleteTelegramWebhook,
   sendGroupSummary,
   sendGroupDeadlineAlert,
   triggerPendingTaskReminders,
@@ -452,6 +456,9 @@ async function startServer() {
         checkAndTriggerScheduledAutomations().catch(err => console.error('[Scheduler] Tick error:', err));
       }, 60 * 1000);
     }
+  } else {
+    // On Vercel serverless runtime: Auto-ensure Telegram Webhook is active
+    setTelegramWebhook().catch(err => console.error('[Telegram Webhook Init Warning]:', err));
   }
 
   const app = express();
@@ -964,6 +971,40 @@ async function startServer() {
     } else {
       res.status(500).json({ error: result.description || 'Failed to send test message via Telegram API' });
     }
+  }));
+
+  // 6. Telegram Inbound Webhook Endpoint (Public - called by Telegram servers)
+  app.post('/api/telegram/webhook', asyncHandler(async (req: any, res: Response) => {
+    // Acknowledge receipt to Telegram API immediately with 200 OK
+    res.status(200).json({ ok: true });
+
+    // Process update asynchronously without blocking response
+    const update = req.body;
+    if (update && typeof update === 'object') {
+      processTelegramUpdate(update).catch(err => {
+        console.error('[Telegram Webhook Error]:', err?.message || err);
+      });
+    }
+  }));
+
+  // 7. Get Webhook Info & Diagnostic Status
+  app.get('/api/telegram/webhook-info', authenticate, asyncHandler(async (req: any, res: Response) => {
+    const info = await getTelegramWebhookInfo();
+    res.json(info);
+  }));
+
+  // 8. Register / Update Telegram Webhook
+  app.post('/api/telegram/set-webhook', authenticate, authorize(['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR']), asyncHandler(async (req: any, res: Response) => {
+    const { webhookUrl } = req.body;
+    const result = await setTelegramWebhook(webhookUrl);
+    res.json(result);
+  }));
+
+  // 9. Delete Telegram Webhook
+  app.post('/api/telegram/delete-webhook', authenticate, authorize(['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR']), asyncHandler(async (req: any, res: Response) => {
+    const { dropPendingUpdates } = req.body;
+    const result = await deleteTelegramWebhook(Boolean(dropPendingUpdates));
+    res.json(result);
   }));
 
   // ── Web Push Notification Endpoints (PWA / Mobile / Lock Screen) ──────────
