@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
-import { API_URL } from './config';
+import { API_URL, FEATURE_FLAGS } from './config';
 import SkillAssessmentView from './SkillAssessmentView';
 import PlacementReadinessView from './PlacementReadinessView';
 import LiveTeachingHubView from './LiveTeachingHubView';
@@ -10214,41 +10214,51 @@ export default function App() {
               onClick={() => { setView('skill-assessment'); setIsMobileSidebarOpen(false); }}
             />
 
-            <SidebarItem
-              icon={<Target size={20} className="text-cyan-500" />}
-              label="Placement Rating"
-              active={view === 'placement-readiness'}
-              onClick={() => { setView('placement-readiness'); setIsMobileSidebarOpen(false); }}
-            />
+            {FEATURE_FLAGS.placementRating && (
+              <SidebarItem
+                icon={<Target size={20} className="text-cyan-500" />}
+                label="Placement Rating"
+                active={view === 'placement-readiness'}
+                onClick={() => { setView('placement-readiness'); setIsMobileSidebarOpen(false); }}
+              />
+            )}
 
-            <SidebarItem
-              icon={<Radio size={20} className="text-emerald-500 animate-pulse" />}
-              label="Live Teaching Hub"
-              active={view === 'live-teaching-hub'}
-              onClick={() => { setView('live-teaching-hub'); setIsMobileSidebarOpen(false); }}
-            />
+            {FEATURE_FLAGS.liveTeachingHub && (
+              <SidebarItem
+                icon={<Radio size={20} className="text-emerald-500 animate-pulse" />}
+                label="Live Teaching Hub"
+                active={view === 'live-teaching-hub'}
+                onClick={() => { setView('live-teaching-hub'); setIsMobileSidebarOpen(false); }}
+              />
+            )}
 
             {/* SIH26044 Academia-Industry Innovation Navigation */}
             {isStudent && (
               <>
-                <SidebarItem
-                  icon={<Briefcase size={20} className="text-teal-400" />}
-                  label="Opportunities"
-                  active={view === 'opportunities'}
-                  onClick={() => { setView('opportunities'); setIsMobileSidebarOpen(false); }}
-                />
-                <SidebarItem
-                  icon={<Code size={20} className="text-indigo-500" />}
-                  label="Coding Tests"
-                  active={view === 'student-coding-assessments'}
-                  onClick={() => { setView('student-coding-assessments'); setIsMobileSidebarOpen(false); }}
-                />
-                <SidebarItem
-                  icon={<Zap size={20} className="text-amber-400" />}
-                  label="Skill Gap AI"
-                  active={view === 'skill-gap-analyzer'}
-                  onClick={() => { setView('skill-gap-analyzer'); setIsMobileSidebarOpen(false); }}
-                />
+                {FEATURE_FLAGS.opportunities && (
+                  <SidebarItem
+                    icon={<Briefcase size={20} className="text-teal-400" />}
+                    label="Opportunities"
+                    active={view === 'opportunities'}
+                    onClick={() => { setView('opportunities'); setIsMobileSidebarOpen(false); }}
+                  />
+                )}
+                {FEATURE_FLAGS.codingTests && (
+                  <SidebarItem
+                    icon={<Code size={20} className="text-indigo-500" />}
+                    label="Coding Tests"
+                    active={view === 'student-coding-assessments'}
+                    onClick={() => { setView('student-coding-assessments'); setIsMobileSidebarOpen(false); }}
+                  />
+                )}
+                {FEATURE_FLAGS.skillGapAi && (
+                  <SidebarItem
+                    icon={<Zap size={20} className="text-amber-400" />}
+                    label="Skill Gap AI"
+                    active={view === 'skill-gap-analyzer'}
+                    onClick={() => { setView('skill-gap-analyzer'); setIsMobileSidebarOpen(false); }}
+                  />
+                )}
               </>
             )}
 

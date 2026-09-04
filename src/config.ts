@@ -10,3 +10,16 @@ export const ENV = Object.freeze({
 
 export const API_URL = ENV.API_URL.replace(/\/api\/?$/, '');
 export const GOAT_CE_URL = ENV.GOAT_CE_URL;
+
+export const FEATURE_FLAGS = {
+  // Toggle UI visibility of features on the sidebar dashboard
+  // Set to `false` to hide temporarily, set to `true` to bring back anytime!
+  placementRating: false,
+  opportunities: false,
+  codingTests: false,
+  skillGapAi: false,
+  liveTeachingHub: true,
+  skillAssessment: true,
+  facultyHub: true,
+  skillHeatmap: true,
+};
