@@ -406,18 +406,32 @@ const getCloudinaryThumbnail = (url: string | undefined | null, width = 400) => 
 };
 
 const getStudentTaskStatusBadge = (task: any, user: any, submissions: any[]) => {
+  const isDeadlinePassed = Boolean(task?.deadline && new Date(task.deadline).getTime() < Date.now());
+  const isClosed = task?.status === 'CLOSED' || isDeadlinePassed;
+
   if (user?.role !== 'STUDENT') {
+    if (task?.status === 'CLOSED') {
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 text-zinc-600 border border-zinc-200 inline-flex items-center gap-1">
+          <Clock size={12} /> CLOSED
+        </span>
+      );
+    }
+    if (isDeadlinePassed) {
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-600 border border-rose-200 inline-flex items-center gap-1">
+          <Clock size={12} /> DEADLINE PASSED
+        </span>
+      );
+    }
     return (
-      <span className={cn(
-        "px-3 py-1 rounded-full text-xs font-bold border",
-        task.status === 'OPEN' ? "bg-emerald-50 text-emerald-600 border-emerald-200" : "bg-zinc-100 text-zinc-600 border-zinc-200"
-      )}>
-        {task.status}
+      <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 inline-flex items-center gap-1">
+        OPEN
       </span>
     );
   }
 
-  const sub = submissions.find(s => String(s.task_id) === String(task.id) && String(s.user_id) === String(user?.id));
+  const sub = submissions.find(s => String(s.task_id) === String(task?.id) && String(s.user_id) === String(user?.id));
   if (sub) {
     if (sub.status === 'VERIFIED') {
       return (
@@ -448,9 +462,6 @@ const getStudentTaskStatusBadge = (task: any, user: any, submissions: any[]) => 
       );
     }
   }
-
-  const isDeadlinePassed = task.deadline && new Date(task.deadline) < new Date();
-  const isClosed = task.status === 'CLOSED' || isDeadlinePassed;
 
   if (isClosed) {
     return (
@@ -11644,20 +11655,40 @@ export default function App() {
                     <ContentCard>
                       <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
                       <div className="space-y-4">
-                        {tasks.slice(0, 5).map(task => (
-                          <div key={task.id} className="flex items-center justify-between p-4 bg-zinc-50 rounded-xl">
-                            <div>
-                              <p className="font-medium text-zinc-900">{task.title}</p>
-                              <p className="text-xs text-zinc-500">
-                                {Array.isArray(task.class_ids) && task.class_ids.length > 0
-                                  ? task.class_ids.map(id => classes.find(c => c.id.toString() === id.toString())?.name || id).join(', ')
-                                  : (task.department_name || 'Global Task')
-                                } • {new Date(task.created_at).toLocaleDateString()}
-                              </p>
+                        {tasks.slice(0, 5).map(task => {
+                          const isDeadlinePassed = Boolean(task.deadline && new Date(task.deadline).getTime() < Date.now());
+                          return (
+                            <div key={task.id} className="flex items-center justify-between p-4 bg-zinc-50 rounded-xl gap-3">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-zinc-900 truncate">{task.title}</p>
+                                <p className="text-xs text-zinc-500 flex flex-wrap items-center gap-1.5 mt-0.5">
+                                  <span>
+                                    {Array.isArray(task.class_ids) && task.class_ids.length > 0
+                                      ? task.class_ids.map(id => classes.find(c => c.id.toString() === id.toString())?.name || id).join(', ')
+                                      : (task.department_name || 'Global Task')
+                                    }
+                                  </span>
+                                  <span>•</span>
+                                  <span>{new Date(task.created_at).toLocaleDateString()}</span>
+                                  {task.deadline && (
+                                    <>
+                                      <span>•</span>
+                                      <span className={cn(
+                                        "font-medium",
+                                        isDeadlinePassed ? "text-rose-600 font-semibold" : "text-zinc-600"
+                                      )}>
+                                        Due: {new Date(task.deadline).toLocaleDateString()}
+                                      </span>
+                                    </>
+                                  )}
+                                </p>
+                              </div>
+                              <div className="shrink-0">
+                                {getStudentTaskStatusBadge(task, user, submissions)}
+                              </div>
                             </div>
-                            {getStudentTaskStatusBadge(task, user, submissions)}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </ContentCard>
                   </PageLayout>
