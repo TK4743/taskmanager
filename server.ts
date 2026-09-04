@@ -560,18 +560,16 @@ async function startServer() {
     try {
       const { todayStr, prevDayStr, hours, minutes } = getISTTimeParts();
 
-      // 1. Morning 7:50 AM - 7:59 AM IST Window -> Pre-Sync Tasks, LeetCode & GitHub Progress
+      // 1. Morning 7:50 AM - 7:59 AM IST Window -> Pre-Sync Previous Day LeetCode & GitHub Progress
       if (hours === 7 && minutes >= 50) {
         const claimed = await claimDailySlot('morning_pre_sync_date', todayStr);
         if (claimed) {
           triggered.push('morning_pre_sync');
-          console.log(`[Scheduler] 🔄 7:50 AM IST Pre-Syncing Tasks, LeetCode & GitHub (${prevDayStr})...`);
+          console.log(`[Scheduler] 🔄 7:50 AM IST Pre-Syncing Previous Day Tasks, LeetCode & GitHub (${prevDayStr})...`);
           try {
             await syncLeetcodeProgressForScope({ date: prevDayStr } as any);
-            await syncLeetcodeProgressForScope({ date: todayStr } as any);
             if (process.env.GITHUB_TOKEN) {
               await syncGitHubProgressForScope({ date: prevDayStr });
-              await syncGitHubProgressForScope({ date: todayStr });
             }
           } catch (syncErr) {
             console.error('[Morning Pre-Sync Error]:', syncErr);
