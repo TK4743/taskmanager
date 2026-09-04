@@ -1,4 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  Briefcase, 
+  Search, 
+  Plus, 
+  Clock, 
+  Award, 
+  MapPin, 
+  Building2, 
+  Send, 
+  CheckCircle2, 
+  XCircle, 
+  FileText, 
+  UserCheck, 
+  Sparkles, 
+  Filter, 
+  Calendar,
+  Layers,
+  ChevronRight,
+  AlertCircle
+} from 'lucide-react';
 import { API_URL } from './config';
 
 const API = API_URL || '';
@@ -16,38 +36,86 @@ interface FacultyOpportunity {
   application_deadline: string;
   company_name: string;
   industry_sector: string;
-  logo_url: string;
+  logo_url?: string;
   status: string;
+  application_count?: number;
 }
 
 interface FacultyApplication {
   id: string;
   opportunity_id: string;
-  title: string;
+  title?: string;
+  opportunity_title?: string;
   opportunity_type: string;
-  duration: string;
-  compensation: string;
-  company_name: string;
+  duration?: string;
+  compensation?: string;
+  company_name?: string;
+  industry_sector?: string;
   proposal: string;
   status: string;
+  decision_note?: string;
   created_at: string;
+  faculty_name?: string;
+  faculty_email?: string;
+  faculty_role?: string;
+  full_name?: string;
+  email?: string;
+  role?: string;
 }
 
+const TYPE_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  FDP: { label: 'Faculty Dev Program', color: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-200' },
+  CONSULTANCY: { label: 'Consultancy Advisory', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+  RESEARCH: { label: 'Sponsored Research', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
+  WORKSHOP: { label: 'Technical Workshop', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
+  GUEST_LECTURE: { label: 'Guest Lecture', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
+};
+
 export default function FacultyIndustryHubView({ token, user }: { token: string; user: any }) {
+  const isIndustry = user?.role === 'INDUSTRY';
+  const isAcademic = ['HOD', 'CLASS_ADVISOR', 'SUPREME_ADMIN'].includes(user?.role || '');
+
   const [opportunities, setOpportunities] = useState<FacultyOpportunity[]>([]);
-  const [myApplications, setMyApplications] = useState<FacultyApplication[]>([]);
-  const [activeTab, setActiveTab] = useState<'browse' | 'my_apps'>('browse');
+  const [applications, setApplications] = useState<FacultyApplication[]>([]);
+  const [activeTab, setActiveTab] = useState<'browse' | 'proposals'>('browse');
   const [filterType, setFilterType] = useState<string>('ALL');
+  const [loading, setLoading] = useState<boolean>(true);
+  
+  // Faculty apply modal
   const [selectedOpp, setSelectedOpp] = useState<FacultyOpportunity | null>(null);
   const [proposalText, setProposalText] = useState<string>('');
-  const [applying, setApplying] = useState<boolean>(false);
-  const [toast, setToast] = useState<string>('');
+  const [submittingProposal, setSubmittingProposal] = useState<boolean>(false);
 
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  // Industry post new opportunity modal
+  const [showPostModal, setShowPostModal] = useState<boolean>(false);
+  const [newOpp, setNewOpp] = useState({
+    opportunity_type: 'FDP',
+    title: '',
+    description: '',
+    compensation: '',
+    duration: '',
+    location: '',
+    mode: 'Hybrid',
+    application_deadline: ''
+  });
+  const [postingOpp, setPostingOpp] = useState<boolean>(false);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3000);
+  // Decision review modal for industry
+  const [reviewingApp, setReviewingApp] = useState<FacultyApplication | null>(null);
+  const [decisionAction, setDecisionAction] = useState<'ACCEPTED' | 'SHORTLISTED' | 'REJECTED'>('ACCEPTED');
+  const [decisionNote, setDecisionNote] = useState<string>('');
+  const [submittingDecision, setSubmittingDecision] = useState<boolean>(false);
+
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  const headers = React.useMemo(() => ({
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`
+  }), [token]);
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
   };
 
   const fetchOpportunities = useCallback(async () => {
@@ -66,26 +134,37 @@ export default function FacultyIndustryHubView({ token, user }: { token: string;
     }
   }, [filterType, headers]);
 
-  const fetchMyApplications = useCallback(async () => {
+  const fetchApplications = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/faculty/my-applications`, { headers });
+      const url = isIndustry ? `${API}/api/industry/faculty-applications` : `${API}/api/faculty/my-applications`;
+      const res = await fetch(url, { headers });
       if (res.ok) {
         const data = await res.json();
-        setMyApplications(data);
+        setApplications(data);
       }
     } catch (err) {
-      console.error('Failed to fetch my applications', err);
+      console.error('Failed to fetch applications', err);
     }
-  }, [headers]);
+  }, [isIndustry, headers]);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    await Promise.all([fetchOpportunities(), fetchApplications()]);
+    setLoading(false);
+  }, [fetchOpportunities, fetchApplications]);
 
   useEffect(() => {
-    fetchOpportunities();
-    fetchMyApplications();
-  }, [fetchOpportunities, fetchMyApplications]);
+    loadData();
+  }, [loadData]);
 
+  // Submit faculty proposal
   const handleApply = async () => {
     if (!selectedOpp) return;
-    setApplying(true);
+    if (!proposalText.trim()) {
+      showToast('Please provide your collaboration pitch or syllabus outline', 'error');
+      return;
+    }
+    setSubmittingProposal(true);
     try {
       const res = await fetch(`${API}/api/faculty/opportunities/${selectedOpp.id}/apply`, {
         method: 'POST',
@@ -94,284 +173,653 @@ export default function FacultyIndustryHubView({ token, user }: { token: string;
       });
       const data = await res.json();
       if (res.ok) {
-        showToast('Application / Proposal submitted successfully!');
+        showToast('Collaboration proposal submitted successfully!');
         setSelectedOpp(null);
         setProposalText('');
-        fetchMyApplications();
+        fetchApplications();
+        fetchOpportunities();
       } else {
-        showToast(data.error || 'Submission failed');
+        showToast(data.error || 'Submission failed', 'error');
       }
     } catch (err) {
-      showToast('Network error while submitting application');
+      showToast('Network error while submitting proposal', 'error');
     } finally {
-      setApplying(false);
+      setSubmittingProposal(false);
     }
   };
 
-  const s: Record<string, React.CSSProperties> = {
-    container: {
-      minHeight: '100vh',
-      background: '#F5F5F4',
-      color: '#0f172a',
-      fontFamily: "'Inter', sans-serif",
-      padding: '24px',
-    },
-    card: {
-      background: '#ffffff',
-      border: '1px solid #e2e8f0',
-      borderRadius: '16px',
-      padding: '20px',
-      marginBottom: '16px',
-      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
-    },
-    tabBtn: (active: boolean) => ({
-      padding: '10px 20px',
-      borderRadius: '10px',
-      fontWeight: 700,
-      fontSize: '13px',
-      cursor: 'pointer',
-      border: active ? '1px solid #0f172a' : '1px solid #e2e8f0',
-      background: active ? '#0f172a' : '#ffffff',
-      color: active ? '#ffffff' : '#475569',
-      transition: 'all 0.15s ease-in-out',
-    }),
-    badge: (color: string) => ({
-      background: `${color}15`,
-      color: color,
-      padding: '4px 10px',
-      borderRadius: '20px',
-      fontSize: '11px',
-      fontWeight: 700,
-      border: `1px solid ${color}40`,
-    }),
-    button: (bg = '#0f172a') => ({
-      background: bg,
-      color: '#ffffff',
-      border: 'none',
-      padding: '9px 18px',
-      borderRadius: '10px',
-      fontWeight: 700,
-      fontSize: '13px',
-      cursor: 'pointer',
-      transition: 'all 0.15s',
-    }),
-    modal: {
-      position: 'fixed' as const,
-      inset: 0,
-      background: 'rgba(15, 23, 42, 0.65)',
-      backdropFilter: 'blur(4px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '20px',
-    },
-    modalBox: {
-      background: '#ffffff',
-      border: '1px solid #e2e8f0',
-      borderRadius: '20px',
-      padding: '28px',
-      maxWidth: '600px',
-      width: '100%',
-      color: '#0f172a',
-      boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-    },
-    toast: {
-      position: 'fixed' as const,
-      bottom: '24px',
-      right: '24px',
-      background: '#059669',
-      color: '#ffffff',
-      borderRadius: '10px',
-      padding: '12px 24px',
-      fontWeight: 700,
-      zIndex: 9999,
-      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-    },
+  // Industry post opportunity
+  const handlePostOpportunity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOpp.title.trim() || !newOpp.description.trim()) {
+      showToast('Title and Description are required', 'error');
+      return;
+    }
+    setPostingOpp(true);
+    try {
+      const res = await fetch(`${API}/api/industry/faculty-opportunities`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(newOpp)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Faculty opportunity created and published!');
+        setShowPostModal(false);
+        setNewOpp({
+          opportunity_type: 'FDP',
+          title: '',
+          description: '',
+          compensation: '',
+          duration: '',
+          location: '',
+          mode: 'Hybrid',
+          application_deadline: ''
+        });
+        fetchOpportunities();
+      } else {
+        showToast(data.error || 'Failed to create opportunity', 'error');
+      }
+    } catch (err) {
+      showToast('Network error while creating opportunity', 'error');
+    } finally {
+      setPostingOpp(false);
+    }
   };
 
-  const TYPE_COLORS: Record<string, string> = {
-    FDP: '#4f46e5',
-    CONSULTANCY: '#059669',
-    RESEARCH: '#db2777',
-    WORKSHOP: '#2563eb',
-    GUEST_LECTURE: '#d97706',
+  // Industry update proposal status
+  const handleUpdateProposalStatus = async () => {
+    if (!reviewingApp) return;
+    setSubmittingDecision(true);
+    try {
+      const res = await fetch(`${API}/api/industry/faculty-applications/${reviewingApp.id}/status`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+          status: decisionAction,
+          decision_note: decisionNote
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`Proposal status updated to ${decisionAction}`);
+        setReviewingApp(null);
+        setDecisionNote('');
+        fetchApplications();
+      } else {
+        showToast(data.error || 'Failed to update status', 'error');
+      }
+    } catch (err) {
+      showToast('Error updating proposal status', 'error');
+    } finally {
+      setSubmittingDecision(false);
+    }
   };
 
   return (
-    <div style={s.container}>
-      {toast && <div style={s.toast}>✨ {toast}</div>}
+    <div className="min-h-full bg-zinc-50 text-zinc-900 font-sans p-4 md:p-8">
+      {/* Toast Alert */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-xl border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-200 ${
+          toast.type === 'success' ? 'bg-zinc-900 text-white border-zinc-800' : 'bg-red-600 text-white border-red-700'
+        }`}>
+          {toast.type === 'success' ? <Sparkles className="w-5 h-5 text-amber-400" /> : <AlertCircle className="w-5 h-5" />}
+          <span className="text-xs md:text-sm font-semibold">{toast.msg}</span>
+        </div>
+      )}
 
-      {/* Header Subtitle */}
-      <div style={{ marginBottom: '20px' }}>
-        <p style={{ color: '#64748b', margin: 0, fontSize: '14px', fontWeight: 600 }}>
-          Engage with corporate partners on FDPs, sponsored research, consultancy, and expert sessions
-        </p>
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 bg-white p-6 rounded-3xl border border-zinc-200 shadow-2xs">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-1">
+            <Building2 className="w-3.5 h-3.5" />
+            {isIndustry ? 'Corporate Academic Partnerships' : 'Faculty Industry Collaboration'}
+          </div>
+          <h1 className="text-2xl md:text-3xl font-black text-zinc-900 tracking-tight">
+            {isIndustry ? 'Faculty Enablement & Research Hub' : 'Industry Faculty Hub'}
+          </h1>
+          <p className="text-zinc-500 text-xs md:text-sm font-medium">
+            {isIndustry 
+              ? 'Publish FDPs, sponsored research grants, consultancy projects, and collaborate with distinguished faculty members.'
+              : 'Engage with corporate partners on Faculty Development Programs, sponsored research grants, and advisory consultancies.'}
+          </p>
+        </div>
+
+        {isIndustry && (
+          <button
+            onClick={() => setShowPostModal(true)}
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs md:text-sm rounded-2xl shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <Plus className="w-4 h-4" />
+            Post Faculty Opportunity
+          </button>
+        )}
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-        <button style={s.tabBtn(activeTab === 'browse')} onClick={() => setActiveTab('browse')}>
-          🔍 Available Opportunities ({opportunities.length})
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={() => setActiveTab('browse')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs md:text-sm font-bold transition-all ${
+            activeTab === 'browse'
+              ? 'bg-zinc-900 text-white shadow-sm'
+              : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-50'
+          }`}
+        >
+          <Search className="w-4 h-4" />
+          Available Opportunities
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
+            activeTab === 'browse' ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-600'
+          }`}>
+            {opportunities.length}
+          </span>
         </button>
-        <button style={s.tabBtn(activeTab === 'my_apps')} onClick={() => setActiveTab('my_apps')}>
-          📝 My Proposals & Applications ({myApplications.length})
+
+        <button
+          onClick={() => setActiveTab('proposals')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs md:text-sm font-bold transition-all ${
+            activeTab === 'proposals'
+              ? 'bg-zinc-900 text-white shadow-sm'
+              : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-50'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          {isIndustry ? 'Received Faculty Proposals' : 'My Submitted Proposals'}
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
+            activeTab === 'proposals' ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-600'
+          }`}>
+            {applications.length}
+          </span>
         </button>
       </div>
 
-      {/* Browse Tab */}
+      {/* Tab 1: Browse Opportunities */}
       {activeTab === 'browse' && (
-        <>
-          {/* Filter Pills */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-            {['ALL', 'FDP', 'CONSULTANCY', 'RESEARCH', 'GUEST_LECTURE', 'WORKSHOP'].map((t) => (
-              <button
-                key={t}
-                onClick={() => setFilterType(t)}
-                style={{
-                  background: filterType === t ? '#0f172a' : '#ffffff',
-                  color: filterType === t ? '#ffffff' : '#475569',
-                  border: `1px solid ${filterType === t ? '#0f172a' : '#e2e8f0'}`,
-                  borderRadius: '20px',
-                  padding: '6px 14px',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease-in-out',
-                }}
-              >
-                {t.replace('_', ' ')}
-              </button>
-            ))}
+        <div className="space-y-6">
+          {/* Category Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
+            <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5 mr-1">
+              <Filter className="w-3.5 h-3.5" /> Category:
+            </span>
+            {['ALL', 'FDP', 'CONSULTANCY', 'RESEARCH', 'GUEST_LECTURE', 'WORKSHOP'].map((cat) => {
+              const active = filterType === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setFilterType(cat)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+                    active
+                      ? 'bg-zinc-900 text-white shadow-2xs'
+                      : 'bg-white text-zinc-600 border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
+                  }`}
+                >
+                  {cat === 'ALL' ? 'All Opportunities' : cat.replace('_', ' ')}
+                </button>
+              );
+            })}
           </div>
 
-          {opportunities.length === 0 ? (
-            <div style={{ ...s.card, textAlign: 'center', padding: '40px', color: '#64748b', fontWeight: 600 }}>
-              No faculty opportunities available for the selected category.
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
-              {opportunities.map((opp) => (
-                <div key={opp.id} style={s.card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <span style={s.badge(TYPE_COLORS[opp.opportunity_type] || '#4f46e5')}>
-                      {opp.opportunity_type.replace('_', ' ')}
-                    </span>
-                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
-                      Mode: {opp.mode}
-                    </span>
-                  </div>
-
-                  <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 6px 0', color: '#0f172a' }}>
-                    {opp.title}
-                  </h3>
-
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#4f46e5', marginBottom: '10px' }}>
-                    🏢 {opp.company_name} ({opp.industry_sector || 'Tech'})
-                  </div>
-
-                  <p style={{ fontSize: '13px', color: '#475569', margin: '0 0 14px 0', lineHeight: 1.5, maxHeight: '60px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {opp.description}
-                  </p>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px', fontSize: '12px', color: '#64748b' }}>
-                    <div>⏱ Duration: <strong style={{ color: '#0f172a' }}>{opp.duration || 'Flexible'}</strong></div>
-                    <div>💰 Grant: <strong style={{ color: '#059669' }}>{opp.compensation || 'Honorarium'}</strong></div>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button style={s.button('#0f172a')} onClick={() => setSelectedOpp(opp)}>
-                      Submit Proposal →
-                    </button>
-                  </div>
-                </div>
+          {/* Opportunities Grid */}
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white border border-zinc-200 rounded-3xl p-6 h-64 animate-pulse" />
               ))}
             </div>
-          )}
-        </>
-      )}
-
-      {/* My Applications Tab */}
-      {activeTab === 'my_apps' && (
-        <>
-          {myApplications.length === 0 ? (
-            <div style={{ ...s.card, textAlign: 'center', padding: '40px', color: '#64748b', fontWeight: 600 }}>
-              You haven't submitted any faculty proposals yet.
+          ) : opportunities.length === 0 ? (
+            <div className="bg-white border border-zinc-200 rounded-3xl p-12 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center mx-auto">
+                <Briefcase className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-zinc-800">No faculty opportunities available for {filterType.replace('_', ' ')}</h3>
+              <p className="text-zinc-500 text-xs max-w-md mx-auto">
+                {isIndustry 
+                  ? 'Click "+ Post Faculty Opportunity" above to create and invite academic faculty to collaborate.'
+                  : 'Check back soon or choose another category filter to explore other institutional programs.'}
+              </p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {myApplications.map((app) => (
-                <div key={app.id} style={s.card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {opportunities.map((opp) => {
+                const conf = TYPE_CONFIG[opp.opportunity_type] || TYPE_CONFIG['FDP'];
+                return (
+                  <div
+                    key={opp.id}
+                    className="bg-white border border-zinc-200 hover:border-zinc-300 rounded-3xl p-6 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all duration-200 group"
+                  >
                     <div>
-                      <span style={s.badge(TYPE_COLORS[app.opportunity_type] || '#4f46e5')}>
-                        {app.opportunity_type.replace('_', ' ')}
-                      </span>
-                      <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: '8px 0 2px 0' }}>
-                        {app.title}
+                      {/* Top Badges */}
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className={`px-3 py-1 rounded-full text-[11px] font-extrabold border ${conf.bg} ${conf.color} ${conf.border}`}>
+                          {conf.label}
+                        </span>
+                        <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider bg-zinc-50 px-2.5 py-0.5 rounded-lg border border-zinc-200">
+                          {opp.mode || 'Hybrid'}
+                        </span>
+                      </div>
+
+                      {/* Title & Company */}
+                      <h3 className="text-base font-black text-zinc-900 group-hover:text-indigo-600 transition-colors line-clamp-2 mb-1">
+                        {opp.title}
                       </h3>
-                      <div style={{ fontSize: '13px', color: '#64748b' }}>
-                        Company: {app.company_name} · Submitted on {new Date(app.created_at).toLocaleDateString()}
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-500 mb-3">
+                        <Building2 className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>{opp.company_name}</span>
+                        {opp.industry_sector && (
+                          <span className="text-zinc-400 font-medium">({opp.industry_sector})</span>
+                        )}
+                      </div>
+
+                      {/* Description */}
+                      <p className="text-xs text-zinc-600 line-clamp-3 leading-relaxed mb-4">
+                        {opp.description}
+                      </p>
+
+                      {/* Details Grid */}
+                      <div className="grid grid-cols-2 gap-2 bg-zinc-50 p-3 rounded-2xl border border-zinc-100 text-xs mb-4">
+                        <div className="flex items-center gap-1.5 text-zinc-600">
+                          <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                          <span className="truncate font-semibold">{opp.duration || 'Flexible'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-emerald-700">
+                          <Award className="w-3.5 h-3.5 text-emerald-500" />
+                          <span className="truncate font-bold">{opp.compensation || 'Honorarium'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-zinc-600 col-span-2">
+                          <MapPin className="w-3.5 h-3.5 text-zinc-400" />
+                          <span className="truncate font-medium">{opp.location || 'Hybrid / Virtual'}</span>
+                        </div>
                       </div>
                     </div>
-                    <span style={s.badge(app.status === 'APPLIED' ? '#d97706' : '#059669')}>
-                      {app.status}
-                    </span>
-                  </div>
 
-                  {app.proposal && (
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', fontSize: '13px', color: '#334155' }}>
-                      <strong>Proposal Pitch:</strong> {app.proposal}
+                    {/* Action Button */}
+                    <div className="pt-2 border-t border-zinc-100 flex items-center justify-between gap-2">
+                      <div className="text-[11px] font-semibold text-zinc-400">
+                        {opp.application_count ? `${opp.application_count} proposals` : 'Open for proposals'}
+                      </div>
+                      
+                      {!isIndustry ? (
+                        <button
+                          onClick={() => setSelectedOpp(opp)}
+                          className="flex items-center gap-1.5 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold rounded-xl transition-all"
+                        >
+                          Submit Proposal
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-xl">
+                          Active Opportunity
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
-        </>
+        </div>
       )}
 
-      {/* Proposal Submission Modal */}
-      {selectedOpp && (
-        <div style={s.modal} onClick={(e) => e.target === e.currentTarget && setSelectedOpp(null)}>
-          <div style={s.modalBox}>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 4px 0', color: '#0f172a' }}>
-              Submit Collaboration Proposal
-            </h3>
-            <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px 0', fontWeight: 600 }}>
-              For: {selectedOpp.title} ({selectedOpp.company_name})
-            </p>
+      {/* Tab 2: Proposals / Applications */}
+      {activeTab === 'proposals' && (
+        <div className="space-y-4">
+          {applications.length === 0 ? (
+            <div className="bg-white border border-zinc-200 rounded-3xl p-12 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center mx-auto">
+                <FileText className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-zinc-800">
+                {isIndustry ? 'No faculty proposals received yet' : 'You have not submitted any proposals yet'}
+              </h3>
+              <p className="text-zinc-500 text-xs max-w-md mx-auto">
+                {isIndustry 
+                  ? 'Faculty applications submitted by academic professors and advisors will appear here for your review.'
+                  : 'Browse available opportunities in the first tab and submit your collaboration pitch.'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {applications.map((app) => {
+                const conf = TYPE_CONFIG[app.opportunity_type] || TYPE_CONFIG['FDP'];
+                const applicantName = app.faculty_name || app.full_name || 'Faculty Member';
+                const applicantEmail = app.faculty_email || app.email || '';
+                const applicantRole = app.faculty_role || app.role || 'Faculty';
 
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#4f46e5', marginBottom: '8px' }}>
-                Proposal Pitch / Scope of Collaboration
+                return (
+                  <div
+                    key={app.id}
+                    className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-2xs space-y-4"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-zinc-100">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${conf.bg} ${conf.color} ${conf.border}`}>
+                            {conf.label}
+                          </span>
+                          <span className="text-xs text-zinc-400 font-medium">
+                            Submitted on {new Date(app.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <h3 className="text-base font-black text-zinc-900">
+                          {app.title || app.opportunity_title || 'Faculty Collaboration'}
+                        </h3>
+                        {app.company_name && (
+                          <div className="text-xs font-semibold text-zinc-500">
+                            Partner: {app.company_name}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-extrabold border ${
+                          app.status === 'ACCEPTED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          app.status === 'REJECTED' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                          app.status === 'SHORTLISTED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                          'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                          {app.status}
+                        </span>
+
+                        {isIndustry && (
+                          <button
+                            onClick={() => {
+                              setReviewingApp(app);
+                              setDecisionAction(app.status === 'ACCEPTED' ? 'ACCEPTED' : 'ACCEPTED');
+                              setDecisionNote(app.decision_note || '');
+                            }}
+                            className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs rounded-xl shadow-2xs transition-all"
+                          >
+                            Review & Decide
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Applicant details for Industry */}
+                    {isIndustry && (
+                      <div className="flex items-center gap-4 bg-zinc-50 p-3 rounded-2xl border border-zinc-100 text-xs">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                          {applicantName.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-bold text-zinc-900">{applicantName} <span className="font-normal text-zinc-500">({applicantRole})</span></div>
+                          <div className="text-zinc-500">{applicantEmail}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Proposal Pitch Text */}
+                    {app.proposal && (
+                      <div className="bg-zinc-50/80 p-4 rounded-2xl border border-zinc-100 text-xs text-zinc-700 space-y-1">
+                        <div className="font-bold text-zinc-900 uppercase tracking-wider text-[10px] text-indigo-600">
+                          Faculty Collaboration Pitch & Scope:
+                        </div>
+                        <p className="whitespace-pre-line leading-relaxed">{app.proposal}</p>
+                      </div>
+                    )}
+
+                    {/* Decision note if any */}
+                    {app.decision_note && (
+                      <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-100 text-xs text-emerald-800">
+                        <span className="font-bold">Partner Feedback:</span> {app.decision_note}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modal: Submit Proposal (for Faculty) */}
+      {selectedOpp && (
+        <div className="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-zinc-200 rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold mb-2">
+                <Send className="w-3 h-3" /> Submit Proposal
+              </div>
+              <h2 className="text-xl font-black text-zinc-900 tracking-tight">{selectedOpp.title}</h2>
+              <p className="text-zinc-500 text-xs mt-0.5">Partner: {selectedOpp.company_name} ({selectedOpp.industry_sector || 'Tech'})</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">
+                Collaboration Pitch & Proposed Curriculum / Scope
               </label>
               <textarea
-                style={{
-                  width: '100%',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '10px',
-                  padding: '12px',
-                  color: '#0f172a',
-                  fontSize: '13px',
-                  minHeight: '120px',
-                  resize: 'vertical',
-                  boxSizing: 'border-box',
-                  outline: 'none',
-                }}
-                placeholder="Detail your research domain, proposed syllabus for FDP, consulting methodology, or lecture focus areas..."
                 value={proposalText}
                 onChange={(e) => setProposalText(e.target.value)}
+                placeholder="Highlight your academic focus, relevant research publications, proposed delivery syllabus for FDP, or advisory framework..."
+                rows={5}
+                className="w-full p-3.5 text-xs md:text-sm bg-zinc-50 border border-zinc-200 rounded-2xl outline-none focus:border-zinc-900 focus:bg-white transition-all resize-none"
               />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button style={s.button('#64748b')} onClick={() => setSelectedOpp(null)}>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedOpp(null)}
+                className="px-4 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 font-bold text-xs"
+              >
                 Cancel
               </button>
-              <button style={s.button('#0f172a')} onClick={handleApply} disabled={applying}>
-                {applying ? 'Submitting...' : 'Submit Proposal'}
+              <button
+                type="button"
+                onClick={handleApply}
+                disabled={submittingProposal}
+                className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs rounded-xl shadow-sm transition-all disabled:opacity-50"
+              >
+                {submittingProposal ? 'Submitting...' : 'Submit Proposal'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Post New Faculty Opportunity (for Industry HR) */}
+      {showPostModal && (
+        <div className="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-zinc-200 rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-150">
+            <div>
+              <h2 className="text-xl font-black text-zinc-900 tracking-tight">Post Faculty Opportunity</h2>
+              <p className="text-zinc-500 text-xs mt-0.5">Publish a Faculty Development Program, Consultancy, or Sponsored Research Grant</p>
+            </div>
+
+            <form onSubmit={handlePostOpportunity} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                  Opportunity Type
+                </label>
+                <select
+                  value={newOpp.opportunity_type}
+                  onChange={(e) => setNewOpp({ ...newOpp, opportunity_type: e.target.value })}
+                  className="w-full p-3 text-xs md:text-sm bg-zinc-50 border border-zinc-200 rounded-2xl outline-none focus:border-zinc-900"
+                >
+                  <option value="FDP">FDP (Faculty Development Program)</option>
+                  <option value="CONSULTANCY">Consultancy Advisory Grant</option>
+                  <option value="RESEARCH">Sponsored Research Project</option>
+                  <option value="GUEST_LECTURE">Guest Lecture / Keynote</option>
+                  <option value="WORKSHOP">Hands-on Technical Masterclass</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Advanced Faculty Enablement: Generative AI & Cloud Architecture"
+                  value={newOpp.title}
+                  onChange={(e) => setNewOpp({ ...newOpp, title: e.target.value })}
+                  className="w-full p-3 text-xs md:text-sm bg-zinc-50 border border-zinc-200 rounded-2xl outline-none focus:border-zinc-900"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                    Compensation / Honorarium / Grant
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., ₹50,000 Honorarium / Grant"
+                    value={newOpp.compensation}
+                    onChange={(e) => setNewOpp({ ...newOpp, compensation: e.target.value })}
+                    className="w-full p-3 text-xs md:text-sm bg-zinc-50 border border-zinc-200 rounded-2xl outline-none focus:border-zinc-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                    Duration
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 2 Weeks / 3 Months"
+                    value={newOpp.duration}
+                    onChange={(e) => setNewOpp({ ...newOpp, duration: e.target.value })}
+                    className="w-full p-3 text-xs md:text-sm bg-zinc-50 border border-zinc-200 rounded-2xl outline-none focus:border-zinc-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                    Mode
+                  </label>
+                  <select
+                    value={newOpp.mode}
+                    onChange={(e) => setNewOpp({ ...newOpp, mode: e.target.value })}
+                    className="w-full p-3 text-xs md:text-sm bg-zinc-50 border border-zinc-200 rounded-2xl outline-none focus:border-zinc-900"
+                  >
+                    <option value="Hybrid">Hybrid</option>
+                    <option value="Remote">Remote</option>
+                    <option value="Onsite">Onsite</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Corporate Campus / Campus Auditorium"
+                    value={newOpp.location}
+                    onChange={(e) => setNewOpp({ ...newOpp, location: e.target.value })}
+                    className="w-full p-3 text-xs md:text-sm bg-zinc-50 border border-zinc-200 rounded-2xl outline-none focus:border-zinc-900"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                  Detailed Description & Scope
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Outline the objectives, eligibility, expected outcomes, and technical domains..."
+                  value={newOpp.description}
+                  onChange={(e) => setNewOpp({ ...newOpp, description: e.target.value })}
+                  className="w-full p-3.5 text-xs md:text-sm bg-zinc-50 border border-zinc-200 rounded-2xl outline-none focus:border-zinc-900 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPostModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 font-bold text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={postingOpp}
+                  className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs rounded-xl shadow-sm transition-all disabled:opacity-50"
+                >
+                  {postingOpp ? 'Publishing...' : 'Publish Opportunity'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Industry Decision Review for Proposals */}
+      {reviewingApp && (
+        <div className="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-zinc-200 rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold mb-2">
+                <UserCheck className="w-3 h-3" /> Proposal Review
+              </div>
+              <h2 className="text-lg font-black text-zinc-900 tracking-tight">
+                Review Faculty Proposal
+              </h2>
+              <p className="text-zinc-500 text-xs">
+                Applicant: {reviewingApp.faculty_name || reviewingApp.full_name || 'Faculty Member'}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                  Select Decision Status
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['ACCEPTED', 'SHORTLISTED', 'REJECTED'] as const).map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setDecisionAction(st)}
+                      className={`py-2 px-2 rounded-xl text-xs font-extrabold border transition-all ${
+                        decisionAction === st
+                          ? st === 'ACCEPTED' ? 'bg-emerald-600 text-white border-emerald-600' :
+                            st === 'SHORTLISTED' ? 'bg-blue-600 text-white border-blue-600' :
+                            'bg-rose-600 text-white border-rose-600'
+                          : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                  Decision Note / Corporate Feedback (Optional)
+                </label>
+                <textarea
+                  value={decisionNote}
+                  onChange={(e) => setDecisionNote(e.target.value)}
+                  placeholder="Add feedback, next steps, or meeting schedules for the faculty member..."
+                  rows={3}
+                  className="w-full p-3 text-xs bg-zinc-50 border border-zinc-200 rounded-xl outline-none focus:border-zinc-900 resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setReviewingApp(null)}
+                className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateProposalStatus}
+                disabled={submittingDecision}
+                className="px-5 py-2 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs rounded-xl shadow-sm transition-all disabled:opacity-50"
+              >
+                {submittingDecision ? 'Saving...' : 'Save Decision'}
               </button>
             </div>
           </div>

@@ -10723,80 +10723,6 @@ async function startServer() {
     res.json({ message: 'Internship marked as completed' });
   }));
 
-  // ── Faculty Industry Hub Endpoints ──────────────────────────────────────────
-  app.get('/api/faculty/opportunities', authenticate, authorize(['HOD', 'CLASS_ADVISOR', 'SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
-    const { type } = req.query as Record<string, string>;
-    let query = `
-      SELECT 
-        ip.id,
-        ip.company_id,
-        ip.posting_type as opportunity_type,
-        ip.title,
-        ip.description,
-        ip.stipend_or_salary as compensation,
-        ip.duration,
-        ip.location,
-        ip.mode,
-        ip.application_deadline,
-        ip.status,
-        cp.company_name,
-        cp.industry_sector,
-        cp.logo_url
-      FROM industry_postings ip
-      JOIN company_profiles cp ON cp.id = ip.company_id
-      WHERE ip.status = 'OPEN' AND cp.is_verified = TRUE
-    `;
-    const params: any[] = [];
-    if (type && type !== 'ALL') {
-      params.push(type.toUpperCase());
-      query += ` AND ip.posting_type = $${params.length}`;
-    }
-    query += ` ORDER BY ip.created_at DESC`;
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  }));
-
-  app.get('/api/faculty/my-applications', authenticate, authorize(['HOD', 'CLASS_ADVISOR', 'SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user.id;
-    const result = await pool.query(`
-      SELECT 
-        pa.id,
-        pa.posting_id as opportunity_id,
-        ip.title,
-        ip.posting_type as opportunity_type,
-        ip.duration,
-        ip.stipend_or_salary as compensation,
-        cp.company_name,
-        pa.cover_letter as proposal,
-        pa.status,
-        pa.created_at
-      FROM posting_applications pa
-      JOIN industry_postings ip ON ip.id = pa.posting_id
-      JOIN company_profiles cp ON cp.id = ip.company_id
-      WHERE pa.student_id = $1
-      ORDER BY pa.created_at DESC
-    `, [userId]);
-    res.json(result.rows);
-  }));
-
-  app.post('/api/faculty/opportunities/:id/apply', authenticate, authorize(['HOD', 'CLASS_ADVISOR', 'SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user.id;
-    const { id } = req.params;
-    const { proposal } = req.body;
-
-    const existing = await pool.query(`SELECT id FROM posting_applications WHERE posting_id = $1 AND student_id = $2`, [id, userId]);
-    if (existing.rowCount && existing.rowCount > 0) {
-      return res.status(409).json({ error: 'You have already submitted a proposal for this opportunity' });
-    }
-
-    await pool.query(`
-      INSERT INTO posting_applications (
-        posting_id, student_id, resume_headline, cover_letter, status
-      ) VALUES ($1, $2, 'Faculty Collaboration Proposal', $3, 'APPLIED')
-    `, [id, userId, proposal || null]);
-
-    res.status(201).json({ message: 'Faculty collaboration proposal submitted successfully' });
-  }));
 
   // ── Notification Center Endpoints ──────────────────────────────────────────
   app.get('/api/notifications', authenticate, asyncHandler(async (req: Request, res: Response) => {
@@ -10979,10 +10905,10 @@ async function startServer() {
   }));
 
   // ── Faculty–Industry Opportunities ────────────────────────────────────────
-  app.post('/api/industry/faculty-opportunities', authenticate, authorize(['INDUSTRY']), asyncHandler(async (req: Request, res: Response) => {
+  app.post('/api/industry/faculty-opportunities', authenticate, authorize(['INDUSTRY', 'SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
     const cpRes = await pool.query(`SELECT id, is_verified FROM company_profiles WHERE user_id=$1`, [userId]);
-    if (!cpRes.rowCount || !cpRes.rows[0].is_verified) return res.status(403).json({ error: 'Account not verified' });
+    if (!cpRes.rowCount || !cpRes.rows[0].is_verified) return res.status(403).json({ error: 'Verified company profile required' });
     const { opportunity_type, title, description, compensation, duration, location, mode, application_deadline } = req.body;
     if (!opportunity_type || !title) return res.status(400).json({ error: 'opportunity_type and title are required' });
     const result = await pool.query(
@@ -10992,45 +10918,162 @@ async function startServer() {
     res.status(201).json(result.rows[0]);
   }));
 
-  app.get('/api/faculty/opportunities', authenticate, authorize(['CLASS_ADVISOR', 'HOD', 'SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
+  app.delete('/api/industry/faculty-opportunities/:id', authenticate, authorize(['INDUSTRY', 'SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const { id } = req.params;
+    const cpRes = await pool.query(`SELECT id FROM company_profiles WHERE user_id=$1`, [userId]);
+    if (!cpRes.rowCount) return res.status(403).json({ error: 'Authorized company profile required' });
+    
+    await pool.query(`DELETE FROM faculty_industry_opportunities WHERE id=$1 AND company_id=$2`, [id, cpRes.rows[0].id]);
+    res.json({ message: 'Opportunity removed successfully' });
+  }));
+
+  app.get('/api/faculty/opportunities', authenticate, authorize(['INDUSTRY', 'CLASS_ADVISOR', 'HOD', 'SUPREME_ADMIN', 'STUDENT']), asyncHandler(async (req: Request, res: Response) => {
     const { type, sector } = req.query as Record<string, string>;
-    let q = `SELECT fio.*, cp.company_name, cp.industry_sector, cp.logo_url FROM faculty_industry_opportunities fio JOIN company_profiles cp ON cp.id=fio.company_id WHERE fio.status='OPEN' AND cp.is_verified=TRUE`;
+    let q = `
+      SELECT 
+        fio.*, 
+        cp.company_name, 
+        cp.industry_sector, 
+        cp.logo_url,
+        (SELECT COUNT(*) FROM faculty_opportunity_applications WHERE opportunity_id = fio.id)::int as application_count
+      FROM faculty_industry_opportunities fio 
+      JOIN company_profiles cp ON cp.id=fio.company_id 
+      WHERE fio.status='OPEN' AND cp.is_verified=TRUE
+    `;
     const params: any[] = [];
-    if (type && type !== 'ALL') { params.push(type.toUpperCase()); q += ` AND fio.opportunity_type=$${params.length}`; }
-    if (sector && sector !== 'ALL') { params.push(`%${sector}%`); q += ` AND cp.industry_sector ILIKE $${params.length}`; }
+    if (type && type !== 'ALL') { 
+      params.push(type.toUpperCase()); 
+      q += ` AND fio.opportunity_type=$${params.length}`; 
+    }
+    if (sector && sector !== 'ALL') { 
+      params.push(`%${sector}%`); 
+      q += ` AND cp.industry_sector ILIKE $${params.length}`; 
+    }
     q += ` ORDER BY fio.created_at DESC`;
     const result = await pool.query(q, params);
     res.json(result.rows);
   }));
 
-  app.post('/api/faculty/opportunities/:id/apply', authenticate, authorize(['CLASS_ADVISOR', 'HOD']), asyncHandler(async (req: Request, res: Response) => {
+  app.post('/api/faculty/opportunities/:id/apply', authenticate, authorize(['CLASS_ADVISOR', 'HOD', 'SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
     const facultyId = (req as any).user.id;
     const { id: opportunityId } = req.params;
     const { proposal } = req.body;
     const existing = await pool.query(`SELECT id FROM faculty_opportunity_applications WHERE opportunity_id=$1 AND faculty_id=$2`, [opportunityId, facultyId]);
-    if (existing.rowCount && existing.rowCount > 0) return res.status(409).json({ error: 'Already applied' });
-    const result = await pool.query(`INSERT INTO faculty_opportunity_applications (opportunity_id, faculty_id, proposal) VALUES ($1,$2,$3) RETURNING *`, [opportunityId, facultyId, proposal || null]);
+    if (existing.rowCount && existing.rowCount > 0) return res.status(409).json({ error: 'You have already submitted a proposal for this opportunity' });
+    
+    const result = await pool.query(
+      `INSERT INTO faculty_opportunity_applications (opportunity_id, faculty_id, proposal, status) VALUES ($1,$2,$3,'APPLIED') RETURNING *`, 
+      [opportunityId, facultyId, proposal || null]
+    );
+
+    // Notify company recruiter
+    try {
+      const oppRes = await pool.query(`SELECT fio.title, cp.user_id FROM faculty_industry_opportunities fio JOIN company_profiles cp ON cp.id = fio.company_id WHERE fio.id = $1`, [opportunityId]);
+      if (oppRes.rowCount && oppRes.rows[0].user_id) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, title, message, type, link) VALUES ($1, 'New Faculty Collaboration Proposal', $2, 'INFO', '/industry/faculty-hub')`,
+          [oppRes.rows[0].user_id, `A faculty member submitted a proposal for '${oppRes.rows[0].title}'`]
+        );
+      }
+    } catch (notifErr) {
+      console.warn('Failed to send proposal notification:', notifErr);
+    }
+
     res.status(201).json(result.rows[0]);
   }));
 
-  app.get('/api/faculty/my-applications', authenticate, authorize(['CLASS_ADVISOR', 'HOD']), asyncHandler(async (req: Request, res: Response) => {
-    const facultyId = (req as any).user.id;
+  app.get('/api/faculty/my-applications', authenticate, authorize(['CLASS_ADVISOR', 'HOD', 'SUPREME_ADMIN', 'INDUSTRY', 'STUDENT']), asyncHandler(async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    
+    // If an INDUSTRY user queries my-applications, return their company's received applications
+    if (user.role === 'INDUSTRY') {
+      const cpRes = await pool.query(`SELECT id FROM company_profiles WHERE user_id=$1`, [user.id]);
+      if (cpRes.rowCount === 0) return res.json([]);
+      const result = await pool.query(
+        `SELECT foa.*, fio.title, fio.opportunity_type, fio.duration, fio.compensation, u.full_name, u.email, u.role, cp.company_name, cp.industry_sector, cp.logo_url 
+         FROM faculty_opportunity_applications foa 
+         JOIN faculty_industry_opportunities fio ON fio.id=foa.opportunity_id 
+         JOIN company_profiles cp ON cp.id=fio.company_id 
+         JOIN users u ON u.id=foa.faculty_id 
+         WHERE fio.company_id=$1 
+         ORDER BY foa.created_at DESC`,
+        [cpRes.rows[0].id]
+      );
+      return res.json(result.rows);
+    }
+
     const result = await pool.query(
-      `SELECT foa.*, fio.title, fio.opportunity_type, fio.duration, fio.compensation, cp.company_name, cp.industry_sector, cp.logo_url FROM faculty_opportunity_applications foa JOIN faculty_industry_opportunities fio ON fio.id=foa.opportunity_id JOIN company_profiles cp ON cp.id=fio.company_id WHERE foa.faculty_id=$1 ORDER BY foa.created_at DESC`,
-      [facultyId]
+      `SELECT foa.*, fio.title, fio.opportunity_type, fio.duration, fio.compensation, cp.company_name, cp.industry_sector, cp.logo_url 
+       FROM faculty_opportunity_applications foa 
+       JOIN faculty_industry_opportunities fio ON fio.id=foa.opportunity_id 
+       JOIN company_profiles cp ON cp.id=fio.company_id 
+       WHERE foa.faculty_id=$1 
+       ORDER BY foa.created_at DESC`,
+      [user.id]
     );
     res.json(result.rows);
   }));
 
-  app.get('/api/industry/faculty-applications', authenticate, authorize(['INDUSTRY']), asyncHandler(async (req: Request, res: Response) => {
+  app.get('/api/industry/faculty-applications', authenticate, authorize(['INDUSTRY', 'SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
     const cpRes = await pool.query(`SELECT id FROM company_profiles WHERE user_id=$1`, [userId]);
     if (cpRes.rowCount === 0) return res.json([]);
     const result = await pool.query(
-      `SELECT foa.*, fio.title, fio.opportunity_type, u.full_name, u.email, u.role FROM faculty_opportunity_applications foa JOIN faculty_industry_opportunities fio ON fio.id=foa.opportunity_id JOIN users u ON u.id=foa.faculty_id WHERE fio.company_id=$1 ORDER BY foa.created_at DESC`,
+      `SELECT foa.*, fio.title, fio.opportunity_type, fio.duration, fio.compensation, u.full_name, u.email, u.role 
+       FROM faculty_opportunity_applications foa 
+       JOIN faculty_industry_opportunities fio ON fio.id=foa.opportunity_id 
+       JOIN users u ON u.id=foa.faculty_id 
+       WHERE fio.company_id=$1 
+       ORDER BY foa.created_at DESC`,
       [cpRes.rows[0].id]
     );
     res.json(result.rows);
+  }));
+
+  app.patch('/api/industry/faculty-applications/:id/status', authenticate, authorize(['INDUSTRY', 'SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const { id } = req.params;
+    const { status, decision_note } = req.body;
+    
+    if (!['ACCEPTED', 'SHORTLISTED', 'REJECTED', 'APPLIED'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const cpRes = await pool.query(`SELECT id FROM company_profiles WHERE user_id=$1`, [userId]);
+    if (cpRes.rowCount === 0) return res.status(403).json({ error: 'Company profile not found' });
+
+    const updated = await pool.query(
+      `UPDATE faculty_opportunity_applications foa
+       SET status=$1, decision_note=$2, decision_at=NOW(), updated_at=NOW()
+       FROM faculty_industry_opportunities fio
+       WHERE foa.id=$3 AND foa.opportunity_id=fio.id AND fio.company_id=$4
+       RETURNING foa.*, fio.title as opportunity_title`,
+      [status, decision_note || null, id, cpRes.rows[0].id]
+    );
+
+    if (updated.rowCount === 0) {
+      return res.status(404).json({ error: 'Application not found or unauthorized' });
+    }
+
+    const appRow = updated.rows[0];
+
+    // Send notification to applicant faculty
+    try {
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type, link) VALUES ($1, $2, $3, $4, '/faculty-hub')`,
+        [
+          appRow.faculty_id,
+          `Faculty Proposal Update: ${status}`,
+          `Your proposal for '${appRow.opportunity_title}' has been marked as ${status}.${decision_note ? ' Note: ' + decision_note : ''}`,
+          status === 'ACCEPTED' ? 'SUCCESS' : (status === 'REJECTED' ? 'WARNING' : 'INFO')
+        ]
+      );
+    } catch (notifErr) {
+      console.warn('Failed to notify faculty:', notifErr);
+    }
+
+    res.json(appRow);
   }));
 
   // ── Industry Collaboration Projects ───────────────────────────────────────
