@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --radius-xl: 0.75rem; /* 12px card radius */
   --radius-lg: 0.5rem;  /* 8px input/button radius */
@@ -8,38 +10,156 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* uniform card shadow */
 }
 
+:root {
+  color-scheme: light;
+  --bg-primary: #ffffff;
+  --bg-subtle: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #f4f4f5;
+  --text-primary: #09090b;
+  --text-secondary: #52525b;
+  --text-muted: #71717a;
+  --border-color: #e4e4e7;
+  --border-subtle: #f4f4f5;
+  --input-bg: #ffffff;
+  --input-border: #e4e4e7;
+  --scrollbar-thumb: #e4e4e7;
+  --scrollbar-hover: #d4d4d8;
+  --skeleton-base: #f4f4f5;
+  --skeleton-highlight: #e4e4e7;
+}
+
+html.dark {
+  color-scheme: dark;
+  --bg-primary: #09090b;
+  --bg-subtle: #0c0c0e;
+  --bg-surface: #121215;
+  --bg-surface-elevated: #18181b;
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --border-color: #27272a;
+  --border-subtle: #1f1f23;
+  --input-bg: #18181b;
+  --input-border: #27272a;
+  --scrollbar-thumb: #27272a;
+  --scrollbar-hover: #3f3f46;
+  --skeleton-base: #18181b;
+  --skeleton-highlight: #27272a;
+}
 
 @layer base {
-  :root {
-    color-scheme: light only !important;
-    background-color: #ffffff !important;
-    background: #ffffff !important;
-  }
   * {
-    border-color: #e4e4e7;
+    border-color: var(--border-color);
     box-sizing: border-box;
   }
   html, body {
-    background-color: #ffffff !important;
-    background: #ffffff !important;
-    color: #18181b;
-    color-scheme: light only !important;
+    background-color: var(--bg-primary);
+    background: var(--bg-primary);
+    color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
     min-height: 100%;
     min-height: 100dvh;
     min-height: -webkit-fill-available;
     overscroll-behavior-y: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
-  input, select, textarea, button {
-    color: #18181b;
-    color-scheme: light;
+  input, select, textarea {
+    color: var(--text-primary);
+    background-color: var(--input-bg);
+    border-color: var(--input-border);
   }
   select, select option {
-    color: #18181b !important;
-    background-color: #ffffff !important;
+    color: var(--text-primary) !important;
+    background-color: var(--input-bg) !important;
   }
   label {
-    color: #52525b;
+    color: var(--text-secondary);
+  }
+}
+
+/* ── Dark Mode Universal Color Harmonization ─────────────────────────────── */
+html.dark {
+  /* Surfaces & Backgrounds */
+  .bg-white {
+    background-color: #121215 !important;
+  }
+  .bg-zinc-50, .bg-slate-50, .bg-gray-50 {
+    background-color: #09090b !important;
+  }
+  .bg-zinc-100, .bg-slate-100, .bg-gray-100 {
+    background-color: #18181b !important;
+  }
+  .bg-zinc-200, .bg-slate-200, .bg-gray-200 {
+    background-color: #27272a !important;
+  }
+  
+  /* Hover Backgrounds */
+  .hover\:bg-zinc-50:hover, .hover\:bg-slate-50:hover, .hover\:bg-gray-50:hover {
+    background-color: #18181b !important;
+  }
+  .hover\:bg-zinc-100:hover, .hover\:bg-slate-100:hover, .hover\:bg-gray-100:hover {
+    background-color: #27272a !important;
+  }
+  .hover\:bg-white:hover {
+    background-color: #1c1c21 !important;
+  }
+
+  /* Borders & Dividers */
+  .border-zinc-100, .border-slate-100, .border-gray-100,
+  .border-zinc-200, .border-slate-200, .border-gray-200,
+  .border-zinc-300, .border-slate-300, .border-gray-300 {
+    border-color: #27272a !important;
+  }
+  .divide-zinc-100 > :not([hidden]) ~ :not([hidden]),
+  .divide-zinc-200 > :not([hidden]) ~ :not([hidden]),
+  .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: #27272a !important;
+  }
+
+  /* Typography */
+  .text-zinc-950, .text-zinc-900, .text-slate-900, .text-gray-900,
+  .text-zinc-800, .text-slate-800, .text-gray-800,
+  .text-zinc-700, .text-slate-700, .text-gray-700 {
+    color: #f4f4f5 !important;
+  }
+  .text-zinc-600, .text-slate-600, .text-gray-600,
+  .text-zinc-500, .text-slate-500, .text-gray-500 {
+    color: #a1a1aa !important;
+  }
+  .text-zinc-400, .text-slate-400, .text-gray-400 {
+    color: #71717a !important;
+  }
+
+  /* Input fields & Dropdowns in Dark Mode */
+  input:not([type="checkbox"]):not([type="radio"]), textarea, select {
+    background-color: #18181b !important;
+    color: #f4f4f5 !important;
+    border-color: #27272a !important;
+  }
+  input::placeholder, textarea::placeholder {
+    color: #52525b !important;
+  }
+
+  /* Table styles in Dark Mode */
+  table {
+    border-color: #27272a !important;
+  }
+  thead, thead th {
+    background-color: #121215 !important;
+    color: #a1a1aa !important;
+    border-color: #27272a !important;
+  }
+  tbody tr {
+    border-color: #27272a !important;
+  }
+  tbody tr:hover {
+    background-color: rgba(39, 39, 42, 0.4) !important;
+  }
+
+  /* Modals & Popovers Backdrop & Elevation */
+  .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl {
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px #27272a !important;
   }
 }
 
@@ -52,11 +172,11 @@
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #e4e4e7;
+  background: var(--scrollbar-thumb);
   border-radius: 9999px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #d4d4d8;
+  background: var(--scrollbar-hover);
 }
 
 /* Shimmer Skeleton Animation */
@@ -72,9 +192,9 @@
 .skeleton-shimmer {
   background: linear-gradient(
     90deg,
-    #f4f4f5 0%,
-    #e4e4e7 35%,
-    #f4f4f5 70%
+    var(--skeleton-base) 0%,
+    var(--skeleton-highlight) 35%,
+    var(--skeleton-base) 70%
   );
   background-size: 200% 100%;
   animation: shimmerWave 1.6s ease-in-out infinite;

@@ -19,6 +19,7 @@ import InstitutionalSkillHeatmapView from './InstitutionalSkillHeatmapView';
 import { generateStudentResumePdf, downloadStudentResumePdf } from './studentProfilePdfGenerator';
 import PWAInstallOverlay from './PWAInstallOverlay';
 import PushNotificationPromptModal from './PushNotificationPromptModal';
+import ThemeToggle from './ThemeToggle';
 import {
   isPushSupported,
   getNotificationPermissionState,
@@ -7313,7 +7314,10 @@ export default function App() {
     ];
 
     return (
-      <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center p-4">
+      <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center p-4 relative">
+        <div className="fixed top-4 right-4 z-50">
+          <ThemeToggle />
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -11190,6 +11194,7 @@ export default function App() {
                   <CheckCircle2 size={12} /> Telegram Linked
                 </span>
               )}
+              <ThemeToggle />
               <div className="relative" ref={notificationDropdownRef}>
                 <button
                   className={cn(
