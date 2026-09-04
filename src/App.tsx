@@ -5255,7 +5255,7 @@ export default function App() {
     try {
       const savedUserStr = localStorage.getItem('user');
       const savedUser = savedUserStr ? JSON.parse(savedUserStr) : null;
-      if (!savedUser || (!['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR'].includes(savedUser.role) && !(savedUser.role === 'STUDENT' && savedUser.is_coordinator))) {
+      if (!savedUser || (!['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR', 'INDUSTRY'].includes(savedUser.role) && !(savedUser.role === 'STUDENT' && savedUser.is_coordinator))) {
         return;
       }
       const res = await fetch(`${API_URL}/api/users`, { headers: { Authorization: `Bearer ${token}` } });
@@ -11142,7 +11142,12 @@ export default function App() {
               <div className="min-w-0">
                 <h2 className="text-xl font-bold text-zinc-900 tracking-tight truncate">
                   {(() => {
-                    if (isIndustry && (view === 'industry-portal' || view === 'dashboard')) return 'Corporate Hiring & Assessments Portal';
+                    if (isIndustry) {
+                      if (view === 'industry-portal' || view === 'dashboard') return 'Corporate Hiring & Assessments Portal';
+                      if (view === 'users') return 'Candidate Talent Pool';
+                      if (view === 'faculty-industry-hub') return 'Faculty R&D Hub & Joint Initiatives';
+                      if (view === 'settings') return 'Corporate Account Settings';
+                    }
                     if (view === 'leetcode-targets' || view === 'coding-progress') {
                       if (codingPlatformTab === 'LEETCODE') return 'LeetCode';
                       if (codingPlatformTab === 'GITHUB') return 'GitHub';
@@ -11163,7 +11168,9 @@ export default function App() {
                     return view.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                   })()}
                 </h2>
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider truncate">Academic Management System</p>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider truncate">
+                  {isIndustry ? 'Corporate Partner Portal' : 'Academic Management System'}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-4 shrink-0">
@@ -12162,7 +12169,7 @@ export default function App() {
                   <PageLayout>
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
                       <h3 className="text-xl font-bold text-zinc-900">
-                        {isAdmin ? 'All Users' : isHOD ? 'Class Advisors & Students' : 'Students'}
+                        {isAdmin ? 'All Users' : isHOD ? 'Class Advisors & Students' : isIndustry ? 'Student Candidates & Placement Talent' : 'Students'}
                       </h3>
                       {/* SA Filters */}
                       {isAdmin && (
@@ -12191,6 +12198,40 @@ export default function App() {
                             {departments.map(d => (
                               <option key={d.id} value={d.id}>{d.name}</option>
                             ))}
+                          </select>
+                        </div>
+                      )}
+                      {isIndustry && (
+                        <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                          <select
+                            className="px-3 py-2 rounded-xl border border-zinc-200 bg-white text-sm font-semibold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-black/10"
+                            value={userDeptFilter}
+                            onChange={e => {
+                              setUserDeptFilter(e.target.value);
+                              setUserYearFilter('');
+                              setUserClassFilter('');
+                              setUserPage(1);
+                            }}
+                          >
+                            <option value="">All Departments</option>
+                            {departments.map(d => (
+                              <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
+                          </select>
+                          <select
+                            className="px-3 py-2 rounded-xl border border-zinc-200 bg-white text-sm font-semibold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-black/10"
+                            value={userYearFilter}
+                            onChange={e => {
+                              setUserYearFilter(e.target.value);
+                              setUserClassFilter('');
+                              setUserPage(1);
+                            }}
+                          >
+                            <option value="">All Years</option>
+                            <option value="1">1st Year</option>
+                            <option value="2">2nd Year</option>
+                            <option value="3">3rd Year</option>
+                            <option value="4">4th Year</option>
                           </select>
                         </div>
                       )}
@@ -12236,31 +12277,33 @@ export default function App() {
                       <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
                         <Input
-                          placeholder={`Search ${isAdmin ? 'HODs' : isHOD ? 'Advisors or Students' : 'Students'} by name or registration number...`}
+                          placeholder={`Search ${isAdmin ? 'HODs' : isHOD ? 'Advisors or Students' : isIndustry ? 'Candidates by name, registration number, department...' : 'Students'} by name or registration number...`}
                           className="pl-10 h-11"
                           value={searchTerm}
                           onChange={e => { setSearchTerm(e.target.value); setUserPage(1); }}
                         />
                       </div>
 
-                      {/* HOD / Admin Year & Section Filters */}
-                      {(isHOD || isAdmin) && (
+                      {/* HOD / Admin / Industry Year & Section Filters */}
+                      {(isHOD || isAdmin || isIndustry) && (
                         <div className="flex flex-wrap items-center gap-3">
-                          <select
-                            className="h-11 px-3 rounded-lg border border-zinc-200 bg-white text-sm font-semibold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-black/5"
-                            value={userYearFilter}
-                            onChange={e => {
-                              setUserYearFilter(e.target.value);
-                              setUserClassFilter('');
-                              setUserPage(1);
-                            }}
-                          >
-                            <option value="">All Years</option>
-                            <option value="1">1st Year</option>
-                            <option value="2">2nd Year</option>
-                            <option value="3">3rd Year</option>
-                            <option value="4">4th Year</option>
-                          </select>
+                          {!isIndustry && (
+                            <select
+                              className="h-11 px-3 rounded-lg border border-zinc-200 bg-white text-sm font-semibold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-black/5"
+                              value={userYearFilter}
+                              onChange={e => {
+                                setUserYearFilter(e.target.value);
+                                setUserClassFilter('');
+                                setUserPage(1);
+                              }}
+                            >
+                              <option value="">All Years</option>
+                              <option value="1">1st Year</option>
+                              <option value="2">2nd Year</option>
+                              <option value="3">3rd Year</option>
+                              <option value="4">4th Year</option>
+                            </select>
+                          )}
 
                           <select
                             className="h-11 px-3 rounded-lg border border-zinc-200 bg-white text-sm font-semibold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-black/5"
@@ -12281,14 +12324,14 @@ export default function App() {
                         </div>
                       )}
 
-                      {(isAdvisor || isHOD || isAdmin) && (
+                      {(isAdvisor || isHOD || isAdmin || isIndustry) && (
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
                             onClick={() => handleBulkDownloadProfiles()}
                             disabled={isExportingBulkResumes}
                             className="h-11 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-2 cursor-pointer shrink-0"
-                            title="Download all student profiles in current view as formatted Resume PDFs in a ZIP archive"
+                            title="Download all candidate resumes in current view as formatted PDFs in a ZIP archive"
                           >
                             {isExportingBulkResumes ? (
                               <Loader2 size={16} className="animate-spin" />
@@ -12304,10 +12347,11 @@ export default function App() {
                     <Table className="min-w-[700px] md:min-w-0">
                       <THead>
                         <TR>
-                          <TH>Name</TH>
-                          <TH>{isAdvisor ? 'Register No' : 'Username'}</TH>
+                          <TH>Candidate Name</TH>
+                          <TH>{isAdvisor || isIndustry ? 'Register No' : 'Username'}</TH>
                           {isAdvisor && <TH>Email</TH>}
-                          {!isAdvisor && <TH>{isAdmin ? 'Department' : 'Section / Class'}</TH>}
+                          {!isAdvisor && <TH>{isAdmin || isIndustry ? 'Department' : 'Section / Class'}</TH>}
+                          {isIndustry && <TH>Class / Section</TH>}
                           <TH className="text-right">Actions</TH>
                         </TR>
                       </THead>
@@ -12315,6 +12359,11 @@ export default function App() {
                         {(() => {
                           const filtered = users
                             .filter(u => {
+                              if (isIndustry) {
+                                if (u.role !== 'STUDENT') return false;
+                                if (userDeptFilter && u.department_id?.toString() !== userDeptFilter.toString()) return false;
+                                return true;
+                              }
                               if (isAdmin) {
                                 if (userRoleFilter && u.role !== userRoleFilter) return false;
                                 if (userDeptFilter && u.department_id?.toString() !== userDeptFilter.toString()) return false;
@@ -12329,7 +12378,7 @@ export default function App() {
                               return true;
                             })
                             .filter(u => {
-                              if (!isAdmin && !isHOD) {
+                              if (!isAdmin && !isHOD && !isIndustry) {
                                 const userClassId = (user?.class_id || myClass?.id)?.toString();
                                 if (userClassId && u.class_id?.toString() !== userClassId) return false;
                               }
@@ -12395,7 +12444,14 @@ export default function App() {
                                   {!isAdvisor && (
                                     <TD>
                                       <span className="px-2 py-1 bg-zinc-100 rounded text-xs text-zinc-600">
-                                        {isAdmin ? (u.department_name || '—') : u.class_name}
+                                        {isAdmin || isIndustry ? (u.department_name || '—') : u.class_name}
+                                      </span>
+                                    </TD>
+                                  )}
+                                  {isIndustry && (
+                                    <TD>
+                                      <span className="px-2 py-1 bg-zinc-100 rounded text-xs text-zinc-600">
+                                        {u.class_name || '—'}
                                       </span>
                                     </TD>
                                   )}
@@ -12408,13 +12464,13 @@ export default function App() {
                                           onClick={() => {
                                             const activeClassId = (user?.class_id || myClass?.id)?.toString();
                                             const isMyClassStudent = activeClassId && u.class_id?.toString() === activeClassId;
-                                            if (isAdmin || isHOD || isMyClassStudent) {
+                                            if (isAdmin || isHOD || isIndustry || isMyClassStudent) {
                                               setViewingStudentProfileId(u.id);
                                             } else {
                                               addToast('Class Advisors can only view profiles of students in their assigned class', 'error');
                                             }
                                           }}
-                                          title="View Full Student Profile"
+                                          title="View Full Candidate Profile"
                                         >
                                           <User size={18} />
                                         </Button>
@@ -12429,32 +12485,36 @@ export default function App() {
                                           <ShieldCheck size={18} />
                                         </Button>
                                       )}
-                                      <Button
-                                        variant="ghost"
-                                        className="p-2 text-zinc-400 hover:text-blue-600"
-                                        onClick={() => resetPassword(u.id)}
-                                        title="Reset Password"
-                                      >
-                                        <ShieldCheck size={18} className="text-blue-500" />
-                                      </Button>
-                                      <button
-                                        onClick={async () => {
-                                          const roleLabel = u.role === 'CLASS_ADVISOR' ? 'Advisor' : u.role === 'HOD' ? 'HOD' : 'User';
-                                          if (confirm(`Delete ${roleLabel} ${u.full_name}? This cannot be undone.`)) {
-                                            const res = await fetch(`${API_URL}/api/users/${u.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-                                            if (res.ok) {
-                                              fetchInitialData();
-                                              addToast(`${roleLabel} deleted successfully.`, 'success');
-                                            } else {
-                                              const data = await res.json();
-                                              addToast(data.error || 'Failed to delete user', 'error');
+                                      {(isAdvisor || isHOD || isAdmin) && (
+                                        <Button
+                                          variant="ghost"
+                                          className="p-2 text-zinc-400 hover:text-blue-600"
+                                          onClick={() => resetPassword(u.id)}
+                                          title="Reset Password"
+                                        >
+                                          <ShieldCheck size={18} className="text-blue-500" />
+                                        </Button>
+                                      )}
+                                      {(isAdvisor || isHOD || isAdmin) && (
+                                        <button
+                                          onClick={async () => {
+                                            const roleLabel = u.role === 'CLASS_ADVISOR' ? 'Advisor' : u.role === 'HOD' ? 'HOD' : 'User';
+                                            if (confirm(`Delete ${roleLabel} ${u.full_name}? This cannot be undone.`)) {
+                                              const res = await fetch(`${API_URL}/api/users/${u.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+                                              if (res.ok) {
+                                                fetchInitialData();
+                                                addToast(`${roleLabel} deleted successfully.`, 'success');
+                                              } else {
+                                                const data = await res.json();
+                                                addToast(data.error || 'Failed to delete user', 'error');
+                                              }
                                             }
-                                          }
-                                        }}
-                                        className="p-2 transition-colors text-zinc-400 hover:text-red-500"
-                                      >
-                                        <Trash2 size={18} />
-                                      </button>
+                                          }}
+                                          className="p-2 transition-colors text-zinc-400 hover:text-red-500"
+                                        >
+                                          <Trash2 size={18} />
+                                        </button>
+                                      )}
                                     </div>
                                   </TD>
                                 </TR>

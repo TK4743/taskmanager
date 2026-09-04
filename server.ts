@@ -1670,6 +1670,15 @@ async function startServer() {
         WHERE u.class_id = $1 AND u.role = 'STUDENT'
         ORDER BY u.register_number ASC, u.full_name ASC
       `, [req.user.class_id]);
+    } else if (req.user.role === 'INDUSTRY') {
+      usersRes = await pool.query(`
+        SELECT u.*, d.name as department_name, c.name as class_name, c.year as class_year
+        FROM users u
+        LEFT JOIN departments d ON u.department_id = d.id
+        LEFT JOIN classes c ON u.class_id = c.id
+        WHERE u.role = 'STUDENT' AND u.is_active = true
+        ORDER BY c.year ASC NULLS LAST, c.name ASC NULLS LAST, u.register_number ASC NULLS LAST, u.full_name ASC
+      `);
     } else {
       return res.status(403).json({ error: 'Forbidden' });
     }
@@ -4862,10 +4871,11 @@ async function startServer() {
       const isSelf = currentUser.id?.toString() === targetUserId.toString();
       const isAdmin = currentUser.role === 'ADMIN' || currentUser.role === 'SUPREME_ADMIN';
       const isHOD = currentUser.role === 'HOD' && currentUser.department_id?.toString() === academic.department_id?.toString();
+      const isIndustry = currentUser.role === 'INDUSTRY';
       const isAdvisorOrCoordinator = (currentUser.role === 'ADVISOR' || currentUser.role === 'CLASS_ADVISOR' || currentUser.role === 'COORDINATOR' || currentUser.is_coordinator) &&
         currentUser.class_id?.toString() === academic.class_id?.toString();
 
-      if (!isSelf && !isAdmin && !isHOD && !isAdvisorOrCoordinator) {
+      if (!isSelf && !isAdmin && !isHOD && !isAdvisorOrCoordinator && !isIndustry) {
         return res.status(403).json({ error: 'You do not have permission to view this student profile' });
       }
 
