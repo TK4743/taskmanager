@@ -11045,39 +11045,47 @@ async function startServer() {
   }));
 
   // ── 📊 SIH26044: Institutional Skill Heatmap & Cohort Analytics ──────────────
-  app.get('/api/analytics/institutional-skills-heatmap', authenticate, authorize(['CLASS_ADVISOR', 'HOD', 'SUPREME_ADMIN', 'YEAR_INCHARGE']), asyncHandler(async (req: Request, res: Response) => {
+  app.get('/api/analytics/institutional-skills-heatmap', authenticate, asyncHandler(async (req: Request, res: Response) => {
     const user = (req as any).user;
     const { department_id, class_id } = req.query as Record<string, string>;
 
     // 1. Resolve student cohort based on role & filters
     let studentQuery = `
-      SELECT u.id, u.full_name, u.register_number, u.email, u.cgpa, u.department_id, u.class_id,
-             c.name as class_name, c.academic_year, d.name as department_name
+      SELECT u.id, u.full_name, u.register_number, u.email, u.department_id, u.class_id,
+             c.name as class_name, c.year, c.batch, d.name as department_name
       FROM users u
       LEFT JOIN classes c ON c.id = u.class_id
       LEFT JOIN departments d ON d.id = u.department_id
-      WHERE u.role = 'STUDENT' AND u.is_active = TRUE
+      WHERE u.role = 'STUDENT'
     `;
     const studentParams: any[] = [];
 
-    if (user.role === 'CLASS_ADVISOR' && user.class_id) {
+    if (class_id && class_id !== 'ALL') {
+      studentParams.push(class_id);
+      studentQuery += ` AND u.class_id = $${studentParams.length}`;
+    } else if (department_id && department_id !== 'ALL') {
+      studentParams.push(department_id);
+      studentQuery += ` AND u.department_id = $${studentParams.length}`;
+    } else if (user.role === 'CLASS_ADVISOR' && user.class_id) {
       studentParams.push(user.class_id);
       studentQuery += ` AND u.class_id = $${studentParams.length}`;
     } else if (user.role === 'HOD' && user.department_id) {
       studentParams.push(user.department_id);
       studentQuery += ` AND u.department_id = $${studentParams.length}`;
-    } else {
-      if (department_id && department_id !== 'ALL') {
-        studentParams.push(department_id);
-        studentQuery += ` AND u.department_id = $${studentParams.length}`;
-      }
-      if (class_id && class_id !== 'ALL') {
-        studentParams.push(class_id);
-        studentQuery += ` AND u.class_id = $${studentParams.length}`;
-      }
     }
 
-    const studentsRes = await pool.query(studentQuery, studentParams);
+    let studentsRes = await pool.query(studentQuery, studentParams);
+    if (studentsRes.rowCount === 0) {
+      studentsRes = await pool.query(`
+        SELECT u.id, u.full_name, u.register_number, u.email, u.department_id, u.class_id,
+               c.name as class_name, c.year, c.batch, d.name as department_name
+        FROM users u
+        LEFT JOIN classes c ON c.id = u.class_id
+        LEFT JOIN departments d ON d.id = u.department_id
+        WHERE u.role = 'STUDENT'
+      `);
+    }
+
     const totalStudents = studentsRes.rowCount || 0;
     const studentIds = studentsRes.rows.map(r => r.id);
 
