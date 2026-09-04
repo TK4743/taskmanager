@@ -445,7 +445,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
     });
   };
 
-  // Strict Lockdown: Listen for Fullscreen Changes, Visibility Changes, Tab Blurs, and Keyboard Shortcuts
+  // Strict Lockdown: Listen for Fullscreen Changes, Visibility Changes, Tab Blurs, Copy/Paste, Right-Click, and Keyboard Shortcuts
   useEffect(() => {
     if (!testStarted || testCompleted) return;
 
@@ -475,13 +475,76 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
       }
     };
 
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setViolationCount(prev => prev + 1);
+      addToast('🚫 Right-click context menu is strictly disabled during the aptitude assessment!', 'error');
+    };
+
+    const handleCopy = (e: ClipboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setViolationCount(prev => prev + 1);
+      addToast('🚫 Copying questions or options is strictly prohibited during the assessment!', 'error');
+    };
+
+    const handleCut = (e: ClipboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setViolationCount(prev => prev + 1);
+      addToast('🚫 Cut action is disabled during the assessment!', 'error');
+    };
+
+    const handlePaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setViolationCount(prev => prev + 1);
+      addToast('🚫 Paste action is disabled during the assessment!', 'error');
+    };
+
+    const handleSelectStart = (e: Event) => {
+      e.preventDefault();
+    };
+
+    const handleDragStart = (e: Event) => {
+      e.preventDefault();
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey || e.metaKey || (e.ctrlKey && ['c', 'v', 'u', 't', 'w', 'r', 'n'].includes(e.key.toLowerCase()))) {
+      const key = e.key ? e.key.toLowerCase() : '';
+
+      // DevTools & Source inspection shortcuts (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S, Ctrl+P)
+      if (
+        e.key === 'F12' ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i', 'j', 'c'].includes(key)) ||
+        ((e.ctrlKey || e.metaKey) && ['u', 's', 'p'].includes(key))
+      ) {
         e.preventDefault();
+        e.stopPropagation();
+        setViolationCount(prev => prev + 1);
+        addToast('🚫 Developer Tools and Source inspection shortcuts are strictly disabled!', 'error');
+        return;
+      }
+
+      // Clipboard shortcuts: Ctrl/Cmd + C, V, X, A
+      if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'x', 'a'].includes(key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        setViolationCount(prev => prev + 1);
+        addToast('🚫 Clipboard shortcuts (Copy/Paste/Cut/Select-All) are disabled during the test!', 'error');
+        return;
+      }
+
+      // Prevent Navigation / Tab / Refresh combos (Ctrl+R, Ctrl+N, Ctrl+T, Ctrl+W) or Alt shortcuts
+      if (e.altKey || ((e.ctrlKey || e.metaKey) && ['r', 'n', 't', 'w'].includes(key))) {
+        e.preventDefault();
+        e.stopPropagation();
         setViolationCount(prev => prev + 1);
         setShowFsWarning(true);
       }
-      if (['F11', 'F12'].includes(e.key)) {
+
+      if (['F11'].includes(e.key)) {
         e.preventDefault();
       }
     };
@@ -490,14 +553,26 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
     document.addEventListener('webkitfullscreenchange', handleFsChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleWindowBlur);
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('contextmenu', handleContextMenu, true);
+    window.addEventListener('copy', handleCopy, true);
+    window.addEventListener('cut', handleCut, true);
+    window.addEventListener('paste', handlePaste, true);
+    window.addEventListener('selectstart', handleSelectStart, true);
+    window.addEventListener('dragstart', handleDragStart, true);
+    window.addEventListener('keydown', handleKeyDown, true);
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFsChange);
       document.removeEventListener('webkitfullscreenchange', handleFsChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleWindowBlur);
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('contextmenu', handleContextMenu, true);
+      window.removeEventListener('copy', handleCopy, true);
+      window.removeEventListener('cut', handleCut, true);
+      window.removeEventListener('paste', handlePaste, true);
+      window.removeEventListener('selectstart', handleSelectStart, true);
+      window.removeEventListener('dragstart', handleDragStart, true);
+      window.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [testStarted, testCompleted]);
 
@@ -1992,7 +2067,32 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
               </div>
             ) : (
               /* State C: Active Interactive Test with Strict Fullscreen & Proctoring */
-              <div className="space-y-6">
+              <div
+                className="space-y-6 select-none"
+                style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
+                onContextMenu={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setViolationCount(prev => prev + 1);
+                  addToast('🚫 Right-click is strictly disabled during the aptitude assessment!', 'error');
+                }}
+                onCopy={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setViolationCount(prev => prev + 1);
+                  addToast('🚫 Copying content is strictly disabled during assessment!', 'error');
+                }}
+                onCut={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onPaste={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onSelectStart={e => e.preventDefault()}
+                onDragStart={e => e.preventDefault()}
+              >
                 
                 {/* Header Status Bar with Fullscreen Indicator & Live Timer */}
                 <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
@@ -2021,6 +2121,11 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                   </div>
 
                   <div className="flex items-center gap-3">
+                    <span className="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-xl text-xs font-extrabold border border-rose-200 flex items-center gap-1.5 shadow-2xs">
+                      <Lock size={13} className="text-rose-600" />
+                      <span>Copy & Right-Click Locked</span>
+                    </span>
+
                     <span className="px-3 py-1.5 bg-amber-100 text-amber-900 rounded-xl text-xs font-extrabold border border-amber-300 flex items-center gap-1.5 shadow-2xs">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                       <span>SIH Demo Session</span>
@@ -2041,7 +2146,16 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
 
                 {/* Current Question Card with Swapped/Shuffled Options */}
                 {activeQuestions.length > 0 && currentQ && (
-                  <div className="bg-white border border-zinc-200 rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
+                  <div
+                    className="bg-white border border-zinc-200 rounded-2xl p-6 md:p-8 shadow-sm space-y-6 select-none"
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                    onContextMenu={e => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setViolationCount(prev => prev + 1);
+                      addToast('🚫 Right-click is disabled on assessment questions!', 'error');
+                    }}
+                  >
                     <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
                       <div className="flex items-center gap-2">
                         <span className="px-2.5 py-0.5 bg-zinc-100 text-zinc-800 rounded-full text-[10px] font-bold uppercase tracking-wider border border-zinc-200">
