@@ -191,7 +191,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
     } catch {}
   };
 
-  // 4. Fullscreen & Focus Listeners
+  // 4. Anti-Cheat, Fullscreen, Right-Click & Clipboard Lockdown Listeners
   useEffect(() => {
     if (!attemptId || overallCompleted) return;
 
@@ -213,12 +213,79 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
       }
     };
 
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setProctorViolations(v => v + 1);
+      logProctorEvent('RIGHT_CLICK_ATTEMPT', 'LOW', { timestamp: new Date().toISOString() });
+      showToast('🚫 Right-click context menu is strictly disabled during the coding test!');
+    };
+
+    const handleCopy = (e: ClipboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setProctorViolations(v => v + 1);
+      logProctorEvent('COPY_ATTEMPT', 'LOW', { timestamp: new Date().toISOString() });
+      showToast('🚫 Copying content is strictly disabled during assessment!');
+    };
+
+    const handleCut = (e: ClipboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showToast('🚫 Cutting content is disabled during assessment!');
+    };
+
+    const handlePaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setProctorViolations(v => v + 1);
+      logProctorEvent('PASTE_ATTEMPT', 'HIGH', { timestamp: new Date().toISOString() });
+      showToast('🚫 Pasting code is strictly prohibited! Please write your code manually.');
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C (DevTools)
+      if (
+        e.key === 'F12' ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && ['I', 'J', 'C'].includes(e.key.toUpperCase())) ||
+        ((e.ctrlKey || e.metaKey) && ['u', 's', 'p'].includes(e.key.toLowerCase()))
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        showToast('🚫 Developer Tools and Page Shortcuts are disabled!');
+        return;
+      }
+
+      // Prevent Ctrl+C, Ctrl+V, Ctrl+X
+      if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'x'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.key.toLowerCase() === 'v') {
+          setProctorViolations(v => v + 1);
+          logProctorEvent('KEYBOARD_PASTE_ATTEMPT', 'HIGH', { timestamp: new Date().toISOString() });
+          showToast('🚫 Pasting code (Ctrl+V) is disabled! Type solution manually.');
+        } else {
+          showToast('🚫 Clipboard shortcuts are disabled during test!');
+        }
+      }
+    };
+
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('contextmenu', handleContextMenu, true);
+    window.addEventListener('copy', handleCopy, true);
+    window.addEventListener('cut', handleCut, true);
+    window.addEventListener('paste', handlePaste, true);
+    window.addEventListener('keydown', handleKeyDown, true);
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('contextmenu', handleContextMenu, true);
+      window.removeEventListener('copy', handleCopy, true);
+      window.removeEventListener('cut', handleCut, true);
+      window.removeEventListener('paste', handlePaste, true);
+      window.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [attemptId, overallCompleted]);
 
@@ -596,10 +663,15 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
         </div>
 
         {/* Main Split Layout: Left Problem Statement, Right Monaco IDE */}
-        <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden select-none">
           
           {/* LEFT: Problem Statement */}
-          <div className="w-full md:w-1/2 border-r border-zinc-700/80 bg-[#0B1120] flex flex-col overflow-y-auto p-6 custom-scrollbar min-h-0">
+          <div 
+            className="w-full md:w-1/2 border-r border-zinc-700/80 bg-[#0B1120] flex flex-col overflow-y-auto p-6 custom-scrollbar min-h-0 select-none"
+            onContextMenu={e => { e.preventDefault(); showToast('🚫 Right click is disabled on problem statement!'); }}
+            onCopy={e => { e.preventDefault(); showToast('🚫 Copying problem text is disabled!'); }}
+            onPaste={e => { e.preventDefault(); showToast('🚫 Pasting is disabled!'); }}
+          >
             <div className="flex items-center justify-between gap-2 mb-3">
               <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                 {currentQ.difficulty} · {currentQ.marks} Marks
@@ -680,7 +752,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
           <div className="w-full md:w-1/2 flex flex-col bg-[#0F172A] min-h-0">
             
             {/* Editor Top Bar with Language Selector */}
-            <div className="h-11 bg-[#1E293B] px-4 flex items-center justify-between border-b border-zinc-700 shrink-0">
+            <div className="h-11 bg-[#1E293B] px-4 flex items-center justify-between border-b border-zinc-700 shrink-0 select-none">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Language:</span>
                 <select
@@ -739,6 +811,50 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                 theme="vs-dark"
                 value={activeCode}
                 onChange={handleCodeChange}
+                onMount={(editor) => {
+                  const domNode = editor.getDomNode();
+                  if (domNode) {
+                    domNode.addEventListener('contextmenu', (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      showToast('🚫 Right-click is strictly disabled in the code editor!');
+                    }, true);
+
+                    domNode.addEventListener('paste', (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setProctorViolations(v => v + 1);
+                      logProctorEvent('MONACO_PASTE_ATTEMPT', 'HIGH', { timestamp: new Date().toISOString() });
+                      showToast('🚫 Pasting code is strictly prohibited! Please type your solution manually.');
+                    }, true);
+
+                    domNode.addEventListener('copy', (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      showToast('🚫 Copying code is disabled!');
+                    }, true);
+
+                    domNode.addEventListener('cut', (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      showToast('🚫 Cut is disabled!');
+                    }, true);
+                  }
+
+                  editor.onKeyDown((e) => {
+                    if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyC' || e.code === 'KeyV' || e.code === 'KeyX')) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (e.code === 'KeyV') {
+                        setProctorViolations(v => v + 1);
+                        logProctorEvent('KEYBOARD_PASTE_ATTEMPT', 'HIGH', { timestamp: new Date().toISOString() });
+                        showToast('🚫 Pasting code (Ctrl+V) is disabled! Type solution manually.');
+                      } else {
+                        showToast('🚫 Clipboard shortcuts are disabled during test!');
+                      }
+                    }
+                  });
+                }}
                 options={{
                   fontSize: 13,
                   fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
@@ -747,7 +863,11 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                   lineNumbers: 'on',
                   tabSize: 4,
                   scrollBeyondLastLine: false,
-                  wordWrap: 'on'
+                  wordWrap: 'on',
+                  contextmenu: false,
+                  copyWithSyntaxHighlighting: false,
+                  dragAndDrop: false,
+                  links: false
                 }}
               />
             </div>
