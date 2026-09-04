@@ -10166,11 +10166,32 @@ export default function App() {
         {isIndustry ? (
           <>
             <SidebarItem
-              icon={<Building2 size={20} className="text-indigo-500" />}
-              label="Hiring & Assessments"
-              badge="Portal"
-              active={view === 'industry-portal' || view === 'dashboard'}
-              onClick={() => { setView('industry-portal'); setIsMobileSidebarOpen(false); }}
+              icon={<LayoutDashboard size={20} className="text-blue-500" />}
+              label="Dashboard"
+              badge="Overview"
+              active={view === 'industry-dashboard' || view === 'dashboard' || view === 'industry-portal'}
+              onClick={() => { setView('industry-dashboard'); setIsMobileSidebarOpen(false); }}
+            />
+            <SidebarItem
+              icon={<UserCheck size={20} className="text-indigo-500" />}
+              label="Applications"
+              badge="Hiring"
+              active={view === 'industry-applications'}
+              onClick={() => { setView('industry-applications'); setIsMobileSidebarOpen(false); }}
+            />
+            <SidebarItem
+              icon={<Briefcase size={20} className="text-amber-500" />}
+              label="Postings"
+              badge="Jobs"
+              active={view === 'industry-postings'}
+              onClick={() => { setView('industry-postings'); setIsMobileSidebarOpen(false); }}
+            />
+            <SidebarItem
+              icon={<Terminal size={20} className="text-emerald-500" />}
+              label="Coding Assessments"
+              badge="Code"
+              active={view === 'industry-coding-assessments'}
+              onClick={() => { setView('industry-coding-assessments'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<Users size={20} className="text-sky-500" />}
@@ -10180,11 +10201,25 @@ export default function App() {
               onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
-              icon={<GraduationCap size={20} className="text-blue-500" />}
-              label="Faculty R&D Hub"
+              icon={<GraduationCap size={20} className="text-purple-500" />}
+              label="Faculty Hub"
               badge="Collab"
               active={view === 'faculty-industry-hub'}
               onClick={() => { setView('faculty-industry-hub'); setIsMobileSidebarOpen(false); }}
+            />
+            <SidebarItem
+              icon={<TrendingUp size={20} className="text-rose-500" />}
+              label="HR Reports"
+              badge="Export"
+              active={view === 'industry-reports'}
+              onClick={() => { setView('industry-reports'); setIsMobileSidebarOpen(false); }}
+            />
+            <SidebarItem
+              icon={<Building2 size={20} className="text-teal-500" />}
+              label="Company Profile"
+              badge="Profile"
+              active={view === 'industry-profile'}
+              onClick={() => { setView('industry-profile'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<Settings size={20} className="text-slate-500" />}
@@ -14758,7 +14793,14 @@ export default function App() {
               }
 
               {
-                (view === 'industry-portal' || (isIndustry && view === 'dashboard')) && (
+                (view === 'industry-portal' ||
+                  view === 'industry-dashboard' ||
+                  view === 'industry-applications' ||
+                  view === 'industry-postings' ||
+                  view === 'industry-coding-assessments' ||
+                  view === 'industry-reports' ||
+                  view === 'industry-profile' ||
+                  (isIndustry && view === 'dashboard')) && (
                   <motion.div
                     key="industry-portal"
                     initial={{ opacity: 0, y: 10 }}
@@ -14769,6 +14811,21 @@ export default function App() {
                     <IndustryPortalView
                       user={user}
                       token={token}
+                      activeTab={(() => {
+                        if (view === 'industry-applications') return 'applications';
+                        if (view === 'industry-postings') return 'postings';
+                        if (view === 'industry-coding-assessments') return 'coding-assessments';
+                        if (view === 'industry-reports') return 'reports';
+                        if (view === 'industry-profile') return 'profile';
+                        return 'dashboard';
+                      })()}
+                      onTabChange={(t) => {
+                        if (t === 'faculty') {
+                          setView('faculty-industry-hub');
+                        } else {
+                          setView(`industry-${t}` as any);
+                        }
+                      }}
                     />
                   </motion.div>
                 )

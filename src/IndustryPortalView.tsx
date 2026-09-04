@@ -28,8 +28,31 @@ const STATUS_COLORS: Record<string, string> = {
   SELECTED: '#059669', REJECTED: '#dc2626', COMPLETED: '#7c3aed',
 };
 
-export default function IndustryPortalView({ token, user }: { token: string; user: any }) {
-  const [tab, setTab] = useState<'dashboard'|'postings'|'applications'|'coding-assessments'|'faculty'|'reports'|'profile'>('dashboard');
+export default function IndustryPortalView({
+  token,
+  user,
+  activeTab = 'dashboard',
+  onTabChange
+}: {
+  token: string;
+  user: any;
+  activeTab?: 'dashboard'|'postings'|'applications'|'coding-assessments'|'faculty'|'reports'|'profile';
+  onTabChange?: (tab: 'dashboard'|'postings'|'applications'|'coding-assessments'|'faculty'|'reports'|'profile') => void;
+}) {
+  const [tab, setTabState] = useState<'dashboard'|'postings'|'applications'|'coding-assessments'|'faculty'|'reports'|'profile'>(activeTab || 'dashboard');
+
+  useEffect(() => {
+    if (activeTab) {
+      setTabState(activeTab);
+      if (activeTab === 'reports') fetchReportPreview();
+    }
+  }, [activeTab]);
+
+  const setTab = (t: 'dashboard'|'postings'|'applications'|'coding-assessments'|'faculty'|'reports'|'profile') => {
+    setTabState(t);
+    if (onTabChange) onTabChange(t);
+    if (t === 'reports') fetchReportPreview();
+  };
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [postings, setPostings] = useState<Posting[]>([]);
   const [selectedPosting, setSelectedPosting] = useState<Posting | null>(null);
