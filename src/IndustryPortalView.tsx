@@ -458,44 +458,33 @@ export default function IndustryPortalView({
             </div>
           </div>
 
-          {/* Report Type Selector Pills */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:10, marginBottom:18 }}>
-            {[
-              { id: 'applications', label: '📋 Applications', desc: 'All candidate submissions' },
-              { id: 'coding-assessment', label: '💻 Coding Tests', desc: 'Q1/Q2 scores & proctor logs' },
-              { id: 'skill-match', label: '🎯 Skill Intelligence', desc: 'Compatibility & skill gaps' },
-              { id: 'shortlist', label: '⭐ Shortlisted', desc: 'Pre-selected candidates' },
-              { id: 'interviews', label: '📅 Interviews', desc: 'Scheduled interview pipeline' },
-              { id: 'selections', label: '🏆 Selections', desc: 'Final hires & offer letters' },
-              { id: 'postings-summary', label: '📊 Postings Summary', desc: 'Role-by-role metrics' },
-              { id: 'recruitment-summary', label: '📈 Executive Summary', desc: 'Company-wide analytics' },
-            ].map(r => (
-              <div
-                key={r.id}
-                onClick={() => { setReportType(r.id); fetchReportPreview(r.id); }}
-                style={{
-                  background: reportType === r.id ? '#0f172a' : '#ffffff',
-                  color: reportType === r.id ? '#ffffff' : '#0f172a',
-                  border: `1px solid ${reportType === r.id ? '#0f172a' : '#e2e8f0'}`,
-                  borderRadius: 12,
-                  padding: '12px 14px',
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                  transition: 'all 0.15s ease-in-out'
-                }}
-              >
-                <div style={{ fontWeight: 800, fontSize: 13 }}>{r.label}</div>
-                <div style={{ fontSize: 11, color: reportType === r.id ? '#cbd5e1' : '#64748b', marginTop: 2 }}>{r.desc}</div>
-              </div>
-            ))}
-          </div>
-
           {/* Dynamic Filters Bar */}
-          <div style={{ ...c.card, padding: 16, marginBottom: 18 }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
-              ⚙️ Filter Report Criteria
+          <div style={{ ...c.card, padding: 20, marginBottom: 18 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>⚙️ Filter & Select Report Data</span>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+              <div>
+                <label style={c.lbl}>📊 Select Report Type</label>
+                <select
+                  style={{ ...c.inp, fontWeight: 700, borderColor: '#6366f1' }}
+                  value={reportType}
+                  onChange={e => {
+                    setReportType(e.target.value);
+                    fetchReportPreview(e.target.value);
+                  }}
+                >
+                  <option value="applications">📋 Candidate Applications & Submissions</option>
+                  <option value="coding-assessment">💻 Coding Assessments & Proctor Logs</option>
+                  <option value="skill-match">🎯 Skill Intelligence & Gap Analysis</option>
+                  <option value="shortlist">⭐ Shortlisted Candidates</option>
+                  <option value="interviews">📅 Scheduled Interview Pipeline</option>
+                  <option value="selections">🏆 Final Selections & Hires</option>
+                  <option value="postings-summary">📊 Postings & Opportunity Summary</option>
+                  <option value="recruitment-summary">📈 Executive Company Analytics</option>
+                </select>
+              </div>
+
               <div>
                 <label style={c.lbl}>Filter by Opportunity</label>
                 <select
