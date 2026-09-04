@@ -7390,7 +7390,7 @@ export default function App() {
                   )}
                   <Button className="w-full py-3 text-lg mt-2">Sign In</Button>
 
-                  <div className="pt-4 mt-4 border-t border-zinc-100 text-center">
+                  <div className="pt-4 mt-5 border-t border-zinc-100">
                     <button
                       type="button"
                       onClick={() => {
@@ -7398,10 +7398,24 @@ export default function App() {
                         setIndRegMsg('');
                         setShowIndustryRegModal(true);
                       }}
-                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                      className="w-full text-left p-3.5 bg-gradient-to-r from-zinc-50 via-indigo-50/30 to-purple-50/20 hover:from-indigo-50/60 hover:to-purple-50/40 border border-zinc-200/80 hover:border-indigo-300 rounded-2xl transition-all duration-200 cursor-pointer group shadow-2xs hover:shadow-xs flex items-center justify-between gap-3"
                     >
-                      <span>🏢 Corporate / Industry Partner?</span>
-                      <span className="font-bold underline">Register Company</span>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-white border border-zinc-200/80 text-indigo-600 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 group-hover:border-indigo-200 transition-all">
+                          <Building2 size={18} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-zinc-900 group-hover:text-indigo-700 transition-colors">
+                            Corporate & Industry Partner?
+                          </p>
+                          <p className="text-[11px] text-zinc-500 font-medium truncate">
+                            Recruit students, post FDPs & host tests
+                          </p>
+                        </div>
+                      </div>
+                      <span className="shrink-0 px-2.5 py-1 bg-white group-hover:bg-indigo-600 group-hover:text-white text-indigo-600 text-[11px] font-bold rounded-lg border border-indigo-100 group-hover:border-indigo-600 shadow-2xs transition-all flex items-center gap-0.5">
+                        Register <ChevronRight size={12} className="opacity-70 group-hover:translate-x-0.5 transition-transform" />
+                      </span>
                     </button>
                   </div>
                 </form>
