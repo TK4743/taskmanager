@@ -228,14 +228,6 @@ export default function IndustryPortalView({
         <span style={c.badge(!!profile?.is_verified)}>{profile?.is_verified ? '✓ Verified Partner' : '⏳ Pending Approval'}</span>
       </div>
 
-      <div style={c.tabBar}>
-        {(['dashboard','postings','applications','coding-assessments','faculty','reports','profile'] as const).map(t => (
-          <button key={t} style={c.tab(tab===t)} onClick={() => { setTab(t); if(t==='reports') fetchReportPreview(); }}>
-            {t==='dashboard'?'📊 Dashboard':t==='postings'?'📋 Postings':t==='applications'?'👥 Applications':t==='coding-assessments'?'💻 Coding Assessments':t==='faculty'?'🎓 Faculty Hub':t==='reports'?'📈 HR Reports':'🏢 Profile'}
-          </button>
-        ))}
-      </div>
-
       <div style={c.body}>
 
         {/* DASHBOARD */}
