@@ -11,7 +11,7 @@
 [![Express](https://img.shields.io/badge/Express-4.x-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Monaco Editor](https://img.shields.io/badge/Monaco_IDE-VS_Code_Core-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white)](https://microsoft.github.io/monaco-editor/)
-[![Telegram Bot](https://img.shields.io/badge/Telegram_Bot-Automated_Poller-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://core.telegram.org/bots/api)
+[![Telegram Bot](https://img.shields.io/badge/Telegram_Bot-Webhook_&_Poller-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://core.telegram.org/bots/api)
 [![PWA](https://img.shields.io/badge/PWA-Web_Push_VAPID-FF6B6B?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
 [![Brevo](https://img.shields.io/badge/Brevo-Multi--Node_Email_Pool-0B996F?style=for-the-badge&logo=sendinblue&logoColor=white)](https://www.brevo.com/)
 [![Sentry](https://img.shields.io/badge/Sentry-Telemetry_&_Audit-362D59?style=for-the-badge&logo=sentry&logoColor=white)](https://sentry.io/)
@@ -585,6 +585,19 @@ Audit Complete: 13/13 PASSED (0 FAILED)
 | `POST` | `/api/assessment/submit` | Student | Submits proctored aptitude test, records scores, and dispatches Telegram + email reports. |
 | `GET` | `/api/industry/assessments/:id/export/excel` | HR / Admin | Generates boundary-trimmed OpenXML Excel assessment scorecard. |
 | `GET` | `/api/industry/assessments/:id/export/pdf` | HR / Admin | Generates printable PDF candidate report. |
+| `POST` | `/api/telegram/webhook` | Public (Telegram API) | Inbound Telegram Webhook for real-time bot command and event processing on Vercel/Serverless. |
+| `GET` | `/api/telegram/webhook-info` | Authenticated | Retrieves current Telegram webhook health, pending updates queue, and registration details. |
+| `POST` | `/api/telegram/set-webhook` | Advisor / HOD / Admin | Registers or updates the production Telegram Webhook URL (`https://.../api/telegram/webhook`). |
+| `POST` | `/api/telegram/delete-webhook` | Advisor / HOD / Admin | Removes Telegram Webhook (to switch to local/Render long-polling mode). |
+| `GET` | `/api/telegram/status` | Authenticated | Fetches Telegram Bot statistics, linked student counts, and current user connection status. |
+| `POST` | `/api/telegram/set-group-chat` | Advisor / HOD / Admin | Configures the official Department Telegram Community Group Chat ID. |
+| `POST` | `/api/telegram/send-group-summary` | Advisor / HOD / Admin | Dispatches instant daily task summary brief to the department Telegram group. |
+| `POST` | `/api/telegram/send-deadline-alert` | Advisor / HOD / Admin | Dispatches instant 24-hour upcoming assignment deadline alert to the department group. |
+| `POST` | `/api/telegram/send-reminders` | Advisor / HOD / Admin | Dispatches private 1-to-1 deadline reminders to students with pending submissions. |
+| `POST` | `/api/telegram/test` | Authenticated | Sends a test verification notification to the user's linked Telegram chat. |
+| `POST` | `/api/student/link-telegram` | Authenticated | Links the logged-in student's account to their Telegram Chat ID. |
+| `DELETE` | `/api/student/unlink-telegram` | Authenticated | Unlinks Telegram from the authenticated student profile. |
+| `POST` | `/api/telegram/broadcast` | Staff / Advisor / HOD / Admin | Broadcasts custom department announcements directly to all linked students via Telegram. |
 
 ---
 
