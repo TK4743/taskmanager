@@ -560,16 +560,18 @@ async function startServer() {
     try {
       const { todayStr, prevDayStr, hours, minutes } = getISTTimeParts();
 
-      // 1. Morning 7:50 AM IST Window -> Pre-Sync Previous Day LeetCode & GitHub Progress (10 mins before 8:00 AM)
+      // 1. Morning 7:50 AM - 7:59 AM IST Window -> Pre-Sync Tasks, LeetCode & GitHub Progress
       if (hours === 7 && minutes >= 50) {
         const claimed = await claimDailySlot('morning_pre_sync_date', todayStr);
         if (claimed) {
           triggered.push('morning_pre_sync');
-          console.log(`[RenderPing/Scheduler] 🔄 7:50 AM IST Pre-Syncing Previous Day Data (${prevDayStr})...`);
+          console.log(`[Scheduler] 🔄 7:50 AM IST Pre-Syncing Tasks, LeetCode & GitHub (${prevDayStr})...`);
           try {
             await syncLeetcodeProgressForScope({ date: prevDayStr } as any);
+            await syncLeetcodeProgressForScope({ date: todayStr } as any);
             if (process.env.GITHUB_TOKEN) {
               await syncGitHubProgressForScope({ date: prevDayStr });
+              await syncGitHubProgressForScope({ date: todayStr });
             }
           } catch (syncErr) {
             console.error('[Morning Pre-Sync Error]:', syncErr);
@@ -577,12 +579,12 @@ async function startServer() {
         }
       }
 
-      // 2. Morning 8:00 AM IST Window -> Send Morning Group Summary & 24h Deadline Alerts
+      // 2. Morning 8:00 AM - 8:49 AM IST Window -> Send Morning Group Summary & 24h Deadline Alerts
       if (hours >= 8 && hours < 9) {
         const claimed = await claimDailySlot('telegram_last_group_summary_morning_date', todayStr);
         if (claimed) {
           triggered.push('morning_summary');
-          console.log(`[RenderPing/Scheduler] 📊 Triggering 8:00 AM IST Morning Group Summary (${prevDayStr})...`);
+          console.log(`[Scheduler] 📊 Triggering 8:00 AM IST Morning Group Summary (${prevDayStr})...`);
           // Ensure previous day data is freshly synced before generating summary
           try {
             await syncLeetcodeProgressForScope({ date: prevDayStr } as any);
@@ -591,10 +593,21 @@ async function startServer() {
             }
           } catch (e) {}
 
-          await Promise.allSettled([
-            sendGroupSummary(undefined, prevDayStr).catch(err => console.error('[Morning Summary Error]:', err)),
-            sendGroupDeadlineAlert().catch(err => console.error('[Morning Deadline Alert Error]:', err))
-          ]);
+          const summaryRes = await sendGroupSummary(undefined, prevDayStr).catch(err => {
+            console.error('[Morning Summary Error]:', err);
+            return { success: false, message: err?.message || 'Error' };
+          });
+
+          await sendGroupDeadlineAlert().catch(err => console.error('[Morning Deadline Alert Error]:', err));
+
+          // If morning summary delivery failed, rollback the daily lock so the next tick can retry
+          if (!summaryRes || !summaryRes.success) {
+            console.warn('[Morning Summary Failed] Rolling back lock for retry:', summaryRes?.message);
+            await pool.query(
+              `DELETE FROM system_settings WHERE key = 'telegram_last_group_summary_morning_date' AND value = $1`,
+              [todayStr]
+            ).catch(() => {});
+          }
         }
       }
 
