@@ -24,9 +24,13 @@ import {
   Eye,
   Terminal,
   HelpCircle,
-  Laptop
+  Laptop,
+  GripVertical,
+  Smartphone,
+  Monitor
 } from 'lucide-react';
 import { API_URL } from './config';
+import { checkIsMobileOrTablet } from './lib/deviceCheck';
 
 interface StudentCodingAssessmentViewProps {
   user: any;
@@ -86,6 +90,18 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
   const [showPreCheckModal, setShowPreCheckModal] = useState(false);
   const [cameraAllowed, setCameraAllowed] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+
+  // Device enforcement state (Desktop/Laptop only)
+  const [isMobileDevice, setIsMobileDevice] = useState<boolean>(() => checkIsMobileOrTablet().isMobile);
+  const [showMobileProhibitedModal, setShowMobileProhibitedModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileDevice(checkIsMobileOrTablet().isMobile);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Active coding attempt state
   const [attemptId, setAttemptId] = useState<string | null>(null);
@@ -309,12 +325,27 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
   // 6. Begin Assessment Flow
   const handleOpenPreCheck = (assessment: AssessmentItem) => {
+    const check = checkIsMobileOrTablet();
+    if (check.isMobile) {
+      setIsMobileDevice(true);
+      setShowMobileProhibitedModal(true);
+      showToast('💻 Desktop/Laptop Required: Mobile devices are strictly prohibited.');
+      return;
+    }
     setActiveAssessment(assessment);
     setShowPreCheckModal(true);
     initWebcam();
   };
 
   const handleStartAttempt = async () => {
+    const check = checkIsMobileOrTablet();
+    if (check.isMobile) {
+      setIsMobileDevice(true);
+      setShowMobileProhibitedModal(true);
+      showToast('💻 Desktop/Laptop Required: Coding assessments cannot be taken on mobile devices.');
+      return;
+    }
+
     if (!activeAssessment || !cameraAllowed) {
       showToast('Camera verification required to start.');
       return;
@@ -600,27 +631,61 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
     );
   }
 
-  // ── Render 2: Active Coding IDE Screen ─────────────────────────────────────
+  // ── Render 2: Mobile / Small Viewport Blocker (Laptop & Desktop Only) ────
+  if (attemptId && isMobileDevice) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#0A0F1D] text-white flex items-center justify-center p-6 select-none font-sans">
+        <div className="max-w-md w-full bg-[#111827] border border-rose-500/50 rounded-3xl p-8 text-center space-y-5 shadow-2xl">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto">
+            <Monitor size={32} />
+          </div>
+          <div className="space-y-2">
+            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40">
+              Desktop / Laptop Required
+            </span>
+            <h2 className="text-xl font-black text-white">Mobile Device Prohibited</h2>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Industry coding assessments cannot be attended on mobile phones or tablets. The multi-file coding IDE, code execution sandbox, and live proctoring require a standard <strong>Laptop or Desktop PC</strong> (minimum 1024px screen width).
+            </p>
+          </div>
+          <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 text-[11px] text-amber-300/90 font-medium">
+            💡 Please switch to your Laptop or Desktop PC to continue your coding assessment.
+          </div>
+          <button
+            onClick={() => {
+              setAttemptId(null);
+              fetchAssessments();
+            }}
+            className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+          >
+            ← Exit to Assessment List
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Render 3: Active Coding IDE Screen ─────────────────────────────────────
   if (attemptId && currentQ) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0F172A] text-white flex flex-col overflow-hidden font-sans">
+      <div className="fixed inset-0 z-50 bg-[#0A0F1D] text-white flex flex-col overflow-hidden font-sans select-none">
         {toast && (
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] px-5 py-2.5 bg-zinc-900 text-white rounded-full text-xs font-bold shadow-2xl border border-zinc-700 animate-bounce">
-            {toast}
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] px-5 py-2.5 bg-zinc-900/95 backdrop-blur-md text-white rounded-full text-xs font-bold shadow-2xl border border-zinc-700 animate-bounce flex items-center gap-2">
+            <span>{toast}</span>
           </div>
         )}
 
         {/* Top Assessment Navigation & Status Bar */}
-        <div className="h-14 bg-[#1E293B] border-b border-zinc-700/80 px-4 md:px-6 flex items-center justify-between shrink-0">
+        <div className="h-14 bg-[#111827] border-b border-slate-800 px-4 md:px-6 flex items-center justify-between shrink-0 shadow-xs z-20">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 bg-[#0F172A] px-3 py-1 rounded-xl border border-zinc-700">
-              <Code size={16} className="text-indigo-400" />
-              <span className="text-xs font-bold text-zinc-200">
+            <div className="flex items-center gap-1.5 bg-[#0A0F1D] px-3 py-1.5 rounded-xl border border-slate-700/80 shadow-inner">
+              <Code size={15} className="text-indigo-400" />
+              <span className="text-xs font-extrabold text-slate-200">
                 Question {currentQIdx + 1} of {questions.length}
               </span>
             </div>
 
-            <div className="flex gap-1">
+            <div className="flex gap-1.5">
               {questions.map((q, idx) => (
                 <button
                   key={q.id}
@@ -628,12 +693,12 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                     setCurrentQIdx(idx);
                     setSampleTestResults([]);
                   }}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                     currentQIdx === idx
-                      ? 'bg-indigo-600 text-white shadow-xs'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
                       : submissionFeedback[idx]
-                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-700'
-                      : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                      ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/80 hover:bg-emerald-900'
+                      : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
                   }`}
                 >
                   Q{idx + 1} {submissionFeedback[idx] ? '✓' : ''}
@@ -642,19 +707,27 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
             </div>
           </div>
 
-          {/* Center Timer */}
-          <div className="flex items-center gap-2 bg-[#0F172A] px-4 py-1.5 rounded-xl border border-zinc-700">
-            <Clock size={16} className={remainingSeconds < 300 ? 'text-rose-400 animate-pulse' : 'text-amber-400'} />
-            <span className={`font-mono text-sm font-bold ${remainingSeconds < 300 ? 'text-rose-400' : 'text-amber-300'}`}>
-              {formatTime(remainingSeconds)}
+          {/* Center Timer & Anti-Cheat Badge */}
+          <div className="flex items-center gap-3">
+            <span className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[11px] font-bold">
+              <Lock size={12} className="text-rose-400" />
+              <span>Copy & Right-Click Locked</span>
             </span>
+
+            <div className="flex items-center gap-2 bg-[#0A0F1D] px-4 py-1.5 rounded-xl border border-slate-700/80 shadow-inner">
+              <Clock size={15} className={remainingSeconds < 300 ? 'text-rose-400 animate-pulse' : 'text-amber-400 animate-pulse'} />
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold hidden sm:inline">Time Left:</span>
+              <span className={`font-mono text-sm font-extrabold tracking-wider tabular-nums ${remainingSeconds < 300 ? 'text-rose-400' : 'text-amber-300'}`}>
+                {formatTime(remainingSeconds)}
+              </span>
+            </div>
           </div>
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleFinishAssessment(false)}
-              className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <span>Finish Assessment</span>
               <CheckCircle2 size={15} />
@@ -667,78 +740,80 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
           
           {/* LEFT: Problem Statement */}
           <div 
-            className="w-full md:w-1/2 border-r border-zinc-700/80 bg-[#0B1120] flex flex-col overflow-y-auto p-6 custom-scrollbar min-h-0 select-none"
+            className="w-full md:w-1/2 border-r border-slate-800 bg-[#0B1120] flex flex-col overflow-y-auto p-6 md:p-7 custom-scrollbar min-h-0 select-none"
             onContextMenu={e => { e.preventDefault(); showToast('🚫 Right click is disabled on problem statement!'); }}
             onCopy={e => { e.preventDefault(); showToast('🚫 Copying problem text is disabled!'); }}
             onPaste={e => { e.preventDefault(); showToast('🚫 Pasting is disabled!'); }}
           >
             <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              <span className="text-xs font-black px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
                 {currentQ.difficulty} · {currentQ.marks} Marks
               </span>
-              <div className="flex gap-1 flex-wrap">
+              <div className="flex gap-1.5 flex-wrap">
                 {(currentQ.skills || []).map((sk, i) => (
-                  <span key={i} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700">
+                  <span key={i} className="text-[10px] font-bold px-2.5 py-0.5 rounded-lg bg-slate-800/90 text-slate-300 border border-slate-700/80">
                     {sk}
                   </span>
                 ))}
               </div>
             </div>
 
-            <h1 className="text-xl font-black text-white mb-4 leading-tight">{currentQ.title}</h1>
+            <h1 className="text-xl md:text-2xl font-black text-white mb-4 leading-tight tracking-tight">{currentQ.title}</h1>
 
-            <div className="space-y-4 text-sm text-zinc-300 leading-relaxed font-normal">
-              <div className="whitespace-pre-wrap">{currentQ.problem_statement}</div>
+            <div className="space-y-4 text-xs md:text-sm text-slate-300 leading-relaxed font-normal">
+              <div className="whitespace-pre-wrap leading-relaxed">{currentQ.problem_statement}</div>
 
               {currentQ.input_format && (
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Input Format</h4>
-                  <div className="p-3 bg-[#1E293B] rounded-xl text-xs text-zinc-200 font-mono whitespace-pre-wrap border border-zinc-700">
+                <div className="space-y-1.5 pt-1">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-400">Input Format</h4>
+                  <div className="py-2.5 px-3.5 bg-[#131C31] rounded-xl text-xs text-slate-200 font-mono leading-relaxed whitespace-pre-wrap break-words border border-slate-800 shadow-inner">
                     {currentQ.input_format}
                   </div>
                 </div>
               )}
 
               {currentQ.output_format && (
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Output Format</h4>
-                  <div className="p-3 bg-[#1E293B] rounded-xl text-xs text-zinc-200 font-mono whitespace-pre-wrap border border-zinc-700">
+                <div className="space-y-1.5">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-400">Output Format</h4>
+                  <div className="py-2.5 px-3.5 bg-[#131C31] rounded-xl text-xs text-slate-200 font-mono leading-relaxed whitespace-pre-wrap break-words border border-slate-800 shadow-inner">
                     {currentQ.output_format}
                   </div>
                 </div>
               )}
 
               {currentQ.constraints && (
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Constraints</h4>
-                  <div className="p-3 bg-[#1E293B] rounded-xl text-xs text-zinc-200 font-mono whitespace-pre-wrap border border-zinc-700">
+                <div className="space-y-1.5">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-400">Constraints</h4>
+                  <div className="py-2.5 px-3.5 bg-[#131C31] rounded-xl text-xs text-slate-200 font-mono leading-relaxed whitespace-pre-wrap break-words border border-slate-800 shadow-inner">
                     {currentQ.constraints}
                   </div>
                 </div>
               )}
 
-              {/* Sample Test Cases */}
+              {/* Sample Test Cases (Unclipped Monospace Rendering) */}
               <div className="space-y-3 pt-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400">Sample Test Cases</h4>
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                  <span>SAMPLE TEST CASES</span>
+                </h4>
                 {(currentQ.sample_test_cases || []).map((tc, idx) => (
-                  <div key={tc.id || idx} className="p-4 bg-[#1E293B] rounded-xl border border-zinc-700 space-y-2">
-                    <div className="text-xs font-bold text-indigo-400">Sample Case #{idx + 1}</div>
-                    <div className="grid grid-cols-2 gap-2">
+                  <div key={tc.id || idx} className="p-4 bg-[#131C31] rounded-2xl border border-slate-700/80 space-y-2.5 shadow-sm">
+                    <div className="text-xs font-black text-indigo-400">Sample Case #{idx + 1}</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <div>
-                        <span className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Input</span>
-                        <pre className="p-2.5 bg-[#0F172A] rounded-lg text-xs font-mono text-zinc-200 overflow-x-auto border border-zinc-800">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Input</span>
+                        <div className="py-2.5 px-3 bg-[#0A0F1D] rounded-xl text-xs font-mono leading-relaxed text-slate-100 min-h-[38px] overflow-x-auto whitespace-pre-wrap break-all border border-slate-800/80">
                           {tc.input_data}
-                        </pre>
+                        </div>
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Expected Output</span>
-                        <pre className="p-2.5 bg-[#0F172A] rounded-lg text-xs font-mono text-emerald-400 overflow-x-auto border border-zinc-800">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Expected Output</span>
+                        <div className="py-2.5 px-3 bg-[#0A0F1D] rounded-xl text-xs font-mono leading-relaxed text-emerald-400 font-semibold min-h-[38px] overflow-x-auto whitespace-pre-wrap break-all border border-slate-800/80">
                           {tc.expected_output}
-                        </pre>
+                        </div>
                       </div>
                     </div>
                     {tc.explanation && (
-                      <p className="text-[11px] text-zinc-400 italic pt-1 border-t border-zinc-700/50">
+                      <p className="text-[11px] text-slate-400 italic pt-1 border-t border-slate-800">
                         {tc.explanation}
                       </p>
                     )}
@@ -749,16 +824,16 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
           </div>
 
           {/* RIGHT: Monaco Editor & Interactive Test Runner */}
-          <div className="w-full md:w-1/2 flex flex-col bg-[#0F172A] min-h-0">
+          <div className="w-full md:w-1/2 flex flex-col bg-[#0A0F1D] min-h-0">
             
             {/* Editor Top Bar with Language Selector */}
-            <div className="h-11 bg-[#1E293B] px-4 flex items-center justify-between border-b border-zinc-700 shrink-0 select-none">
+            <div className="h-11 bg-[#111827] px-4 flex items-center justify-between border-b border-slate-800 shrink-0 select-none z-10">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Language:</span>
+                <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Language:</span>
                 <select
                   value={activeLang}
                   onChange={e => handleLanguageChange(e.target.value)}
-                  className="bg-[#0F172A] text-white text-xs font-bold px-3 py-1 rounded-lg border border-zinc-600 outline-none cursor-pointer"
+                  className="bg-[#0A0F1D] text-indigo-300 text-xs font-bold px-3 py-1 rounded-xl border border-slate-700 hover:border-indigo-500/60 focus:border-indigo-500 outline-none shadow-xs transition-colors cursor-pointer"
                 >
                   <option value="c">C (GCC)</option>
                   <option value="cpp">C++ (G++)</option>
@@ -769,7 +844,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
               <div className="flex items-center gap-2.5">
                 {/* Autosave Status Pill */}
-                <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#0F172A] border border-zinc-700/80">
+                <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold bg-[#0A0F1D] border border-slate-800 shadow-inner">
                   {autosaveStatus === 'saving' && (
                     <span className="text-amber-400 flex items-center gap-1 animate-pulse">
                       <RotateCcw size={11} className="animate-spin" /> Saving...
@@ -786,7 +861,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                     </span>
                   )}
                   {autosaveStatus === 'idle' && (
-                    <span className="text-zinc-400">Ready</span>
+                    <span className="text-slate-400">Ready</span>
                   )}
                 </div>
 
@@ -795,7 +870,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                     handleCodeChange(starterTemplates[activeLang] || '');
                     showToast('Template reset.');
                   }}
-                  className="p-1 text-zinc-400 hover:text-white transition-colors"
+                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
                   title="Reset to starter template"
                 >
                   <RotateCcw size={14} />
@@ -873,18 +948,18 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
             </div>
 
             {/* Bottom Test Runner Panel & Action Buttons */}
-            <div className="h-56 bg-[#1E293B] border-t border-zinc-700 flex flex-col shrink-0">
-              <div className="h-10 px-4 bg-[#0F172A] flex items-center justify-between border-b border-zinc-800">
+            <div className="h-56 bg-[#111827] border-t border-slate-800 flex flex-col shrink-0 z-10">
+              <div className="h-11 px-4 bg-[#0A0F1D] flex items-center justify-between border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <Terminal size={14} className="text-indigo-400" />
-                  <span className="text-xs font-bold text-zinc-300">Test Cases Console</span>
+                  <span className="text-xs font-extrabold text-slate-200">Test Cases Console</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
                   <button
                     disabled={isRunning || isSubmitting}
                     onClick={handleRunCode}
-                    className="px-4 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+                    className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
                   >
                     <Play size={13} className="text-emerald-400" />
                     <span>{isRunning ? 'Running...' : 'Run Code'}</span>
@@ -893,7 +968,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                   <button
                     disabled={isRunning || isSubmitting}
                     onClick={handleSubmitCode}
-                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                    className="px-5 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50 cursor-pointer"
                   >
                     <Send size={13} />
                     <span>{isSubmitting ? 'Evaluating...' : 'Submit'}</span>
@@ -904,7 +979,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
               {/* Test Results Output */}
               <div className="flex-1 overflow-y-auto p-3 text-xs font-mono space-y-2 custom-scrollbar">
                 {sampleTestResults.length === 0 && !submissionFeedback[currentQIdx] && (
-                  <div className="text-zinc-500 py-6 text-center text-xs">
+                  <div className="text-slate-500 py-6 text-center text-xs">
                     Click <strong>Run Code</strong> to test against sample cases or <strong>Submit</strong> to evaluate against all test cases.
                   </div>
                 )}
@@ -913,7 +988,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                   <div className="p-3 bg-indigo-950/40 border border-indigo-700/50 rounded-xl flex items-center justify-between">
                     <div>
                       <span className="text-xs font-black text-indigo-300">Latest Submission Status: {submissionFeedback[currentQIdx].status}</span>
-                      <p className="text-[11px] text-zinc-400">
+                      <p className="text-[11px] text-slate-400">
                         Public Tests: {submissionFeedback[currentQIdx].public_tests_passed}/{submissionFeedback[currentQIdx].public_tests_total} · Hidden Tests: {submissionFeedback[currentQIdx].hidden_tests_passed}/{submissionFeedback[currentQIdx].hidden_tests_total}
                       </p>
                     </div>
@@ -937,17 +1012,17 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                           {r.is_hidden ? `Hidden Test Case #${i + 1}` : `Sample Case #${i + 1}`} — {r.status}
                         </span>
                       </span>
-                      <span className="text-[10px] text-zinc-500">{r.execution_time_ms} ms</span>
+                      <span className="text-[10px] text-slate-500">{r.execution_time_ms} ms</span>
                     </div>
 
                     {!r.is_hidden && (
-                      <div className="grid grid-cols-2 gap-2 text-[11px] mt-1 pt-1 border-t border-zinc-800">
+                      <div className="grid grid-cols-2 gap-2 text-[11px] mt-1 pt-1 border-t border-slate-800">
                         <div>
-                          <span className="text-zinc-500 block">Your Output:</span>
-                          <span className="text-zinc-200">{r.actual_output || '—'}</span>
+                          <span className="text-slate-500 block">Your Output:</span>
+                          <span className="text-slate-200">{r.actual_output || '—'}</span>
                         </div>
                         <div>
-                          <span className="text-zinc-500 block">Expected Output:</span>
+                          <span className="text-slate-500 block">Expected Output:</span>
                           <span className="text-emerald-400">{r.expected_output || '—'}</span>
                         </div>
                       </div>
@@ -959,16 +1034,31 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
           </div>
         </div>
 
-        {/* Floating Webcam Proctoring Feed (Bottom-Right PIP) */}
-        <div className="fixed bottom-4 right-4 z-50 w-44 bg-black rounded-2xl overflow-hidden border-2 border-indigo-500 shadow-2xl">
-          <div className="relative aspect-video bg-zinc-900">
-            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-            <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-600/90 text-white text-[9px] font-black uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-              LIVE PROCTOR
+        {/* Floating Webcam Proctoring Feed (Draggable Anywhere, Never Obstructs Console) */}
+        <motion.div
+          drag
+          dragMomentum={false}
+          whileDrag={{ scale: 1.05 }}
+          className="fixed top-18 right-6 z-[9999] w-48 bg-slate-900/95 backdrop-blur-md rounded-2xl overflow-hidden border-2 border-indigo-500 shadow-2xl select-none cursor-move"
+          title="Click and drag to position webcam proctor anywhere on screen"
+        >
+          <div className="flex items-center justify-between px-2.5 py-1 bg-slate-800/90 border-b border-slate-700/80 text-[10px] font-bold text-slate-300 cursor-grab active:cursor-grabbing">
+            <span className="flex items-center gap-1 text-slate-200">
+              <GripVertical size={13} className="text-slate-400" /> Move Camera
+            </span>
+            <span className="flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 text-[9px] font-black border border-rose-500/40">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+              LIVE
+            </span>
+          </div>
+
+          <div className="relative aspect-video bg-black">
+            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />
+            <div className="absolute bottom-1 left-1.5 right-1.5 text-center text-[9px] font-bold text-white/80 bg-black/60 backdrop-blur-xs py-0.5 rounded">
+              Camera Monitored
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -1115,8 +1205,9 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
               {/* Assessment Rules */}
               <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-200 text-xs text-zinc-600 space-y-1.5 font-medium">
                 <div className="font-bold text-zinc-900 flex items-center gap-1.5">
-                  <ShieldAlert size={14} className="text-amber-500" /> Integrity Rules
+                  <ShieldAlert size={14} className="text-amber-500" /> Integrity & Device Rules
                 </div>
+                <p>• 💻 <strong>Desktop / Laptop PC Mandatory:</strong> Mobile phones and tablets are strictly prohibited.</p>
                 <p>• You will receive <strong>2 randomly assigned coding questions</strong> from the 10-question pool.</p>
                 <p>• You may choose your language (<strong>C, C++, Java, or Python</strong>) independently for each question.</p>
                 <p>• Assessment is strictly timed ({activeAssessment.duration_minutes} mins) based on the server clock.</p>
@@ -1130,19 +1221,60 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                     setShowPreCheckModal(false);
                     stopWebcam();
                   }}
-                  className="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-2xl text-xs font-bold transition-colors"
+                  className="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
-                  disabled={!cameraAllowed}
+                  disabled={!cameraAllowed || isMobileDevice}
                   onClick={handleStartAttempt}
-                  className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black shadow-md disabled:opacity-50 transition-all flex items-center justify-center gap-1.5"
+                  className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black shadow-md disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <span>Enter & Start Coding</span>
                   <Maximize2 size={14} />
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Device Prohibited Alert Modal */}
+      <AnimatePresence>
+        {showMobileProhibitedModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-rose-200 text-center space-y-5"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto shadow-sm">
+                <Laptop size={32} />
+              </div>
+              <div className="space-y-2">
+                <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200">
+                  Laptop or Desktop Only
+                </span>
+                <h3 className="text-xl font-black text-zinc-900">Mobile Device Detected</h3>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Assessment test sessions can <strong>only be attended on a Laptop or Desktop computer</strong>. Mobile devices and tablets are strictly not allowed for exam security and IDE workspace compliance.
+                </p>
+              </div>
+              <div className="p-3.5 bg-zinc-50 rounded-2xl border border-zinc-200 text-left text-xs text-zinc-700 space-y-1 font-medium">
+                <div className="font-bold text-zinc-900 flex items-center gap-1.5 text-xs">
+                  💻 Device Requirements:
+                </div>
+                <p>• Standard Laptop or Desktop PC (Windows, macOS, or Linux)</p>
+                <p>• Screen resolution of 1024px width or higher</p>
+                <p>• Working front-facing webcam for proctoring</p>
+              </div>
+              <button
+                onClick={() => setShowMobileProhibitedModal(false)}
+                className="w-full py-3.5 bg-zinc-900 hover:bg-black text-white font-bold rounded-2xl text-xs transition-all shadow-md cursor-pointer"
+              >
+                Understood, I will switch to Laptop/Desktop
+              </button>
             </motion.div>
           </div>
         )}

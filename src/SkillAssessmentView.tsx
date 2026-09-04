@@ -40,9 +40,13 @@ import {
   Lightbulb,
   X,
   Mail,
-  GripVertical
+  GripVertical,
+  Laptop,
+  Monitor,
+  Smartphone
 } from 'lucide-react';
 import { API_URL } from './config';
+import { checkIsMobileOrTablet } from './lib/deviceCheck';
 
 interface SkillAssessmentViewProps {
   user: any;
@@ -126,6 +130,18 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showFsWarning, setShowFsWarning] = useState(false);
   const [violationCount, setViolationCount] = useState(0);
+
+  // ── Device Enforcement State (Laptop/Desktop only) ──────────────────────────
+  const [isMobileDevice, setIsMobileDevice] = useState<boolean>(() => checkIsMobileOrTablet().isMobile);
+  const [showMobileProhibitedModal, setShowMobileProhibitedModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileDevice(checkIsMobileOrTablet().isMobile);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // ── Webcam & Cloudinary Face Verification State ────────────────────────────
   const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null);
@@ -745,6 +761,13 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
   // ── Student: Track Selection & Assessment Flow ─────────────────────────────
 
   const handleSelectTrack = async (t: AssessmentTrack) => {
+    const check = checkIsMobileOrTablet();
+    if (check.isMobile) {
+      setIsMobileDevice(true);
+      setShowMobileProhibitedModal(true);
+      addToast('💻 Laptop/Desktop Required: Proctored assessments cannot be taken on mobile devices.', 'error');
+      return;
+    }
     setIsMicroQuiz(false);
     setMicroQuizTopic(null);
     setSelectedTrack(t.track_type);
@@ -757,6 +780,13 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
   };
 
   const handleLaunchMicroQuiz = async (mod: RemedialModule) => {
+    const check = checkIsMobileOrTablet();
+    if (check.isMobile) {
+      setIsMobileDevice(true);
+      setShowMobileProhibitedModal(true);
+      addToast('💻 Laptop/Desktop Required: Micro-quizzes must be attended on a Laptop or Desktop.', 'error');
+      return;
+    }
     setIsMicroQuiz(true);
     setMicroQuizTopic(mod.skill_tag);
     setSelectedTrack('MICRO_REMEDIAL');
@@ -770,6 +800,13 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
 
   // Student Starts Proctored Test
   const handleStartAssessment = async () => {
+    const check = checkIsMobileOrTablet();
+    if (check.isMobile) {
+      setIsMobileDevice(true);
+      setShowMobileProhibitedModal(true);
+      addToast('💻 Desktop/Laptop Required: Mobile devices are strictly prohibited during assessments.', 'error');
+      return;
+    }
     if (!capturedPhotoUrl) {
       addToast('Please capture and verify your face photo before proceeding.', 'warning');
       return;
@@ -1409,6 +1446,9 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                   <li className="text-amber-950 font-bold">
                     <strong>SIH Demo Purpose:</strong> This assessment session is conducted for Smart India Hackathon (SIH) demonstration purposes only within this project.
                   </li>
+                  <li className="text-rose-950 font-bold">
+                    <strong>💻 Desktop/Laptop Mandatory:</strong> Attending assessments on mobile devices or tablets is strictly prohibited.
+                  </li>
                   <li><strong>Target Benchmark:</strong> {selectedTrackTitle} (Cutoff: {selectedTrackCutoff}%).</li>
                   <li><strong>Full-Screen Lockdown:</strong> Leaving full-screen logs an integrity incident.</li>
                   <li><strong>Telegram Alert:</strong> Scorecard will be instantly dispatched to your Telegram account upon submission.</li>
@@ -1424,16 +1464,16 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                     stopWebcam();
                     setShowStartConfirmModal(false);
                   }}
-                  className="px-4 py-2 text-xs font-bold text-zinc-600 hover:text-zinc-900 rounded-xl hover:bg-zinc-100 transition"
+                  className="px-4 py-2 text-xs font-bold text-zinc-600 hover:text-zinc-900 rounded-xl hover:bg-zinc-100 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  disabled={!capturedPhotoUrl}
+                  disabled={!capturedPhotoUrl || isMobileDevice}
                   onClick={handleStartAssessment}
                   className={`px-6 py-2.5 rounded-xl text-xs font-bold shadow-md transition flex items-center gap-2 ${
-                    capturedPhotoUrl
+                    capturedPhotoUrl && !isMobileDevice
                       ? 'bg-black hover:bg-zinc-800 text-white cursor-pointer'
                       : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
                   }`}
@@ -1487,6 +1527,44 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
               </span>
             </div>
           </motion.div>
+        )}
+
+        {/* ═════════════════════════════════════════════════════════════════════
+            DEVICE RESTRICTION VIOLATION OVERLAY (Laptop / Desktop Required)
+            ═════════════════════════════════════════════════════════════════════ */}
+        {isMobileDevice && testStarted && !testCompleted && (
+          <div className="fixed inset-0 z-[99999999] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-white border-2 border-rose-500 rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl space-y-4 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 mx-auto">
+                <Monitor size={30} />
+              </div>
+
+              <div className="space-y-1">
+                <h3 className="text-xl font-extrabold text-zinc-900 tracking-tight">
+                  Desktop / Laptop Required
+                </h3>
+                <p className="text-xs text-zinc-600 font-medium leading-relaxed">
+                  Assessment tests cannot be attended on mobile phones or tablets. Please switch to your Laptop or Desktop PC to continue.
+                </p>
+              </div>
+
+              <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-600 font-medium">
+                Standard screen viewport (minimum 1024px width) and physical keyboard required.
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  stopWebcam();
+                  setTestStarted(false);
+                  setActiveTab('tracks');
+                }}
+                className="w-full py-3 px-4 rounded-xl bg-zinc-900 hover:bg-black text-white text-xs font-bold shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                Exit Assessment
+              </button>
+            </div>
+          </div>
         )}
 
         {/* ═════════════════════════════════════════════════════════════════════
@@ -2047,11 +2125,29 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                   </div>
                 </div>
 
+                {isMobileDevice && (
+                  <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800 font-semibold flex items-center justify-center gap-2">
+                    <Laptop size={16} className="text-rose-600 shrink-0" />
+                    <span>Mobile device detected. Please switch to a <strong>Laptop or Desktop computer</strong> to attend this assessment.</span>
+                  </div>
+                )}
+
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
                   <button
                     type="button"
-                    onClick={() => setShowStartConfirmModal(true)}
-                    className="w-full sm:w-auto px-8 py-3.5 bg-black hover:bg-zinc-800 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    disabled={isMobileDevice}
+                    onClick={() => {
+                      if (isMobileDevice) {
+                        setShowMobileProhibitedModal(true);
+                        return;
+                      }
+                      setShowStartConfirmModal(true);
+                    }}
+                    className={`w-full sm:w-auto px-8 py-3.5 rounded-xl text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 ${
+                      isMobileDevice
+                        ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                        : 'bg-black hover:bg-zinc-800 text-white cursor-pointer hover:shadow-lg'
+                    }`}
                   >
                     <Camera size={16} /> Verify Face Identity & Begin Test
                   </button>
@@ -3226,6 +3322,41 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                 </button>
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {/* ── Mobile Device Prohibited Alert Modal ── */}
+        {showMobileProhibitedModal && (
+          <div className="fixed inset-0 z-[9999999] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-rose-200 text-center space-y-5">
+              <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto shadow-sm">
+                <Laptop size={32} />
+              </div>
+              <div className="space-y-2">
+                <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200">
+                  Laptop or Desktop Only
+                </span>
+                <h3 className="text-xl font-black text-zinc-900">Mobile Device Detected</h3>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Proctored assessment tests and micro-quizzes can <strong>only be attended on a Laptop or Desktop computer</strong>. Mobile devices and tablets are strictly prohibited for institutional test security and proctoring compliance.
+                </p>
+              </div>
+              <div className="p-3.5 bg-zinc-50 rounded-2xl border border-zinc-200 text-left text-xs text-zinc-700 space-y-1 font-medium">
+                <div className="font-bold text-zinc-900 flex items-center gap-1.5 text-xs">
+                  💻 Device Requirements:
+                </div>
+                <p>• Standard Laptop or Desktop PC (Windows, macOS, Linux)</p>
+                <p>• Standard viewport width (minimum 1024px)</p>
+                <p>• Working front-facing webcam for live face verification</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMobileProhibitedModal(false)}
+                className="w-full py-3.5 bg-zinc-900 hover:bg-black text-white font-bold rounded-2xl text-xs transition-all shadow-md cursor-pointer"
+              >
+                Understood, I will switch to Laptop/Desktop
+              </button>
             </div>
           </div>
         )}
