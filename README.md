@@ -125,6 +125,8 @@ The platform implements a strict, multi-tiered Role-Based Access Control (RBAC) 
 | **Student / Candidate** | Individual Student Scope | Task submission with image proof, LeetCode / GitHub profile linking, timed coding assessments, AI skill gap analysis, portfolio building, and job applications. |
 | **Industry Partner (HR)** | Corporate Hiring Scope | Job, internship, and research posting creation, 10-question coding assessment management, applicant shortlisting, and candidate report export. |
 
+> 📖 **Deep-Dive Documentation**: For comprehensive role specifications, individual access permissions, feature breakdowns, and sequence diagrams, refer to **[`ROLES_AND_WORKFLOWS.md`](./ROLES_AND_WORKFLOWS.md)**.
+
 ---
 
 ## 4. End-to-End System Workflows & Deep Audit
