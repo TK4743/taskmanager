@@ -639,6 +639,63 @@ export async function buildIncompleteExcelBuffer(
       });
       column.width = maxLength + 3;
     });
+
+    // --- 4. Unlinked Telegram WorkSheet ---
+    const sheetUn = workbook.addWorksheet(`${year}IT Unlinked`, { views: [{ showGridLines: true }] });
+    sheetUn.mergeCells('A1:E1');
+    const title4 = sheetUn.getCell('A1');
+    title4.value = 'VSB ENGINEERING COLLEGE - DEPARTMENT OF IT';
+    title4.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF1E3A8A' } };
+    title4.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheetUn.getRow(1).height = 25;
+
+    sheetUn.mergeCells('A2:E2');
+    const subtitle4 = sheetUn.getCell('A2');
+    subtitle4.value = `${romanYear} YEAR - STUDENTS NOT LINKED WITH TELEGRAM BOT`;
+    subtitle4.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF475569' } };
+    subtitle4.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheetUn.getRow(2).height = 20;
+
+    sheetUn.getRow(4).values = ['S.No', 'Register Number', 'Student Name', 'Section', 'Bot Status'];
+    sheetUn.getRow(4).font = { bold: true };
+    sheetUn.getRow(4).height = 20;
+
+    const yearUnlinked = allStudentsProgress.filter(r => {
+      const className = r.class_name ? String(r.class_name).trim() : '';
+      return getYearFromClassName(className) === year && !r.telegram_chat_id;
+    });
+
+    if (yearUnlinked.length === 0) {
+      sheetUn.getCell(5, 1).value = 'All students linked with Telegram Bot! 🎉';
+      sheetUn.getCell(5, 1).font = { italic: true };
+    } else {
+      yearUnlinked.forEach((r, idx) => {
+        let sec = 'A';
+        const className = r.class_name ? String(r.class_name).trim() : '';
+        const match = className.match(/^([1-4])\s*(it)?\s*([a-d])$/i) || className.match(/^(?:iii|ii|iv|i)\s*(?:it)?\s*([a-d])$/i);
+        if (match) {
+          sec = (match[3] || match[1] || 'A').toUpperCase();
+        }
+        sheetUn.addRow([
+          idx + 1,
+          r.register_number || '',
+          r.full_name || '',
+          sec,
+          'NOT LINKED'
+        ]);
+      });
+    }
+
+    sheetUn.columns.forEach(column => {
+      let maxLength = 10;
+      column.eachCell!({ includeEmpty: true }, cell => {
+        const columnLength = cell.value ? cell.value.toString().length : 0;
+        if (columnLength > maxLength) {
+          maxLength = columnLength;
+        }
+      });
+      column.width = maxLength + 3;
+    });
   }
 
   // Double-insurance: Ensure at least one worksheet is created to prevent Excel corruption
@@ -693,6 +750,7 @@ export async function registerBotCommandsMenu(): Promise<void> {
       { command: 'github', description: 'Check GitHub commits & targets' },
       { command: 'stats', description: 'Your overall performance scorecard' },
       { command: 'defaulters', description: 'List students with pending targets (Staff)' },
+      { command: 'unlinked', description: 'List students not linked with bot (Staff)' },
       { command: 'status', description: 'Check linked student account' },
       { command: 'link', description: 'Connect account (/link <reg_no>)' },
       { command: 'help', description: 'Bot commands & help guide' }
@@ -726,12 +784,12 @@ export function getInteractiveMenuKeyboard(role?: string) {
           { text: '⚠️ Defaulters', callback_data: 'cb_defaulters' }
         ],
         [
-          { text: '⏰ 24h Deadlines', callback_data: 'cb_deadlines' },
-          { text: '📋 Task Status', callback_data: 'cb_task_status' }
+          { text: '📱 Unlinked Students', callback_data: 'cb_unlinked' },
+          { text: '⏰ 24h Deadlines', callback_data: 'cb_deadlines' }
         ],
         [
-          { text: '🏆 Leaderboard', callback_data: 'cb_leaderboard' },
-          { text: '🔎 Student Search', callback_data: 'cb_search_help' }
+          { text: '📋 Task Status', callback_data: 'cb_task_status' },
+          { text: '🏆 Leaderboard', callback_data: 'cb_leaderboard' }
         ],
         [
           { text: '👥 Dept Group', callback_data: 'cb_group_link' },
@@ -1826,9 +1884,28 @@ export async function getDefaultersCard(scopeText?: string): Promise<{ html: str
   `;
   const params: any[] = [dateStr];
 
-  if (scopeText) {
-    params.push(`%${scopeText.trim()}%`);
-    query += ` AND (c.name ILIKE $${params.length} OR c.batch ILIKE $${params.length})`;
+  if (scopeText && scopeText.trim()) {
+    const clean = scopeText.toLowerCase().replace(/[@#/_]/g, '').trim();
+    const romanClean = clean
+      .replace(/^iii\s*it/, '3it').replace(/^ii\s*it/, '2it').replace(/^iv\s*it/, '4it').replace(/^i\s*it/, '1it')
+      .replace(/^iii/, '3').replace(/^ii/, '2').replace(/^iv/, '4').replace(/^i/, '1');
+
+    const yearMatch = romanClean.match(/^(?:link)?\s*(?:year|y)?\s*([1-4])\s*(?:it|year|yr)?$/i);
+    const classMatch = romanClean.match(/^(?:link)?\s*([1-4])\s*(?:it)?\s*([a-d])$/i) || romanClean.match(/^(?:class)?\s*([1-4])\s*(?:it)?\s*([a-d])$/i);
+
+    if (classMatch) {
+      const y = parseInt(classMatch[1], 10);
+      const sec = classMatch[2].toUpperCase();
+      params.push(y, `%${sec}%`);
+      query += ` AND c.year = $${params.length - 1} AND c.name ILIKE $${params.length}`;
+    } else if (yearMatch) {
+      const y = parseInt(yearMatch[1], 10);
+      params.push(y);
+      query += ` AND c.year = $${params.length}`;
+    } else {
+      params.push(`%${clean}%`);
+      query += ` AND (c.name ILIKE $${params.length} OR c.batch ILIKE $${params.length})`;
+    }
   }
 
   query += ` ORDER BY c.name ASC, u.register_number ASC`;
@@ -1867,11 +1944,16 @@ export async function getDefaultersCard(scopeText?: string): Promise<{ html: str
     html += `🎉 <b>Outstanding! All targeted students have completed their daily targets today! 🌟</b>\n`;
   } else {
     html += `📋 <b>PENDING STUDENTS LIST:</b>\n`;
-    defaulters.forEach((d, i) => {
-      const isLast = i === defaulters.length - 1;
+    const MAX_SHOWN = 25;
+    const shownDefaulters = defaulters.slice(0, MAX_SHOWN);
+    shownDefaulters.forEach((d, i) => {
+      const isLast = i === shownDefaulters.length - 1;
       html += ` ${isLast ? '└' : '├'} ⚠️ <b>${escapeHtml(d.name)}</b> (<code>${escapeHtml(d.regNo)}</code>) [${escapeHtml(d.className)}]\n`;
       html += `     ⏳ Target Status: <code>${escapeHtml(d.lcStatus)}</code>\n`;
     });
+    if (defaulters.length > MAX_SHOWN) {
+      html += `\n<i>...and <b>${defaulters.length - MAX_SHOWN} more</b> student(s).</i>\n💡 <i>Filter by class using <code>/defaulters 3itc</code> or <code>/defaulters 2ita</code>.</i>\n`;
+    }
   }
 
   html += getWatermarkHtml();
@@ -1885,6 +1967,121 @@ export async function getDefaultersCard(scopeText?: string): Promise<{ html: str
       [
         { text: '📱 Main Menu', callback_data: 'cb_menu' },
         { text: '🌐 Open Portal', url: getPortalUrl() }
+      ]
+    ]
+  };
+
+  return { html, keyboard };
+}
+
+/**
+ * 📱 Unlinked Students Card (Students who haven't connected with personal bot)
+ */
+export async function getUnlinkedStudentsCard(scopeText?: string): Promise<{ html: string; keyboard: any }> {
+  const botUsername = (await fetchBotUsername()) || cachedBotUsername || 'IT_TaskManager_Alerts_bot';
+  const botUrl = `https://t.me/${botUsername}?start=link`;
+
+  let query = `
+    SELECT u.id, u.full_name, u.register_number, u.telegram_chat_id, c.name as class_name, c.year
+    FROM users u
+    LEFT JOIN classes c ON u.class_id = c.id
+    WHERE u.role = 'STUDENT'
+  `;
+  const params: any[] = [];
+
+  if (scopeText && scopeText.trim()) {
+    const clean = scopeText.toLowerCase().replace(/[@#/_]/g, '').trim();
+    const romanClean = clean
+      .replace(/^iii\s*it/, '3it').replace(/^ii\s*it/, '2it').replace(/^iv\s*it/, '4it').replace(/^i\s*it/, '1it')
+      .replace(/^iii/, '3').replace(/^ii/, '2').replace(/^iv/, '4').replace(/^i/, '1');
+
+    const yearMatch = romanClean.match(/^(?:link)?\s*(?:year|y)?\s*([1-4])\s*(?:it|year|yr)?$/i);
+    const classMatch = romanClean.match(/^(?:link)?\s*([1-4])\s*(?:it)?\s*([a-d])$/i) || romanClean.match(/^(?:class)?\s*([1-4])\s*(?:it)?\s*([a-d])$/i);
+
+    if (classMatch) {
+      const y = parseInt(classMatch[1], 10);
+      const sec = classMatch[2].toUpperCase();
+      params.push(y, `%${sec}%`);
+      query += ` AND c.year = $${params.length - 1} AND c.name ILIKE $${params.length}`;
+    } else if (yearMatch) {
+      const y = parseInt(yearMatch[1], 10);
+      params.push(y);
+      query += ` AND c.year = $${params.length}`;
+    } else {
+      params.push(`%${clean}%`);
+      query += ` AND (c.name ILIKE $${params.length} OR c.batch ILIKE $${params.length})`;
+    }
+  }
+
+  query += ` ORDER BY c.year ASC, c.name ASC, u.register_number ASC`;
+
+  const res = await pool.query(query, params);
+  const allStudents = res.rows;
+  const unlinked = allStudents.filter(s => !s.telegram_chat_id);
+  const linkedCount = allStudents.length - unlinked.length;
+  const linkedPct = allStudents.length > 0 ? Math.round((linkedCount / allStudents.length) * 100) : 0;
+
+  // Group by class
+  const classBreakdown: Record<string, { total: number; unlinked: number; names: string[] }> = {};
+  allStudents.forEach(s => {
+    const cName = s.class_name || 'Unassigned';
+    if (!classBreakdown[cName]) {
+      classBreakdown[cName] = { total: 0, unlinked: 0, names: [] };
+    }
+    classBreakdown[cName].total++;
+    if (!s.telegram_chat_id) {
+      classBreakdown[cName].unlinked++;
+      classBreakdown[cName].names.push(s.full_name);
+    }
+  });
+
+  let html = `📱 <b>TELEGRAM BOT LINKING REPORT</b>  🤖\n──────────────────────────────\n`;
+  if (scopeText && scopeText.trim()) html += `🔍 <b>Filter:</b> <code>${escapeHtml(scopeText)}</code>\n`;
+  html += `<blockquote>📊 <b>Total Students:</b> <code>${allStudents.length}</code>\n`;
+  html += `✅ <b>Linked with Bot:</b> <code>${linkedCount} (${linkedPct}%)</code>\n`;
+  html += `⚠️ <b>Not Linked (Missing Alerts):</b> <b>${unlinked.length}</b> student(s)</blockquote>\n\n`;
+
+  if (unlinked.length === 0) {
+    html += `🎉 <b>Outstanding! 100% of students have linked their personal Telegram bot! 🌟</b>\n\n`;
+  } else {
+    html += `🏫 <b>UNLINKED STUDENTS BY CLASS:</b>\n`;
+    Object.keys(classBreakdown).sort().forEach(cName => {
+      const info = classBreakdown[cName];
+      const unlinkedPct = info.total > 0 ? Math.round((info.unlinked / info.total) * 100) : 0;
+      html += `• <b>${escapeHtml(cName)}:</b> ⚠️ <b>${info.unlinked} / ${info.total}</b> unlinked (${unlinkedPct}%)\n`;
+    });
+    html += `\n`;
+
+    // List top unlinked students
+    const MAX_SHOWN = 20;
+    const shown = unlinked.slice(0, MAX_SHOWN);
+    html += `📋 <b>STUDENTS REQUIRING BOT LINK (${unlinked.length} total):</b>\n`;
+    shown.forEach((s, i) => {
+      const isLast = i === shown.length - 1;
+      html += ` ${isLast ? '└' : '├'} ⚠️ <b>${escapeHtml(s.full_name)}</b> (<code>${escapeHtml(s.register_number)}</code>) [${escapeHtml(s.class_name || 'IT')}]\n`;
+    });
+    if (unlinked.length > MAX_SHOWN) {
+      html += `\n<i>...and <b>${unlinked.length - MAX_SHOWN} more</b> student(s).</i>\n💡 <i>Filter by class using <code>/unlinked 3itc</code> or <code>/unlinked 2ita</code>.</i>\n`;
+    }
+    html += `\n`;
+
+    html += `📢 <b>ACTION REQUIRED FOR UNLINKED STUDENTS:</b>\n`;
+    html += `To receive <b>instant private deadline alerts</b>, <b>verified proofs</b>, and <b>personal scorecards</b>:\n`;
+    html += `1️⃣ Message @${botUsername} or tap the button below\n`;
+    html += `2️⃣ Send: <code>/link YOUR_REGISTER_NUMBER</code>\n`;
+    html += `<i>Example:</i> <code>/link 922524205001</code>\n`;
+  }
+
+  html += getWatermarkHtml();
+
+  const keyboard = {
+    inline_keyboard: [
+      [
+        { text: '🤖 Connect Personal Bot (1-Click)', url: botUrl }
+      ],
+      [
+        { text: '🔄 Refresh Status', callback_data: 'cb_unlinked' },
+        { text: '📱 Main Menu', callback_data: 'cb_menu' }
       ]
     ]
   };
@@ -2642,12 +2839,38 @@ export async function sendGroupSummary(targetChatId?: string, dateOverride?: str
       incompleteByClass[classNameClean].push(r);
     });
 
-    // Process task pending submissions silently to compile data for the Excel sheet
+    // ── Active Assignments Aggregation Across All Assigned Classes & Years ──
+    const activeTasksSummary: any[] = [];
     for (let idx = 0; idx < tasksRes.rows.length; idx++) {
       const t = tasksRes.rows[idx];
       const deadlineStr = t.deadline
         ? new Date(t.deadline).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
         : 'No deadline';
+
+      const classBreakdownRes = await pool.query(`
+        SELECT c.id as class_id, c.name as class_name, c.year,
+               COUNT(DISTINCT u.id) as total_students,
+               COUNT(DISTINCT ts.id) FILTER (WHERE ts.status IN ('SUBMITTED', 'VERIFIED')) as completed_count
+        FROM task_classes tc
+        JOIN classes c ON c.id = tc.class_id
+        JOIN users u ON u.class_id = c.id AND u.role = 'STUDENT'
+        LEFT JOIN task_submissions ts ON ts.task_id = tc.task_id AND ts.user_id = u.id AND ts.status IN ('SUBMITTED', 'VERIFIED')
+        WHERE tc.task_id = $1
+        GROUP BY c.id, c.name, c.year
+        ORDER BY c.year ASC, c.name ASC
+      `, [t.id]);
+
+      const totalTargeted = classBreakdownRes.rows.reduce((sum, r) => sum + parseInt(r.total_students, 10), 0);
+      const totalCompleted = classBreakdownRes.rows.reduce((sum, r) => sum + parseInt(r.completed_count, 10), 0);
+
+      activeTasksSummary.push({
+        title: t.title,
+        category: t.category,
+        deadlineStr,
+        totalTargeted,
+        totalCompleted,
+        classes: classBreakdownRes.rows
+      });
 
       const pendingStudentsRes = await pool.query(`
         SELECT u.full_name, u.register_number, c.name as class_name
@@ -2682,6 +2905,29 @@ export async function sendGroupSummary(targetChatId?: string, dateOverride?: str
     let html = `📊 <b>DEPARTMENT DAILY BRIEF</b>  🏛\n──────────────────────────────\n`;
     html += `<blockquote>📅 <b>Date:</b> <i>${dateStr} (IST)</i>\n`;
     html += `👥 <b>Students:</b> <code>${totalStudents}</code>  |  📱 <b>Linked Telegram:</b> <code>${linkedTelegram}</code></blockquote>\n\n`;
+
+    // ── Active Department Assignments Across All Classes ──
+    if (activeTasksSummary.length > 0) {
+      html += `📋 <b>ACTIVE ASSIGNMENTS (ALL SECTIONS):</b>\n\n`;
+      activeTasksSummary.forEach((task, idx) => {
+        const pct = task.totalTargeted > 0 ? Math.round((task.totalCompleted / task.totalTargeted) * 100) : 0;
+        const progressBar = makeProgressBar(task.totalCompleted, task.totalTargeted, 8);
+        html += `📌 <b>${idx + 1}. ${escapeHtml(task.title)}</b>\n`;
+        if (task.category) html += `   📂 <i>Category:</i> <code>${escapeHtml(task.category)}</code>\n`;
+        html += `   ⏰ <i>Due:</i> ${task.deadlineStr}\n`;
+        html += `   ✅ <i>Overall:</i> <b>${task.totalCompleted} / ${task.totalTargeted} (${pct}%)</b> ${progressBar}\n`;
+        if (task.classes.length > 0) {
+          html += `   🏫 <i>Section-wise Progress:</i>\n`;
+          task.classes.forEach((cls: any) => {
+            const clsTot = parseInt(cls.total_students, 10) || 0;
+            const clsSub = parseInt(cls.completed_count, 10) || 0;
+            const clsPct = clsTot > 0 ? Math.round((clsSub / clsTot) * 100) : 0;
+            html += `      • <b>${escapeHtml(cls.class_name)}:</b> <code>${clsSub}/${clsTot}</code> (${clsPct}%)\n`;
+          });
+        }
+        html += `\n`;
+      });
+    }
 
     html += `🏆 <b>TODAY'S TOP PERFORMERS:</b>\n\n`;
     html += `💻 <b>GitHub Top Committers:</b>\n`;
@@ -2739,13 +2985,27 @@ export async function sendGroupSummary(targetChatId?: string, dateOverride?: str
       html += ` └ <i>No class summaries available.</i>\n\n`;
     }
 
+    // ── Telegram Bot Adoption & Unlinked Students Indicator ──
+    const unlinkedCount = totalStudents - linkedTelegram;
+    const botUsername = (await fetchBotUsername()) || cachedBotUsername || 'IT_TaskManager_Alerts_bot';
+    html += `📱 <b>TELEGRAM BOT STATUS & UNLINKED STUDENTS:</b>\n`;
+    html += ` ├ 🔗 <b>Connected:</b> <code>${linkedTelegram} / ${totalStudents}</code> (${totalStudents > 0 ? Math.round((linkedTelegram / totalStudents) * 100) : 0}%)\n`;
+    html += ` └ ⚠️ <b>Pending Connection:</b> <b>${unlinkedCount}</b> student(s) unlinked\n\n`;
+    if (unlinkedCount > 0) {
+      html += `📢 <i>Unlinked students: Message <b>@${botUsername}</b> and reply with <code>/link YOUR_REGISTER_NUMBER</code> to receive private deadline & scorecard alerts!</i>\n\n`;
+    }
+
     html += `📎 <b>DETAILED INCOMPLETE REPORT:</b>\n`;
-    html += `<i>Full lists of pending LeetCode solvers, inactive GitHub students, and task submissions are attached in the Excel sheet below.</i>\n`;
+    html += `<i>Full lists of pending LeetCode solvers, inactive GitHub students, unlinked bot profiles, and task submissions are attached in the Excel sheet below.</i>\n`;
 
     html += getWatermarkHtml();
 
     const inlineKeyboard = {
       inline_keyboard: [
+        [
+          { text: '🤖 Link Personal Bot (1-Click)', url: `https://t.me/${botUsername}?start=link` },
+          { text: '📱 Unlinked List', callback_data: 'cb_unlinked' }
+        ],
         [
           { text: '⚠️ Defaulters', callback_data: 'cb_defaulters' },
           { text: '🏆 Leaderboard', callback_data: 'cb_leaderboard' }
@@ -3267,6 +3527,9 @@ export async function processTelegramUpdate(update: any): Promise<void> {
       } else if (cbData === 'cb_defaulters') {
         const card = await getDefaultersCard();
         await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
+      } else if (cbData === 'cb_unlinked') {
+        const card = await getUnlinkedStudentsCard();
+        await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
       } else if (cbData === 'cb_summary') {
         await sendGroupSummary(String(cbChatId));
       } else if (cbData === 'cb_deadlines') {
@@ -3313,6 +3576,17 @@ export async function processTelegramUpdate(update: any): Promise<void> {
         if (!currentSavedGroup) setGroupChatId(String(chatId));
       }).catch(() => { });
     }
+
+    // Fetch sender's student account for authenticated commands
+    const userRes = await pool.query(`
+      SELECT u.id, u.full_name, u.register_number, u.role, u.class_id, u.leetcode_url, u.github_url, c.name as class_name
+      FROM users u
+      LEFT JOIN classes c ON u.class_id = c.id
+      WHERE u.telegram_chat_id = $1
+      LIMIT 1
+    `, [String(senderUserId)]);
+    const user = userRes.rows[0];
+    const isStaff = user && (user.role === 'SUPREME_ADMIN' || user.role === 'STAFF' || user.role === 'COORDINATOR' || user.role === 'HOD' || user.role === 'CLASS_ADVISOR');
 
     // Command: /id
     if (text.startsWith('/id')) {
@@ -3366,9 +3640,20 @@ export async function processTelegramUpdate(update: any): Promise<void> {
           const groupInviteUrl = await getGroupInviteLink();
           let welcomeHtml = `🎉 <b>ACCOUNT LINKED SUCCESSFULLY!</b>  ✅\n──────────────────────────────\n`;
           welcomeHtml += `<blockquote>👤 <b>Student:</b> <b>${escapeHtml(linkResult.studentName)}</b>\n`;
-          welcomeHtml += `✨ <i>Your Telegram is now securely connected to IT TaskManager! You will receive private deadline alerts and evaluation notices here.</i></blockquote>\n\n`;
+          welcomeHtml += `✨ <i>Your Telegram is now securely connected to IT TaskManager! You will receive private deadline alerts, grade verifications, and scorecards here.</i></blockquote>\n\n`;
+
+          welcomeHtml += `🎯 <b>ESSENTIAL STUDENT COMMANDS:</b>\n`;
+          welcomeHtml += `• 📋 <code>/tasks</code> - View assigned pending & submitted assignments\n`;
+          welcomeHtml += `• 📊 <code>/stats</code> - Complete live scorecard (Tasks + LC + GH)\n`;
+          welcomeHtml += `• 🧩 <code>/leetcode</code> - Check daily LeetCode solved count & targets\n`;
+          welcomeHtml += `• 💻 <code>/github</code> - Check daily GitHub commits & streak\n`;
+          welcomeHtml += `• ⏰ <code>/deadlines</code> - 24-hour upcoming assignment deadlines\n`;
+          welcomeHtml += `• 🏆 <code>/leaderboard</code> - Daily department coding rankings\n`;
+          welcomeHtml += `• 👤 <code>/status</code> - Connected profile info\n`;
+          welcomeHtml += `• 👥 <code>/group</code> - Join official department community group\n\n`;
+
           welcomeHtml += `👥 <b>RECOMMENDED NEXT STEP:</b>\n`;
-          welcomeHtml += `Join our <b>Official Department Telegram Group</b> to receive daily coding leaderboards, class briefs, and announcements!\n`;
+          welcomeHtml += `Join our <b>Official Department Telegram Group</b> for daily coding podiums and announcements!\n`;
           welcomeHtml += getWatermarkHtml();
 
           const keyboard: any = {
@@ -3409,13 +3694,63 @@ export async function processTelegramUpdate(update: any): Promise<void> {
           );
         } else {
           const groupInviteUrl = await getGroupInviteLink();
-          let greetingHtml = `👋 <b>WELCOME TO IT TASK MANAGER</b>  🎓\n──────────────────────────────\n`;
-          greetingHtml += `<blockquote>Hello <b>${escapeHtml(senderName)}</b>!\n`;
-          greetingHtml += `Stay connected and never miss an assignment deadline or coding goal!</blockquote>\n\n`;
-          greetingHtml += `📌 <b>LINK YOUR ACCOUNT:</b>\n`;
-          greetingHtml += `Reply with your 12-digit Register Number:\n<code>/link YOUR_REGISTER_NUMBER</code>\n<i>(Or simply send your Register Number directly into the chat!)</i>\n\n`;
-          greetingHtml += `👥 <b>OFFICIAL DEPARTMENT COMMUNITY:</b>\n`;
-          greetingHtml += `Make sure to join our official Telegram group for daily coding podiums, class briefs, and announcements!\n`;
+          let greetingHtml = '';
+
+          if (user) {
+            // Already Linked User Welcome Tutorial
+            greetingHtml += `🎓 <b>STUDENT ACADEMIC TUTOR & DASHBOARD</b>  🚀\n──────────────────────────────\n`;
+            greetingHtml += `<blockquote>👤 <b>Connected Student:</b> <b>${escapeHtml(user.full_name)}</b>\n`;
+            greetingHtml += `🆔 <b>Reg No:</b> <code>${escapeHtml(user.register_number)}</code>\n`;
+            greetingHtml += `🏫 <b>Class:</b> <code>${escapeHtml(user.class_name || 'IT Department')}</code></blockquote>\n\n`;
+
+            greetingHtml += `📚 <b>ESSENTIAL STUDENT COMMANDS:</b>\n`;
+            greetingHtml += `• 📋 <code>/tasks</code> - View assigned pending & submitted assignments\n`;
+            greetingHtml += `• 📊 <code>/stats</code> - Complete live scorecard (Tasks + LC + GH)\n`;
+            greetingHtml += `• 🧩 <code>/leetcode</code> - Check daily LeetCode solved count & targets\n`;
+            greetingHtml += `• 💻 <code>/github</code> - Check daily GitHub commits & streak\n`;
+            greetingHtml += `• ⏰ <code>/deadlines</code> - 24-hour upcoming assignment deadlines\n`;
+            greetingHtml += `• 🏆 <code>/leaderboard</code> - Daily department coding rankings\n`;
+            greetingHtml += `• 👤 <code>/status</code> - Connected profile info\n`;
+            greetingHtml += `• 👥 <code>/group</code> - Join official department community group\n`;
+            greetingHtml += `• 📱 <code>/menu</code> - Open quick interactive action buttons\n`;
+            greetingHtml += `• ❌ <code>/unlink</code> - Disconnect account\n`;
+
+            if (isStaff) {
+              greetingHtml += `\n🏛 <b>FACULTY / ADVISOR TOOLS:</b>\n`;
+              greetingHtml += `• <code>/summary</code> - Department daily brief & Excel\n`;
+              greetingHtml += `• <code>/defaulters [class]</code> - Target defaulters report\n`;
+              greetingHtml += `• <code>/unlinked [class]</code> - Unlinked students report\n`;
+              greetingHtml += `• <code>/check &lt;Reg_No&gt;</code> - Student scorecard lookup\n`;
+              greetingHtml += `• <code>/broadcast &lt;msg&gt;</code> - Send announcement\n`;
+            }
+          } else {
+            // New / Unlinked User Onboarding Tutorial
+            greetingHtml += `🎓 <b>WELCOME TO IT TASK MANAGER TUTOR</b>  🤖\n──────────────────────────────\n`;
+            greetingHtml += `<blockquote>👋 Hello <b>${escapeHtml(senderName)}</b>!\n`;
+            greetingHtml += `I am your official personal academic & coding assistant for the Department of Information Technology, VSBEC.</blockquote>\n\n`;
+
+            greetingHtml += `📚 <b>HOW THIS BOT HELPS YOU:</b>\n`;
+            greetingHtml += `• ⏰ <b>Deadlines:</b> Get 24-hour alerts before assignment deadlines.\n`;
+            greetingHtml += `• 📤 <b>Verification:</b> Instant alerts when faculty review or approve your proof.\n`;
+            greetingHtml += `• 🧩 <b>Coding Tracking:</b> Daily progress for LeetCode & GitHub.\n`;
+            greetingHtml += `• 🏆 <b>Podiums:</b> Daily department coding rankings.\n\n`;
+
+            greetingHtml += `📌 <b>STEP 1 — CONNECT YOUR ACCOUNT:</b>\n`;
+            greetingHtml += `Reply with your 12-digit Register Number:\n`;
+            greetingHtml += `<code>/link YOUR_REGISTER_NUMBER</code>\n`;
+            greetingHtml += `<i>Example:</i> <code>/link 922524205001</code>\n`;
+            greetingHtml += `<i>(Or simply send your Register Number directly into the chat!)</i>\n\n`;
+
+            greetingHtml += `🎯 <b>ESSENTIAL STUDENT COMMANDS:</b>\n`;
+            greetingHtml += `• 📋 <code>/tasks</code> - View assigned pending & submitted assignments\n`;
+            greetingHtml += `• 📊 <code>/stats</code> - Complete live scorecard (Tasks + LC + GH)\n`;
+            greetingHtml += `• 🧩 <code>/leetcode</code> - Check daily LeetCode progress\n`;
+            greetingHtml += `• 💻 <code>/github</code> - Check daily GitHub commits\n`;
+            greetingHtml += `• ⏰ <code>/deadlines</code> - 24-hour upcoming assignment deadlines\n`;
+            greetingHtml += `• 🏆 <code>/leaderboard</code> - Daily coding rankings\n`;
+            greetingHtml += `• 📱 <code>/menu</code> - Quick action buttons\n`;
+          }
+
           greetingHtml += getWatermarkHtml();
 
           const keyboard: any = {
@@ -3432,7 +3767,15 @@ export async function processTelegramUpdate(update: any): Promise<void> {
             ]);
           }
 
+          if (user) {
+            keyboard.inline_keyboard.push([
+              { text: '📋 My Tasks', callback_data: 'cb_tasks' },
+              { text: '📊 My Scorecard', callback_data: 'cb_stats' }
+            ]);
+          }
+
           keyboard.inline_keyboard.push([
+            { text: '📱 Main Menu', callback_data: 'cb_menu' },
             { text: '🌐 Open Web Portal', url: getPortalUrl() }
           ]);
 
@@ -3442,42 +3785,51 @@ export async function processTelegramUpdate(update: any): Promise<void> {
       return;
     }
 
-    // Fetch sender's student account for authenticated commands
-    const userRes = await pool.query(`
-      SELECT u.id, u.full_name, u.register_number, u.role, u.class_id, u.leetcode_url, u.github_url, c.name as class_name
-      FROM users u
-      LEFT JOIN classes c ON u.class_id = c.id
-      WHERE u.telegram_chat_id = $1
-      LIMIT 1
-    `, [String(senderUserId)]);
-    const user = userRes.rows[0];
-
     // Command: /menu or /help
     if (text.startsWith('/menu') || text.startsWith('/help')) {
       const keyboard = getInteractiveMenuKeyboard(user?.role);
-      let helpHtml = `📱 <b>IT TASK MANAGER MENU</b>  ⚡\n──────────────────────────────\n`;
-      if (user) {
-        helpHtml += `<blockquote>👤 <b>Connected:</b> <b>${escapeHtml(user.full_name)}</b>\n🆔 <b>Reg No:</b> <code>${escapeHtml(user.register_number)}</code>\n🏫 <b>Class:</b> <code>${escapeHtml(user.class_name || 'IT Department')}</code></blockquote>\n\n`;
-      }
-      helpHtml += `<b>Available Commands:</b>\n`;
-      helpHtml += `• <code>/check &lt;Reg_No&gt;</code> - Complete student scorecard (Tasks + LC + GH)\n`;
-      helpHtml += `• <code>/3ita</code>, <code>/3itb</code>, <code>/3itc</code>, <code>/2ita</code> - Instant class analysis\n`;
-      helpHtml += `• <code>/year3</code>, <code>/year2</code> - Year-wise department analysis\n`;
-      helpHtml += `• <code>/tasks</code> - View assigned tasks\n`;
-      helpHtml += `• <code>/deadlines</code> - 24-hour upcoming deadlines\n`;
-      helpHtml += `• <code>/leetcode</code> - Daily LeetCode progress\n`;
-      helpHtml += `• <code>/github</code> - Daily GitHub commits\n`;
-      helpHtml += `• <code>/stats</code> - Full performance scorecard\n`;
-      helpHtml += `• <code>/leaderboard</code> - Daily coding rankings\n`;
-      helpHtml += `• <code>/group</code> - Join official department Telegram group\n`;
-      helpHtml += `• <code>/status</code> - Connected profile info\n`;
-      helpHtml += `• <code>/unlink</code> - Disconnect account\n`;
+      let helpHtml = '';
 
-      if (user?.role === 'SUPREME_ADMIN' || user?.role === 'STAFF' || user?.role === 'COORDINATOR' || user?.role === 'HOD' || user?.role === 'CLASS_ADVISOR') {
-        helpHtml += `\n<b>Staff / Coordinator Commands:</b>\n`;
-        helpHtml += `• <code>/defaulters [class]</code> - Target defaulters report\n`;
-        helpHtml += `• <code>/broadcast &lt;msg&gt;</code> - Announcement to all students\n`;
-        helpHtml += `• <code>/summary</code> - Class daily brief\n`;
+      if (isStaff) {
+        // Faculty / Advisor Menu
+        helpHtml += `📱 <b>FACULTY & ADVISOR MANAGEMENT MENU</b>  ⚡\n──────────────────────────────\n`;
+        helpHtml += `<blockquote>👤 <b>Staff:</b> <b>${escapeHtml(user.full_name)}</b>\n`;
+        helpHtml += `🏷 <b>Role:</b> <code>${user.role}</code></blockquote>\n\n`;
+
+        helpHtml += `🎯 <b>STUDENT ESSENTIALS:</b>\n`;
+        helpHtml += `• <code>/tasks</code> - View assigned tasks\n`;
+        helpHtml += `• <code>/stats</code> - Personal performance scorecard\n`;
+        helpHtml += `• <code>/deadlines</code> - 24-hour upcoming deadlines\n`;
+        helpHtml += `• <code>/leaderboard</code> - Daily coding rankings\n\n`;
+
+        helpHtml += `🏛 <b>STAFF & DEPARTMENT MANAGEMENT:</b>\n`;
+        helpHtml += `• <code>/summary</code> - Complete department daily brief & Excel\n`;
+        helpHtml += `• <code>/defaulters [class]</code> - Target defaulters report (e.g. <code>/defaulters 3itc</code>)\n`;
+        helpHtml += `• <code>/unlinked [class]</code> - Unlinked students report (e.g. <code>/unlinked 3itc</code>)\n`;
+        helpHtml += `• <code>/check &lt;Reg_No&gt;</code> - Student scorecard lookup\n`;
+        helpHtml += `• <code>/3ita</code>, <code>/3itb</code>, <code>/3itc</code>, <code>/2ita</code> - Instant class analysis\n`;
+        helpHtml += `• <code>/year3</code>, <code>/year2</code> - Multi-section year analysis\n`;
+        helpHtml += `• <code>/broadcast &lt;msg&gt;</code> - Announcement broadcast to all students\n`;
+      } else {
+        // Student Menu (Focused purely on Student Essentials)
+        helpHtml += `📱 <b>STUDENT ESSENTIAL MENU & GUIDE</b>  ⚡\n──────────────────────────────\n`;
+        if (user) {
+          helpHtml += `<blockquote>👤 <b>Student:</b> <b>${escapeHtml(user.full_name)}</b>\n🆔 <b>Reg No:</b> <code>${escapeHtml(user.register_number)}</code>\n🏫 <b>Class:</b> <code>${escapeHtml(user.class_name || 'IT Department')}</code></blockquote>\n\n`;
+        } else {
+          helpHtml += `<blockquote>⚠️ <i>Your Telegram is not yet linked. Send <code>/link &lt;Reg_No&gt;</code> to connect!</i></blockquote>\n\n`;
+        }
+
+        helpHtml += `🎯 <b>ESSENTIAL STUDENT COMMANDS:</b>\n`;
+        helpHtml += `• 📋 <code>/tasks</code> - View assigned pending & submitted assignments\n`;
+        helpHtml += `• 📊 <code>/stats</code> - Complete live scorecard (Tasks + LC + GH)\n`;
+        helpHtml += `• 🧩 <code>/leetcode</code> - Check daily LeetCode solved count & targets\n`;
+        helpHtml += `• 💻 <code>/github</code> - Check daily GitHub commits & streak\n`;
+        helpHtml += `• ⏰ <code>/deadlines</code> - 24-hour upcoming assignment deadlines\n`;
+        helpHtml += `• 🏆 <code>/leaderboard</code> - Daily department coding rankings\n`;
+        helpHtml += `• 👤 <code>/status</code> - Connected profile info\n`;
+        helpHtml += `• 👥 <code>/group</code> - Join official department Telegram group\n`;
+        helpHtml += `• 📱 <code>/menu</code> - Open quick interactive action buttons\n`;
+        helpHtml += `• ❌ <code>/unlink</code> - Disconnect account\n`;
       }
 
       helpHtml += `\n👥 <i>Join our Department Telegram group for live podium alerts!</i>\n`;
@@ -3665,6 +4017,15 @@ export async function processTelegramUpdate(update: any): Promise<void> {
       return;
     }
 
+    // Command: /unlinked, /notlinked, /linkstatus
+    if (text.startsWith('/unlinked') || text.startsWith('/notlinked') || text.startsWith('/linkstatus')) {
+      const parts = text.split(/\s+/);
+      const scopeFilter = parts.slice(1).join(' ');
+      const card = await getUnlinkedStudentsCard(scopeFilter);
+      await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
+      return;
+    }
+
     // Command: /broadcast <message> (Admin/Staff only)
     if (text.startsWith('/broadcast')) {
       if (!user || (user.role !== 'SUPREME_ADMIN' && user.role !== 'STAFF' && user.role !== 'COORDINATOR' && user.role !== 'HOD' && user.role !== 'CLASS_ADVISOR')) {
@@ -3794,12 +4155,13 @@ export function startTelegramPoller(): void {
   if (!token || isPolling) return;
 
   isPolling = true;
-  console.log('[Telegram Bot] Ultra-fast concurrent poller started for interactive commands...');
+  console.log('[Telegram Bot] Poller initialized for interactive commands...');
 
   // Automatically register native Telegram command menu
   registerBotCommandsMenu().catch(err => console.warn('[Telegram Bot] Menu registration warning:', err));
 
   const poll = async () => {
+    let nextDelay = 500;
     try {
       const url = `https://api.telegram.org/bot${token}/getUpdates?offset=${lastUpdateId + 1}&timeout=10`;
       const response = await fetch(url);
@@ -3814,12 +4176,16 @@ export function startTelegramPoller(): void {
         await Promise.allSettled(data.result.map(async (update: any) => {
           await processTelegramUpdate(update);
         }));
+      } else if (!data.ok && data.error_code === 409) {
+        // Webhook is active on production (e.g. Vercel), back off so we don't spam getUpdates
+        nextDelay = 30000;
       }
     } catch (err: any) {
       console.error('[Telegram Poll Error]:', err?.message || err);
+      nextDelay = 5000;
     } finally {
       if (isPolling) {
-        setTimeout(poll, 500);
+        setTimeout(poll, nextDelay);
       }
     }
   };

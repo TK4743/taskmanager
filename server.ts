@@ -988,16 +988,16 @@ async function startServer() {
 
   // 6. Telegram Inbound Webhook Endpoint (Public - called by Telegram servers)
   app.post('/api/telegram/webhook', asyncHandler(async (req: any, res: Response) => {
-    // Acknowledge receipt to Telegram API immediately with 200 OK
-    res.status(200).json({ ok: true });
-
-    // Process update asynchronously without blocking response
     const update = req.body;
     if (update && typeof update === 'object') {
-      processTelegramUpdate(update).catch(err => {
+      try {
+        await processTelegramUpdate(update);
+      } catch (err: any) {
         console.error('[Telegram Webhook Error]:', err?.message || err);
-      });
+      }
     }
+    // Acknowledge receipt to Telegram API with 200 OK after processing
+    res.status(200).json({ ok: true });
   }));
 
   // 7. Get Webhook Info & Diagnostic Status
@@ -8275,6 +8275,7 @@ async function startServer() {
 
     const todayStr = getISTDateStr();
     await exportAndPushLeetcodeDailyProgress(todayStr).catch(err => console.error('[Cron Webhook LeetCode Export Error]:', err));
+    await generateDatabaseSnapshot().catch(err => console.error('[Cron Webhook DB Backup Error]:', err));
 
     return res.json({
       success: true,
