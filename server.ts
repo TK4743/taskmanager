@@ -635,7 +635,19 @@ async function startServer() {
             }
           } catch (e) {}
 
-          await sendGroupSummary().catch(err => console.error('[Evening Summary Error]:', err));
+          const summaryRes = await sendGroupSummary().catch(err => {
+            console.error('[Evening Summary Error]:', err);
+            return { success: false, message: err.message };
+          });
+
+          // If delivery failed, rollback the daily lock so the next RenderPing tick can retry
+          if (!summaryRes || !summaryRes.success) {
+            console.warn('[Evening Summary Failed] Rolling back lock for retry:', summaryRes?.message);
+            await pool.query(
+              `DELETE FROM system_settings WHERE key = 'telegram_last_group_summary_evening_date' AND value = $1`,
+              [todayStr]
+            ).catch(() => {});
+          }
         }
       }
 
@@ -654,6 +666,10 @@ async function startServer() {
             await generateDatabaseSnapshot();
           } catch (syncErr) {
             console.error('[Nightly Sync Error]:', syncErr);
+            await pool.query(
+              `DELETE FROM system_settings WHERE key = 'leetcode_last_daily_csv_push_date' AND value = $1`,
+              [todayStr]
+            ).catch(() => {});
           }
         }
       }
@@ -668,8 +684,19 @@ async function startServer() {
   const healthCheckHandler = async (req: Request, res: Response) => {
     try {
       await pool.query('SELECT 1');
-      // Evaluate scheduled daily automations on every incoming RenderPing request
-      const automationResult = await checkAndTriggerScheduledAutomations().catch(() => ({ triggered: [], time: 'error' }));
+      // Run automations non-blocking in the background so RenderPing gets an immediate fast response (<5ms)
+      const isManualSync = req.query.sync === 'true' || req.query.wait === 'true';
+      let automationResult: any = { status: 'triggered_in_background' };
+      
+      if (isManualSync) {
+        automationResult = await checkAndTriggerScheduledAutomations().catch(() => ({ triggered: [], time: 'error' }));
+      } else {
+        // Fire in background asynchronously
+        setImmediate(() => {
+          checkAndTriggerScheduledAutomations().catch(err => console.error('[RenderPing Automation Error]:', err));
+        });
+      }
+
       res.status(200).json({
         status: 'ok',
         database: 'connected',
