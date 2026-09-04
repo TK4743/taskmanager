@@ -44,6 +44,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
   const [applications, setApplications] = useState<Application[]>([]);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [typeFilter, setTypeFilter] = useState('ALL');
+  const [sectorFilter, setSectorFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [selectedPosting, setSelectedPosting] = useState<Posting|null>(null);
   const [matchResult, setMatchResult] = useState<MatchResult|null>(null);
@@ -64,6 +65,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
     let url = `/api/postings`;
     const params = new URLSearchParams();
     if (typeFilter !== 'ALL') params.append('type', typeFilter);
+    if (sectorFilter !== 'ALL') params.append('sector', sectorFilter);
     if (search && search.trim()) params.append('search', search.trim());
     const qStr = params.toString();
     if (qStr) url += `?${qStr}`;
@@ -79,7 +81,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
     } finally {
       setLoading(false);
     }
-  }, [typeFilter, search, token]);
+  }, [token, typeFilter, sectorFilter, search]);
 
   const fetchApplications = useCallback(async () => {
     try {
@@ -246,6 +248,31 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
               </div>
             </div>
 
+            {/* SIH26044 Multi-Domain & Ayush Sector Filter Row */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-4 scrollbar-none">
+              <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider shrink-0 mr-1">Sector:</span>
+              {[
+                { id: 'ALL', label: 'All Domains' },
+                { id: 'AYUSH', label: '🌿 AYUSH & Digital Health' },
+                { id: 'AI', label: '🤖 AI & Data Science' },
+                { id: 'Cloud', label: '☁️ Cloud & DevOps' },
+                { id: 'Enterprise', label: '💼 Enterprise IT' },
+                { id: 'FinTech', label: '💳 FinTech & Web3' },
+              ].map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => setSectorFilter(s.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                    sectorFilter === s.id
+                      ? 'bg-teal-700 text-white border-teal-700 shadow-xs'
+                      : 'bg-white text-zinc-600 border-zinc-200 hover:bg-teal-50 hover:text-teal-800'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
             {loading && (
               <div className="text-center py-20 text-zinc-400 text-xs font-semibold bg-white rounded-2xl border border-zinc-200 shadow-2xs">
                 <div className="inline-block w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -278,6 +305,11 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
                           >
                             {TYPE_ICONS[p.posting_type]} {p.posting_type}
                           </span>
+                          {p.industry_sector && (
+                            <span className="text-[11px] font-extrabold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                              {p.industry_sector.includes('AYUSH') || p.industry_sector.includes('Health') ? '🌿' : '🏢'} {p.industry_sector}
+                            </span>
+                          )}
                           <span className="text-[11px] font-semibold text-zinc-600 bg-zinc-100 border border-zinc-200 px-2 py-0.5 rounded-md">
                             {p.mode}
                           </span>

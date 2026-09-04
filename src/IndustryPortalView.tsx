@@ -658,7 +658,24 @@ export default function IndustryPortalView({ token, user }: { token: string; use
         {tab==='profile' && <>
           <h2 style={{ fontSize:22, fontWeight:800, color:'#0f172a', marginBottom:20 }}>Company Profile</h2>
           <div style={c.card}>
-            {([['company_name','Company Name'],['industry_sector','Industry Sector'],['company_size','Company Size'],['hq_location','HQ Location'],['website','Website URL']] as [string,string][]).map(([field,label]) => (
+            <div style={{ marginBottom:14 }}>
+              <label style={c.lbl}>Company Name</label>
+              <input style={c.inp} value={profileForm.company_name||''} onChange={e => setProfileForm(p=>({...p,company_name:e.target.value}))} />
+            </div>
+            <div style={{ marginBottom:14 }}>
+              <label style={c.lbl}>Industry Sector (SIH26044 Multi-Domain)</label>
+              <select style={c.inp} value={profileForm.industry_sector||'Enterprise IT Services & Product Engineering'} onChange={e => setProfileForm(p=>({...p,industry_sector:e.target.value}))}>
+                <option value="🌿 AYUSH & Digital Health-Tech">🌿 AYUSH & Digital Health-Tech (Ayurveda, Yoga, Unani, Siddha, Homoeopathy & Telemedicine)</option>
+                <option value="🤖 AI / Machine Learning & Data Science">🤖 AI / Machine Learning & Data Science</option>
+                <option value="☁️ Cloud Computing, DevOps & Cyber Security">☁️ Cloud Computing, DevOps & Cyber Security</option>
+                <option value="💼 Enterprise IT Services & Product Engineering">💼 Enterprise IT Services & Product Engineering</option>
+                <option value="💳 FinTech, Banking & Web3">💳 FinTech, Banking & Web3</option>
+                <option value="⚡ Embedded Systems, IoT & Robotics">⚡ Embedded Systems, IoT & Robotics</option>
+                <option value="🧬 Bio-Informatics & Healthcare Analytics">🧬 Bio-Informatics & Healthcare Analytics</option>
+                <option value="🎓 Ed-Tech & E-Learning Platforms">🎓 Ed-Tech & E-Learning Platforms</option>
+              </select>
+            </div>
+            {([['company_size','Company Size'],['hq_location','HQ Location'],['website','Website URL']] as [string,string][]).map(([field,label]) => (
               <div key={field} style={{ marginBottom:14 }}>
                 <label style={c.lbl}>{label}</label>
                 <input style={c.inp} value={(profileForm as any)[field]||''} onChange={e => setProfileForm(p=>({...p,[field]:e.target.value}))} />

@@ -15,6 +15,7 @@ import StudentOpportunitiesView from './StudentOpportunitiesView';
 import SkillGapAnalyzerView from './SkillGapAnalyzerView';
 import FacultyIndustryHubView from './FacultyIndustryHubView';
 import StudentCodingAssessmentView from './StudentCodingAssessmentView';
+import InstitutionalSkillHeatmapView from './InstitutionalSkillHeatmapView';
 import { generateStudentResumePdf, downloadStudentResumePdf } from './studentProfilePdfGenerator';
 import PWAInstallOverlay from './PWAInstallOverlay';
 import PushNotificationPromptModal from './PushNotificationPromptModal';
@@ -28,6 +29,7 @@ import {
 } from './pushNotificationClient';
 import {
   LayoutDashboard,
+  BarChart3,
   Building2,
   Users,
   ClipboardList,
@@ -10282,6 +10284,16 @@ export default function App() {
               />
             )}
 
+            {(isAdvisor || isHOD || isAdmin) && (
+              <SidebarItem
+                icon={<BarChart3 size={20} className="text-pink-400" />}
+                label="Skill Heatmap"
+                badge="SIH Analytics"
+                active={view === 'institutional-skill-heatmap'}
+                onClick={() => { setView('institutional-skill-heatmap'); setIsMobileSidebarOpen(false); }}
+              />
+            )}
+
             {isAdmin && (
               <>
                 <SidebarItem
@@ -11145,6 +11157,7 @@ export default function App() {
                     if (view === 'users') return 'User Management';
                     if (view === 'skill-assessment') return 'Placement Skill Assessment (SIH Demo)';
                     if (view === 'placement-readiness') return 'Placement Readiness Rating (SIH Demo)';
+                    if (view === 'institutional-skill-heatmap') return 'Institutional Skill Heatmap & Cohort Analytics (SIH26044)';
                     if (view === 'live-teaching-hub') return 'Live Teaching Hub (GOAT Code Editor)';
                     if (view === 'tasks') return 'Tasks';
                     return view.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -14660,6 +14673,23 @@ export default function App() {
                     className="relative w-full h-full min-h-0 overflow-y-auto custom-scrollbar"
                   >
                     <FacultyIndustryHubView
+                      user={user}
+                      token={token}
+                    />
+                  </motion.div>
+                )
+              }
+
+              {
+                view === 'institutional-skill-heatmap' && (
+                  <motion.div
+                    key="institutional-skill-heatmap"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="relative w-full h-full min-h-0 overflow-y-auto custom-scrollbar"
+                  >
+                    <InstitutionalSkillHeatmapView
                       user={user}
                       token={token}
                     />
