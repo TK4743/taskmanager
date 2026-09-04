@@ -16,7 +16,7 @@ import SkillGapAnalyzerView from './SkillGapAnalyzerView';
 import FacultyIndustryHubView from './FacultyIndustryHubView';
 import StudentCodingAssessmentView from './StudentCodingAssessmentView';
 import InstitutionalSkillHeatmapView from './InstitutionalSkillHeatmapView';
-import PortalTutorGuide from './PortalTutorGuide';
+import PortalTutorGuide, { SidebarFeaturePopover, getSidebarFeatureInfo, SidebarFeatureGuideDrawer } from './PortalTutorGuide';
 import { generateStudentResumePdf, downloadStudentResumePdf } from './studentProfilePdfGenerator';
 import PWAInstallOverlay from './PWAInstallOverlay';
 import PushNotificationPromptModal from './PushNotificationPromptModal';
@@ -4308,25 +4308,9 @@ export default function App() {
     }
   };
 
-  // Portal Tutor & Onboarding Tour State - Shows each time on login for all roles
+  // Sidebar Feature Guide Drawer State
   const [showTutorModal, setShowTutorModal] = useState(false);
-  const [tutorInitialMode, setTutorInitialMode] = useState<'TOUR' | 'DIRECTORY'>('TOUR');
-
-  // Auto-launch tutor on each login / startup for all roles (Student, Coordinator, Advisor, HOD, Supreme Admin, Industry HR)
-  useEffect(() => {
-    if (user?.role && token) {
-      const sessionKey = `portal_tutor_shown_session_${user.id || user.username}`;
-      const hasShownThisSession = sessionStorage.getItem(sessionKey);
-      if (!hasShownThisSession) {
-        const timer = setTimeout(() => {
-          setTutorInitialMode('TOUR');
-          setShowTutorModal(true);
-          sessionStorage.setItem(sessionKey, 'true');
-        }, 1000);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [user?.role, user?.id, token]);
+  const [tutorInitialMode, setTutorInitialMode] = useState<'TOUR' | 'DIRECTORY'>('DIRECTORY');
 
   // Student Profile Completion Prompt Modal State
   const [showProfilePromptModal, setShowProfilePromptModal] = useState(false);
@@ -10146,54 +10130,81 @@ export default function App() {
             <SidebarItem
               icon={<LayoutDashboard size={20} className="text-blue-500" />}
               label="Dashboard"
+              viewKey="industry-dashboard"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'industry-dashboard' || view === 'dashboard' || view === 'industry-portal'}
               onClick={() => { setView('industry-dashboard'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<UserCheck size={20} className="text-indigo-500" />}
               label="Applications"
+              viewKey="industry-applications"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'industry-applications'}
               onClick={() => { setView('industry-applications'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<Briefcase size={20} className="text-amber-500" />}
               label="Postings"
+              viewKey="industry-postings"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'industry-postings'}
               onClick={() => { setView('industry-postings'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<Terminal size={20} className="text-emerald-500" />}
               label="Coding Assessments"
+              viewKey="industry-coding-assessments"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'industry-coding-assessments'}
               onClick={() => { setView('industry-coding-assessments'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<Users size={20} className="text-sky-500" />}
               label="Candidate Pool"
+              viewKey="users"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'users'}
               onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<GraduationCap size={20} className="text-purple-500" />}
               label="Faculty Hub"
+              viewKey="faculty-industry-hub"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'faculty-industry-hub'}
               onClick={() => { setView('faculty-industry-hub'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<TrendingUp size={20} className="text-rose-500" />}
               label="HR Reports"
+              viewKey="industry-reports"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'industry-reports'}
               onClick={() => { setView('industry-reports'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<Building2 size={20} className="text-teal-500" />}
               label="Company Profile"
+              viewKey="industry-profile"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'industry-profile'}
               onClick={() => { setView('industry-profile'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<Settings size={20} className="text-slate-500" />}
               label="Settings"
+              viewKey="settings"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'settings'}
               onClick={() => { setView('settings'); setIsMobileSidebarOpen(false); }}
             />
@@ -10203,6 +10214,9 @@ export default function App() {
             <SidebarItem
               icon={<LayoutDashboard size={20} className="text-blue-500" />}
               label="Dashboard"
+              viewKey="dashboard"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'dashboard'}
               onClick={() => { setView('dashboard'); setIsMobileSidebarOpen(false); }}
             />
@@ -10210,6 +10224,9 @@ export default function App() {
             <SidebarItem
               icon={<ClipboardList size={20} className="text-indigo-500" />}
               label="Tasks"
+              viewKey="tasks"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'tasks'}
               onClick={() => { setView('tasks'); setIsMobileSidebarOpen(false); }}
             />
@@ -10217,6 +10234,9 @@ export default function App() {
             <SidebarItem
               icon={<Code size={20} className="text-amber-500" />}
               label="Coding Progress"
+              viewKey="leetcode-targets"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'leetcode-targets' || view === 'coding-progress'}
               onClick={() => { setView('leetcode-targets'); setIsMobileSidebarOpen(false); }}
             />
@@ -10224,6 +10244,9 @@ export default function App() {
             <SidebarItem
               icon={<Megaphone size={20} className="text-rose-500" />}
               label="Notice Board"
+              viewKey="notice-board"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'notice-board'}
               onClick={() => { setView('notice-board'); fetchNotices(); setIsMobileSidebarOpen(false); }}
             />
@@ -10231,6 +10254,9 @@ export default function App() {
             <SidebarItem
               icon={<Sparkles size={20} className="text-purple-500" />}
               label="Skill Assessment"
+              viewKey="skill-assessment"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'skill-assessment'}
               onClick={() => { setView('skill-assessment'); setIsMobileSidebarOpen(false); }}
             />
@@ -10238,6 +10264,9 @@ export default function App() {
             <SidebarItem
               icon={<Target size={20} className="text-cyan-500" />}
               label="Placement Rating"
+              viewKey="placement-readiness"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'placement-readiness'}
               onClick={() => { setView('placement-readiness'); setIsMobileSidebarOpen(false); }}
             />
@@ -10245,6 +10274,9 @@ export default function App() {
             <SidebarItem
               icon={<Radio size={20} className="text-emerald-500 animate-pulse" />}
               label="Live Teaching Hub"
+              viewKey="live-teaching-hub"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'live-teaching-hub'}
               onClick={() => { setView('live-teaching-hub'); setIsMobileSidebarOpen(false); }}
             />
@@ -10255,18 +10287,27 @@ export default function App() {
                 <SidebarItem
                   icon={<Briefcase size={20} className="text-teal-400" />}
                   label="Opportunities"
+                  viewKey="opportunities"
+                  userRole={user?.role}
+                  isCoordinator={Boolean(user?.is_coordinator)}
                   active={view === 'opportunities'}
                   onClick={() => { setView('opportunities'); setIsMobileSidebarOpen(false); }}
                 />
                 <SidebarItem
                   icon={<Code size={20} className="text-indigo-500" />}
                   label="Coding Tests"
+                  viewKey="student-coding-assessments"
+                  userRole={user?.role}
+                  isCoordinator={Boolean(user?.is_coordinator)}
                   active={view === 'student-coding-assessments'}
                   onClick={() => { setView('student-coding-assessments'); setIsMobileSidebarOpen(false); }}
                 />
                 <SidebarItem
                   icon={<Zap size={20} className="text-amber-400" />}
                   label="Skill Gap AI"
+                  viewKey="skill-gap-analyzer"
+                  userRole={user?.role}
+                  isCoordinator={Boolean(user?.is_coordinator)}
                   active={view === 'skill-gap-analyzer'}
                   onClick={() => { setView('skill-gap-analyzer'); setIsMobileSidebarOpen(false); }}
                 />
@@ -10277,6 +10318,9 @@ export default function App() {
               <SidebarItem
                 icon={<GraduationCap size={20} className="text-blue-400" />}
                 label="Faculty Hub"
+                viewKey="faculty-industry-hub"
+                userRole={user?.role}
+                isCoordinator={Boolean(user?.is_coordinator)}
                 active={view === 'faculty-industry-hub'}
                 onClick={() => { setView('faculty-industry-hub'); setIsMobileSidebarOpen(false); }}
               />
@@ -10286,6 +10330,9 @@ export default function App() {
               <SidebarItem
                 icon={<BarChart3 size={20} className="text-pink-400" />}
                 label="Skill Heatmap"
+                viewKey="institutional-skill-heatmap"
+                userRole={user?.role}
+                isCoordinator={Boolean(user?.is_coordinator)}
                 active={view === 'institutional-skill-heatmap'}
                 onClick={() => { setView('institutional-skill-heatmap'); setIsMobileSidebarOpen(false); }}
               />
@@ -10297,18 +10344,27 @@ export default function App() {
                   icon={<Briefcase size={20} className="text-emerald-500" />}
                   label="Industry Partners"
                   badge={pendingIndustryList.length > 0 ? `${pendingIndustryList.length} Pending` : undefined}
+                  viewKey="industry-approvals"
+                  userRole={user?.role}
+                  isCoordinator={Boolean(user?.is_coordinator)}
                   active={view === 'industry-approvals'}
                   onClick={() => { setView('industry-approvals'); setIsMobileSidebarOpen(false); }}
                 />
                 <SidebarItem
                   icon={<Building2 size={20} className="text-violet-500" />}
                   label="Departments"
+                  viewKey="departments"
+                  userRole={user?.role}
+                  isCoordinator={Boolean(user?.is_coordinator)}
                   active={view === 'departments'}
                   onClick={() => { setView('departments'); setIsMobileSidebarOpen(false); }}
                 />
                 <SidebarItem
                   icon={<Users size={20} className="text-sky-500" />}
                   label="HOD Accounts"
+                  viewKey="users"
+                  userRole={user?.role}
+                  isCoordinator={Boolean(user?.is_coordinator)}
                   active={view === 'users'}
                   onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
                 />
@@ -10321,18 +10377,27 @@ export default function App() {
                   icon={<Briefcase size={20} className="text-emerald-500" />}
                   label="Industry Partners"
                   badge={pendingIndustryList.length > 0 ? `${pendingIndustryList.length} Pending` : undefined}
+                  viewKey="industry-approvals"
+                  userRole={user?.role}
+                  isCoordinator={Boolean(user?.is_coordinator)}
                   active={view === 'industry-approvals'}
                   onClick={() => { setView('industry-approvals'); setIsMobileSidebarOpen(false); }}
                 />
                 <SidebarItem
                   icon={<Building2 size={20} className="text-violet-500" />}
                   label="Classes"
+                  viewKey="classes"
+                  userRole={user?.role}
+                  isCoordinator={Boolean(user?.is_coordinator)}
                   active={view === 'classes'}
                   onClick={() => { setView('classes'); setIsMobileSidebarOpen(false); }}
                 />
                 <SidebarItem
                   icon={<Users size={20} className="text-sky-500" />}
                   label="Users"
+                  viewKey="users"
+                  userRole={user?.role}
+                  isCoordinator={Boolean(user?.is_coordinator)}
                   active={view === 'users'}
                   onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
                 />
@@ -10344,12 +10409,18 @@ export default function App() {
                 <SidebarItem
                   icon={<Building2 size={20} className="text-violet-500" />}
                   label="My Class"
+                  viewKey="my-class"
+                  userRole={user?.role}
+                  isCoordinator={Boolean(user?.is_coordinator)}
                   active={view === 'my-class'}
                   onClick={() => { setView('my-class'); setIsMobileSidebarOpen(false); }}
                 />
                 <SidebarItem
                   icon={<Users size={20} className="text-sky-500" />}
                   label="Students"
+                  viewKey="users"
+                  userRole={user?.role}
+                  isCoordinator={Boolean(user?.is_coordinator)}
                   active={view === 'users'}
                   onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
                 />
@@ -10360,6 +10431,9 @@ export default function App() {
               <SidebarItem
                 icon={<ShieldCheck size={20} className="text-emerald-600" />}
                 label="Verifications"
+                viewKey="verifications"
+                userRole={user?.role}
+                isCoordinator={Boolean(user?.is_coordinator)}
                 active={view === 'verifications'}
                 onClick={() => { setView('verifications'); setIsMobileSidebarOpen(false); }}
               />
@@ -10370,12 +10444,18 @@ export default function App() {
                 <SidebarItem
                   icon={<CheckCircle2 size={20} className="text-teal-500" />}
                   label="My Submissions"
+                  viewKey="submissions"
+                  userRole={user?.role}
+                  isCoordinator={Boolean(user?.is_coordinator)}
                   active={view === 'submissions'}
                   onClick={() => { setView('submissions'); setIsMobileSidebarOpen(false); }}
                 />
                 <SidebarItem
                   icon={<User size={20} className="text-blue-600" />}
                   label="Profile"
+                  viewKey="profile"
+                  userRole={user?.role}
+                  isCoordinator={Boolean(user?.is_coordinator)}
                   active={view === 'profile'}
                   onClick={() => { setView('profile'); setIsMobileSidebarOpen(false); }}
                 />
@@ -10385,6 +10465,9 @@ export default function App() {
             <SidebarItem
               icon={<Settings size={20} className="text-slate-500" />}
               label="Settings"
+              viewKey="settings"
+              userRole={user?.role}
+              isCoordinator={Boolean(user?.is_coordinator)}
               active={view === 'settings'}
               onClick={() => { setView('settings'); setIsMobileSidebarOpen(false); }}
             />
@@ -11190,18 +11273,15 @@ export default function App() {
                   <CheckCircle2 size={12} /> Telegram Linked
                 </span>
               )}
-              {/* Interactive Portal Tutor & Feature Guide Button */}
+              {/* Interactive Portal Feature Guide Drawer Button */}
               <button
                 type="button"
-                onClick={() => {
-                  setTutorInitialMode('TOUR');
-                  setShowTutorModal(true);
-                }}
+                onClick={() => setShowTutorModal(true)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 border border-indigo-200/80 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
-                title="Launch Interactive Portal Tutor & Feature Guide"
+                title="Sidebar Feature Guide & Mini Tabs"
               >
                 <Sparkles size={15} className="text-indigo-600 transition-transform group-hover:scale-110" />
-                <span className="hidden sm:inline">Portal Tutor</span>
+                <span className="hidden sm:inline">Feature Guide</span>
               </button>
 
               <div className="relative" ref={notificationDropdownRef}>
@@ -15930,29 +16010,103 @@ export default function App() {
 
 // --- Helper Components ---
 
-function SidebarItem({ icon, label, active, onClick, badge }: { icon: React.ReactNode; label: string; active?: boolean; onClick: () => void; badge?: string }) {
+function SidebarItem({
+  icon,
+  label,
+  active,
+  onClick,
+  badge,
+  viewKey,
+  userRole,
+  isCoordinator
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+  badge?: string;
+  viewKey?: string;
+  userRole?: string;
+  isCoordinator?: boolean;
+}) {
+  const [showPopover, setShowPopover] = useState(false);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const itemRef = useRef<HTMLDivElement>(null);
+
+  const featureInfo = viewKey ? getSidebarFeatureInfo(viewKey, userRole, isCoordinator) : null;
+
+  const handleTogglePopover = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (itemRef.current) {
+      setAnchorRect(itemRef.current.getBoundingClientRect());
+    }
+    setShowPopover(prev => !prev);
+  };
+
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl transition-all font-semibold text-xs leading-none text-left group",
-        active
-          ? "bg-zinc-900 text-white shadow-md shadow-zinc-900/20"
-          : "text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900"
+    <div ref={itemRef} className="relative group/sideitem flex items-center w-full">
+      <button
+        onClick={onClick}
+        className={cn(
+          "flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl transition-all font-semibold text-xs leading-none text-left group",
+          active
+            ? "bg-zinc-900 text-white shadow-md shadow-zinc-900/20"
+            : "text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900"
+        )}
+      >
+        <span className="shrink-0 transition-transform group-hover/sideitem:scale-110 flex items-center justify-center">{icon}</span>
+        <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis min-w-0">{label}</span>
+        
+        {badge && (
+          <span className={cn(
+            "ml-1.5 text-[9px] font-bold px-2 py-0.5 rounded-md shrink-0 uppercase tracking-tight",
+            active ? "bg-white/20 text-white" : "bg-rose-50 text-rose-700 border border-rose-200"
+          )}>
+            {badge}
+          </span>
+        )}
+
+        {/* Feature Mini Tab Trigger Pill */}
+        {featureInfo && (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={handleTogglePopover}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                handleTogglePopover(e as any);
+              }
+            }}
+            title={`${featureInfo.title} mini feature tab`}
+            className={cn(
+              "ml-1 p-1 rounded-lg transition-all opacity-0 group-hover/sideitem:opacity-100 focus:opacity-100 cursor-pointer flex items-center justify-center shrink-0",
+              showPopover
+                ? "opacity-100 bg-indigo-600 text-white shadow-xs"
+                : active
+                  ? "text-zinc-400 hover:text-white hover:bg-white/20"
+                  : "text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50"
+            )}
+          >
+            <Info size={13} className="shrink-0" />
+          </span>
+        )}
+
+        {active && !badge && !featureInfo && <ChevronRight size={14} className="ml-1 opacity-50 shrink-0" />}
+      </button>
+
+      {/* Floating Role-Aware Mini Tab Popover */}
+      {featureInfo && (
+        <SidebarFeaturePopover
+          feature={featureInfo}
+          isOpen={showPopover}
+          onClose={() => setShowPopover(false)}
+          onNavigate={onClick}
+          isActive={active}
+          anchorRect={anchorRect}
+        />
       )}
-    >
-      <span className="shrink-0 transition-transform group-hover:scale-110 flex items-center justify-center">{icon}</span>
-      <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis min-w-0">{label}</span>
-      {badge && (
-        <span className={cn(
-          "ml-1.5 text-[9px] font-bold px-2 py-0.5 rounded-md shrink-0 uppercase tracking-tight",
-          active ? "bg-white/20 text-white" : "bg-rose-50 text-rose-700 border border-rose-200"
-        )}>
-          {badge}
-        </span>
-      )}
-      {active && !badge && <ChevronRight size={14} className="ml-1 opacity-50 shrink-0" />}
-    </button>
+    </div>
   );
 }
 

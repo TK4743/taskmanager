@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   GraduationCap,
@@ -18,7 +18,6 @@ import {
   Building2,
   BarChart3,
   Terminal,
-  FileDown,
   UserCheck,
   TrendingUp,
   LayoutDashboard,
@@ -26,1223 +25,1008 @@ import {
   Radio,
   X,
   ChevronRight,
-  ChevronLeft,
   CheckCircle2,
-  HelpCircle,
-  Play,
-  RotateCcw,
   BookOpen,
-  ArrowRight,
   Info,
-  Layers,
-  Send,
-  User
+  User,
+  Settings,
+  Lightbulb,
+  ExternalLink
 } from 'lucide-react';
 
 export type UserRole = 'STUDENT' | 'STUDENT_COORDINATOR' | 'CLASS_ADVISOR' | 'HOD' | 'SUPREME_ADMIN' | 'INDUSTRY';
 
-export interface TourStep {
-  id: string;
-  targetId?: string; // DOM element ID to spotlight
-  view?: string;     // Portal view to switch to for this step
-  title: string;
-  description: string;
-  badge?: string;
-  category?: string;
-  tips?: string[];
-  icon: React.ReactNode;
-}
-
-export interface FeatureGuideItem {
+export interface SidebarFeatureInfo {
   id: string;
   title: string;
-  category: 'Core' | 'Academic & Tasks' | 'Coding & Skills' | 'Placement & Industry' | 'Administration';
+  badge: string;
   description: string;
-  targetView: string;
-  icon: React.ReactNode;
   keyPoints: string[];
-  proTip: string;
-}
-
-interface PortalTutorGuideProps {
-  userRole?: string;
-  isCoordinator?: boolean;
-  userName?: string;
-  currentView: string;
-  onNavigateView: (view: string) => void;
-  isOpen: boolean;
-  onClose: () => void;
-  initialMode?: 'TOUR' | 'DIRECTORY';
+  proTip?: string;
+  icon: React.ReactNode;
+  category?: string;
 }
 
 // -------------------------------------------------------------
-// Role-Specific Step & Feature Definitions
+// Comprehensive Role-Specific Sidebar Feature Information
 // -------------------------------------------------------------
 
-export const ROLE_TOUR_STEPS: Record<string, TourStep[]> = {
-  STUDENT_COORDINATOR: [
-    {
-      id: 'coord-welcome',
-      title: 'Welcome to Student Coordinator Command Hub',
-      description: 'You have dual capabilities: complete your student tasks & coding targets, plus help your Class Advisor verify submissions, track defaulters, and manage class broadcasts.',
-      badge: 'Student Coordinator',
-      icon: <GraduationCap className="text-indigo-600" size={24} />,
-      tips: [
-        'Assist your Class Advisor in verifying classmate submissions and proofs',
-        'Monitor class-wide LeetCode & GitHub streak completion',
-        'Help broadcast circulars and send reminder alerts to incomplete peers'
-      ]
+export const SIDEBAR_FEATURES: Record<string, Record<string, SidebarFeatureInfo>> = {
+  STUDENT: {
+    'dashboard': {
+      id: 'dashboard',
+      title: 'Academic Dashboard',
+      badge: 'Overview',
+      description: 'Your central command center showing task progress, coding streaks, urgent announcements, and upcoming deadlines.',
+      keyPoints: [
+        'Real-time summary of completed vs pending assignments',
+        'Daily LeetCode & GitHub streak counters',
+        'Quick shortcuts to urgent notices and assessments'
+      ],
+      proTip: 'Check this page every morning to stay on top of daily departmental requirements.',
+      icon: <LayoutDashboard size={18} className="text-blue-500" />
     },
-    {
-      id: 'coord-verifications',
-      targetId: 'nav-item-verifications',
-      view: 'verifications',
-      title: 'Classmate Submission Verifications',
-      description: 'Inspect task proofs submitted by peers in your section. Approve verified completions or send feedback for resubmissions.',
-      badge: 'Coordinator Authority',
-      icon: <ShieldCheck className="text-emerald-600" size={24} />,
-      tips: [
-        'Review uploaded screenshots and custom registration field proofs',
-        'Collaborate with your faculty Class Advisor on pending review queues'
-      ]
+    'tasks': {
+      id: 'tasks',
+      title: 'Department Tasks & Submissions',
+      badge: 'Assignments',
+      description: 'View assignments, workshops, and technical competitions. Submit proof screenshots, enter custom details, and track approvals.',
+      keyPoints: [
+        'Upload image/PDF proofs before deadlines pass',
+        'Form teams with classmates or complete solo entries',
+        'Review feedback notes if a submission requires revision'
+      ],
+      proTip: 'Tasks marked as Urgent or due within 24h are highlighted in bright orange/red.',
+      icon: <ClipboardList size={18} className="text-indigo-500" />
     },
-    {
-      id: 'coord-tasks',
-      targetId: 'nav-item-tasks',
-      view: 'tasks',
-      title: 'Tasks & Pending Email Reminders',
-      description: 'View department assignments, create team entries, and dispatch automated reminder alerts to incomplete classmates.',
-      badge: 'Task Management',
-      icon: <ClipboardList className="text-indigo-500" size={24} />,
-      tips: [
-        'Use "Send Pending Email Alert" to notify incomplete classmates across your section',
-        'Monitor who has submitted versus who is still pending'
-      ]
-    },
-    {
-      id: 'coord-coding',
-      targetId: 'nav-item-leetcode-targets',
-      view: 'leetcode-targets',
-      title: 'Class Coding Progress & Daily Targets',
-      description: 'Track daily problem counts, weekly targets, and GitHub commit activity across all students in your assigned class.',
-      badge: 'Coding Monitor',
-      icon: <Code className="text-amber-500" size={24} />,
-      tips: [
-        'Track daily target compliance rates for your section',
-        'Sync your personal LeetCode and GitHub stats regularly'
-      ]
-    },
-    {
-      id: 'coord-opportunities',
-      targetId: 'nav-item-opportunities',
-      view: 'opportunities',
-      title: 'Placement Drives & Verified Resume',
-      description: 'Apply to verified campus recruitment opportunities and export your ATS-friendly certified department PDF resume.',
-      badge: 'Career & Placement',
-      icon: <Briefcase className="text-teal-500" size={24} />,
-      tips: [
-        'Maintain a high Placement Readiness rating by completing domain assessments'
-      ]
-    }
-  ],
-  STUDENT: [
-    {
-      id: 'student-welcome',
-      title: 'Welcome to Student Academic & Career Portal',
-      description: 'Your central hub for tracking departmental tasks, daily coding challenges, skill assessments, placement opportunities, and live classes.',
-      badge: 'Getting Started',
-      icon: <GraduationCap className="text-indigo-600" size={24} />,
-      tips: [
-        'Complete assigned tasks before deadlines to maintain 100% compliance',
-        'Sync your GitHub and LeetCode daily to boost your placement readiness rating',
-        'Download your verified academic & skill resume directly from the profile tab'
-      ]
-    },
-    {
-      id: 'tour-tasks',
-      targetId: 'nav-item-tasks',
-      view: 'tasks',
-      title: 'Department Tasks & Event Submissions',
-      description: 'View assignments, workshops, and competitions. Submit proof screenshots, complete custom fields, or form teams for group tasks.',
-      badge: 'Core Feature',
-      icon: <ClipboardList className="text-indigo-500" size={24} />,
-      tips: [
-        'Attach clear screenshots showing completion before submitting',
-        'For team tasks, invite classmates from your section or complete solo',
-        'Check feedback notes if a submission requires revisions'
-      ]
-    },
-    {
-      id: 'tour-coding',
-      targetId: 'nav-item-leetcode-targets',
-      view: 'leetcode-targets',
-      title: 'LeetCode & GitHub Daily Progress Tracker',
-      description: 'Track daily problem counts, weekly targets, and GitHub commit activity with real-time sync and 30-day performance graphs.',
+    'leetcode-targets': {
+      id: 'leetcode-targets',
+      title: 'LeetCode & GitHub Coding Progress',
       badge: 'Coding Hub',
-      icon: <Code className="text-amber-500" size={24} />,
-      tips: [
-        'Click the Sync button to fetch your latest LeetCode solves and commits',
-        'Aim to meet your daily targets set by faculty advisors'
-      ]
-    },
-    {
-      id: 'tour-opportunities',
-      targetId: 'nav-item-opportunities',
-      view: 'opportunities',
-      title: 'Corporate Recruitment & Internships',
-      description: 'Explore campus drive listings and internships posted by verified industry partners. Filter by eligibility and apply with one click.',
-      badge: 'Placement & Career',
-      icon: <Briefcase className="text-teal-500" size={24} />,
-      tips: [
-        'Keep your profile information 100% completed to increase shortlist rates',
-        'Attempt company coding tests directly through the assessment module'
-      ]
-    },
-    {
-      id: 'tour-assessments',
-      targetId: 'nav-item-skill-assessment',
-      view: 'skill-assessment',
-      title: 'Placement Skill Assessment & Radar Analytics',
-      description: 'Take adaptive domain assessments across Coding, Core CS, Aptitude, and Verbal skills. Receive immediate radar chart feedback.',
-      badge: 'Assessment AI',
-      icon: <Sparkles className="text-purple-500" size={24} />,
-      tips: [
-        'Use the Skill Gap AI analyzer to identify target skills needed for specific job roles',
-        'Earn validated skill badges displayed on your verified student profile'
-      ]
-    },
-    {
-      id: 'tour-live-hub',
-      targetId: 'nav-item-live-teaching-hub',
-      view: 'live-teaching-hub',
-      title: 'Live Teaching Hub & Collaborative Sandbox',
-      description: 'Join real-time coding sessions with faculty, run code in isolated sandboxes, and download lecture resources.',
-      badge: 'Classroom Hub',
-      icon: <Radio className="text-emerald-500" size={24} />,
-      tips: [
-        'Practice live syntax and debug directly alongside faculty instructions'
-      ]
-    },
-    {
-      id: 'tour-notice-board',
-      targetId: 'nav-item-notice-board',
-      view: 'notice-board',
-      title: 'Digital Notice Board & Official Broadcasts',
-      description: 'Stay updated with urgent announcements, exam schedules, and circulars with priority filtering and attachment downloads.',
-      badge: 'Announcements',
-      icon: <Megaphone className="text-rose-500" size={24} />,
-      tips: [
-        'Connect Telegram to receive instantaneous 1-to-1 reminders for all announcements'
-      ]
-    },
-    {
-      id: 'tour-profile',
-      targetId: 'nav-item-profile',
-      view: 'profile',
-      title: 'Student Profile & Verified PDF Resume Generator',
-      description: 'Manage personal info, skills, projects, achievements, and export an ATS-friendly, verified department PDF resume.',
-      badge: 'Profile & Resume',
-      icon: <User className="text-blue-600" size={24} />,
-      tips: [
-        'Include verified project links, certifications, and GitHub repositories',
-        'Click Generate Verified PDF to instantly download your placement resume'
-      ]
-    }
-  ],
-
-  CLASS_ADVISOR: [
-    {
-      id: 'advisor-welcome',
-      title: 'Welcome to Class Advisor Management Portal',
-      description: 'Your command center for verifying class submissions, monitoring student coding targets, broadcasting notices, and tracking performance.',
-      badge: 'Advisor Hub',
-      icon: <ShieldCheck className="text-indigo-600" size={24} />,
-      tips: [
-        'Review pending task submissions daily to give prompt feedback',
-        'Set daily & weekly LeetCode targets for your class section',
-        'Dispatch automated email reminders to incomplete students with 1 click'
-      ]
-    },
-    {
-      id: 'tour-verifications',
-      targetId: 'nav-item-verifications',
-      view: 'verifications',
-      title: 'Task Verification & Approval Workflow',
-      description: 'Inspect student screenshots and custom fields. Approve valid submissions or reject with feedback notes for resubmission.',
-      badge: 'Verification Center',
-      icon: <ShieldCheck className="text-emerald-600" size={24} />,
-      tips: [
-        'Click on screenshots to view full-resolution proof images',
-        'Add constructive rejection notes so students know how to correct errors'
-      ]
-    },
-    {
-      id: 'tour-coding-monitor',
-      targetId: 'nav-item-leetcode-targets',
-      view: 'leetcode-targets',
-      title: 'Class Coding Progress & Target Configurations',
-      description: 'Monitor daily and weekly LeetCode solves and GitHub commit activity for all students in your class section.',
-      badge: 'Coding Monitor',
-      icon: <Code className="text-amber-500" size={24} />,
-      tips: [
-        'Use the "LeetCode Target" button to assign class-wide daily problem targets',
-        'Export Excel reports for departmental compliance records'
-      ]
-    },
-    {
-      id: 'tour-my-class',
-      targetId: 'nav-item-my-class',
-      view: 'my-class',
-      title: 'Class Roster & Student Profiles',
-      description: 'View the complete directory of students in your assigned class, track individual GPA, submission rates, and contact info.',
-      badge: 'Class Roster',
-      icon: <Building2 className="text-violet-500" size={24} />,
-      tips: [
-        'Click on any student to view their full portfolio, achievements, and verified resume'
-      ]
-    },
-    {
-      id: 'tour-notices-advisor',
-      targetId: 'nav-item-notice-board',
-      view: 'notice-board',
-      title: 'Publish Class & Department Notices',
-      description: 'Broadcast urgent circulars, exam schedules, and instructions with optional PDF/image attachments targeted specifically to your class.',
-      badge: 'Communications',
-      icon: <Megaphone className="text-rose-500" size={24} />,
-      tips: [
-        'Pin important circulars to keep them at the top of students notice boards'
-      ]
-    }
-  ],
-
-  HOD: [
-    {
-      id: 'hod-welcome',
-      title: 'Welcome to Department Head (HOD) Portal',
-      description: 'Strategic oversight of all academic batches, class advisors, department analytics, institutional skill heatmaps, and industry collaborations.',
-      badge: 'HOD Executive Portal',
-      icon: <Building2 className="text-indigo-600" size={24} />,
-      tips: [
-        'Analyze department-wide submission trends across all four academic years',
-        'Review corporate tie-ups and approve registered industry partners',
-        'Broadcast official department-wide announcements with 1 click'
-      ]
-    },
-    {
-      id: 'tour-department-tasks',
-      targetId: 'nav-item-tasks',
-      view: 'tasks',
-      title: 'Department Task Creation & Deadline Extensions',
-      description: 'Create multi-class tasks, attach poster previews, dispatch automated email reminders to defaulters, and extend deadlines as needed.',
-      badge: 'Academic Control',
-      icon: <ClipboardList className="text-indigo-500" size={24} />,
-      tips: [
-        'Use "Send Pending Email Alert" to notify incomplete students across classes',
-        'Re-open tasks easily using "Extend Deadline & Reopen"'
-      ]
-    },
-    {
-      id: 'tour-skill-heatmap',
-      targetId: 'nav-item-institutional-skill-heatmap',
-      view: 'institutional-skill-heatmap',
-      title: 'Institutional Skill Heatmap & Cohort Analytics',
-      description: 'Interactive visual heatmaps breaking down technical competencies, coding readiness, and skill gaps across all sections.',
-      badge: 'Analytics AI',
-      icon: <BarChart3 className="text-pink-500" size={24} />,
-      tips: [
-        'Identify specific technical domains where students require targeted workshops'
-      ]
-    },
-    {
-      id: 'tour-faculty-hub',
-      targetId: 'nav-item-faculty-industry-hub',
-      view: 'faculty-industry-hub',
-      title: 'Faculty-Industry Innovation Hub',
-      description: 'Collaborate with corporate partners, review joint research and project requests, and manage corporate coding assessment tracks.',
-      badge: 'Industry Tie-ups',
-      icon: <GraduationCap className="text-blue-500" size={24} />,
-      tips: [
-        'Coordinate joint campus recruitment drives and industrial mentorship programs'
-      ]
-    },
-    {
-      id: 'tour-classes-hod',
-      targetId: 'nav-item-classes',
-      view: 'classes',
-      title: 'Classes, Sections & Advisor Assignments',
-      description: 'Create and organize sections across 1st to 4th year, designate faculty class advisors, and track student enrollment.',
-      badge: 'Faculty Admin',
-      icon: <Users className="text-sky-500" size={24} />,
-      tips: [
-        'Assign qualified faculty advisors to each class section for autonomous verification'
-      ]
-    }
-  ],
-
-  SUPREME_ADMIN: [
-    {
-      id: 'admin-welcome',
-      title: 'Welcome to Supreme Administrator Portal',
-      description: 'Total administrative authority over departments, user roles, system settings, corporate approvals, and global campus broadcasts.',
-      badge: 'Super Admin Control',
-      icon: <Zap className="text-indigo-600" size={24} />,
-      tips: [
-        'Create departments and designate HOD accounts with automated password resets',
-        'Review and approve pending corporate recruiter accounts',
-        'Monitor global system logs and database backup relays'
-      ]
-    },
-    {
-      id: 'tour-admin-departments',
-      targetId: 'nav-item-departments',
-      view: 'departments',
-      title: 'Department & Academic Branch Management',
-      description: 'Create and configure institutional departments, course codes, and assign department heads.',
-      badge: 'Institutional Architecture',
-      icon: <Building2 className="text-violet-500" size={24} />,
-      tips: [
-        'Set up department codes and batch structures for seamless student grouping'
-      ]
-    },
-    {
-      id: 'tour-admin-industry',
-      targetId: 'nav-item-industry-approvals',
-      view: 'industry-approvals',
-      title: 'Corporate & Recruiter Account Approvals',
-      description: 'Review registering industry partners, verify company credentials, and approve access to talent recruitment pools.',
-      badge: 'Industry Approvals',
-      icon: <Briefcase className="text-emerald-500" size={24} />,
-      tips: [
-        'Verify corporate email domains before granting candidate search access'
-      ]
-    },
-    {
-      id: 'tour-admin-users',
-      targetId: 'nav-item-users',
-      view: 'users',
-      title: 'Global User Accounts & Role Control',
-      description: 'Manage HODs, Class Advisors, Students, and Recruiters with instant password reset tools and role promotions.',
-      badge: 'User Directory',
-      icon: <Users className="text-sky-500" size={24} />,
-      tips: [
-        'Use the 1-click password reset to restore student or faculty credentials'
-      ]
-    }
-  ],
-
-  INDUSTRY: [
-    {
-      id: 'industry-welcome',
-      title: 'Welcome to Corporate Recruiter & Partner Portal',
-      description: 'Hire top verified student talent, post internships and job opportunities, design custom coding assessments, and review candidates.',
-      badge: 'Recruiter Hub',
-      icon: <Briefcase className="text-indigo-600" size={24} />,
-      tips: [
-        'Post recruitment drives with specific CGPA and skill requirements',
-        'Design automated coding challenges to pre-screen candidates',
-        'Download verified, ATS-ready student resumes with 1 click'
-      ]
-    },
-    {
-      id: 'tour-postings',
-      targetId: 'nav-item-industry-postings',
-      view: 'industry-postings',
-      title: 'Job & Internship Drive Postings',
-      description: 'Create and manage recruitment listings with custom eligibility criteria, stipend/salary packages, deadlines, and application links.',
-      badge: 'Drive Manager',
-      icon: <Briefcase className="text-amber-500" size={24} />,
-      tips: [
-        'Specify required skills so the platform matches eligible student profiles'
-      ]
-    },
-    {
-      id: 'tour-coding-assessments-hr',
-      targetId: 'nav-item-industry-coding-assessments',
-      view: 'industry-coding-assessments',
-      title: 'HR Coding Challenges & Online Tests',
-      description: 'Create technical coding tests with custom test cases, hidden validation rules, and automated execution scoring.',
-      badge: 'Technical Assessment',
-      icon: <Terminal className="text-emerald-500" size={24} />,
-      tips: [
-        'Add public and private test cases to evaluate edge cases accurately'
-      ]
-    },
-    {
-      id: 'tour-candidate-pool',
-      targetId: 'nav-item-users',
-      view: 'users',
-      title: 'Candidate Talent Pool & Verified Resumes',
-      description: 'Search top-ranking students across coding solved counts, CGPA, and skill proficiencies. Download verified PDF profiles.',
-      badge: 'Talent Sourcing',
-      icon: <Users className="text-sky-500" size={24} />,
-      tips: [
-        'Filter by year, branch, and technical proficiencies for targeted shortlisting'
-      ]
-    },
-    {
-      id: 'tour-faculty-collaboration',
-      targetId: 'nav-item-faculty-industry-hub',
-      view: 'faculty-industry-hub',
-      title: 'Academia-Industry Collaboration Hub',
-      description: 'Collaborate with faculty on curriculum enhancement, sponsored student projects, and hackathon initiatives.',
-      badge: 'Innovation Network',
-      icon: <GraduationCap className="text-purple-500" size={24} />,
-      tips: [
-        'Engage early with student cohorts through sponsored workshops and mentorship'
-      ]
-    }
-  ]
-};
-
-export const ROLE_FEATURE_CATALOG: Record<string, FeatureGuideItem[]> = {
-  STUDENT: [
-    {
-      id: 'feat-tasks',
-      title: 'Daily Tasks & Submission Proofs',
-      category: 'Academic & Tasks',
-      description: 'View mandatory department assignments, workshops, and competitions. Submit proof screenshots and join team activities.',
-      targetView: 'tasks',
-      icon: <ClipboardList className="text-indigo-600" size={20} />,
+      description: 'Track daily problem counts, weekly targets, and GitHub commit activity with 1-click live sync and 30-day streak graphs.',
       keyPoints: [
-        'Upload image/PDF proofs before the deadline passes',
-        'Form teams with classmates or submit solo for team tasks',
-        'Track verification status: Pending, Verified, or Re-submit'
+        '1-click sync with your public LeetCode & GitHub handles',
+        'Track progress toward advisor-assigned weekly problem targets',
+        'View 30-day activity heatmaps and solve history'
       ],
-      proTip: 'Tasks marked as Urgent or due within 24h are highlighted in orange and red.'
+      proTip: 'Consistent daily solves directly boost your placement readiness score.',
+      icon: <Code size={18} className="text-amber-500" />
     },
-    {
-      id: 'feat-coding',
-      title: 'LeetCode & GitHub Live Sync',
-      category: 'Coding & Skills',
-      description: 'Track daily problem counts, weekly targets, and GitHub commit activity with real-time sync and 30-day history graphs.',
-      targetView: 'leetcode-targets',
-      icon: <Code className="text-amber-500" size={20} />,
-      keyPoints: [
-        'One-click synchronization with your public LeetCode handle',
-        'Daily commit tracking to ensure coding consistency',
-        'History charts showing 30-day streak & target completion'
-      ],
-      proTip: 'Ensure your LeetCode username is correctly entered in your profile for accurate automated syncing.'
-    },
-    {
-      id: 'feat-opportunities',
-      title: 'Campus Recruitment & Internships',
-      category: 'Placement & Industry',
-      description: 'Explore campus recruitment drives, internships, and hackathons posted by verified corporate partners.',
-      targetView: 'opportunities',
-      icon: <Briefcase className="text-teal-500" size={20} />,
-      keyPoints: [
-        'Filter opportunities by full-time vs internship',
-        'Direct apply links and eligibility criteria checking',
-        'Track application status in real-time'
-      ],
-      proTip: 'Complete all 4 sections of your profile to unlock 1-click rapid applications.'
-    },
-    {
-      id: 'feat-coding-assessments',
-      title: 'Company Coding Tests & Sandbox',
-      category: 'Coding & Skills',
-      description: 'Attempt corporate technical coding challenges in a live IDE sandbox with real-time test case verification.',
-      targetView: 'student-coding-assessments',
-      icon: <Terminal className="text-emerald-500" size={20} />,
-      keyPoints: [
-        'Full Monaco code editor supporting multiple programming languages',
-        'Run sample test cases and submit for final hidden validation',
-        'Live execution timer and score leaderboards'
-      ],
-      proTip: 'Always test edge cases using custom inputs before submitting your final solution.'
-    },
-    {
-      id: 'feat-skill-gap',
-      title: 'Skill Gap AI Analyzer',
-      category: 'Coding & Skills',
-      description: 'Compare your verified technical skills against real industry job descriptions to identify gaps and get curated learning paths.',
-      targetView: 'skill-gap-analyzer',
-      icon: <Zap className="text-amber-400" size={20} />,
-      keyPoints: [
-        'Role-targeted readiness scoring against Frontend, Backend, AI/ML, and DevOps',
-        'Personalized roadmap of missing skills to acquire',
-        'Recommended projects to build to bridge skill gaps'
-      ],
-      proTip: 'Run an analysis whenever you add new projects or certifications to your profile.'
-    },
-    {
-      id: 'feat-placement-rating',
-      title: 'Placement Readiness Rating',
-      category: 'Placement & Industry',
-      description: 'Holistic 360-degree placement rating combining academic consistency, coding activity, and skill assessments.',
-      targetView: 'placement-readiness',
-      icon: <Target className="text-cyan-500" size={20} />,
-      keyPoints: [
-        'Overall placement readiness percentile',
-        'Breakdown across Coding, Core CS, Aptitude, and Soft Skills',
-        'Benchmark comparisons against department averages'
-      ],
-      proTip: 'Students with rating above 80% are automatically highlighted in the Corporate Recruiter Pool.'
-    },
-    {
-      id: 'feat-live-hub',
-      title: 'Live Teaching Hub',
-      category: 'Academic & Tasks',
-      description: 'Join interactive live coding lectures, explore shared faculty code repositories, and download study notes.',
-      targetView: 'live-teaching-hub',
-      icon: <Radio className="text-emerald-500" size={20} />,
-      keyPoints: [
-        'Real-time classroom code broadcasts',
-        'Embedded terminal sandbox to run code snippets',
-        'Lecture attachments and source code downloads'
-      ],
-      proTip: 'Use split-screen mode on desktop to code along while watching the faculty broadcast.'
-    },
-    {
-      id: 'feat-notice-board',
+    'notice-board': {
+      id: 'notice-board',
       title: 'Digital Notice Board',
-      category: 'Core',
-      description: 'Official department announcements, circulars, and urgent alerts with priority filters and instant Telegram alerts.',
-      targetView: 'notice-board',
-      icon: <Megaphone className="text-rose-500" size={20} />,
+      badge: 'Announcements',
+      description: 'Stay updated with urgent circulars, exam timetables, and official announcements with attachment downloads.',
       keyPoints: [
-        'Filter by Urgent, High, and Normal priorities',
+        'Filter notices by Urgent, High, and Normal priorities',
         'Download official circular attachments in PDF/Image formats',
-        'Share individual notices with classmates via direct link'
+        'Connect Telegram to receive instant smartphone push alerts'
       ],
-      proTip: 'Connect Telegram in your top navbar to receive instant smartphone notifications when new notices are posted.'
+      proTip: 'Urgent notices are highlighted and pinned at the top of your feed.',
+      icon: <Megaphone size={18} className="text-rose-500" />
     },
-    {
-      id: 'feat-profile',
-      title: 'Profile & Verified PDF Resume',
-      category: 'Core',
-      description: 'Manage your portfolio, achievements, social handles, and generate an ATS-compliant verified PDF resume.',
-      targetView: 'profile',
-      icon: <User className="text-blue-600" size={20} />,
+    'skill-assessment': {
+      id: 'skill-assessment',
+      title: 'Placement Skill Assessment',
+      badge: 'Adaptive AI',
+      description: 'Take adaptive domain assessments across Coding, Core CS, Aptitude, and Verbal skills with instant radar analytics.',
       keyPoints: [
-        'Track profile completion percentage across 4 sections',
-        'Log hackathon wins, published papers, and certifications',
-        'Download instant verified PDF resume with department seal'
+        'Adaptive difficulty questions across core engineering domains',
+        'Visual radar chart feedback identifying strengths and weaknesses',
+        'Earn verified skill badges displayed on your student profile'
       ],
-      proTip: 'The verified PDF resume automatically embeds your real-time LeetCode and GitHub stats.'
+      proTip: 'Retake assessments periodically to reflect your latest skills on your resume.',
+      icon: <Sparkles size={18} className="text-purple-500" />
+    },
+    'placement-readiness': {
+      id: 'placement-readiness',
+      title: 'Placement Readiness Rating',
+      badge: 'Career Index',
+      description: 'Holistic 360-degree placement readiness percentile combining academics, coding consistency, and assessment scores.',
+      keyPoints: [
+        'Overall placement readiness percentile & benchmark rankings',
+        'Detailed breakdown across technical, aptitude, and soft skills',
+        'Actionable tips to improve your candidate rating'
+      ],
+      proTip: 'Students with ratings above 80% are prioritized in corporate recruiter candidate pools.',
+      icon: <Target size={18} className="text-cyan-500" />
+    },
+    'live-teaching-hub': {
+      id: 'live-teaching-hub',
+      title: 'Live Teaching Hub & Sandbox',
+      badge: 'Interactive Lab',
+      description: 'Join real-time coding lectures with faculty, execute code in interactive sandboxes, and download lecture notes.',
+      keyPoints: [
+        'Watch live faculty code broadcasts and explanations',
+        'Run sample code in an isolated multi-language sandbox',
+        'Download lecture code snippets and PDF notes'
+      ],
+      proTip: 'Use split-screen mode on desktop to code alongside the live instructor broadcast.',
+      icon: <Radio size={18} className="text-emerald-500" />
+    },
+    'opportunities': {
+      id: 'opportunities',
+      title: 'Placement Drives & Internships',
+      badge: 'Campus Drives',
+      description: 'Explore job openings and internships posted by verified corporate partners. Filter by eligibility and apply with 1 click.',
+      keyPoints: [
+        'Filter drives by full-time, internship, stipend, and role',
+        '1-click application submission with auto-verified profile data',
+        'Real-time tracking of shortlisting and interview rounds'
+      ],
+      proTip: 'Complete all 4 profile sections to unlock 1-click rapid drive applications.',
+      icon: <Briefcase size={18} className="text-teal-500" />
+    },
+    'student-coding-assessments': {
+      id: 'student-coding-assessments',
+      title: 'Company Coding Assessments',
+      badge: 'Coding IDE',
+      description: 'Attempt recruiter technical coding challenges inside a Monaco IDE sandbox with real-time test case verification.',
+      keyPoints: [
+        'Multi-language code editor with syntax highlighting and auto-complete',
+        'Run against public test cases before final hidden submission',
+        'Live execution timer and automated test case scoring'
+      ],
+      proTip: 'Always test edge cases using custom test inputs before submitting your final solution.',
+      icon: <Terminal size={18} className="text-indigo-500" />
+    },
+    'skill-gap-analyzer': {
+      id: 'skill-gap-analyzer',
+      title: 'Skill Gap AI Analyzer',
+      badge: 'Career AI',
+      description: 'Compare your verified skills against real industry job descriptions to identify missing skills and get curated learning paths.',
+      keyPoints: [
+        'Role-targeted readiness scoring for Frontend, Backend, AI/ML, and DevOps',
+        'Personalized roadmap of high-demand skills to learn',
+        'Curated project ideas to bridge specific technical gaps'
+      ],
+      proTip: 'Run an analysis whenever you complete new projects or certifications.',
+      icon: <Zap size={18} className="text-amber-500" />
+    },
+    'submissions': {
+      id: 'submissions',
+      title: 'My Submission History',
+      badge: 'Proof Records',
+      description: 'Comprehensive log of all your submitted tasks, proof screenshots, verification timestamps, and faculty feedback notes.',
+      keyPoints: [
+        'Review approval status: Verified, Pending Review, or Re-submission Needed',
+        'Read detailed advisor feedback notes on any rejected proofs',
+        'Quickly resubmit corrected proof files with 1 click'
+      ],
+      proTip: 'If a submission is marked Re-submit, read the advisor comment and upload a fresh proof.',
+      icon: <CheckCircle2 size={18} className="text-teal-500" />
+    },
+    'profile': {
+      id: 'profile',
+      title: 'Profile & Verified PDF Resume',
+      badge: 'Certified CV',
+      description: 'Manage personal details, skills, projects, and achievements. Generate an ATS-compliant, verified department PDF resume.',
+      keyPoints: [
+        'Track profile completion percentage across 4 key sections',
+        'Add project links, hackathon wins, and certifications',
+        'Generate instant verified PDF resume with official seal'
+      ],
+      proTip: 'The verified PDF resume automatically embeds your verified LeetCode and GitHub metrics.',
+      icon: <User size={18} className="text-blue-600" />
+    },
+    'settings': {
+      id: 'settings',
+      title: 'Account Settings',
+      badge: 'Preferences',
+      description: 'Manage account security, update password, link Telegram notifications, and customize your portal experience.',
+      keyPoints: [
+        'Update account password and recovery details',
+        'Configure notification and alert preferences',
+        'Manage linked external developer accounts'
+      ],
+      proTip: 'Keep your contact number updated so advisors can reach you for placement drives.',
+      icon: <Settings size={18} className="text-slate-500" />
     }
-  ],
+  },
 
-  CLASS_ADVISOR: [
-    {
-      id: 'adv-verifications',
-      title: 'Task Verifications Queue',
-      category: 'Academic & Tasks',
-      description: 'Review and approve/reject student task submissions with proof screenshots and custom field validations.',
-      targetView: 'verifications',
-      icon: <ShieldCheck className="text-emerald-600" size={20} />,
+  STUDENT_COORDINATOR: {
+    'dashboard': {
+      id: 'dashboard',
+      title: 'Coordinator Command Dashboard',
+      badge: 'Coordinator Hub',
+      description: 'Dual view for student tasks and class-wide submission monitoring, defaulter stats, and pending verification queues.',
+      keyPoints: [
+        'Track class-wide task submission percentages',
+        'Monitor daily LeetCode compliance across your section',
+        'Quick shortcuts to verify proofs and send reminder alerts'
+      ],
+      proTip: 'Use your coordinator authority to keep class submission rates at 100%.',
+      icon: <LayoutDashboard size={18} className="text-blue-500" />
+    },
+    'verifications': {
+      id: 'verifications',
+      title: 'Class Submission Verifications',
+      badge: 'Verification Authority',
+      description: 'Inspect proof screenshots and custom fields submitted by peers in your section. Approve valid entries or request fixes.',
+      keyPoints: [
+        'Full-resolution preview of classmate completion proofs',
+        '1-click approval or rejection with feedback comments',
+        'Collaborate directly with your faculty Class Advisor on pending queues'
+      ],
+      proTip: 'Adding clear rejection notes helps classmates quickly fix proof errors.',
+      icon: <ShieldCheck size={18} className="text-emerald-600" />
+    },
+    'tasks': {
+      id: 'tasks',
+      title: 'Tasks & Pending Email Reminders',
+      badge: 'Defaulter Alerts',
+      description: 'View department assignments, create team submissions, and dispatch automated reminder emails to incomplete classmates.',
+      keyPoints: [
+        '1-click Send Pending Email Alert to all incomplete peers',
+        'Monitor who has submitted versus who is still pending',
+        'Form and lead team submissions for group assignments'
+      ],
+      proTip: 'Dispatch pending email reminders 24 hours before deadlines to maximize submissions.',
+      icon: <ClipboardList size={18} className="text-indigo-500" />
+    },
+    'leetcode-targets': {
+      id: 'leetcode-targets',
+      title: 'Class Coding Streak Monitor',
+      badge: 'Coding Monitor',
+      description: 'Track daily problem counts, weekly targets, and GitHub commit streaks across all students in your class section.',
+      keyPoints: [
+        'Track daily target compliance rates for your section',
+        'Identify inactive classmates and encourage active streaks',
+        'Sync your personal LeetCode & GitHub stats regularly'
+      ],
+      proTip: 'Celebrate top weekly coders in your class group to build healthy competition.',
+      icon: <Code size={18} className="text-amber-500" />
+    },
+    'opportunities': {
+      id: 'opportunities',
+      title: 'Placement Drives & Verified Resume',
+      badge: 'Career Hub',
+      description: 'Apply to verified campus recruitment opportunities and export your ATS-friendly certified department PDF resume.',
+      keyPoints: [
+        'Explore verified company drives and internships',
+        '1-click application submission with verified credentials',
+        'Download your official certified PDF resume'
+      ],
+      proTip: 'Maintain a high placement rating by completing domain assessments.',
+      icon: <Briefcase size={18} className="text-teal-500" />
+    }
+  },
+
+  CLASS_ADVISOR: {
+    'dashboard': {
+      id: 'dashboard',
+      title: 'Class Advisor Dashboard',
+      badge: 'Advisor Hub',
+      description: 'Central overview of class submission rates, pending verification queues, LeetCode target compliance, and quick action shortcuts.',
+      keyPoints: [
+        'Class-wide task completion metrics and compliance percentages',
+        'Pending verification counter for quick review',
+        'Recent notices and student milestone summaries'
+      ],
+      proTip: 'Review the pending verifications counter daily to keep approval queues clear.',
+      icon: <LayoutDashboard size={18} className="text-blue-500" />
+    },
+    'verifications': {
+      id: 'verifications',
+      title: 'Task Verification & Approval Center',
+      badge: 'Primary Approval',
+      description: 'Inspect student screenshots and custom proof fields. Approve valid submissions or reject with feedback notes for resubmission.',
       keyPoints: [
         'Full-resolution image preview of student completion proofs',
-        'Instant 1-click approval or rejection with feedback comments',
-        'Filter by task category, student register number, or class'
+        'Instant 1-click approval or rejection with custom feedback notes',
+        'Filter submissions by task category, student register number, or status'
       ],
-      proTip: 'Rejections automatically unlock a resubmission slot for the student.'
+      proTip: 'Rejections automatically unlock a resubmission slot for the student.',
+      icon: <ShieldCheck size={18} className="text-emerald-600" />
     },
-    {
-      id: 'adv-coding-monitor',
-      title: 'LeetCode & GitHub Progress Monitor',
-      category: 'Coding & Skills',
-      description: 'Track daily problem counts, weekly targets, and GitHub commit activity for all students in your class section.',
-      targetView: 'leetcode-targets',
-      icon: <Code className="text-amber-500" size={20} />,
+    'tasks': {
+      id: 'tasks',
+      title: 'Class Task & Defaulter Management',
+      badge: 'Defaulter Alerts',
+      description: 'Track task submissions for your assigned class and dispatch automated reminder emails to incomplete students with 1 click.',
       keyPoints: [
-        'Configure class-level daily & weekly problem solving targets',
-        'Identify students with zero solves or inactive streaks',
+        '1-click automated email dispatch to all incomplete students',
+        'View live completion percentages per task',
+        'Filter by pending vs submitted student rosters'
+      ],
+      proTip: 'Dispatch pending email alerts 24 hours prior to deadline to minimize defaulters.',
+      icon: <ClipboardList size={18} className="text-indigo-500" />
+    },
+    'leetcode-targets': {
+      id: 'leetcode-targets',
+      title: 'LeetCode & GitHub Progress Monitor',
+      badge: 'Target Config',
+      description: 'Configure daily & weekly problem targets for your class section, monitor solves in real-time, and export Excel compliance reports.',
+      keyPoints: [
+        'Set class-wide daily & weekly problem-solving targets',
+        'Monitor live solve counts and identify inactive students',
         'Export Excel reports for departmental compliance records'
       ],
-      proTip: 'Use the Target Configurations tab to adjust difficulty expectations throughout the semester.'
+      proTip: 'Use the Target Configuration tool to set realistic milestones during exam weeks.',
+      icon: <Code size={18} className="text-amber-500" />
     },
-    {
-      id: 'adv-my-class',
+    'my-class': {
+      id: 'my-class',
       title: 'Class Roster & Student Directory',
-      category: 'Core',
+      badge: 'Roster Control',
       description: 'Complete student directory with GPA tracking, contact numbers, parent details, and verified PDF resume downloads.',
-      targetView: 'my-class',
-      icon: <Building2 className="text-violet-500" size={20} />,
       keyPoints: [
-        'Quick search by register number or name',
+        'Quick search by register number, name, or CGPA',
         'Inspect individual student submission histories and achievements',
-        'One-click student password reset tool'
+        '1-click password reset tool for student accounts'
       ],
-      proTip: 'Click on any student card to view their complete academic and coding portfolio.'
+      proTip: 'Click on any student card to view their complete academic and coding portfolio.',
+      icon: <Building2 size={18} className="text-violet-500" />
     },
-    {
-      id: 'adv-notices',
+    'notice-board': {
+      id: 'notice-board',
       title: 'Class Notice Broadcasts',
-      category: 'Core',
-      description: 'Publish official announcements, exam schedules, and circulars targeted specifically to your class section.',
-      targetView: 'notice-board',
-      icon: <Megaphone className="text-rose-500" size={20} />,
+      badge: 'Broadcasts',
+      description: 'Publish official circulars, exam schedules, and announcements with optional PDF/image attachments targeted to your class.',
       keyPoints: [
-        'Attach PDF circulars or image flyers',
+        'Attach official PDF circulars or image flyers',
         'Select priority level: Urgent, High, Normal',
         'Pin critical announcements to the top of student feeds'
       ],
-      proTip: 'Notices marked as Urgent trigger instant Telegram alerts to all linked students.'
+      proTip: 'Notices marked as Urgent trigger instant Telegram alerts to linked students.',
+      icon: <Megaphone size={18} className="text-rose-500" />
+    },
+    'faculty-industry-hub': {
+      id: 'faculty-industry-hub',
+      title: 'Faculty-Industry Collaboration',
+      badge: 'Industry Bridge',
+      description: 'Collaborate with corporate recruiters on student mentorship, joint project tracks, and placement drive coordination.',
+      keyPoints: [
+        'Review corporate partner engagement requests',
+        'Coordinate industry workshops and hackathon mentorships',
+        'Track student placement conversion rates across drives'
+      ],
+      proTip: 'Connect high-performing student cohorts directly with industry project mentors.',
+      icon: <GraduationCap size={18} className="text-blue-400" />
+    },
+    'institutional-skill-heatmap': {
+      id: 'institutional-skill-heatmap',
+      title: 'Class Skill Heatmap Analytics',
+      badge: 'Skill Analytics',
+      description: 'Visual heatmap breaking down technical competencies, coding readiness, and skill gaps across your class section.',
+      keyPoints: [
+        'Identify specific technical domains where students need targeted workshops',
+        'Compare section performance against department benchmarks',
+        'Export visual reports for departmental review meetings'
+      ],
+      proTip: 'Use domain gap data to arrange specialized hands-on coaching sessions.',
+      icon: <BarChart3 size={18} className="text-pink-400" />
     }
-  ],
+  },
 
-  HOD: [
-    {
-      id: 'hod-tasks',
+  HOD: {
+    'dashboard': {
+      id: 'dashboard',
+      title: 'HOD Executive Dashboard',
+      badge: 'Executive Oversight',
+      description: 'Strategic oversight of all academic batches (1st-4th Year), class advisors, department analytics, and industry tie-ups.',
+      keyPoints: [
+        'Multi-batch task compliance and submission trend charts',
+        'Overview of active classes, advisors, and student enrollments',
+        '1-click shortcuts to broadcast department circulars'
+      ],
+      proTip: 'Use batch comparison charts to monitor placement readiness across 3rd & 4th year cohorts.',
+      icon: <LayoutDashboard size={18} className="text-blue-500" />
+    },
+    'tasks': {
+      id: 'tasks',
       title: 'Department Task & Deadline Control',
-      category: 'Academic & Tasks',
+      badge: 'Academic Control',
       description: 'Create multi-class tasks, attach poster previews, dispatch automated email reminders to defaulters, and extend deadlines.',
-      targetView: 'tasks',
-      icon: <ClipboardList className="text-indigo-500" size={20} />,
       keyPoints: [
         'Broadcast tasks to all department sections simultaneously',
-        'Send 1-click email alerts to all incomplete students',
-        'Reopen closed tasks by extending deadlines with custom dates'
+        'Send 1-click email alerts to all incomplete students across batches',
+        'Re-open closed tasks by extending deadlines with custom dates'
       ],
-      proTip: 'The multi-node email dispatch automatically delivers reminder notices to student inboxes.'
+      proTip: 'The multi-node email dispatch automatically delivers reminder notices to student inboxes.',
+      icon: <ClipboardList size={18} className="text-indigo-500" />
     },
-    {
-      id: 'hod-heatmap',
+    'institutional-skill-heatmap': {
+      id: 'institutional-skill-heatmap',
       title: 'Institutional Skill Heatmap',
-      category: 'Coding & Skills',
-      description: 'Cohort-level visualization of technical proficiencies, placement readiness, and skill competencies across all batches.',
-      targetView: 'institutional-skill-heatmap',
-      icon: <BarChart3 className="text-pink-500" size={20} />,
+      badge: 'Cohort AI',
+      description: 'Interactive visual heatmaps breaking down technical competencies, coding readiness, and skill gaps across all batches.',
       keyPoints: [
-        'Batch-by-batch technical competency comparisons',
-        'Identify department-wide skill deficiencies',
+        'Batch-by-batch technical competency comparisons across all 4 years',
+        'Identify department-wide skill deficiencies for curriculum refinement',
         'Export visual reports for accreditation and review committees'
       ],
-      proTip: 'Use heatmap filters to compare 3rd year vs 4th year placement preparedness.'
+      proTip: 'Filter by year to compare 3rd year vs 4th year placement preparedness.',
+      icon: <BarChart3 size={18} className="text-pink-500" />
     },
-    {
-      id: 'hod-industry-hub',
-      title: 'Faculty-Industry Collaboration Hub',
-      category: 'Placement & Industry',
+    'faculty-industry-hub': {
+      id: 'faculty-industry-hub',
+      title: 'Faculty-Industry Innovation Hub',
+      badge: 'Corporate Tie-ups',
       description: 'Coordinate joint academic-industry initiatives, approve corporate recruitment partners, and organize coding tracks.',
-      targetView: 'faculty-industry-hub',
-      icon: <GraduationCap className="text-blue-500" size={20} />,
       keyPoints: [
-        'Review corporate recruiter registration requests',
+        'Review corporate recruiter registration requests and company credentials',
         'Manage joint student-industry innovation projects',
         'Track student placement conversion rates across drives'
       ],
-      proTip: 'Check the pending approvals badge to promptly activate newly registered recruiters.'
+      proTip: 'Check the pending approvals badge to promptly activate newly registered recruiters.',
+      icon: <GraduationCap size={18} className="text-blue-500" />
+    },
+    'industry-approvals': {
+      id: 'industry-approvals',
+      title: 'Corporate Partner Approvals',
+      badge: 'Recruiter Vetting',
+      description: 'Review registering corporate HR accounts, verify company credentials, and approve access to student talent pools.',
+      keyPoints: [
+        'Inspect recruiter company profiles, official domains, and contact info',
+        'Approve or decline recruiter access to student resumes',
+        'Audit recruiter hiring and assessment activities'
+      ],
+      proTip: 'Verify corporate email domains before granting candidate search access.',
+      icon: <Briefcase size={18} className="text-emerald-500" />
+    },
+    'classes': {
+      id: 'classes',
+      title: 'Classes & Advisor Assignments',
+      badge: 'Faculty Admin',
+      description: 'Create and organize sections across 1st to 4th year, designate faculty class advisors, and track student enrollment.',
+      keyPoints: [
+        'Create class sections and designate faculty advisors',
+        'Monitor student enrollment counts and advisor workloads',
+        'Manage coordinator appointments per section'
+      ],
+      proTip: 'Assign qualified faculty advisors to each class section for autonomous verification.',
+      icon: <Building2 size={18} className="text-violet-500" />
+    },
+    'users': {
+      id: 'users',
+      title: 'Faculty & Student User Directory',
+      badge: 'User Control',
+      description: 'Manage department faculty, advisors, and students with 1-click password resets, role edits, and account activation tools.',
+      keyPoints: [
+        'Search users across all batches and faculty roles',
+        '1-click password reset to default credentials',
+        'Promote or designate student coordinator privileges'
+      ],
+      proTip: 'Filter by role to perform quick maintenance on faculty or student accounts.',
+      icon: <Users size={18} className="text-sky-500" />
+    },
+    'verifications': {
+      id: 'verifications',
+      title: 'Department Verifications Audit',
+      badge: 'Audit Trail',
+      description: 'High-level audit of all submitted task proofs, advisor review speeds, and verification dispute resolutions.',
+      keyPoints: [
+        'Audit proof verification turnaround times across advisors',
+        'Review approved and rejected submission archives',
+        'Override or resolve disputed student verifications'
+      ],
+      proTip: 'Ensure advisors maintain zero backlog on active task verifications.',
+      icon: <ShieldCheck size={18} className="text-emerald-600" />
     }
-  ],
+  },
 
-  SUPREME_ADMIN: [
-    {
-      id: 'admin-depts',
+  SUPREME_ADMIN: {
+    'dashboard': {
+      id: 'dashboard',
+      title: 'Supreme Master Command Center',
+      badge: 'Super Admin',
+      description: 'Global system statistics, active department counts, user registrations, server health, and institutional activity relays.',
+      keyPoints: [
+        'Real-time overview of all departments, batches, and users',
+        'Global system logs and database backup relays',
+        'System-wide announcement broadcasting'
+      ],
+      proTip: 'Monitor active user counts and server response times during peak hours.',
+      icon: <LayoutDashboard size={18} className="text-blue-500" />
+    },
+    'departments': {
+      id: 'departments',
       title: 'Department & Batch Architecture',
-      category: 'Administration',
-      description: 'Configure academic departments, course branches, and designate department heads.',
-      targetView: 'departments',
-      icon: <Building2 className="text-violet-500" size={20} />,
+      badge: 'Institutional Architecture',
+      description: 'Create and configure institutional departments, course codes, academic branches, and designate department heads.',
       keyPoints: [
         'Create new departments and assigned code identifiers',
         'Oversee cross-departmental user distribution',
         'Assign and update HOD leadership accounts'
       ],
-      proTip: 'Department structures dynamically organize all subordinate class sections and tasks.'
+      proTip: 'Department structures dynamically organize all subordinate class sections and tasks.',
+      icon: <Building2 size={18} className="text-violet-500" />
     },
-    {
-      id: 'admin-industry-approvals',
+    'industry-approvals': {
+      id: 'industry-approvals',
       title: 'Corporate Recruiter Verification',
-      category: 'Administration',
-      description: 'Review registering industry HR accounts, verify company credentials, and approve talent search access.',
-      targetView: 'industry-approvals',
-      icon: <Briefcase className="text-emerald-500" size={20} />,
+      badge: 'Global Approvals',
+      description: 'Review registering corporate HR accounts, verify company credentials, and approve access to student talent pools.',
       keyPoints: [
         'Inspect recruiter company profiles and contact emails',
         'Approve or decline recruiter access to student resumes',
         'Audit recruiter hiring and assessment activities'
       ],
-      proTip: 'Approved corporate recruiters gain instant access to candidate search and coding test creation.'
+      proTip: 'Approved corporate recruiters gain instant access to candidate search and coding test creation.',
+      icon: <Briefcase size={18} className="text-emerald-500" />
     },
-    {
-      id: 'admin-users',
+    'users': {
+      id: 'users',
       title: 'Global User Administration',
-      category: 'Administration',
-      description: 'Manage all student, faculty, advisor, and recruiter accounts with instant credential resets and role upgrades.',
-      targetView: 'users',
-      icon: <Users className="text-sky-500" size={20} />,
+      badge: 'Global Users',
+      description: 'Manage all student, faculty, advisor, HOD, and recruiter accounts with instant credential resets and role upgrades.',
       keyPoints: [
         'Search users across all roles and departments',
         '1-click password reset to default register number',
-        'Manage student coordinator badges'
+        'Manage student coordinator badges and role permissions'
       ],
-      proTip: 'Filter by role to perform quick maintenance on faculty or advisor accounts.'
+      proTip: 'Filter by role to perform quick maintenance on faculty or advisor accounts.',
+      icon: <Users size={18} className="text-sky-500" />
+    },
+    'institutional-skill-heatmap': {
+      id: 'institutional-skill-heatmap',
+      title: 'Institution-wide Skill Heatmap',
+      badge: 'Campus Analytics',
+      description: 'Campus-wide technical competency heatmaps across all engineering branches, batches, and coding platforms.',
+      keyPoints: [
+        'Cross-departmental skill comparisons and benchmarks',
+        'Identify institutional training requirements',
+        'Export comprehensive reports for management and accreditation'
+      ],
+      proTip: 'Compare engineering branches to identify high-performing domains.',
+      icon: <BarChart3 size={18} className="text-pink-400" />
     }
-  ],
+  },
 
-  INDUSTRY: [
-    {
-      id: 'ind-postings',
+  INDUSTRY: {
+    'industry-dashboard': {
+      id: 'industry-dashboard',
+      title: 'Recruiter Dashboard',
+      badge: 'Corporate Hub',
+      description: 'Recruiter command center showing active job listings, received applications, and candidate match rates.',
+      keyPoints: [
+        'Overview of active campus job and internship drives',
+        'Summary of received student applications and review statuses',
+        'Quick access to coding assessments and candidate talent pool'
+      ],
+      proTip: 'Check received applications daily to schedule timely interview rounds.',
+      icon: <LayoutDashboard size={18} className="text-blue-500" />
+    },
+    'industry-applications': {
+      id: 'industry-applications',
+      title: 'Candidate Applications',
+      badge: 'Applicant Review',
+      description: 'Review student applications for your postings, inspect verified resumes, update application statuses, and shortlist candidates.',
+      keyPoints: [
+        'Filter applicants by job posting, CGPA, and coding scores',
+        'Download verified, ATS-compliant department-certified student PDF resumes',
+        'Update candidate status: Applied, Shortlisted, Interviewed, Offered'
+      ],
+      proTip: 'Shortlisted candidates automatically receive notification updates.',
+      icon: <UserCheck size={18} className="text-indigo-500" />
+    },
+    'industry-postings': {
+      id: 'industry-postings',
       title: 'Campus Job & Internship Postings',
-      category: 'Placement & Industry',
+      badge: 'Drive Postings',
       description: 'Create and publish job listings with tailored eligibility criteria, salary/stipend packages, and application deadlines.',
-      targetView: 'industry-postings',
-      icon: <Briefcase className="text-amber-500" size={20} />,
       keyPoints: [
         'Specify required minimum CGPA, department branches, and skills',
         'Set application deadlines and attach drive guidelines',
-        'Receive and review candidate applications directly'
+        'Target specific graduation batches (e.g., 2026 Batch)'
       ],
-      proTip: 'Target specific batches (e.g. 2026 Batch) to reach the exact target student cohort.'
+      proTip: 'Specify required skills so the platform highlights matching student profiles.',
+      icon: <Briefcase size={18} className="text-amber-500" />
     },
-    {
-      id: 'ind-coding',
-      title: 'Custom Technical Coding Assessments',
-      category: 'Coding & Skills',
+    'industry-coding-assessments': {
+      id: 'industry-coding-assessments',
+      title: 'Custom Coding Challenges & Tests',
+      badge: 'Technical Assessment',
       description: 'Build algorithmic coding challenges with custom test cases, hidden evaluation criteria, and automated scoring.',
-      targetView: 'industry-coding-assessments',
-      icon: <Terminal className="text-emerald-500" size={20} />,
       keyPoints: [
         'Create questions in C++, Java, Python, and JavaScript',
         'Configure public and private test cases with score weights',
-        'Inspect candidate submitted code and execution runtimes'
+        'Inspect candidate submitted code, execution times, and memory metrics'
       ],
-      proTip: 'Use private test cases to detect hard-coded edge case solutions.'
+      proTip: 'Use private test cases to detect hard-coded edge case solutions.',
+      icon: <Terminal size={18} className="text-emerald-500" />
     },
-    {
-      id: 'ind-candidate-pool',
-      title: 'Candidate Talent Sourcing & Resumes',
-      category: 'Placement & Industry',
-      description: 'Filter verified student profiles by LeetCode problem counts, GitHub commits, CGPA, and download PDF resumes.',
-      targetView: 'users',
-      icon: <Users className="text-sky-500" size={20} />,
+    'users': {
+      id: 'users',
+      title: 'Candidate Talent Pool & Verified Resumes',
+      badge: 'Talent Sourcing',
+      description: 'Search top-ranking students across coding solved counts, CGPA, and skill proficiencies. Download verified PDF profiles.',
       keyPoints: [
-        'Real-time ranking of top student coders in the institution',
+        'Real-time ranking of top student coders across the institution',
         'Direct download of verified, department-certified PDF resumes',
-        'Direct shortlisting for scheduled interview rounds'
+        'Direct candidate filtering by graduation year and tech stack'
       ],
-      proTip: 'Look for students with high Placement Readiness ratings for immediate hiring.'
+      proTip: 'Look for students with high Placement Readiness ratings for rapid hiring.',
+      icon: <Users size={18} className="text-sky-500" />
+    },
+    'faculty-industry-hub': {
+      id: 'faculty-industry-hub',
+      title: 'Academia-Industry Innovation Network',
+      badge: 'Faculty Hub',
+      description: 'Collaborate with faculty on curriculum enhancement, sponsored student projects, and hackathon initiatives.',
+      keyPoints: [
+        'Engage early with student cohorts through sponsored workshops',
+        'Propose real-world capstone project topics to faculty',
+        'Organize campus hackathons with department support'
+      ],
+      proTip: 'Early academic engagement dramatically improves final placement conversions.',
+      icon: <GraduationCap size={18} className="text-purple-500" />
+    },
+    'industry-reports': {
+      id: 'industry-reports',
+      title: 'Recruitment Analytics & Reports',
+      badge: 'HR Metrics',
+      description: 'Comprehensive hiring analytics, assessment score distributions, and talent pipeline performance reports.',
+      keyPoints: [
+        'Analyze candidate assessment pass rates and test score distributions',
+        'Track hiring pipeline conversion funnel from application to offer',
+        'Export summary reports for corporate recruitment reviews'
+      ],
+      proTip: 'Use score distribution graphs to calibrate test difficulty for future rounds.',
+      icon: <TrendingUp size={18} className="text-rose-500" />
+    },
+    'industry-profile': {
+      id: 'industry-profile',
+      title: 'Company Profile & Branding',
+      badge: 'Company Profile',
+      description: 'Manage corporate branding, company logo, description, recruiter contacts, and website links displayed to students.',
+      keyPoints: [
+        'Update corporate overview, culture details, and benefits',
+        'Upload high-resolution corporate logo for job drive headers',
+        'Manage primary HR recruiter contact info'
+      ],
+      proTip: 'A detailed company profile increases student drive application volume.',
+      icon: <Building2 size={18} className="text-teal-500" />
+    },
+    'settings': {
+      id: 'settings',
+      title: 'Recruiter Settings',
+      badge: 'Security',
+      description: 'Manage corporate account password, login credentials, and notification alert preferences.',
+      keyPoints: [
+        'Update account security credentials',
+        'Configure applicant email notification alerts'
+      ],
+      proTip: 'Enable email alerts to be notified immediately when a top candidate applies.',
+      icon: <Settings size={18} className="text-slate-500" />
     }
-  ]
+  }
 };
 
 // -------------------------------------------------------------
-// Main Component
+// Helper to look up feature information for any role & view
 // -------------------------------------------------------------
 
-export default function PortalTutorGuide({
-  userRole = 'STUDENT',
-  isCoordinator = false,
-  userName = 'User',
-  currentView,
-  onNavigateView,
-  isOpen,
-  onClose,
-  initialMode = 'TOUR'
-}: PortalTutorGuideProps) {
+export function getSidebarFeatureInfo(
+  viewKey: string,
+  userRole?: string,
+  isCoordinator?: boolean
+): SidebarFeatureInfo | null {
   const effectiveRole = (isCoordinator && userRole?.toUpperCase() === 'STUDENT')
     ? 'STUDENT_COORDINATOR'
     : (userRole?.toUpperCase() || 'STUDENT');
 
-  const tourSteps = ROLE_TOUR_STEPS[effectiveRole] || ROLE_TOUR_STEPS.STUDENT;
-  const featureCatalog = ROLE_FEATURE_CATALOG[effectiveRole] || ROLE_FEATURE_CATALOG.STUDENT;
+  const roleFeatures = SIDEBAR_FEATURES[effectiveRole] || SIDEBAR_FEATURES.STUDENT;
 
-  const [activeMode, setActiveMode] = useState<'TOUR' | 'DIRECTORY' | 'WELCOME'>(initialMode);
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
+  if (roleFeatures[viewKey]) {
+    return roleFeatures[viewKey];
+  }
 
-  // Sync mode when reopened
+  // Fallback to student features if not in specific role
+  if (SIDEBAR_FEATURES.STUDENT[viewKey]) {
+    return SIDEBAR_FEATURES.STUDENT[viewKey];
+  }
+
+  // Fallback to advisor/HOD/industry if applicable
+  for (const roleKey of Object.keys(SIDEBAR_FEATURES)) {
+    if (SIDEBAR_FEATURES[roleKey][viewKey]) {
+      return SIDEBAR_FEATURES[roleKey][viewKey];
+    }
+  }
+
+  return null;
+}
+
+// -------------------------------------------------------------
+// Mini Feature Popover Card Component for Sidebar Items
+// -------------------------------------------------------------
+
+interface SidebarFeaturePopoverProps {
+  feature: SidebarFeatureInfo;
+  isOpen: boolean;
+  onClose: () => void;
+  onNavigate?: () => void;
+  isActive?: boolean;
+  anchorRect?: DOMRect | null;
+}
+
+export function SidebarFeaturePopover({
+  feature,
+  isOpen,
+  onClose,
+  onNavigate,
+  isActive = false,
+  anchorRect
+}: SidebarFeaturePopoverProps) {
+  const popoverRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    }
     if (isOpen) {
-      setActiveMode(initialMode);
-      setCurrentStepIndex(0);
+      document.addEventListener('mousedown', handleClickOutside);
     }
-  }, [isOpen, initialMode]);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
-  const currentStep = tourSteps[currentStepIndex] || tourSteps[0];
+  if (!isOpen) return null;
 
-  const handleNextStep = () => {
-    if (currentStepIndex < tourSteps.length - 1) {
-      const nextIndex = currentStepIndex + 1;
-      const nextStep = tourSteps[nextIndex];
-      setCurrentStepIndex(nextIndex);
-      if (nextStep.view) {
-        onNavigateView(nextStep.view);
-      }
-    } else {
-      // Finished tour
-      markTourCompleted();
-      onClose();
-    }
-  };
+  // Calculate position relative to viewport or anchor
+  const topPosition = anchorRect ? Math.min(Math.max(anchorRect.top - 10, 60), window.innerHeight - 340) : 100;
+  const leftPosition = anchorRect ? anchorRect.right + 12 : 260;
 
-  const handlePrevStep = () => {
-    if (currentStepIndex > 0) {
-      const prevIndex = currentStepIndex - 1;
-      const prevStep = tourSteps[prevIndex];
-      setCurrentStepIndex(prevIndex);
-      if (prevStep.view) {
-        onNavigateView(prevStep.view);
-      }
-    }
-  };
+  return (
+    <AnimatePresence>
+      <motion.div
+        ref={popoverRef}
+        initial={{ opacity: 0, x: -8, scale: 0.96 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        exit={{ opacity: 0, x: -8, scale: 0.96 }}
+        transition={{ duration: 0.16, ease: 'easeOut' }}
+        style={{
+          top: `${topPosition}px`,
+          left: `${leftPosition}px`
+        }}
+        className="fixed z-[9999] w-80 max-w-[calc(100vw-300px)] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-indigo-950/20 border border-zinc-200/90 dark:border-zinc-800 p-4 text-left pointer-events-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-2.5 mb-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-zinc-800 border border-indigo-100 dark:border-zinc-700 flex items-center justify-center shrink-0 shadow-2xs">
+              {feature.icon}
+            </div>
+            <div className="min-w-0">
+              <span className="inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100/90 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
+                {feature.badge}
+              </span>
+              <h4 className="text-xs font-black text-zinc-900 dark:text-white truncate mt-0.5">
+                {feature.title}
+              </h4>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            title="Close mini tab"
+          >
+            <X size={14} />
+          </button>
+        </div>
 
-  const handleJumpToStep = (index: number) => {
-    const step = tourSteps[index];
-    setCurrentStepIndex(index);
-    if (step.view) {
-      onNavigateView(step.view);
-    }
-  };
+        {/* Short Description */}
+        <p className="text-[11px] text-zinc-600 dark:text-zinc-300 font-medium leading-relaxed mb-3">
+          {feature.description}
+        </p>
 
-  const markTourCompleted = () => {
-    try {
-      localStorage.setItem(`portal_tour_completed_${effectiveRole.toLowerCase()}`, 'true');
-    } catch (e) { }
-  };
+        {/* Key Highlights */}
+        {feature.keyPoints && feature.keyPoints.length > 0 && (
+          <div className="space-y-1.5 mb-3 bg-zinc-50 dark:bg-zinc-800/60 p-2.5 rounded-xl border border-zinc-100 dark:border-zinc-800">
+            <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1">
+              <Sparkles size={11} className="text-indigo-500" /> Key Features:
+            </p>
+            <ul className="space-y-1">
+              {feature.keyPoints.map((point, idx) => (
+                <li key={idx} className="text-[10.5px] text-zinc-700 dark:text-zinc-300 flex items-start gap-1.5 leading-tight">
+                  <span className="w-1 h-1 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-  const handleLaunchFeatureFromCatalog = (item: FeatureGuideItem) => {
-    onNavigateView(item.targetView);
-    onClose();
-  };
+        {/* Pro Tip if available */}
+        {feature.proTip && (
+          <div className="flex items-start gap-1.5 text-[10px] text-amber-700 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-900/60 rounded-lg p-2 mb-3 leading-snug font-medium">
+            <Lightbulb size={12} className="shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+            <span>{feature.proTip}</span>
+          </div>
+        )}
 
-  const categories = useMemo(() => {
-    const cats = new Set<string>();
-    featureCatalog.forEach(f => cats.add(f.category));
-    return ['ALL', ...Array.from(cats)];
-  }, [featureCatalog]);
+        {/* Action Button */}
+        <div className="flex items-center justify-end gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+          {isActive ? (
+            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 px-2 py-1">
+              <CheckCircle2 size={12} /> Currently Active View
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (onNavigate) onNavigate();
+                onClose();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs hover:shadow-sm transition-all cursor-pointer"
+            >
+              <span>Open View</span>
+              <ChevronRight size={13} />
+            </button>
+          )}
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
 
-  const filteredFeatures = useMemo(() => {
-    return featureCatalog.filter(item => {
-      const matchesCategory = selectedCategory === 'ALL' || item.category === selectedCategory;
-      const matchesSearch = !searchQuery.trim() ||
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.keyPoints.some(k => k.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchesCategory && matchesSearch;
-    });
-  }, [featureCatalog, selectedCategory, searchQuery]);
+// -------------------------------------------------------------
+// Compact Sidebar Feature Guide Flyout Drawer
+// (Triggered cleanly from top-bar/sidebar without full-screen modal)
+// -------------------------------------------------------------
+
+interface SidebarFeatureGuideDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  userRole?: string;
+  isCoordinator?: boolean;
+  onNavigateView: (view: string) => void;
+  currentView: string;
+}
+
+export function SidebarFeatureGuideDrawer({
+  isOpen,
+  onClose,
+  userRole = 'STUDENT',
+  isCoordinator = false,
+  onNavigateView,
+  currentView
+}: SidebarFeatureGuideDrawerProps) {
+  const effectiveRole = (isCoordinator && userRole?.toUpperCase() === 'STUDENT')
+    ? 'STUDENT_COORDINATOR'
+    : (userRole?.toUpperCase() || 'STUDENT');
+
+  const roleFeatures = SIDEBAR_FEATURES[effectiveRole] || SIDEBAR_FEATURES.STUDENT;
+  const featureList = Object.entries(roleFeatures);
+
+  const [search, setSearch] = useState('');
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return featureList;
+    const q = search.toLowerCase();
+    return featureList.filter(([_, item]) =>
+      item.title.toLowerCase().includes(q) ||
+      item.description.toLowerCase().includes(q) ||
+      item.badge.toLowerCase().includes(q)
+    );
+  }, [featureList, search]);
 
   if (!isOpen) return null;
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-        {/* Backdrop overlay */}
+      <div className="fixed inset-0 z-[250] flex pointer-events-auto">
+        {/* Subtle backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/70 backdrop-blur-md"
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs"
           onClick={onClose}
         />
 
-        {/* ------------------------------------------------------------- */}
-        {/* MODE: INTERACTIVE STEP-BY-STEP TOUR */}
-        {/* ------------------------------------------------------------- */}
-        {activeMode === 'TOUR' && (
-          <motion.div
-            key="modal-tour"
-            initial={{ opacity: 0, scale: 0.95, y: 15 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-            className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-zinc-200 overflow-hidden z-10 flex flex-col max-h-[90vh]"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header with gradient badge and close button */}
-            <div className="p-6 pb-4 border-b border-zinc-100 flex items-center justify-between bg-gradient-to-r from-zinc-50 via-indigo-50/30 to-purple-50/20">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-600/20 shrink-0">
-                  {currentStep.icon}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
-                      Step {currentStepIndex + 1} of {tourSteps.length}
-                    </span>
-                    <span className="text-xs font-bold text-zinc-500">
-                      {effectiveRole.replace(/_/g, ' ')} Portal Tutor
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-black text-zinc-900 tracking-tight mt-0.5">
-                    {currentStep.title}
-                  </h3>
-                </div>
+        {/* Compact Slide-out Side Drawer */}
+        <motion.div
+          initial={{ x: -360, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: -360, opacity: 0 }}
+          transition={{ type: 'spring', damping: 26, stiffness: 260 }}
+          className="relative w-96 max-w-[90vw] h-full bg-white dark:bg-zinc-900 shadow-2xl border-r border-zinc-200 dark:border-zinc-800 z-10 flex flex-col"
+        >
+          {/* Header */}
+          <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/70 dark:bg-zinc-800/40">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                <Sparkles size={16} />
               </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveMode('DIRECTORY')}
-                  className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                  title="View complete feature catalog"
-                >
-                  <BookOpen size={14} className="text-zinc-600" />
-                  <span className="hidden sm:inline">Feature Catalog</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="p-1.5 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-xl transition-all cursor-pointer"
-                  title="Close Tutor"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="p-6 md:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
-              <div className="space-y-3">
-                <p className="text-zinc-700 text-sm md:text-base leading-relaxed font-medium">
-                  {currentStep.description}
+              <div>
+                <h3 className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-wider">
+                  Sidebar Feature Guide
+                </h3>
+                <p className="text-[10px] font-bold text-zinc-500">
+                  {effectiveRole.replace(/_/g, ' ')} Portal Reference
                 </p>
               </div>
-
-              {/* Pro Tips / Highlights */}
-              {currentStep.tips && currentStep.tips.length > 0 && (
-                <div className="bg-gradient-to-br from-indigo-50/60 to-purple-50/40 border border-indigo-100 rounded-2xl p-4.5 space-y-2.5">
-                  <div className="flex items-center gap-2 text-indigo-950 font-black text-xs uppercase tracking-wider">
-                    <Sparkles size={15} className="text-indigo-600 shrink-0" />
-                    <span>Key Highlights & Best Practices</span>
-                  </div>
-                  <ul className="space-y-2 text-xs md:text-sm text-zinc-700">
-                    {currentStep.tips.map((tip, idx) => (
-                      <li key={idx} className="flex items-start gap-2.5">
-                        <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
-                        <span className="leading-snug">{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Step Navigation Dots */}
-              <div className="flex items-center justify-center gap-2 pt-2">
-                {tourSteps.map((step, idx) => (
-                  <button
-                    key={step.id}
-                    type="button"
-                    onClick={() => handleJumpToStep(idx)}
-                    className={`transition-all rounded-full cursor-pointer ${
-                      idx === currentStepIndex
-                        ? 'w-8 h-2.5 bg-indigo-600 shadow-sm'
-                        : 'w-2.5 h-2.5 bg-zinc-200 hover:bg-zinc-400'
-                    }`}
-                    title={step.title}
-                  />
-                ))}
-              </div>
             </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <X size={16} />
+            </button>
+          </div>
 
-            {/* Footer Controls */}
-            <div className="p-4 md:p-6 border-t border-zinc-100 bg-zinc-50/70 flex flex-wrap items-center justify-between gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  markTourCompleted();
-                  onClose();
-                }}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-zinc-500 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-all cursor-pointer"
-              >
-                End / Close Tutor
-              </button>
+          {/* Search bar */}
+          <div className="p-3 border-b border-zinc-100 dark:border-zinc-800">
+            <input
+              type="text"
+              placeholder="Search sidebar features..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full px-3 py-1.5 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400"
+            />
+          </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handlePrevStep}
-                  disabled={currentStepIndex === 0}
-                  className="px-4 py-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <ChevronLeft size={16} />
-                  <span>Move Back</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleNextStep}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-lg shadow-indigo-600/25 transition-all flex items-center gap-2 cursor-pointer"
-                >
-                  <span>{currentStepIndex === tourSteps.length - 1 ? 'Finish & Close' : 'Move Next'}</span>
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ------------------------------------------------------------- */}
-        {/* MODE: COMPLETE FEATURE DIRECTORY & KNOWLEDGE HUB */}
-        {/* ------------------------------------------------------------- */}
-        {activeMode === 'DIRECTORY' && (
-          <motion.div
-            key="modal-directory"
-            initial={{ opacity: 0, scale: 0.95, y: 15 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-            className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-zinc-200 overflow-hidden z-10 flex flex-col max-h-[90vh]"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="p-6 pb-4 border-b border-zinc-100 flex items-center justify-between bg-gradient-to-r from-zinc-50 via-indigo-50/20 to-zinc-50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shadow-md shrink-0">
-                  <BookOpen size={20} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-zinc-900 tracking-tight flex items-center gap-2">
-                    <span>{effectiveRole.replace(/_/g, ' ')} Feature Guide & Knowledge Hub</span>
-                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                      {featureCatalog.length} Features
-                    </span>
-                  </h3>
-                  <p className="text-xs font-semibold text-zinc-500">
-                    Comprehensive overview of all portal capabilities, shortcuts, and best practices.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
+          {/* List of features */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2.5 custom-scrollbar">
+            {filtered.map(([viewKey, feat]) => {
+              const isCurrent = currentView === viewKey;
+              return (
+                <div
+                  key={viewKey}
                   onClick={() => {
-                    setActiveMode('TOUR');
-                    setCurrentStepIndex(0);
+                    onNavigateView(viewKey);
+                    onClose();
                   }}
-                  className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                  className={`p-3 rounded-2xl border transition-all cursor-pointer group ${
+                    isCurrent
+                      ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800'
+                      : 'bg-zinc-50/50 dark:bg-zinc-800/30 border-zinc-200/80 dark:border-zinc-800 hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60'
+                  }`}
                 >
-                  <Play size={13} fill="currentColor" />
-                  <span>Start Step-by-Step Tour</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="p-1.5 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-xl transition-all cursor-pointer"
-                  title="Close"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-
-            {/* Filter toolbar */}
-            <div className="p-4 border-b border-zinc-100 bg-zinc-50/70 flex flex-col sm:flex-row items-center justify-between gap-3">
-              {/* Category pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
-                {categories.map(cat => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                      selectedCategory === cat
-                        ? 'bg-zinc-900 text-white shadow-xs'
-                        : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-100'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              {/* Search input */}
-              <div className="relative w-full sm:w-64">
-                <input
-                  type="text"
-                  placeholder="Search features or tips..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full pl-3 pr-8 py-1.5 text-xs font-semibold rounded-xl border border-zinc-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
-                  >
-                    <X size={13} />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Feature Cards Grid */}
-            <div className="p-6 overflow-y-auto space-y-4 custom-scrollbar flex-1">
-              {filteredFeatures.length === 0 ? (
-                <div className="text-center py-12 text-zinc-400 font-bold text-sm">
-                  No features found matching "{searchQuery}".
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredFeatures.map(item => (
-                    <div
-                      key={item.id}
-                      className="p-5 rounded-2xl border border-zinc-200 hover:border-indigo-300 bg-white hover:bg-indigo-50/20 transition-all shadow-xs flex flex-col justify-between space-y-4 group"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-xl bg-zinc-100 group-hover:bg-indigo-100 text-zinc-800 group-hover:text-indigo-600 flex items-center justify-center transition-colors shrink-0">
-                              {item.icon}
-                            </div>
-                            <div>
-                              <h4 className="font-extrabold text-zinc-900 text-sm leading-snug">
-                                {item.title}
-                              </h4>
-                              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                                {item.category}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <p className="text-xs text-zinc-600 font-medium leading-relaxed">
-                          {item.description}
-                        </p>
-
-                        {/* Key Points */}
-                        <ul className="space-y-1 text-xs text-zinc-600 pt-1">
-                          {item.keyPoints.map((pt, i) => (
-                            <li key={i} className="flex items-start gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
-                              <span className="leading-tight">{pt}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div className="pt-3 border-t border-zinc-100 flex items-center justify-between gap-2">
-                        <div className="text-[11px] text-indigo-700 font-semibold italic flex items-center gap-1">
-                          <Info size={13} className="text-indigo-500 shrink-0" />
-                          <span className="truncate max-w-[220px]" title={item.proTip}>{item.proTip}</span>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleLaunchFeatureFromCatalog(item)}
-                          className="px-3.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-indigo-600 text-white text-xs font-bold transition-colors flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs"
-                        >
-                          <span>Open</span>
-                          <ArrowRight size={13} />
-                        </button>
-                      </div>
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="shrink-0">{feat.icon}</div>
+                      <span className="text-xs font-black text-zinc-900 dark:text-white truncate">
+                        {feat.title}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-white dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-600 shrink-0">
+                      {feat.badge}
+                    </span>
+                  </div>
 
-            {/* Footer */}
-            <div className="p-4 border-t border-zinc-100 bg-zinc-50 flex items-center justify-between text-xs text-zinc-500 font-semibold">
-              <span>Need more help? Check with your Department Coordinator or Class Advisor.</span>
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2 rounded-xl bg-zinc-200 hover:bg-zinc-300 text-zinc-800 font-bold transition-all cursor-pointer"
-              >
-                Close Guide
-              </button>
-            </div>
-          </motion.div>
-        )}
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-300 font-medium leading-relaxed line-clamp-2 mb-2">
+                    {feat.description}
+                  </p>
+
+                  <div className="flex items-center justify-between text-[10px] font-bold text-indigo-600 dark:text-indigo-400 pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
+                    <span>{isCurrent ? '● Active Tab' : 'Click to Switch'}</span>
+                    <ExternalLink size={12} className="opacity-70 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Footer note */}
+          <div className="p-3 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 text-center">
+            <p className="text-[10px] text-zinc-500 font-semibold">
+              Tip: Hover or click the mini <Info size={11} className="inline text-indigo-500 mx-0.5" /> icon on any sidebar item for instant feature guides!
+            </p>
+          </div>
+        </motion.div>
       </div>
     </AnimatePresence>
+  );
+}
+
+// Default export for backward compatibility
+export default function PortalTutorGuide(props: any) {
+  return (
+    <SidebarFeatureGuideDrawer
+      isOpen={props.isOpen}
+      onClose={props.onClose}
+      userRole={props.userRole}
+      isCoordinator={props.isCoordinator}
+      onNavigateView={props.onNavigateView}
+      currentView={props.currentView}
+    />
   );
 }
