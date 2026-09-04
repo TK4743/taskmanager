@@ -1503,14 +1503,17 @@ export async function getClassOrYearAnalysisCard(
     `, [studentIds, dateStr]),
 
     pool.query(`
-      SELECT DISTINCT t.id, t.title, t.category, t.deadline
+      SELECT t.id, t.title, t.category, t.deadline,
+             STRING_AGG(DISTINCT c.name, ', ') as assigned_class_names
       FROM tasks t
       JOIN task_classes tc ON tc.task_id = t.id
+      JOIN classes c ON c.id = tc.class_id
       WHERE tc.class_id = ANY($1)
         AND t.status = 'OPEN'
         AND (t.deadline IS NULL OR t.deadline >= CURRENT_TIMESTAMP)
+      GROUP BY t.id, t.title, t.category, t.deadline
       ORDER BY t.deadline ASC NULLS LAST
-      LIMIT 4
+      LIMIT 6
     `, [classIds])
   ]);
 
@@ -1648,23 +1651,36 @@ export async function getClassOrYearAnalysisCard(
         ? new Date(t.deadline).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
         : 'No deadline';
 
+      // Count students in the target classes who belong to the current query scope (studentIds)
+      const taskTargetRes = await pool.query(`
+        SELECT COUNT(DISTINCT u.id) as targeted_count
+        FROM users u
+        JOIN task_classes tc ON tc.class_id = u.class_id AND tc.task_id = $1
+        WHERE u.id = ANY($2) AND u.role = 'STUDENT'
+      `, [t.id, studentIds]);
+      const taskTotalStudents = parseInt(taskTargetRes.rows[0]?.targeted_count || '0', 10);
+
+      if (taskTotalStudents === 0) continue;
+
       const taskSubmissionsRes = await pool.query(`
         SELECT u.id, u.full_name
         FROM users u
+        JOIN task_classes tc ON tc.class_id = u.class_id AND tc.task_id = $1
         LEFT JOIN task_submissions ts ON ts.task_id = $1 AND ts.user_id = u.id AND ts.status IN ('SUBMITTED', 'VERIFIED')
-        WHERE u.id = ANY($2)
+        WHERE u.id = ANY($2) AND u.role = 'STUDENT'
           AND ts.id IS NULL
         ORDER BY u.register_number ASC
       `, [t.id, studentIds]);
 
       const pendingCount = taskSubmissionsRes.rows.length;
-      const completedCount = totalStudents - pendingCount;
-      const progressBar = makeProgressBar(completedCount, totalStudents, 8);
+      const completedCount = taskTotalStudents - pendingCount;
+      const progressBar = makeProgressBar(completedCount, taskTotalStudents, 8);
 
-      html += `📌 <b>${idx + 1}. ${escapeHtml(t.title)}</b>\n`;
+      const classBadge = (isYearOnly && t.assigned_class_names) ? ` <i>[${escapeHtml(t.assigned_class_names)}]</i>` : '';
+      html += `📌 <b>${idx + 1}. ${escapeHtml(t.title)}</b>${classBadge}\n`;
       if (t.category) html += `   📂 <i>Category:</i> <code>${escapeHtml(t.category)}</code>\n`;
       html += `   ⏰ <i>Due:</i> ${deadlineStr}\n`;
-      html += `   ✅ <i>Submissions:</i> <b>${completedCount} / ${totalStudents}</b> ${progressBar}\n`;
+      html += `   ✅ <i>Submissions:</i> <b>${completedCount} / ${taskTotalStudents}</b> ${progressBar}\n`;
 
       if (pendingCount === 0) {
         html += `   ✨ <i>Status: 100% Complete! All students submitted!</i> 🎉\n\n`;
