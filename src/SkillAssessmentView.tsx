@@ -1917,6 +1917,19 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                   </div>
                 )}
 
+                {/* Email Scorecard Sent Banner */}
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-blue-950 text-xs font-medium">
+                  <div className="flex items-center gap-2">
+                    <Mail size={16} className="text-blue-700 shrink-0" />
+                    <span>
+                      <strong>Official Scorecard Emailed!</strong> Your detailed performance scorecard and SIH Demo skill breakdown have been sent to your email.
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold shrink-0">
+                    ✓ Emailed
+                  </span>
+                </div>
+
                 {/* Scorecard Hero Card */}
                 <div className="bg-white border border-zinc-200 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
                   <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">

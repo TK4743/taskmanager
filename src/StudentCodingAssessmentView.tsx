@@ -27,7 +27,8 @@ import {
   Laptop,
   GripVertical,
   Smartphone,
-  Monitor
+  Monitor,
+  Mail
 } from 'lucide-react';
 import { API_URL } from './config';
 import { checkIsMobileOrTablet } from './lib/deviceCheck';
@@ -609,6 +610,21 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
               <div className="text-xs font-bold text-zinc-400 uppercase">Passing Benchmark</div>
               <div className="text-3xl font-black text-zinc-800 mt-1">{activeAssessment?.passing_score || 60}%</div>
             </div>
+          </div>
+
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <Mail size={18} />
+              </div>
+              <div>
+                <span className="text-[11px] font-extrabold text-blue-900 uppercase tracking-wider block">Official Scorecard Emailed</span>
+                <span className="text-xs text-blue-800 font-semibold">Your comprehensive evaluation report has been dispatched to your email.</span>
+              </div>
+            </div>
+            <span className="text-[10px] font-extrabold px-2.5 py-1 bg-white text-blue-700 rounded-lg border border-blue-200 shadow-2xs shrink-0">
+              ✓ Sent
+            </span>
           </div>
 
           <p className="text-xs text-zinc-500 leading-relaxed">

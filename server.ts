@@ -40,7 +40,9 @@ import {
   notifyNoticeBoardAnnouncementEmail,
   getLiveEmailNodesStatus,
   sendAssessmentInvitationEmail,
-  triggerAssessmentCampaignEmails
+  triggerAssessmentCampaignEmails,
+  sendAptitudeAssessmentResultEmail,
+  sendCodingAssessmentResultEmail
 } from './emailService.js';
 
 export {
@@ -55,7 +57,9 @@ export {
   notifyNoticeBoardAnnouncementEmail,
   triggerDeadlineUrgentEmailReminders,
   sendAssessmentInvitationEmail,
-  triggerAssessmentCampaignEmails
+  triggerAssessmentCampaignEmails,
+  sendAptitudeAssessmentResultEmail,
+  sendCodingAssessmentResultEmail
 };
 import {
   startTelegramPoller,
@@ -8670,6 +8674,36 @@ async function startServer() {
       console.warn('[Telegram Alert Error]:', tgErr);
     }
 
+    // ── 📧 Automated Scorecard Email Notification ──────────────────────────
+    if (uRes.rows.length > 0 && uRes.rows[0].email) {
+      const studentEmail = uRes.rows[0].email;
+      sendAptitudeAssessmentResultEmail({
+        to: studentEmail,
+        studentName: targetName,
+        registerNumber: targetRegNo,
+        trackTitle,
+        trackType: track_type,
+        scorePercentage,
+        correctCount,
+        totalQuestions,
+        cutoffPercentage,
+        isPassed,
+        timeTakenSeconds: time_taken_seconds,
+        categoryBreakdown,
+        strengths,
+        gaps,
+        proctorPhotoUrl: proctor_photo_url || null
+      }).then(emailRes => {
+        if (emailRes.success) {
+          console.log(`[Assessment Email] ✅ Scorecard email dispatched to ${studentEmail} (${emailRes.messageId})`);
+        } else {
+          console.warn(`[Assessment Email] ⚠️ Could not send scorecard email to ${studentEmail}:`, emailRes.error);
+        }
+      }).catch(e => {
+        console.error('[Assessment Email Error]', e.message);
+      });
+    }
+
     res.json({
       success: true,
       result: {
@@ -11903,6 +11937,77 @@ async function startServer() {
       referenceId: assignment.id,
       metadata: { Score: `${assignment.final_score}`, Status: isPassed ? 'PASSED' : 'COMPLETED' }
     });
+
+    // ── 📧 Automated Coding Assessment Scorecard Email Dispatch ──────────────
+    try {
+      const studentProfileRes = await pool.query(`SELECT full_name, register_number, email FROM users WHERE id = $1`, [studentId]);
+      const studentEmail = studentProfileRes.rows[0]?.email;
+      const studentName = studentProfileRes.rows[0]?.full_name || 'Candidate';
+      const registerNumber = studentProfileRes.rows[0]?.register_number || '';
+
+      const qSubmissionsRes = await pool.query(`
+        SELECT 
+          cq.title,
+          cq.marks as max_marks,
+          COALESCE(caq.score, 0) as score,
+          COALESCE(cs.language, 'cpp') as language,
+          COALESCE(cs.public_tests_passed, 0) as public_tests_passed,
+          COALESCE(cs.public_tests_total, 2) as public_tests_total,
+          COALESCE(cs.hidden_tests_passed, 0) as hidden_tests_passed,
+          COALESCE(cs.hidden_tests_total, 3) as hidden_tests_total,
+          cq.skills
+        FROM coding_assignment_questions caq
+        JOIN coding_questions cq ON cq.id = caq.question_id
+        LEFT JOIN coding_submissions cs ON cs.assignment_id = caq.assignment_id AND cs.question_id = caq.question_id
+        WHERE caq.assignment_id = $1
+        ORDER BY caq.created_at ASC
+      `, [assignment.id]);
+
+      const questionsAttempted = qSubmissionsRes.rows.map((r: any) => ({
+        title: r.title,
+        score: Number(r.score) || 0,
+        maxMarks: Number(r.max_marks) || 50,
+        language: r.language,
+        publicTestsPassed: Number(r.public_tests_passed) || 0,
+        publicTestsTotal: Number(r.public_tests_total) || 2,
+        hiddenTestsPassed: Number(r.hidden_tests_passed) || 0,
+        hiddenTestsTotal: Number(r.hidden_tests_total) || 3
+      }));
+
+      const allSkills: string[] = [];
+      qSubmissionsRes.rows.forEach((r: any) => {
+        try {
+          const sks = typeof r.skills === 'string' ? JSON.parse(r.skills) : (r.skills || []);
+          allSkills.push(...sks);
+        } catch {}
+      });
+
+      if (studentEmail) {
+        sendCodingAssessmentResultEmail({
+          to: studentEmail,
+          studentName,
+          registerNumber,
+          assessmentTitle: assignment.assessment_title,
+          companyName: assignment.company_name,
+          finalScore: Number(assignment.final_score) || 0,
+          passingScore: Number(assignment.passing_score) || 60,
+          isPassed,
+          timeTakenMinutes: assignment.duration_minutes || 60,
+          questionsAttempted,
+          skillsAssessed: Array.from(new Set(allSkills))
+        }).then(emailRes => {
+          if (emailRes.success) {
+            console.log(`[Coding Scorecard Email] ✅ Dispatched to ${studentEmail} (${emailRes.messageId})`);
+          } else {
+            console.warn(`[Coding Scorecard Email] ⚠️ Could not dispatch to ${studentEmail}:`, emailRes.error);
+          }
+        }).catch(e => {
+          console.error('[Coding Scorecard Email Error]', e.message);
+        });
+      }
+    } catch (emailErr: any) {
+      console.warn('[Coding Scorecard Email Prep Error]:', emailErr.message);
+    }
 
     res.json({
       message: 'Assessment completed and skill intelligence profile updated successfully',

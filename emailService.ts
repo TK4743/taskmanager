@@ -2613,3 +2613,605 @@ export async function triggerAssessmentCampaignEmails(params: {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 12. APTITUDE & TECHNICAL SKILL ASSESSMENT RESULT SCORECARD EMAIL
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AptitudeAssessmentResultEmailPayload {
+  to: string;
+  studentName: string;
+  registerNumber?: string;
+  className?: string;
+  trackTitle: string;
+  trackType: string;
+  scorePercentage: number;
+  correctCount: number;
+  totalQuestions: number;
+  cutoffPercentage: number;
+  isPassed: boolean;
+  timeTakenSeconds: number;
+  categoryBreakdown?: Record<string, number>;
+  strengths?: string[];
+  gaps?: string[];
+  proctorPhotoUrl?: string | null;
+  portalUrl?: string;
+}
+
+export async function sendAptitudeAssessmentResultEmail(payload: AptitudeAssessmentResultEmailPayload): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const {
+    to,
+    studentName,
+    registerNumber,
+    className,
+    trackTitle,
+    scorePercentage,
+    correctCount,
+    totalQuestions,
+    cutoffPercentage,
+    isPassed,
+    timeTakenSeconds,
+    categoryBreakdown = {},
+    strengths = [],
+    gaps = [],
+    proctorPhotoUrl,
+    portalUrl
+  } = payload;
+
+  const portalLink = getCanonicalPortalUrl(portalUrl);
+  const subject = `${isPassed ? '🎯 PASSED' : '📊 SCORECARD'}: ${trackTitle} (${scorePercentage}%) — VSBEC IT Assessment`;
+  const currentDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+  const mins = Math.floor(timeTakenSeconds / 60);
+  const secs = timeTakenSeconds % 60;
+  const timeTakenFormatted = `${mins}m ${secs}s`;
+  const refCode = `SIH-DEMO/APT/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
+
+  // Category breakdown rows HTML
+  const categoryRows = Object.entries(categoryBreakdown).map(([cat, pct]) => {
+    const isGood = Number(pct) >= 70;
+    const isMedium = Number(pct) >= 50;
+    const color = isGood ? '#047857' : isMedium ? '#b45309' : '#b91c1c';
+    const bg = isGood ? '#ecfdf5' : isMedium ? '#fffbeb' : '#fef2f2';
+    const border = isGood ? '#a7f3d0' : isMedium ? '#fde68a' : '#fecaca';
+    return `
+      <tr>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-weight: 600; font-size: 12.5px;">
+          ${cat}
+        </td>
+        <td align="right" style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">
+          <span style="display: inline-block; background-color: ${bg}; color: ${color}; border: 1px solid ${border}; font-weight: 800; font-size: 12px; padding: 2px 10px; border-radius: 9999px;">
+            ${pct}%
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Strengths & Gaps pills HTML
+  const strengthsHtml = strengths.length > 0 ? strengths.map(s => `
+    <li style="margin-bottom: 4px; color: #065f46; font-size: 12px;">✅ <b>${s}</b></li>
+  `).join('') : '<li style="color: #64748b; font-size: 12px;">— Completed with balanced baseline performance</li>';
+
+  const gapsHtml = gaps.length > 0 ? gaps.map(g => `
+    <li style="margin-bottom: 4px; color: #991b1b; font-size: 12px;">⚠️ <b>${g}</b></li>
+  `).join('') : '<li style="color: #065f46; font-size: 12px;">🌟 Outstanding! Zero critical skill gaps identified.</li>';
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 24px 8px; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #cbd5e1; box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.08);">
+    
+    <!-- Top Accent Stripe -->
+    <tr>
+      <td height="6" style="background: linear-gradient(90deg, #1e3a8a 0%, #4f46e5 50%, #d97706 100%);"></td>
+    </tr>
+
+    <!-- SIH Demo Top Notice Banner -->
+    <tr>
+      <td style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); padding: 10px 20px; text-align: center; border-bottom: 1px solid #4338ca;">
+        <span style="display: inline-block; background-color: #f59e0b; color: #000000; font-size: 10px; font-weight: 900; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 8px;">
+          SIH DEMO
+        </span>
+        <span style="color: #e0e7ff; font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em;">
+          Smart India Hackathon • Institutional Placement & Skill Assessment Sandbox
+        </span>
+      </td>
+    </tr>
+
+    <!-- Institutional Header -->
+    <tr>
+      <td style="padding: 24px 24px 18px 24px; background-color: #ffffff; border-bottom: 2px solid #4f46e5; text-align: center;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="center" style="padding-bottom: 10px;">
+              <img src="${COLLEGE_LOGO_URL}" alt="VSBEC IT Emblem" width="72" height="72" style="display: block; width: 72px; height: 72px; border-radius: 50%; border: 2px solid #d97706; box-shadow: 0 2px 8px rgba(0,0,0,0.12);" />
+            </td>
+          </tr>
+          <tr>
+            <td align="center">
+              <h1 style="margin: 0 0 3px 0; font-size: 19px; font-weight: 900; color: #0f172a; text-transform: uppercase; font-family: Georgia, 'Times New Roman', serif;">
+                VSB Engineering College
+              </h1>
+              <h2 style="margin: 0 0 6px 0; font-size: 12.5px; font-weight: 700; color: #1e3a8a; letter-spacing: 0.06em; text-transform: uppercase;">
+                Department of Information Technology
+              </h2>
+              <span style="display: inline-block; background-color: #eef2ff; border: 1px solid #c7d2fe; border-radius: 9999px; padding: 3px 12px; font-size: 11px; font-weight: 800; color: #4338ca; letter-spacing: 0.04em;">
+                OFFICIAL ASSESSMENT PERFORMANCE SCORECARD
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Reference Bar -->
+    <tr>
+      <td style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 24px; font-size: 11px;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="left" style="font-weight: 700; color: #4338ca;">
+              REF: ${refCode}
+            </td>
+            <td align="right" style="font-weight: 700; color: #b45309;">
+              DATE: ${currentDate}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Body Content -->
+    <tr>
+      <td style="padding: 26px 24px;">
+        
+        <p style="margin: 0 0 14px 0; font-size: 15px; color: #0f172a;">
+          Dear <b>${studentName}</b> ${registerNumber ? `(Reg: <b>${registerNumber}</b>)` : ''}${className ? ` · Class ${className}` : ''},
+        </p>
+
+        <p style="margin: 0 0 20px 0; font-size: 13.5px; color: #334155; line-height: 1.6;">
+          Your proctored test session for <b>${trackTitle}</b> has been evaluated and verified on the Institutional Skill Intelligence Engine. Below is your official scorecard and performance report:
+        </p>
+
+        <!-- 🌟 Hero Scorecard Banner -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background: ${isPassed ? 'linear-gradient(135deg, #064e3b 0%, #047857 100%)' : 'linear-gradient(135deg, #1e293b 0%, #334155 100%)'}; border-radius: 12px; margin-bottom: 22px; color: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.12); overflow: hidden;">
+          <tr>
+            <td style="padding: 22px 20px;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="vertical-align: middle;">
+                    <span style="display: inline-block; background-color: ${isPassed ? '#10b981' : '#f59e0b'}; color: #ffffff; font-size: 10px; font-weight: 900; text-transform: uppercase; padding: 3px 10px; border-radius: 9999px; letter-spacing: 0.05em; margin-bottom: 6px;">
+                      ${isPassed ? '✓ ASSESSMENT PASSED' : '⚠️ REMEDIAL ACTION REQUIRED'}
+                    </span>
+                    <h3 style="margin: 2px 0 6px 0; font-size: 16px; font-weight: 800; color: #ffffff;">
+                      ${trackTitle}
+                    </h3>
+                    <p style="margin: 0; font-size: 12px; color: #e2e8f0;">
+                      Passing Benchmark Cutoff: <b>${cutoffPercentage}%</b>
+                    </p>
+                  </td>
+                  <td align="right" style="vertical-align: middle; width: 130px;">
+                    <div style="background-color: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 12px; padding: 10px 14px; text-align: center;">
+                      <span style="font-size: 10px; text-transform: uppercase; font-weight: 700; color: #cbd5e1; display: block;">Final Score</span>
+                      <span style="font-size: 28px; font-weight: 900; color: #ffffff; line-height: 1.1; display: block; font-family: -apple-system, sans-serif;">
+                        ${scorePercentage}%
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Summary Metrics 3-Col Box -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 22px; font-size: 12px; text-align: center;">
+          <tr>
+            <td style="padding: 12px 10px; border-right: 1px solid #e2e8f0; width: 33.3%;">
+              <span style="color: #64748b; font-size: 10.5px; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 3px;">Questions Solved</span>
+              <strong style="color: #0f172a; font-size: 14px;">${correctCount} / ${totalQuestions}</strong>
+            </td>
+            <td style="padding: 12px 10px; border-right: 1px solid #e2e8f0; width: 33.3%;">
+              <span style="color: #64748b; font-size: 10.5px; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 3px;">Time Taken</span>
+              <strong style="color: #0f172a; font-size: 14px;">⏱️ ${timeTakenFormatted}</strong>
+            </td>
+            <td style="padding: 12px 10px; width: 33.3%;">
+              <span style="color: #64748b; font-size: 10.5px; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 3px;">Proctor Status</span>
+              <strong style="color: #047857; font-size: 13px;">🛡️ Verified</strong>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Domain / Category Performance Breakdown -->
+        ${categoryRows ? `
+        <h4 style="margin: 0 0 10px 0; font-size: 13px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.04em;">
+          📊 Domain Performance Breakdown
+        </h4>
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 22px;">
+          ${categoryRows}
+        </table>
+        ` : ''}
+
+        <!-- Strengths & Focus Areas -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 22px;">
+          <tr>
+            <td style="padding: 14px 16px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; vertical-align: top; width: 50%;">
+              <h5 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 800; color: #166534; text-transform: uppercase;">
+                🌟 Verified Strengths
+              </h5>
+              <ul style="margin: 0; padding-left: 14px;">
+                ${strengthsHtml}
+              </ul>
+            </td>
+            <td style="width: 12px;">&nbsp;</td>
+            <td style="padding: 14px 16px; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; vertical-align: top; width: 50%;">
+              <h5 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 800; color: #991b1b; text-transform: uppercase;">
+                🎯 AI Remedial Focus
+              </h5>
+              <ul style="margin: 0; padding-left: 14px;">
+                ${gapsHtml}
+              </ul>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Next Action Card -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #eef2ff; border: 1px solid #c7d2fe; border-radius: 10px; margin-bottom: 24px; padding: 14px 16px;">
+          <tr>
+            <td>
+              <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: 800; color: #3730a3;">
+                🚀 Next Steps on VSB Skill Intelligence Portal:
+              </h4>
+              <p style="margin: 0 0 12px 0; font-size: 12px; color: #4338ca; line-height: 1.5;">
+                Access your personalized <b>AI Remedial Modules</b>, interactive <b>Formula Cheat Sheets</b>, and 5-question micro-quizzes to target your identified gap areas.
+              </p>
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="border-radius: 6px; background: #4338ca;">
+                    <a href="${portalLink}" target="_blank" style="font-size: 12.5px; font-family: sans-serif; color: #ffffff; text-decoration: none; border-radius: 6px; padding: 9px 20px; border: 1px solid #4338ca; display: inline-block; font-weight: 700;">
+                      📊 Open Portal & Review Solutions →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        ${getTelegramCommunityBoxHtml()}
+
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style="padding: 20px 24px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #64748b; line-height: 1.5;">
+        <p style="margin: 0 0 4px 0; font-weight: 700; color: #0f172a;">
+          Department of Information Technology • VSB Engineering College
+        </p>
+        <p style="margin: 0 0 4px 0;">
+          NH-67, Karur-Coimbatore Highway, Karudayampalayam, Karur, Tamil Nadu 639111
+        </p>
+        <p style="margin: 0; color: #94a3b8; font-size: 10px;">
+          This is an automated Smart India Hackathon (SIH 2024 / SIH Demo) institutional assessment notification. Please do not reply directly to this email.
+        </p>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+  `;
+
+  return dispatchEmailThroughPool(
+    to,
+    studentName,
+    subject,
+    htmlContent,
+    'VSBEC IT Placement Assessment Engine'
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 13. INDUSTRY CODING ASSESSMENT RESULT SCORECARD EMAIL
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CodingAssessmentResultEmailPayload {
+  to: string;
+  studentName: string;
+  registerNumber?: string;
+  className?: string;
+  assessmentTitle: string;
+  companyName: string;
+  finalScore: number;
+  passingScore: number;
+  isPassed: boolean;
+  timeTakenMinutes?: number;
+  questionsAttempted?: Array<{
+    title: string;
+    score: number;
+    maxMarks: number;
+    language: string;
+    publicTestsPassed: number;
+    publicTestsTotal: number;
+    hiddenTestsPassed: number;
+    hiddenTestsTotal: number;
+  }>;
+  skillsAssessed?: string[];
+  portalUrl?: string;
+}
+
+export async function sendCodingAssessmentResultEmail(payload: CodingAssessmentResultEmailPayload): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const {
+    to,
+    studentName,
+    registerNumber,
+    className,
+    assessmentTitle,
+    companyName,
+    finalScore,
+    passingScore,
+    isPassed,
+    timeTakenMinutes = 60,
+    questionsAttempted = [],
+    skillsAssessed = [],
+    portalUrl
+  } = payload;
+
+  const portalLink = getCanonicalPortalUrl(portalUrl);
+  const subject = `${isPassed ? '🏆 QUALIFIED' : '📊 EVALUATION COMPLETED'}: ${companyName} Coding Qualifier (${finalScore}/100) — VSBEC IT`;
+  const currentDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+  const refCode = `SIH-DEMO/CODE/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
+
+  // Question details rows HTML
+  const questionRows = questionsAttempted.length > 0 ? questionsAttempted.map((q, idx) => {
+    const isFull = q.score >= q.maxMarks;
+    const isPartial = q.score > 0;
+    const badgeColor = isFull ? '#047857' : isPartial ? '#b45309' : '#b91c1c';
+    const badgeBg = isFull ? '#ecfdf5' : isPartial ? '#fffbeb' : '#fef2f2';
+    const badgeBorder = isFull ? '#a7f3d0' : isPartial ? '#fde68a' : '#fecaca';
+
+    return `
+      <tr style="background-color: #ffffff;">
+        <td style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0;">
+          <div style="font-weight: 700; color: #0f172a; font-size: 13px; margin-bottom: 2px;">
+            Q${idx + 1}: ${q.title}
+          </div>
+          <div style="font-size: 11px; color: #64748b; font-mono;">
+            Language: <strong style="color: #4f46e5;">${(q.language || 'cpp').toUpperCase()}</strong> · Public Tests: ${q.publicTestsPassed}/${q.publicTestsTotal} · Hidden Tests: ${q.hiddenTestsPassed}/${q.hiddenTestsTotal}
+          </div>
+        </td>
+        <td align="right" style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;">
+          <span style="display: inline-block; background-color: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder}; font-weight: 800; font-size: 13px; padding: 4px 12px; border-radius: 8px;">
+            ${q.score} / ${q.maxMarks} pts
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('') : `
+    <tr>
+      <td colspan="2" style="padding: 12px 14px; color: #64748b; font-size: 12px; text-align: center;">
+        2 Problems Evaluated on Server Sandbox
+      </td>
+    </tr>
+  `;
+
+  // Skills assessed badges HTML
+  const skillsBadges = skillsAssessed.length > 0 ? skillsAssessed.map(sk => `
+    <span style="display: inline-block; background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; margin-right: 6px; margin-bottom: 6px;">
+      ${sk}
+    </span>
+  `).join('') : '<span style="color: #64748b; font-size: 11px;">Data Structures · Algorithms · Problem Solving</span>';
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 24px 8px; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #cbd5e1; box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.08);">
+    
+    <!-- Top Accent Stripe -->
+    <tr>
+      <td height="6" style="background: linear-gradient(90deg, #4f46e5 0%, #06b6d4 50%, #10b981 100%);"></td>
+    </tr>
+
+    <!-- SIH Demo Top Notice Banner -->
+    <tr>
+      <td style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); padding: 10px 20px; text-align: center; border-bottom: 1px solid #3730a3;">
+        <span style="display: inline-block; background-color: #10b981; color: #ffffff; font-size: 10px; font-weight: 900; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 8px;">
+          SIH DEMO
+        </span>
+        <span style="color: #e0e7ff; font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em;">
+          Smart India Hackathon • Corporate Coding Qualifier & Live Proctoring Benchmark
+        </span>
+      </td>
+    </tr>
+
+    <!-- Institutional Header -->
+    <tr>
+      <td style="padding: 24px 24px 18px 24px; background-color: #ffffff; border-bottom: 2px solid #4f46e5; text-align: center;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="center" style="padding-bottom: 10px;">
+              <img src="${COLLEGE_LOGO_URL}" alt="VSBEC IT Emblem" width="72" height="72" style="display: block; width: 72px; height: 72px; border-radius: 50%; border: 2px solid #d97706; box-shadow: 0 2px 8px rgba(0,0,0,0.12);" />
+            </td>
+          </tr>
+          <tr>
+            <td align="center">
+              <h1 style="margin: 0 0 3px 0; font-size: 19px; font-weight: 900; color: #0f172a; text-transform: uppercase; font-family: Georgia, 'Times New Roman', serif;">
+                VSB Engineering College
+              </h1>
+              <h2 style="margin: 0 0 6px 0; font-size: 12.5px; font-weight: 700; color: #1e3a8a; letter-spacing: 0.06em; text-transform: uppercase;">
+                Department of Information Technology
+              </h2>
+              <span style="display: inline-block; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 9999px; padding: 3px 12px; font-size: 11px; font-weight: 800; color: #065f46; letter-spacing: 0.04em;">
+                OFFICIAL INDUSTRY CODING QUALIFIER REPORT
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Reference Bar -->
+    <tr>
+      <td style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 24px; font-size: 11px;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="left" style="font-weight: 700; color: #4338ca;">
+              REF: ${refCode}
+            </td>
+            <td align="right" style="font-weight: 700; color: #b45309;">
+              DATE: ${currentDate}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Body Content -->
+    <tr>
+      <td style="padding: 26px 24px;">
+        
+        <p style="margin: 0 0 14px 0; font-size: 15px; color: #0f172a;">
+          Dear <b>${studentName}</b> ${registerNumber ? `(Reg: <b>${registerNumber}</b>)` : ''}${className ? ` · Class ${className}` : ''},
+        </p>
+
+        <p style="margin: 0 0 20px 0; font-size: 13.5px; color: #334155; line-height: 1.6;">
+          Your proctored solution for the <b>${assessmentTitle}</b> (${companyName}) has been compiled and evaluated against all public and hidden test cases on our isolated server-side sandbox.
+        </p>
+
+        <!-- 🌟 Hero Scorecard Banner -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background: ${isPassed ? 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #064e3b 100%)' : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'}; border-radius: 12px; margin-bottom: 22px; color: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.14); overflow: hidden;">
+          <tr>
+            <td style="padding: 22px 20px;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="vertical-align: middle;">
+                    <span style="display: inline-block; background-color: ${isPassed ? '#10b981' : '#f59e0b'}; color: #ffffff; font-size: 10px; font-weight: 900; text-transform: uppercase; padding: 3px 10px; border-radius: 9999px; letter-spacing: 0.05em; margin-bottom: 6px;">
+                      ${isPassed ? '✓ RECRUITMENT QUALIFIER PASSED' : 'COMPLETED'}
+                    </span>
+                    <h3 style="margin: 2px 0 4px 0; font-size: 16px; font-weight: 800; color: #ffffff;">
+                      ${assessmentTitle}
+                    </h3>
+                    <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                      Recruiter Partner: <strong style="color: #cbd5e1;">${companyName}</strong> · Passing Benchmark: <b>${passingScore}%</b>
+                    </p>
+                  </td>
+                  <td align="right" style="vertical-align: middle; width: 140px;">
+                    <div style="background-color: rgba(255, 255, 255, 0.12); border: 2px solid rgba(255, 255, 255, 0.25); border-radius: 12px; padding: 10px 14px; text-align: center;">
+                      <span style="font-size: 10px; text-transform: uppercase; font-weight: 700; color: #94a3b8; display: block;">Total Score</span>
+                      <span style="font-size: 28px; font-weight: 900; color: #10b981; line-height: 1.1; display: block; font-family: -apple-system, sans-serif;">
+                        ${finalScore} <span style="font-size: 14px; color: #94a3b8;">/ 100</span>
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Summary Metrics 3-Col Box -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 22px; font-size: 12px; text-align: center;">
+          <tr>
+            <td style="padding: 12px 10px; border-right: 1px solid #e2e8f0; width: 33.3%;">
+              <span style="color: #64748b; font-size: 10.5px; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 3px;">Assigned Problems</span>
+              <strong style="color: #0f172a; font-size: 14px;">2 (Random Pool)</strong>
+            </td>
+            <td style="padding: 12px 10px; border-right: 1px solid #e2e8f0; width: 33.3%;">
+              <span style="color: #64748b; font-size: 10.5px; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 3px;">Assessment Duration</span>
+              <strong style="color: #0f172a; font-size: 14px;">⏱️ ${timeTakenMinutes} Mins</strong>
+            </td>
+            <td style="padding: 12px 10px; width: 33.3%;">
+              <span style="color: #64748b; font-size: 10.5px; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 3px;">Anti-Cheat Protocol</span>
+              <strong style="color: #047857; font-size: 13px;">🛡️ Full Proctored</strong>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Problem-by-Problem Evaluation Breakdown -->
+        <h4 style="margin: 0 0 10px 0; font-size: 13px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.04em;">
+          💻 Problem Evaluation & Sandbox Results
+        </h4>
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 22px; font-size: 12px;">
+          ${questionRows}
+        </table>
+
+        <!-- Skills Verified -->
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; margin-bottom: 22px;">
+          <span style="display: block; font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 8px;">
+            🧠 Skills Matrix Updated in Institutional Profile:
+          </span>
+          <div>
+            ${skillsBadges}
+          </div>
+        </div>
+
+        <!-- Next Action Card -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; margin-bottom: 24px; padding: 14px 16px;">
+          <tr>
+            <td>
+              <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: 800; color: #166534;">
+                📈 Verified Technical Profile Transmitted:
+              </h4>
+              <p style="margin: 0 0 12px 0; font-size: 12px; color: #15803d; line-height: 1.5;">
+                Your performance benchmarks have been logged in your official Student Skill Intelligence Profile and are accessible to <b>${companyName}</b> recruiters on the Industry Portal.
+              </p>
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="border-radius: 6px; background: #059669;">
+                    <a href="${portalLink}" target="_blank" style="font-size: 12.5px; font-family: sans-serif; color: #ffffff; text-decoration: none; border-radius: 6px; padding: 9px 20px; border: 1px solid #059669; display: inline-block; font-weight: 700;">
+                      🚀 View Placement Dashboard →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        ${getTelegramCommunityBoxHtml()}
+
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style="padding: 20px 24px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #64748b; line-height: 1.5;">
+        <p style="margin: 0 0 4px 0; font-weight: 700; color: #0f172a;">
+          Department of Information Technology • VSB Engineering College
+        </p>
+        <p style="margin: 0 0 4px 0;">
+          NH-67, Karur-Coimbatore Highway, Karudayampalayam, Karur, Tamil Nadu 639111
+        </p>
+        <p style="margin: 0; color: #94a3b8; font-size: 10px;">
+          This is an automated Smart India Hackathon (SIH 2024 / SIH Demo) institutional coding assessment notification. Please do not reply directly to this email.
+        </p>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+  `;
+
+  return dispatchEmailThroughPool(
+    to,
+    studentName,
+    subject,
+    htmlContent,
+    'VSBEC IT Industry Coding Qualifier'
+  );
+}
+
