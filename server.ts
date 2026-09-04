@@ -9651,187 +9651,253 @@ async function startServer() {
 
   const LEARNING_RESOURCES: Record<string, { title: string; platform: string; url: string; duration: string }[]> = {
     'pytorch': [
-      { title: 'PyTorch Official Beginner Basics & Tensors', platform: 'pytorch.org', url: 'https://pytorch.org/tutorials/beginner/basics/intro.html', duration: '10 hrs' },
-      { title: 'PyTorch Documentation & API Reference', platform: 'pytorch.org', url: 'https://pytorch.org/docs/stable/index.html', duration: 'Self-paced' },
-      { title: 'AI & Deep Learning Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ai-data-scientist', duration: 'Self-paced' }
+      { title: 'PyTorch Tutorial & Deep Learning Guide', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/pytorch-tutorial/', duration: '12 hrs' },
+      { title: 'Machine Learning & Neural Networks Basics', platform: 'W3Schools', url: 'https://www.w3schools.com/python/python_ml_getting_started.asp', duration: '8 hrs' },
+      { title: 'PyTorch Official Beginner Basics & Tensors', platform: 'pytorch.org', url: 'https://pytorch.org/tutorials/beginner/basics/intro.html', duration: '10 hrs' }
     ],
     'computer vision': [
+      { title: 'OpenCV Python & Computer Vision Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/opencv-python-tutorial/', duration: '15 hrs' },
       { title: 'OpenCV Official Tutorials & Core Pipeline', platform: 'opencv.org', url: 'https://docs.opencv.org/4.x/d9/df8/tutorial_root.html', duration: '20 hrs' },
-      { title: 'PyTorch TorchVision Computer Vision Guide', platform: 'pytorch.org', url: 'https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html', duration: '12 hrs' },
-      { title: 'Computer Vision & AI Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ai-data-scientist', duration: 'Self-paced' }
+      { title: 'PyTorch TorchVision Computer Vision Guide', platform: 'pytorch.org', url: 'https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html', duration: '12 hrs' }
     ],
     'cv': [
+      { title: 'OpenCV Python & Computer Vision Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/opencv-python-tutorial/', duration: '15 hrs' },
       { title: 'OpenCV Official Tutorials & Core Pipeline', platform: 'opencv.org', url: 'https://docs.opencv.org/4.x/d9/df8/tutorial_root.html', duration: '20 hrs' },
       { title: 'PyTorch TorchVision Computer Vision Guide', platform: 'pytorch.org', url: 'https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html', duration: '12 hrs' }
     ],
     'c++': [
-      { title: 'Learn C++ Complete Guide & Tutorials', platform: 'learncpp.com', url: 'https://www.learncpp.com/', duration: '30 hrs' },
-      { title: 'C++ Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/cpp', duration: 'Self-paced' },
-      { title: 'C++ Standard Reference & STL Handbook', platform: 'cppreference.com', url: 'https://en.cppreference.com/w/cpp', duration: 'Self-paced' }
+      { title: 'C++ Programming Language Complete Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/c-plus-plus/', duration: '25 hrs' },
+      { title: 'C++ Tutorial & Interactive Exercises', platform: 'W3Schools', url: 'https://www.w3schools.com/cpp/', duration: '15 hrs' },
+      { title: 'Learn C++ Complete Guide & Tutorials', platform: 'learncpp.com', url: 'https://www.learncpp.com/', duration: '30 hrs' }
     ],
     'cpp': [
-      { title: 'Learn C++ Complete Guide & Tutorials', platform: 'learncpp.com', url: 'https://www.learncpp.com/', duration: '30 hrs' },
-      { title: 'C++ Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/cpp', duration: 'Self-paced' },
-      { title: 'C++ Standard Reference & STL Handbook', platform: 'cppreference.com', url: 'https://en.cppreference.com/w/cpp', duration: 'Self-paced' }
+      { title: 'C++ Programming Language Complete Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/c-plus-plus/', duration: '25 hrs' },
+      { title: 'C++ Tutorial & Interactive Exercises', platform: 'W3Schools', url: 'https://www.w3schools.com/cpp/', duration: '15 hrs' },
+      { title: 'Learn C++ Complete Guide & Tutorials', platform: 'learncpp.com', url: 'https://www.learncpp.com/', duration: '30 hrs' }
     ],
     'c': [
+      { title: 'C Programming Language Tutorial & Examples', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/c-programming-language/', duration: '20 hrs' },
       { title: 'C Programming Tutorial & Exercises', platform: 'W3Schools', url: 'https://www.w3schools.com/c/', duration: '15 hrs' },
       { title: 'C Language Reference', platform: 'cppreference.com', url: 'https://en.cppreference.com/w/c', duration: 'Self-paced' }
     ],
-    'react': [
-      { title: 'React Official Documentation & Guides', platform: 'react.dev', url: 'https://react.dev/learn', duration: '20 hrs' },
-      { title: 'React Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/react', duration: 'Self-paced' }
+    'git': [
+      { title: 'Git Tutorial - A Complete Guide', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/git-tutorial/', duration: '6 hrs' },
+      { title: 'Git Tutorial & Version Control', platform: 'W3Schools', url: 'https://www.w3schools.com/git/', duration: '5 hrs' },
+      { title: 'Git & GitHub Comprehensive Handbook', platform: 'git-scm.com', url: 'https://git-scm.com/book/en/v2', duration: '4 hrs' }
     ],
-    'node.js': [
-      { title: 'Node.js Official Documentation', platform: 'nodejs.org', url: 'https://nodejs.org/en/docs', duration: '15 hrs' },
-      { title: 'Node.js Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/nodejs', duration: 'Self-paced' }
+    'cloud architecture': [
+      { title: 'Cloud Computing & Architecture Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/cloud-computing-architecture/', duration: '10 hrs' },
+      { title: 'AWS Cloud Essentials Tutorial', platform: 'W3Schools', url: 'https://www.w3schools.com/aws/', duration: '8 hrs' },
+      { title: 'AWS Cloud Practitioner Essentials', platform: 'AWS Training', url: 'https://aws.amazon.com/training/digital/aws-cloud-practitioner-essentials', duration: '6 hrs' }
     ],
-    'nodejs': [
-      { title: 'Node.js Official Documentation', platform: 'nodejs.org', url: 'https://nodejs.org/en/docs', duration: '15 hrs' },
-      { title: 'Node.js Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/nodejs', duration: 'Self-paced' }
-    ],
-    'python': [
-      { title: 'Python Official Tutorial & Standard Library', platform: 'python.org', url: 'https://docs.python.org/3/tutorial/', duration: '20 hrs' },
-      { title: 'Python Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/python', duration: 'Self-paced' }
-    ],
-    'sql': [
-      { title: 'SQL Tutorial & Hands-on Exercises', platform: 'W3Schools', url: 'https://www.w3schools.com/sql/', duration: '10 hrs' },
-      { title: 'PostgreSQL & SQL DBA Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/postgresql-dba', duration: 'Self-paced' }
-    ],
-    'postgresql': [
-      { title: 'PostgreSQL Official Documentation & Tutorial', platform: 'postgresql.org', url: 'https://www.postgresql.org/docs/current/tutorial.html', duration: '10 hrs' },
-      { title: 'PostgreSQL DBA Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/postgresql-dba', duration: 'Self-paced' }
+    'cloud': [
+      { title: 'Cloud Computing & Architecture Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/cloud-computing-architecture/', duration: '10 hrs' },
+      { title: 'AWS Cloud Essentials Tutorial', platform: 'W3Schools', url: 'https://www.w3schools.com/aws/', duration: '8 hrs' },
+      { title: 'AWS Cloud Practitioner Essentials', platform: 'AWS Training', url: 'https://aws.amazon.com/training/digital/aws-cloud-practitioner-essentials', duration: '6 hrs' }
     ],
     'aws': [
-      { title: 'AWS Cloud Practitioner Essentials', platform: 'AWS Training', url: 'https://aws.amazon.com/training/digital/aws-cloud-practitioner-essentials', duration: '6 hrs' },
-      { title: 'AWS Cloud Architect Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/aws', duration: 'Self-paced' }
-    ],
-    'docker': [
-      { title: 'Docker Official Getting Started Guide', platform: 'docker.com', url: 'https://docs.docker.com/get-started/', duration: '4 hrs' },
-      { title: 'Docker Roadmap & Cheat Sheet', platform: 'roadmap.sh', url: 'https://roadmap.sh/docker', duration: 'Self-paced' }
+      { title: 'AWS Tutorial & Cloud Services Overview', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/aws-tutorial/', duration: '12 hrs' },
+      { title: 'AWS Cloud Essentials Tutorial', platform: 'W3Schools', url: 'https://www.w3schools.com/aws/', duration: '8 hrs' },
+      { title: 'AWS Cloud Practitioner Essentials', platform: 'AWS Training', url: 'https://aws.amazon.com/training/digital/aws-cloud-practitioner-essentials', duration: '6 hrs' }
     ],
     'kubernetes': [
-      { title: 'Kubernetes Official Interactive Basics', platform: 'kubernetes.io', url: 'https://kubernetes.io/docs/tutorials/kubernetes-basics/', duration: '8 hrs' },
-      { title: 'Kubernetes Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/kubernetes', duration: 'Self-paced' }
+      { title: 'Kubernetes Tutorial - Architecture & Deployment', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/kubernetes/', duration: '12 hrs' },
+      { title: 'Kubernetes & DevOps Fundamentals', platform: 'W3Schools', url: 'https://www.w3schools.com/devops/devops_kubernetes.php', duration: '8 hrs' },
+      { title: 'Kubernetes Official Interactive Basics', platform: 'kubernetes.io', url: 'https://kubernetes.io/docs/tutorials/kubernetes-basics/', duration: '8 hrs' }
     ],
-    'typescript': [
-      { title: 'TypeScript Official Handbook', platform: 'typescriptlang.org', url: 'https://www.typescriptlang.org/docs/handbook/intro.html', duration: '10 hrs' },
-      { title: 'TypeScript Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/typescript', duration: 'Self-paced' }
+    'react': [
+      { title: 'ReactJS Complete Tutorial & Projects', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/reactjs-tutorials/', duration: '20 hrs' },
+      { title: 'React Tutorial & Practice Exercises', platform: 'W3Schools', url: 'https://www.w3schools.com/react/', duration: '12 hrs' },
+      { title: 'React Official Documentation & Guides', platform: 'react.dev', url: 'https://react.dev/learn', duration: '20 hrs' }
     ],
-    'git': [
-      { title: 'Git & GitHub Comprehensive Handbook', platform: 'git-scm.com', url: 'https://git-scm.com/book/en/v2', duration: '4 hrs' },
-      { title: 'Git & GitHub Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/git-github', duration: 'Self-paced' }
+    'node.js': [
+      { title: 'Node.js Complete Tutorial & Backend Guide', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/nodejs/', duration: '18 hrs' },
+      { title: 'Node.js Tutorial & Module Reference', platform: 'W3Schools', url: 'https://www.w3schools.com/nodejs/', duration: '10 hrs' },
+      { title: 'Node.js Official Documentation', platform: 'nodejs.org', url: 'https://nodejs.org/en/docs', duration: '15 hrs' }
+    ],
+    'nodejs': [
+      { title: 'Node.js Complete Tutorial & Backend Guide', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/nodejs/', duration: '18 hrs' },
+      { title: 'Node.js Tutorial & Module Reference', platform: 'W3Schools', url: 'https://www.w3schools.com/nodejs/', duration: '10 hrs' },
+      { title: 'Node.js Official Documentation', platform: 'nodejs.org', url: 'https://nodejs.org/en/docs', duration: '15 hrs' }
+    ],
+    'postgresql': [
+      { title: 'PostgreSQL Tutorial & Advanced Queries', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/postgresql-tutorial/', duration: '12 hrs' },
+      { title: 'PostgreSQL Tutorial & Interactive Editor', platform: 'W3Schools', url: 'https://www.w3schools.com/postgresql/', duration: '8 hrs' },
+      { title: 'PostgreSQL Official Documentation & Tutorial', platform: 'postgresql.org', url: 'https://www.postgresql.org/docs/current/tutorial.html', duration: '10 hrs' }
+    ],
+    'postgres': [
+      { title: 'PostgreSQL Tutorial & Advanced Queries', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/postgresql-tutorial/', duration: '12 hrs' },
+      { title: 'PostgreSQL Tutorial & Interactive Editor', platform: 'W3Schools', url: 'https://www.w3schools.com/postgresql/', duration: '8 hrs' }
+    ],
+    'docker': [
+      { title: 'Docker Tutorial - Containerization from Scratch', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/docker-tutorial/', duration: '10 hrs' },
+      { title: 'Docker & DevOps Containerization', platform: 'W3Schools', url: 'https://www.w3schools.com/devops/devops_docker.php', duration: '6 hrs' },
+      { title: 'Docker Official Getting Started Guide', platform: 'docker.com', url: 'https://docs.docker.com/get-started/', duration: '4 hrs' }
     ],
     'java': [
-      { title: 'Java Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/java', duration: 'Self-paced' },
+      { title: 'Java Programming Language Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/java/', duration: '25 hrs' },
+      { title: 'Java Tutorial & Code Examples', platform: 'W3Schools', url: 'https://www.w3schools.com/java/', duration: '15 hrs' },
       { title: 'Java Official Tutorials & Best Practices', platform: 'Oracle dev.java', url: 'https://dev.java/learn/', duration: '30 hrs' }
     ],
     'spring boot': [
+      { title: 'Spring Boot Tutorial & Microservices', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/spring-boot/', duration: '18 hrs' },
       { title: 'Spring Boot Official Getting Started Guides', platform: 'spring.io', url: 'https://spring.io/guides/gs/spring-boot', duration: '10 hrs' },
-      { title: 'Spring Boot Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/spring-boot', duration: 'Self-paced' }
+      { title: 'Java Enterprise & Spring Architecture', platform: 'W3Schools', url: 'https://www.w3schools.com/java/java_packages.asp', duration: '8 hrs' }
+    ],
+    'spring': [
+      { title: 'Spring Framework Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/spring-framework-tutorial/', duration: '15 hrs' },
+      { title: 'Spring Boot Official Guides', platform: 'spring.io', url: 'https://spring.io/guides/gs/spring-boot', duration: '10 hrs' }
+    ],
+    'sql': [
+      { title: 'SQL Tutorial - Comprehensive Database Guide', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/sql-tutorial/', duration: '15 hrs' },
+      { title: 'SQL Tutorial & Hands-on Exercises', platform: 'W3Schools', url: 'https://www.w3schools.com/sql/', duration: '10 hrs' }
+    ],
+    'python': [
+      { title: 'Python Programming Language Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/python-programming-language-tutorial/', duration: '20 hrs' },
+      { title: 'Python Tutorial & Interactive Quiz', platform: 'W3Schools', url: 'https://www.w3schools.com/python/', duration: '12 hrs' },
+      { title: 'Python Official Tutorial & Standard Library', platform: 'python.org', url: 'https://docs.python.org/3/tutorial/', duration: '20 hrs' }
+    ],
+    'typescript': [
+      { title: 'TypeScript Tutorial - Complete Guide', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/typescript/', duration: '10 hrs' },
+      { title: 'TypeScript Tutorial & Interactive Playground', platform: 'W3Schools', url: 'https://www.w3schools.com/typescript/', duration: '8 hrs' },
+      { title: 'TypeScript Official Handbook', platform: 'typescriptlang.org', url: 'https://www.typescriptlang.org/docs/handbook/intro.html', duration: '10 hrs' }
+    ],
+    'javascript': [
+      { title: 'JavaScript Tutorial - Beginner to Advanced', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/javascript/', duration: '20 hrs' },
+      { title: 'JavaScript Tutorial & Interactive Examples', platform: 'W3Schools', url: 'https://www.w3schools.com/js/', duration: '15 hrs' }
+    ],
+    'js': [
+      { title: 'JavaScript Tutorial - Beginner to Advanced', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/javascript/', duration: '20 hrs' },
+      { title: 'JavaScript Tutorial & Interactive Examples', platform: 'W3Schools', url: 'https://www.w3schools.com/js/', duration: '15 hrs' }
+    ],
+    'html': [
+      { title: 'HTML Tutorial - Web Development', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/html-tutorial/', duration: '10 hrs' },
+      { title: 'HTML5 Tutorial & Web Essentials', platform: 'W3Schools', url: 'https://www.w3schools.com/html/', duration: '10 hrs' }
+    ],
+    'css': [
+      { title: 'CSS Tutorial - Styling Web Pages', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/css-tutorial/', duration: '12 hrs' },
+      { title: 'CSS Tutorial & Interactive Editor', platform: 'W3Schools', url: 'https://www.w3schools.com/css/', duration: '12 hrs' }
+    ],
+    'mongodb': [
+      { title: 'MongoDB Tutorial - NoSQL Database Mastery', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/mongodb-tutorial/', duration: '12 hrs' },
+      { title: 'MongoDB Tutorial & Aggregation Pipeline', platform: 'W3Schools', url: 'https://www.w3schools.com/mongodb/', duration: '8 hrs' },
+      { title: 'MongoDB Official Developer University', platform: 'MongoDB', url: 'https://learn.mongodb.com/', duration: '10 hrs' }
     ],
     'machine learning': [
-      { title: 'Google Machine Learning Crash Course', platform: 'Google Developers', url: 'https://developers.google.com/machine-learning/crash-course', duration: '15 hrs' },
-      { title: 'AI & Data Scientist Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ai-data-scientist', duration: 'Self-paced' }
+      { title: 'Machine Learning Tutorial & Algorithms', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/machine-learning/', duration: '25 hrs' },
+      { title: 'Machine Learning with Python Tutorial', platform: 'W3Schools', url: 'https://www.w3schools.com/python/python_ml_getting_started.asp', duration: '12 hrs' },
+      { title: 'Google Machine Learning Crash Course', platform: 'Google Developers', url: 'https://developers.google.com/machine-learning/crash-course', duration: '15 hrs' }
+    ],
+    'ml': [
+      { title: 'Machine Learning Tutorial & Algorithms', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/machine-learning/', duration: '25 hrs' },
+      { title: 'Machine Learning with Python Tutorial', platform: 'W3Schools', url: 'https://www.w3schools.com/python/python_ml_getting_started.asp', duration: '12 hrs' }
     ],
     'deep learning': [
-      { title: 'Deep Learning Specialization & Architectures', platform: 'Coursera (DeepLearning.AI)', url: 'https://www.coursera.org/specializations/deep-learning', duration: '60 hrs' },
-      { title: 'PyTorch Deep Learning with PyTorch', platform: 'pytorch.org', url: 'https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html', duration: '12 hrs' }
+      { title: 'Deep Learning Tutorial & Neural Networks', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/deep-learning-tutorial/', duration: '25 hrs' },
+      { title: 'PyTorch Deep Learning 60min Blitz', platform: 'pytorch.org', url: 'https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html', duration: '12 hrs' }
     ],
     'tensorflow': [
-      { title: 'TensorFlow Core Tutorials & Keras Workflow', platform: 'tensorflow.org', url: 'https://www.tensorflow.org/tutorials', duration: '15 hrs' },
-      { title: 'AI & Machine Learning Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ai-data-scientist', duration: 'Self-paced' }
+      { title: 'TensorFlow Tutorial & Neural Network Models', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/tensorflow-tutorial/', duration: '15 hrs' },
+      { title: 'TensorFlow Core Tutorials & Keras Workflow', platform: 'tensorflow.org', url: 'https://www.tensorflow.org/tutorials', duration: '15 hrs' }
     ],
     'nlp': [
+      { title: 'Natural Language Processing (NLP) Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/natural-language-processing-nlp-tutorial/', duration: '18 hrs' },
       { title: 'Hugging Face NLP Course & Transformer Models', platform: 'huggingface.co', url: 'https://huggingface.co/learn/nlp-course', duration: '20 hrs' }
     ],
     'natural language processing': [
+      { title: 'Natural Language Processing (NLP) Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/natural-language-processing-nlp-tutorial/', duration: '18 hrs' },
       { title: 'Hugging Face NLP Course & Transformer Models', platform: 'huggingface.co', url: 'https://huggingface.co/learn/nlp-course', duration: '20 hrs' }
     ],
     'generative ai': [
-      { title: 'Generative AI for Beginners Curriculum', platform: 'Microsoft GitHub', url: 'https://github.com/microsoft/generative-ai-for-beginners', duration: '18 hrs' },
-      { title: 'Prompt Engineering & LLM Architecture Guide', platform: 'promptingguide.ai', url: 'https://www.promptingguide.ai/', duration: '6 hrs' }
+      { title: 'Generative AI Tutorial & LLM Concepts', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/generative-ai-tutorial/', duration: '15 hrs' },
+      { title: 'Generative AI for Beginners Curriculum', platform: 'Microsoft GitHub', url: 'https://github.com/microsoft/generative-ai-for-beginners', duration: '18 hrs' }
     ],
     'graphql': [
-      { title: 'GraphQL Official Tutorial & Schema Design', platform: 'graphql.org', url: 'https://graphql.org/learn/', duration: '6 hrs' },
-      { title: 'GraphQL Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/graphql', duration: 'Self-paced' }
-    ],
-    'mongodb': [
-      { title: 'MongoDB Official Developer University', platform: 'MongoDB', url: 'https://learn.mongodb.com/', duration: '10 hrs' },
-      { title: 'MongoDB Database Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/mongodb', duration: 'Self-paced' }
+      { title: 'GraphQL Tutorial & API Architecture', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/graphql-tutorial/', duration: '10 hrs' },
+      { title: 'GraphQL Official Tutorial & Schema Design', platform: 'graphql.org', url: 'https://graphql.org/learn/', duration: '6 hrs' }
     ],
     'redis': [
-      { title: 'Redis Official Documentation & Data Structures', platform: 'redis.io', url: 'https://redis.io/docs/latest/develop/get-started/', duration: '5 hrs' },
-      { title: 'Redis Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/redis', duration: 'Self-paced' }
+      { title: 'Redis Tutorial & In-Memory Data Structures', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/redis-tutorial/', duration: '8 hrs' },
+      { title: 'Redis Official Documentation & Getting Started', platform: 'redis.io', url: 'https://redis.io/docs/latest/develop/get-started/', duration: '5 hrs' }
     ],
     'linux': [
-      { title: 'Linux Command Line Guide & Shell Scripting', platform: 'LinuxCommand.org', url: 'https://linuxcommand.org/tlcl.php', duration: '8 hrs' },
-      { title: 'Linux Operating System Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/linux', duration: 'Self-paced' }
+      { title: 'Linux Tutorial - Operating System & Commands', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/linux-tutorial/', duration: '12 hrs' },
+      { title: 'Linux Command Line Guide & Shell Scripting', platform: 'LinuxCommand.org', url: 'https://linuxcommand.org/tlcl.php', duration: '8 hrs' }
     ],
     'devops': [
-      { title: 'DevOps Complete Mastery Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/devops', duration: 'Self-paced' },
-      { title: 'DevOps Hands-on Exercises & Scenarios', platform: 'GitHub', url: 'https://github.com/bregman-arie/devops-exercises', duration: '20 hrs' }
+      { title: 'DevOps Tutorial - CI/CD & Cloud Infrastructure', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/devops-tutorial/', duration: '15 hrs' },
+      { title: 'DevOps & Cloud Fundamentals', platform: 'W3Schools', url: 'https://www.w3schools.com/devops/', duration: '10 hrs' }
     ],
     'ci/cd': [
-      { title: 'GitHub Actions Official Workflows & CI/CD', platform: 'GitHub Docs', url: 'https://docs.github.com/en/actions', duration: '5 hrs' },
-      { title: 'DevOps CI/CD Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/devops', duration: 'Self-paced' }
+      { title: 'CI/CD Pipeline Tutorial & Best Practices', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/ci-cd-pipeline-in-devops/', duration: '8 hrs' },
+      { title: 'GitHub Actions Official Workflows & CI/CD', platform: 'GitHub Docs', url: 'https://docs.github.com/en/actions', duration: '5 hrs' }
     ],
     'figma': [
-      { title: 'Figma Official Design Systems & UI Learning', platform: 'Figma', url: 'https://www.figma.com/resources/learn-design/', duration: '6 hrs' },
-      { title: 'UX / UI Design Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ux-design', duration: 'Self-paced' }
+      { title: 'UI/UX Design Tutorial using Figma', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/ui-ux-design-with-figma/', duration: '10 hrs' },
+      { title: 'Figma Official Design Systems & UI Learning', platform: 'Figma', url: 'https://www.figma.com/resources/learn-design/', duration: '6 hrs' }
     ],
     'flutter': [
-      { title: 'Flutter Official Code Labs & UI Development', platform: 'flutter.dev', url: 'https://docs.flutter.dev/get-started/codelab', duration: '15 hrs' },
-      { title: 'Flutter Mobile Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/flutter', duration: 'Self-paced' }
+      { title: 'Flutter Tutorial - Cross-Platform Mobile Apps', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/flutter-tutorial/', duration: '20 hrs' },
+      { title: 'Flutter Official Code Labs & UI Development', platform: 'flutter.dev', url: 'https://docs.flutter.dev/get-started/codelab', duration: '15 hrs' }
     ],
     'android': [
-      { title: 'Android Developers Official Training Courses', platform: 'Google Android', url: 'https://developer.android.com/courses', duration: '20 hrs' },
-      { title: 'Android Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/android', duration: 'Self-paced' }
+      { title: 'Android App Development Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/android-tutorial/', duration: '25 hrs' },
+      { title: 'Android Developers Official Training Courses', platform: 'Google Android', url: 'https://developer.android.com/courses', duration: '20 hrs' }
     ],
     'ios': [
-      { title: 'Apple Swift & SwiftUI Developer Documentation', platform: 'Apple Developer', url: 'https://developer.apple.com/swift/', duration: '20 hrs' },
-      { title: 'iOS Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ios', duration: 'Self-paced' }
+      { title: 'iOS App Development Tutorial with Swift', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/ios-app-development-with-swift-tutorial/', duration: '25 hrs' },
+      { title: 'Apple Swift & SwiftUI Developer Documentation', platform: 'Apple Developer', url: 'https://developer.apple.com/swift/', duration: '20 hrs' }
     ],
     'system design': [
-      { title: 'System Design Complete Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/system-design', duration: 'Self-paced' },
+      { title: 'System Design Tutorial & Architecture Patterns', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/system-design-tutorial/', duration: '20 hrs' },
       { title: 'System Design Primer (Architecture & Tradeoffs)', platform: 'GitHub', url: 'https://github.com/donnemartin/system-design-primer', duration: 'Self-paced' }
     ],
     'dsa': [
-      { title: 'Data Structures & Algorithms Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/datastructures-and-algorithms', duration: 'Self-paced' },
-      { title: 'LeetCode Problem Solving Platform', platform: 'LeetCode', url: 'https://leetcode.com/problemset/', duration: 'Self-paced' }
+      { title: 'Data Structures & Algorithms Complete Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/data-structures/', duration: '30 hrs' },
+      { title: 'DSA Tutorial & Algorithm Practice', platform: 'W3Schools', url: 'https://www.w3schools.com/dsa/', duration: '20 hrs' }
+    ],
+    'data structures': [
+      { title: 'Data Structures & Algorithms Complete Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/data-structures/', duration: '30 hrs' },
+      { title: 'DSA Tutorial & Algorithm Practice', platform: 'W3Schools', url: 'https://www.w3schools.com/dsa/', duration: '20 hrs' }
+    ],
+    'algorithms': [
+      { title: 'Algorithms Analysis & Design Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/fundamentals-of-algorithms/', duration: '25 hrs' },
+      { title: 'DSA Tutorial & Algorithm Practice', platform: 'W3Schools', url: 'https://www.w3schools.com/dsa/', duration: '20 hrs' }
     ],
     'rest api': [
-      { title: 'RESTful API Architecture & Design Principles', platform: 'restfulapi.net', url: 'https://restfulapi.net/', duration: '4 hrs' },
-      { title: 'Backend API Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/backend', duration: 'Self-paced' }
+      { title: 'REST API Tutorial & Principles', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/rest-api-tutorial/', duration: '6 hrs' },
+      { title: 'RESTful API Architecture & Design Principles', platform: 'restfulapi.net', url: 'https://restfulapi.net/', duration: '4 hrs' }
     ],
     'cybersecurity': [
-      { title: 'Cyber Security Complete Career Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/cyber-security', duration: 'Self-paced' },
-      { title: 'TryHackMe Practical Hands-On Labs', platform: 'TryHackMe', url: 'https://tryhackme.com/', duration: '30 hrs' }
+      { title: 'Cyber Security Tutorial & Ethical Hacking Basics', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/cyber-security-tutorial/', duration: '20 hrs' },
+      { title: 'Cyber Security Essentials & Concepts', platform: 'W3Schools', url: 'https://www.w3schools.com/cybersecurity/', duration: '12 hrs' }
     ],
     'blockchain': [
-      { title: 'Blockchain Specialization & Smart Contracts', platform: 'Coursera', url: 'https://www.coursera.org/learn/blockchain-basics', duration: '10 hrs' },
-      { title: 'Blockchain Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/blockchain', duration: 'Self-paced' }
+      { title: 'Blockchain Tutorial & Smart Contracts', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/blockchain-tutorial/', duration: '15 hrs' },
+      { title: 'Blockchain Specialization & Smart Contracts', platform: 'Coursera', url: 'https://www.coursera.org/learn/blockchain-basics', duration: '10 hrs' }
     ],
     'excel': [
+      { title: 'Microsoft Excel Tutorial & Formulas', platform: 'W3Schools', url: 'https://www.w3schools.com/excel/', duration: '10 hrs' },
       { title: 'Microsoft Excel Training Center', platform: 'Microsoft Support', url: 'https://support.microsoft.com/en-us/excel', duration: '5 hrs' }
     ],
     'data analysis': [
-      { title: 'Data Analysis with Python Certification', platform: 'freeCodeCamp', url: 'https://www.freecodecamp.org/learn/data-analysis-with-python/', duration: '25 hrs' },
-      { title: 'AI & Data Scientist Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ai-data-scientist', duration: 'Self-paced' }
-    ],
-    'tableau': [
-      { title: 'Tableau Public Visual Analytics Training', platform: 'Tableau', url: 'https://public.tableau.com/en-us/s/resources', duration: '8 hrs' }
+      { title: 'Data Analysis with Python Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/data-analysis-with-python/', duration: '15 hrs' },
+      { title: 'Data Science & Analysis with Python', platform: 'W3Schools', url: 'https://www.w3schools.com/datascience/', duration: '15 hrs' }
     ],
     'pandas': [
-      { title: 'Pandas Official User Guide & DataFrames', platform: 'pandas.pydata.org', url: 'https://pandas.pydata.org/docs/user_guide/index.html', duration: '8 hrs' }
+      { title: 'Pandas Tutorial & DataFrame Operations', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/pandas-tutorial/', duration: '12 hrs' },
+      { title: 'Pandas Tutorial & Hands-on Examples', platform: 'W3Schools', url: 'https://www.w3schools.com/python/pandas/default.asp', duration: '8 hrs' }
     ],
     'numpy': [
-      { title: 'NumPy Absolute Basics for Beginners', platform: 'numpy.org', url: 'https://numpy.org/doc/stable/user/absolute_beginners.html', duration: '6 hrs' }
+      { title: 'NumPy Tutorial & Multidimensional Arrays', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/numpy-tutorial/', duration: '10 hrs' },
+      { title: 'NumPy Tutorial & Practice Exercises', platform: 'W3Schools', url: 'https://www.w3schools.com/python/numpy/default.asp', duration: '6 hrs' }
     ],
     'scikit-learn': [
+      { title: 'Scikit-Learn Machine Learning Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/learning-model-building-scikit-learn-python-machine-learning-library/', duration: '12 hrs' },
       { title: 'Scikit-Learn Machine Learning Tutorials', platform: 'scikit-learn.org', url: 'https://scikit-learn.org/stable/tutorial/index.html', duration: '12 hrs' }
     ],
     'sklearn': [
+      { title: 'Scikit-Learn Machine Learning Tutorial', platform: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/learning-model-building-scikit-learn-python-machine-learning-library/', duration: '12 hrs' },
       { title: 'Scikit-Learn Machine Learning Tutorials', platform: 'scikit-learn.org', url: 'https://scikit-learn.org/stable/tutorial/index.html', duration: '12 hrs' }
     ]
   };
@@ -9850,11 +9916,11 @@ async function startServer() {
       }
     }
 
-    // Smart fallback routing with dedicated developer documentation platforms
+    // Smart fallback routing with dedicated developer documentation platforms (GeeksforGeeks / W3Schools search)
     const slug = encodeURIComponent(skillName.trim());
     return [
-      { title: `${skillName} Developer Handbook & Documentation`, platform: 'DevDocs.io', url: `https://devdocs.io/#q=${slug}`, duration: 'Self-paced' },
-      { title: `${skillName} Tutorials & Placement Examples`, platform: 'GeeksforGeeks', url: `https://www.geeksforgeeks.org/search/${slug}/`, duration: '10 hrs' }
+      { title: `${skillName} Tutorials & Problem Solutions`, platform: 'GeeksforGeeks', url: `https://www.geeksforgeeks.org/search/${slug}/`, duration: '10 hrs' },
+      { title: `${skillName} Documentation & Syntax Reference`, platform: 'W3Schools', url: `https://www.w3schools.com/howto/howto_js_search_menu.asp`, duration: 'Self-paced' }
     ];
   }
 

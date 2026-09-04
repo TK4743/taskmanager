@@ -73,6 +73,60 @@ interface SkillGapData {
   studentSkills: { name: string; level: number; source?: string }[];
 }
 
+const TRUSTED_SKILL_URLS: Record<string, { url: string; platform: string }> = {
+  'git': { url: 'https://www.geeksforgeeks.org/git-tutorial/', platform: 'GeeksforGeeks' },
+  'cloud architecture': { url: 'https://www.geeksforgeeks.org/cloud-computing-architecture/', platform: 'GeeksforGeeks' },
+  'cloud': { url: 'https://www.geeksforgeeks.org/cloud-computing-architecture/', platform: 'GeeksforGeeks' },
+  'aws': { url: 'https://www.w3schools.com/aws/', platform: 'W3Schools' },
+  'kubernetes': { url: 'https://www.geeksforgeeks.org/kubernetes/', platform: 'GeeksforGeeks' },
+  'react': { url: 'https://www.geeksforgeeks.org/reactjs-tutorials/', platform: 'GeeksforGeeks' },
+  'node.js': { url: 'https://www.geeksforgeeks.org/nodejs/', platform: 'GeeksforGeeks' },
+  'nodejs': { url: 'https://www.geeksforgeeks.org/nodejs/', platform: 'GeeksforGeeks' },
+  'postgresql': { url: 'https://www.geeksforgeeks.org/postgresql-tutorial/', platform: 'GeeksforGeeks' },
+  'postgres': { url: 'https://www.geeksforgeeks.org/postgresql-tutorial/', platform: 'GeeksforGeeks' },
+  'docker': { url: 'https://www.geeksforgeeks.org/docker-tutorial/', platform: 'GeeksforGeeks' },
+  'java': { url: 'https://www.geeksforgeeks.org/java/', platform: 'GeeksforGeeks' },
+  'spring boot': { url: 'https://www.geeksforgeeks.org/spring-boot/', platform: 'GeeksforGeeks' },
+  'spring': { url: 'https://www.geeksforgeeks.org/spring-framework-tutorial/', platform: 'GeeksforGeeks' },
+  'sql': { url: 'https://www.w3schools.com/sql/', platform: 'W3Schools' },
+  'pytorch': { url: 'https://www.geeksforgeeks.org/pytorch-tutorial/', platform: 'GeeksforGeeks' },
+  'computer vision': { url: 'https://www.geeksforgeeks.org/opencv-python-tutorial/', platform: 'GeeksforGeeks' },
+  'cv': { url: 'https://www.geeksforgeeks.org/opencv-python-tutorial/', platform: 'GeeksforGeeks' },
+  'c++': { url: 'https://www.geeksforgeeks.org/c-plus-plus/', platform: 'GeeksforGeeks' },
+  'cpp': { url: 'https://www.geeksforgeeks.org/c-plus-plus/', platform: 'GeeksforGeeks' },
+  'c': { url: 'https://www.w3schools.com/c/', platform: 'W3Schools' },
+  'python': { url: 'https://www.w3schools.com/python/', platform: 'W3Schools' },
+  'typescript': { url: 'https://www.w3schools.com/typescript/', platform: 'W3Schools' },
+  'javascript': { url: 'https://www.w3schools.com/js/', platform: 'W3Schools' },
+  'mongodb': { url: 'https://www.w3schools.com/mongodb/', platform: 'W3Schools' },
+  'html': { url: 'https://www.w3schools.com/html/', platform: 'W3Schools' },
+  'css': { url: 'https://www.w3schools.com/css/', platform: 'W3Schools' },
+  'machine learning': { url: 'https://www.geeksforgeeks.org/machine-learning/', platform: 'GeeksforGeeks' },
+  'deep learning': { url: 'https://www.geeksforgeeks.org/deep-learning-tutorial/', platform: 'GeeksforGeeks' },
+  'dsa': { url: 'https://www.geeksforgeeks.org/data-structures/', platform: 'GeeksforGeeks' },
+  'data structures': { url: 'https://www.geeksforgeeks.org/data-structures/', platform: 'GeeksforGeeks' },
+  'cybersecurity': { url: 'https://www.geeksforgeeks.org/cyber-security-tutorial/', platform: 'GeeksforGeeks' },
+  'blockchain': { url: 'https://www.geeksforgeeks.org/blockchain-tutorial/', platform: 'GeeksforGeeks' },
+  'figma': { url: 'https://www.geeksforgeeks.org/ui-ux-design-with-figma/', platform: 'GeeksforGeeks' },
+  'flutter': { url: 'https://www.geeksforgeeks.org/flutter-tutorial/', platform: 'GeeksforGeeks' },
+  'android': { url: 'https://www.geeksforgeeks.org/android-tutorial/', platform: 'GeeksforGeeks' },
+  'excel': { url: 'https://www.w3schools.com/excel/', platform: 'W3Schools' },
+  'pandas': { url: 'https://www.geeksforgeeks.org/pandas-tutorial/', platform: 'GeeksforGeeks' },
+  'numpy': { url: 'https://www.geeksforgeeks.org/numpy-tutorial/', platform: 'GeeksforGeeks' }
+};
+
+function getTrustedSkillTutorial(skillName: string): { url: string; platform: string } {
+  const key = (skillName || '').trim().toLowerCase();
+  if (TRUSTED_SKILL_URLS[key]) return TRUSTED_SKILL_URLS[key];
+  for (const [k, v] of Object.entries(TRUSTED_SKILL_URLS)) {
+    if (key.includes(k) || k.includes(key)) return v;
+  }
+  return {
+    url: `https://www.geeksforgeeks.org/search/${encodeURIComponent(skillName.trim())}/`,
+    platform: 'GeeksforGeeks'
+  };
+}
+
 export default function SkillGapAnalyzerView({ token, user }: { token: string; user: any }) {
   const [postings, setPostings] = useState<Posting[]>([]);
   const [selectedPostingId, setSelectedPostingId] = useState<string>('');
@@ -630,24 +684,34 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
                 High-Demand Industry Skills
               </h3>
             </div>
-            <span className="text-[10px] font-bold text-zinc-400">Aggregated from active corporate postings</span>
+            <span className="text-[10px] font-bold text-zinc-400">Click any skill for verified GeeksforGeeks & W3Schools tutorials</span>
           </div>
 
           {skillDemand.length === 0 ? (
             <p className="text-xs text-zinc-400 py-2">Loading demand benchmarks...</p>
           ) : (
-            <div className="flex flex-wrap gap-2 pt-1">
-              {skillDemand.map((sd, i) => (
-                <div
-                  key={i}
-                  className="bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-xl text-xs font-bold text-zinc-800 flex items-center gap-2"
-                >
-                  <span>{sd.skill}</span>
-                  <span className="bg-white text-zinc-900 text-[10px] font-black px-1.5 py-0.2 rounded-md border border-zinc-200">
-                    {sd.count} Postings
-                  </span>
-                </div>
-              ))}
+            <div className="flex flex-wrap gap-2.5 pt-1">
+              {skillDemand.map((sd, i) => {
+                const tutorial = getTrustedSkillTutorial(sd.skill);
+                return (
+                  <a
+                    key={i}
+                    href={tutorial.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={`Open ${sd.skill} tutorial on ${tutorial.platform}`}
+                    className="bg-zinc-50 hover:bg-zinc-100/90 border border-zinc-200 hover:border-zinc-400 px-3 py-1.5 rounded-xl text-xs font-bold text-zinc-800 flex items-center gap-2 transition-all group shadow-2xs cursor-pointer"
+                  >
+                    <span className="group-hover:text-black flex items-center gap-1">
+                      {sd.skill}
+                      <ExternalLink size={11} className="opacity-0 group-hover:opacity-70 transition-opacity" />
+                    </span>
+                    <span className="bg-white text-zinc-900 text-[10px] font-black px-1.5 py-0.2 rounded-md border border-zinc-200">
+                      {sd.count} Postings
+                    </span>
+                  </a>
+                );
+              })}
             </div>
           )}
         </div>
