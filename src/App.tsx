@@ -3801,9 +3801,6 @@ export default function App() {
   const [viewingStudentProfileId, setViewingStudentProfileId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [isServerAwake, setIsServerAwake] = useState(false);
-  const [isWakingServer, setIsWakingServer] = useState(true);
-  const [wakeAttempt, setWakeAttempt] = useState(0);
 
   // Toast State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -4733,40 +4730,6 @@ export default function App() {
     }
   }, [verificationTaskFilter, view, token, user?.role, user?.is_coordinator]);
 
-  const runHealthCheckWithRetries = async () => {
-    setIsWakingServer(true);
-    setHasError(false);
-
-    const delays = [0, 2000, 4000, 8000, 16000, 32000, 30000]; // 7 attempts, up to ~92 seconds total wait
-    for (let i = 0; i < delays.length; i++) {
-      setWakeAttempt(i + 1);
-      if (delays[i] > 0) {
-        await new Promise(resolve => setTimeout(resolve, delays[i]));
-      }
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-        const res = await fetch(`${API_URL}/health`, {
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data.status === 'ok') {
-            setIsServerAwake(true);
-            setIsWakingServer(false);
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn(`Health check attempt ${i + 1} failed, retrying...`, err);
-      }
-    }
-    setIsWakingServer(false);
-    setHasError(true);
-  };
 
   // ── Coding Targets & Progress Operations ──────────────────────────────
   const fetchMyLeetcodeProgress = async () => {
@@ -4940,9 +4903,10 @@ export default function App() {
 
 
   useEffect(() => {
-    runHealthCheckWithRetries();
     if (token || localStorage.getItem('token')) {
       fetchInitialData(token || localStorage.getItem('token') || undefined);
+    } else {
+      setIsLoading(false);
     }
   }, [token]);
 
@@ -8302,25 +8266,6 @@ export default function App() {
     );
   };
 
-  if (isWakingServer) {
-    return (
-      <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center p-4">
-        <Card className="p-8 text-center max-w-md w-full flex flex-col items-center gap-4">
-          <div className="w-16 h-16 bg-zinc-50 text-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-2 border border-zinc-200">
-            <Loader2 className="w-8 h-8 text-black animate-spin" />
-          </div>
-          <h2 className="text-2xl font-bold text-zinc-900">Connecting to Server</h2>
-          <p className="text-zinc-500 text-sm">
-            Waking up the server — this can take up to a minute on first load...
-          </p>
-          <div className="px-3 py-1.5 bg-zinc-100 rounded-full text-xs font-semibold text-zinc-600">
-            Attempt {wakeAttempt} of 6
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
   if (hasError) {
     return (
       <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center p-4">
@@ -8335,9 +8280,7 @@ export default function App() {
           <Button
             className="w-full flex items-center justify-center gap-2"
             onClick={() => {
-              setIsLoading(true);
-              setHasError(false);
-              runHealthCheckWithRetries();
+              window.location.reload();
             }}
           >
             Retry Connection
