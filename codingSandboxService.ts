@@ -107,7 +107,10 @@ if __name__ == '__main__':
 
 const SANITIZED_ENV = {
   PATH: process.env.PATH || '',
-  SYSTEMROOT: process.env.SYSTEMROOT || 'C:\\Windows',
+  PATHEXT: process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD',
+  SYSTEMROOT: process.env.SYSTEMROOT || process.env.windir || 'C:\\Windows',
+  SystemDrive: process.env.SystemDrive || 'C:',
+  COMSPEC: process.env.COMSPEC || 'C:\\Windows\\system32\\cmd.exe',
   TEMP: os.tmpdir(),
   TMP: os.tmpdir(),
 };

@@ -140,11 +140,13 @@ export async function sendUnifiedNotification(options: SendNotificationOptions):
             </body>
             </html>
           `;
-          dispatchEmailThroughPool({
-            to: recipient.email,
-            subject: emailSubject,
-            html: emailHtml
-          }).catch((e: any) => console.warn('[Notification] Email dispatch warning:', e.message));
+          dispatchEmailThroughPool(
+            recipient.email,
+            recipient.full_name || 'User',
+            emailSubject,
+            emailHtml,
+            'VSBEC IT Department'
+          ).catch((e: any) => console.warn('[Notification] Email dispatch warning:', e.message));
         }
       }
     } catch (err: any) {
