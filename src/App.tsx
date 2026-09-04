@@ -10111,56 +10111,48 @@ export default function App() {
             <SidebarItem
               icon={<LayoutDashboard size={20} className="text-blue-500" />}
               label="Dashboard"
-              badge="Overview"
               active={view === 'industry-dashboard' || view === 'dashboard' || view === 'industry-portal'}
               onClick={() => { setView('industry-dashboard'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<UserCheck size={20} className="text-indigo-500" />}
               label="Applications"
-              badge="Hiring"
               active={view === 'industry-applications'}
               onClick={() => { setView('industry-applications'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<Briefcase size={20} className="text-amber-500" />}
               label="Postings"
-              badge="Jobs"
               active={view === 'industry-postings'}
               onClick={() => { setView('industry-postings'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<Terminal size={20} className="text-emerald-500" />}
               label="Coding Assessments"
-              badge="Code"
               active={view === 'industry-coding-assessments'}
               onClick={() => { setView('industry-coding-assessments'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<Users size={20} className="text-sky-500" />}
               label="Candidate Pool"
-              badge="Talent"
               active={view === 'users'}
               onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<GraduationCap size={20} className="text-purple-500" />}
               label="Faculty Hub"
-              badge="Collab"
               active={view === 'faculty-industry-hub'}
               onClick={() => { setView('faculty-industry-hub'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<TrendingUp size={20} className="text-rose-500" />}
               label="HR Reports"
-              badge="Export"
               active={view === 'industry-reports'}
               onClick={() => { setView('industry-reports'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
               icon={<Building2 size={20} className="text-teal-500" />}
               label="Company Profile"
-              badge="Profile"
               active={view === 'industry-profile'}
               onClick={() => { setView('industry-profile'); setIsMobileSidebarOpen(false); }}
             />
@@ -10204,7 +10196,6 @@ export default function App() {
             <SidebarItem
               icon={<Sparkles size={20} className="text-purple-500" />}
               label="Skill Assessment"
-              badge="SIH Demo"
               active={view === 'skill-assessment'}
               onClick={() => { setView('skill-assessment'); setIsMobileSidebarOpen(false); }}
             />
@@ -10212,7 +10203,6 @@ export default function App() {
             <SidebarItem
               icon={<Target size={20} className="text-cyan-500" />}
               label="Placement Rating"
-              badge="SIH Demo"
               active={view === 'placement-readiness'}
               onClick={() => { setView('placement-readiness'); setIsMobileSidebarOpen(false); }}
             />
@@ -10220,7 +10210,6 @@ export default function App() {
             <SidebarItem
               icon={<Radio size={20} className="text-emerald-500 animate-pulse" />}
               label="Live Teaching Hub"
-              badge="SIH Demo"
               active={view === 'live-teaching-hub'}
               onClick={() => { setView('live-teaching-hub'); setIsMobileSidebarOpen(false); }}
             />
@@ -10231,21 +10220,18 @@ export default function App() {
                 <SidebarItem
                   icon={<Briefcase size={20} className="text-teal-400" />}
                   label="Opportunities"
-                  badge="Industry"
                   active={view === 'opportunities'}
                   onClick={() => { setView('opportunities'); setIsMobileSidebarOpen(false); }}
                 />
                 <SidebarItem
                   icon={<Code size={20} className="text-indigo-500" />}
                   label="Coding Tests"
-                  badge="Industry"
                   active={view === 'student-coding-assessments'}
                   onClick={() => { setView('student-coding-assessments'); setIsMobileSidebarOpen(false); }}
                 />
                 <SidebarItem
                   icon={<Zap size={20} className="text-amber-400" />}
                   label="Skill Gap AI"
-                  badge="AI"
                   active={view === 'skill-gap-analyzer'}
                   onClick={() => { setView('skill-gap-analyzer'); setIsMobileSidebarOpen(false); }}
                 />
@@ -10256,7 +10242,6 @@ export default function App() {
               <SidebarItem
                 icon={<GraduationCap size={20} className="text-blue-400" />}
                 label="Faculty Hub"
-                badge="Collab"
                 active={view === 'faculty-industry-hub'}
                 onClick={() => { setView('faculty-industry-hub'); setIsMobileSidebarOpen(false); }}
               />
@@ -10266,7 +10251,6 @@ export default function App() {
               <SidebarItem
                 icon={<BarChart3 size={20} className="text-pink-400" />}
                 label="Skill Heatmap"
-                badge="SIH Analytics"
                 active={view === 'institutional-skill-heatmap'}
                 onClick={() => { setView('institutional-skill-heatmap'); setIsMobileSidebarOpen(false); }}
               />
@@ -15902,8 +15886,8 @@ function SidebarItem({ icon, label, active, onClick, badge }: { icon: React.Reac
       <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis min-w-0">{label}</span>
       {badge && (
         <span className={cn(
-          "ml-1.5 text-[8px] font-black px-1.5 py-0.5 rounded-md shrink-0 uppercase tracking-tighter",
-          active ? "bg-amber-400 text-black shadow-xs" : "bg-amber-100 text-amber-900 border border-amber-300"
+          "ml-1.5 text-[9px] font-bold px-2 py-0.5 rounded-md shrink-0 uppercase tracking-tight",
+          active ? "bg-white/20 text-white" : "bg-rose-50 text-rose-700 border border-rose-200"
         )}>
           {badge}
         </span>
