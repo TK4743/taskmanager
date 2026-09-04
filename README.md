@@ -34,45 +34,44 @@
 </div>
 
 ## 📑 Table of Contents
-- [Executive Overview & Institutional Vision](#-executive-overview--institutional-vision)
-- [System Architecture & Infrastructure Topology](#-system-architecture--infrastructure-topology)
-- [Deep Multi-Role Hierarchy & Governance Matrix](#-deep-multi-role-hierarchy--governance-matrix)
-- [Core Functional Modules & Workflows](#-core-functional-modules--workflows)
-  - [1. Academic Task Lifecycle & Multi-Tier Verification Pipeline](#1-academic-task-lifecycle--multi-tier-verification-pipeline)
-  - [2. Live Coding Competency & Daily Daemon Momentum Sync](#2-live-coding-competency--daily-daemon-momentum-sync)
-  - [3. Corporate Industry Portal & Monaco Sandbox Coding Engine](#3-corporate-industry-portal--monaco-sandbox-coding-engine)
-  - [4. Placement Readiness Engine 2.0 & AI Skill Gap Matching](#4-placement-readiness-engine-20--ai-skill-gap-matching)
-  - [5. Proctored Skill Assessments & Student Marks Transcripts](#5-proctored-skill-assessments--student-marks-transcripts)
-  - [6. Omnichannel Notification & Multi-Node Email Dispatch Pool](#6-omnichannel-notification--multi-node-email-dispatch-pool)
-  - [7. Corporate OpenXML Excel, PDF & CSV Reporting Suite](#7-corporate-openxml-excel-pdf--csv-reporting-suite)
-  - [8. Live Teaching Hub & Faculty-Industry Collaboration](#8-live-teaching-hub--faculty-industry-collaboration)
-- [Compiler Sandbox & Security Guard Architecture](#-compiler-sandbox--security-guard-architecture)
-- [High-Performance In-Memory RAM Directory Cache](#-high-performance-in-memory-ram-directory-cache)
-- [Database Schema Architecture (35 Relational Tables)](#-database-schema-architecture-35-relational-tables)
-- [Environment Configuration Reference](#-environment-configuration-reference)
-- [Installation & Local Deployment Guide](#-installation--local-deployment-guide)
-- [Production Deployment (Vercel & Render)](#-production-deployment-vercel--render)
-- [Verification & Automated Test Suite](#-verification--automated-test-suite)
-- [API Endpoints Reference](#-api-endpoints-reference)
-- [License & Intellectual Property](#-license--intellectual-property)
+- [1. Executive Overview & Institutional Vision](#1-executive-overview--institutional-vision)
+- [2. System Architecture & Infrastructure Topology](#2-system-architecture--infrastructure-topology)
+- [3. Multi-Role Hierarchy & Governance Matrix](#3-multi-role-hierarchy--governance-matrix)
+- [4. End-to-End System Workflows & Deep Audit](#4-end-to-end-system-workflows--deep-audit)
+  - [Workflow A: Academic Task Lifecycle & 3-Tier Verification](#workflow-a-academic-task-lifecycle--3-tier-verification)
+  - [Workflow B: Live Coding Velocity & LeetCode/GitHub Daemon Sync](#workflow-b-live-coding-velocity--leetcodegithub-daemon-sync)
+  - [Workflow C: Corporate Industry Portal & Sandboxed Coding Qualifier](#workflow-c-corporate-industry-portal--sandboxed-coding-qualifier)
+  - [Workflow D: Proctored Aptitude Assessments & Automated Email Scorecards](#workflow-d-proctored-aptitude-assessments--automated-email-scorecards)
+  - [Workflow E: Placement Readiness Index 2.0 & Algorithmic Tier Routing](#workflow-e-placement-readiness-index-20--algorithmic-tier-routing)
+  - [Workflow F: Multi-Node Brevo Email Load Balancer & Instant Failover](#workflow-f-multi-node-brevo-email-load-balancer--instant-failover)
+- [5. Anti-Cheat Security & Exam Lockdown Subsystem](#5-anti-cheat-security--exam-lockdown-subsystem)
+- [6. Multi-Language Compiler Sandbox Architecture](#6-multi-language-compiler-sandbox-architecture)
+- [7. In-Memory RAM Directory Cache & Performance Optimization](#7-in-memory-ram-directory-cache--performance-optimization)
+- [8. Database Schema Architecture (35 Relational Tables)](#8-database-schema-architecture-35-relational-tables)
+- [9. Automated Scorecard & Email Notification Templates](#9-automated-scorecard--email-notification-templates)
+- [10. Environment Variables Reference](#10-environment-variables-reference)
+- [11. Installation & Local Deployment Guide](#11-installation--local-deployment-guide)
+- [12. Production Deployment Guide (Vercel & Render)](#12-production-deployment-guide-vercel--render)
+- [13. System Verification & Automated Test Suite](#13-system-verification--automated-test-suite)
+- [14. API Endpoints Reference](#14-api-endpoints-reference)
+- [15. License & Intellectual Property](#15-license--intellectual-property)
 
 ---
 
-## 📌 Executive Overview & Institutional Vision
+## 1. Executive Overview & Institutional Vision
 
-The **Academia–Industry Integrated Platform & IT Task Manager** is an enterprise-grade institutional governance, technical competency tracking, and corporate recruitment ecosystem engineered specifically for the Department of Information Technology at VSB Engineering College.
+The **Academia–Industry Integrated Platform & IT Task Manager** is an enterprise-grade institutional governance, technical competency tracking, and corporate recruitment ecosystem engineered specifically for the Department of Information Technology at VSB Engineering College as part of the **Smart India Hackathon (SIH26044)** initiative.
 
-Designed to bridge traditional academic course management with competitive tier-1 industry standards, the system resolves key operational and developmental challenges:
-
-1. **Academic Task Oversight & Peer Review Governance**: Eliminates lost assignments and delayed grading through a 3-tier review pipeline (**Student Coordinator Peer Review** $\rightarrow$ **Class Advisor Validation** $\rightarrow$ **HOD Oversight**), accompanied by image proof verification and dispute audit logs.
-2. **Coding Velocity & Habit Tracking**: Automates continuous background synchronization with **LeetCode GraphQL** and **GitHub REST APIs**, tracking daily problem-solving velocity, weekly target adherence, and Git commit momentum across all enrolled student cohorts.
-3. **Corporate Recruitment & Multi-Compiler Assessments**: Empowers corporate talent acquisition teams with a custom **Monaco IDE assessment suite** featuring multi-language sandboxed execution (**C, C++, Java 17, Python 3**), automated hidden test case validation, anti-cheat webcam PIP proctoring, AI skill-gap matching, and instant OpenXML Excel/PDF scorecard exports.
-4. **Placement Readiness 2.0**: Employs a 4-pillar algorithmic evaluation engine (Aptitude 35%, LeetCode 25%, Projects 20%, Task Discipline 20%) mapping candidates against Tier-1 Product, Tier-2 IT Services, and Tier-3 Baseline company criteria.
-5. **High Reliability & Zero-Downtime Infrastructure**: Features in-memory directory caching (<0.01ms lookups), multi-node Brevo email failover pools with real-time credit telemetry, automated database snapshots, and native PWA push notifications.
+### Core Institutional Pillars:
+1. **Academic Task Oversight & Peer Review Governance**: Replaces unstructured paper/form submissions with a rigorous 3-tier review pipeline (**Student Coordinator Peer Review** $\rightarrow$ **Class Advisor Validation** $\rightarrow$ **HOD Oversight**), backed by Cloudinary image proof compression and audit logging.
+2. **Algorithmic Momentum & Coding Habit Tracking**: Continuous synchronization with **LeetCode GraphQL** and **GitHub REST APIs** tracks daily problem-solving velocity, weekly target compliance, and commit streaks across all students.
+3. **Corporate Recruitment & Multi-Compiler Assessments**: Empowers corporate talent acquisition partners with a **Monaco IDE assessment suite** featuring multi-language sandboxed execution (**C, C++, Java 17, Python 3**), automated hidden test case validation, anti-cheat webcam PIP proctoring, AI skill-gap matching, and instant OpenXML Excel/PDF scorecard exports.
+4. **Placement Readiness Index 2.0**: A 4-pillar algorithmic evaluation model (Aptitude 35%, LeetCode 25%, Projects 20%, Task Discipline 20%) mapping candidates against Tier-1 Product, Tier-2 IT Services, and Tier-3 Baseline company criteria.
+5. **High Reliability & Zero-Downtime Infrastructure**: In-memory directory caching (<0.01ms lookups), multi-node Brevo email failover pools with real-time credit telemetry, automated database snapshots, and native PWA push notifications.
 
 ---
 
-## 🏛️ System Architecture & Infrastructure Topology
+## 2. System Architecture & Infrastructure Topology
 
 ```mermaid
 flowchart TD
@@ -113,7 +112,7 @@ flowchart TD
 
 ---
 
-## 👥 Deep Multi-Role Hierarchy & Governance Matrix
+## 3. Multi-Role Hierarchy & Governance Matrix
 
 The platform implements a strict, multi-tiered Role-Based Access Control (RBAC) architecture:
 
@@ -128,11 +127,9 @@ The platform implements a strict, multi-tiered Role-Based Access Control (RBAC) 
 
 ---
 
-## 🔄 Core Functional Modules & Workflows
+## 4. End-to-End System Workflows & Deep Audit
 
-### 1. Academic Task Lifecycle & Multi-Tier Verification Pipeline
-
-The platform guarantees submission accountability by requiring multi-stage verification before a task is marked verified.
+### Workflow A: Academic Task Lifecycle & 3-Tier Verification
 
 ```mermaid
 sequenceDiagram
@@ -161,7 +158,7 @@ sequenceDiagram
     Server->>Alerts: Send Confirmation Notification to Student
 ```
 
-* **Key Features**:
+* **Key Governance Mechanisms**:
   - Image proof attachment with auto-compression via Cloudinary CDN.
   - Granular rejection notes with 1-click proof resubmission.
   - Team tasks support (2–5 members) with group submission and team leader override.
@@ -170,9 +167,7 @@ sequenceDiagram
 
 ---
 
-### 2. Live Coding Competency & Daily Daemon Momentum Sync
-
-Continuous algorithmic tracking bridges classroom learning and real-world coding practice.
+### Workflow B: Live Coding Velocity & LeetCode/GitHub Daemon Sync
 
 ```mermaid
 sequenceDiagram
@@ -206,148 +201,158 @@ sequenceDiagram
 
 ---
 
-### 3. Corporate Industry Portal & Monaco Sandbox Coding Engine
-
-Corporate recruiters can evaluate technical talent using a dedicated assessment platform:
-
-1. **10-Question Pool & 2-Question Random Assignment**: Recruiters configure a 10-question pool with sample and hidden test cases. When an assessment begins, each candidate receives 2 randomized questions.
-2. **Multi-Language Sandboxed Execution**: Monaco IDE provides syntax highlighting, auto-completion, and error diagnostics for **C, C++, Java 17, and Python 3**.
-3. **Anti-Cheat Webcam PIP Proctoring**: Fullscreen lock enforcement, tab-switch violation counters, and live webcam snapshot capturing.
-4. **Automated Hidden Test Evaluation**: Evaluates execution time, memory bounds, and stdout output normalization.
+### Workflow C: Corporate Industry Portal & Sandboxed Coding Qualifier
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Candidate as Student / Candidate
+    actor Candidate as Student / Candidate (Laptop/Desktop)
     actor HR as Corporate HR Recruiter
     participant Server as Backend API Gateway
     participant Sandbox as Compiler Sandbox Service
     participant DB as PostgreSQL Database
+    participant Email as Multi-Node Brevo Email Pool
 
     HR->>Server: POST /api/industry/coding-assessments (Create 10-Question Pool)
-    Server->>DB: Store Assessment & Test Cases
+    Server->>DB: Store Assessment & Hidden Test Cases
     
     Candidate->>Server: POST /api/student/coding-assessments/:id/start
-    Server->>DB: Randomly select 2 questions & assign to Candidate
-    Server->>Candidate: Return Attempt Token, Questions & Starter Code
+    Note over Candidate,Server: Verified Desktop/Laptop & Camera Monitored
+    Server->>DB: Randomly select 2 questions from 10-question pool
+    Server->>Candidate: Return Attempt Token, Questions & Starter Templates
     
     loop During Assessment (Testing Code)
-        Candidate->>Server: POST /api/sandbox/run (Execute Sample Test Cases)
-        Server->>Sandbox: Execute Code in Isolated Temporary Runtime
-        Sandbox->>Server: Return stdout, execution time, memory, exit code
-        Server->>Candidate: Display Sample Test Case Results
+        Candidate->>Server: POST /api/student/coding-assessments/run
+        Server->>Sandbox: Execute in isolated runtime (C, C++, Java, Python)
+        Sandbox->>Server: Return stdout, execution time, memory bounds
+        Server->>Candidate: Render Sample Test Case Results
     end
     
-    Candidate->>Server: POST /api/student/coding-assessments/:id/submit
-    Server->>Sandbox: Execute All Hidden Test Cases Across Languages
-    Server->>DB: Store Final Score, Pass/Fail Status, Time Taken
+    Candidate->>Server: POST /api/student/coding-assessments/:id/finish
+    Server->>Sandbox: Evaluate All Hidden Test Cases
+    Server->>DB: Record final score, pass/fail status & update student_skills
+    Server->>Email: Dispatch SIH Demo Coding Scorecard Email to Student
     Server->>HR: Assessment Complete (Instant HR Dashboard Update)
 ```
 
 ---
 
-### 4. Placement Readiness Engine 2.0 & AI Skill Gap Matching
+### Workflow D: Proctored Aptitude Assessments & Automated Email Scorecards
 
-The Placement Readiness Engine evaluates students across 4 balanced pillars to compute an objective readiness index:
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Student as Student (Desktop/Laptop)
+    participant Server as Backend API Server
+    participant Cloudinary as Cloudinary CDN
+    participant DB as PostgreSQL Database
+    participant Telegram as Telegram Bot
+    participant Email as Multi-Node Brevo Email Pool
+
+    Student->>Server: Launch Track (Cognizant / TCS / Zoho / Core)
+    Note over Student,Server: Strict Device Check (Mobile Blocked)
+    Student->>Server: Capture Face Photo
+    Server->>Cloudinary: Store Proctored Face Verification Snapshot
+    Server->>Student: Enter Strict Full-Screen Exam Room
+    
+    loop During Test
+        Note over Student: Anti-Cheat active (Copy, Paste, DevTools & Blur blocked)
+        Student->>Server: Answer questions (Timer countdown active)
+    end
+    
+    Student->>Server: POST /api/assessment/submit
+    Server->>DB: Store Answers, Score %, Category Breakdown & Strengths/Gaps
+    Server->>Telegram: Dispatch Instant Telegram Performance Alert
+    Server->>Email: Dispatch Rich SIH Demo Scorecard Email
+    Server->>Student: Display Scorecard & AI Remedial Learning Links
+```
+
+---
+
+### Workflow E: Placement Readiness Index 2.0 & Algorithmic Tier Routing
+
+The Placement Readiness Engine calculates an objective score out of 100%:
 
 $$\text{Placement Readiness Index (PRI)} = (\text{Pillar 1} \times 0.35) + (\text{Pillar 2} \times 0.25) + (\text{Pillar 3} \times 0.20) + (\text{Pillar 4} \times 0.20)$$
 
-| Pillar | Focus Area | Weight | Evaluation Criteria |
-| :--- | :--- | :---: | :--- |
-| **Pillar 1** | **Aptitude & Technical Assessments** | **35%** | Proctored test scores, accuracy rate, and assessment clearance track records. |
-| **Pillar 2** | **LeetCode & Algorithmic Vigor** | **25%** | Total problems solved, 7-day rolling consistency streak, and difficulty distribution. |
-| **Pillar 3** | **Technical Portfolio & Projects** | **20%** | Verified GitHub repositories, deployed projects, certifications, and technical proficiencies. |
-| **Pillar 4** | **Academic Task Discipline** | **20%** | On-time task submission rate, peer-review clearance, and academic consistency. |
-
-* **Company Tier Shortlisting**:
-  - 🌟 **Tier 1 (Product / Dream Companies)**: PRI $\ge 85\%$, High LeetCode streak, advanced projects.
-  - 💼 **Tier 2 (IT Services & Core IT)**: PRI $65\% - 84\%$, solid academic discipline, active coding habit.
-  - 🛠️ **Tier 3 (Baseline / Development Needed)**: PRI $< 65\%$, personalized skill-gap remediation roadmaps.
-
----
-
-### 5. Proctored Skill Assessments & Student Marks Transcripts
-
-* **Proctored Mock Tracks**: Dedicated assessment tracks modeled after leading enterprise hiring patterns (Cognizant, TCS, Wipro, Infosys, Zoho).
-* **Anti-Cheat Safeguards**: Webcam face snapshot capturing, full-screen lockdown violation logging, and Fisher-Yates question shuffling.
-* **Student Marks Transcript (`activeTab === 'my_marks'`)**:
-  - Live KPI summaries: Average Mark, Personal Best, Tests Attempted, Clearance Rate.
-  - Proctored attempt cards with facial verification badges.
-  - Question-by-question review modals with correct answers and detailed explanations.
-
----
-
-### 6. Omnichannel Notification & Multi-Node Email Dispatch Pool
-
-* **Telegram Bot Poller (`@IT_TaskManager_Alerts_bot`)**:
-  - `/start <token>`: Secure 6-digit cryptographic handshake linking Telegram to student profile.
-  - Direct student status lookup by Register Number (e.g. `922524205001`) or `/check <reg_no>`.
-  - Class shortcuts (`/3ita`, `/3itb`, `/2ita`, `/year3`) providing instant section completion digests.
-  - **Automated 8:00 AM IST Daily Brief**: Morning reminders for pending assignments due on the day.
-* **PWA Web Push Notifications**: VAPID-authenticated instant push alerts for task dispatches, verifications, and deadlines.
-* **Multi-Node Brevo Email Pool (`emailService.ts`)**:
-  - Load-balanced pool across multiple Brevo API accounts with automated round-robin failover.
-  - Real-time live credit counter and quota validation studio.
-  - Self-service 6-digit OTP password reset with 1-click copy and institutional email branding.
-
----
-
-### 7. Corporate OpenXML Excel, PDF & CSV Reporting Suite
-
-* **Dynamic Boundary-Trimmed Workbooks**: Generated via `ExcelJS` without empty padding rows or columns, pre-styled with corporate headers, color-coded pass/fail cells, and auto-adjusted column widths.
-* **9 Specialized Export Streams**:
-  1. Complete Department Task Status Matrix
-  2. Class-Wise Submission & Verification Breakdown
-  3. LeetCode & GitHub Progress Report
-  4. Placement Readiness Index & Tier Shortlists
-  5. Proctored Assessment Result Workbooks
-  6. Corporate Coding Assessment Evaluation Sheets
-  7. Student Directory & Profile Data Dumps
-  8. Opt-Out & Exemption Audit Logs
-  9. ATS-Compatible Candidate CSV Streams
-
----
-
-### 8. Live Teaching Hub & Faculty-Industry Collaboration
-
-* **Live Teaching Hub**: Interactive session workspace for faculty to schedule live lectures, stream screen/video feeds, share real-time code snippets, and record attendance.
-* **Faculty-Industry Collaboration Hub**: Dedicated workspace for joint research projects, corporate guest lectures, curriculum alignment boards, and internship MOU tracking.
-
----
-
-## ⚡ Compiler Sandbox & Security Guard Architecture
-
-The compilation engine executes code submissions in an isolated environment with strict resource bounds:
-
 ```
-┌─────────────────┬─────────────────┬────────────────────┬────────────────────┐
-│ Language        │ Compiler / VM   │ Compilation Flags  │ Security Bounds    │
-├─────────────────┼─────────────────┼────────────────────┼────────────────────┤
-│ C               │ GCC 6.3.0+      │ gcc -O2 -std=c11   │ 4000ms CPU Timeout │
-│ C++             │ G++ 6.3.0+      │ g++ -O2 -std=c++17 │ 4000ms CPU Timeout │
-│ Java            │ OpenJDK 17      │ javac -> java      │ 6000ms CPU Timeout │
-│ Python 3        │ Python 3.10+    │ python -u          │ 4000ms CPU Timeout │
-└─────────────────┴─────────────────┴────────────────────┴────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       PLACEMENT READINESS INDEX (PRI)                       │
+├───────────────────────┬──────────┬──────────────────────────────────────────┤
+│ Pillar 1 (35%)        │ Aptitude │ Proctored test scores & clearance record │
+│ Pillar 2 (25%)        │ LeetCode │ Total solved, 7-day streak & difficulty  │
+│ Pillar 3 (20%)        │ Projects │ Verified GitHub repos, stack & certs     │
+│ Pillar 4 (20%)        │ Tasks    │ Academic task on-time completion rate    │
+└───────────────────────┴──────────┴──────────────────────────────────────────┘
+                                   │
+               ┌───────────────────┼───────────────────┐
+               ▼                   ▼                   ▼
+       🌟 Tier 1 (PRI ≥ 85%) 💼 Tier 2 (65%-84%) 🛠️ Tier 3 (< 65%)
+       Product & Dream Co.   Core IT Services    AI Remedials & Labs
 ```
 
-**Security Safeguards**:
-1. **Isolated Temp Directories**: Every execution runs inside an ephemeral, uniquely generated directory with strict path sanitization.
-2. **Infinite Loop Interception**: Asynchronous process management terminates hanging child processes cleanly with timeout diagnostics.
-3. **Cross-Platform Output Normalization**: Normalizes line endings (`\r\n` $\rightarrow$ `\n`) and trims trailing whitespace for accurate test case evaluation.
+---
+
+### Workflow F: Multi-Node Brevo Email Load Balancer & Instant Failover
+
+```mermaid
+flowchart TD
+    Trigger["📧 Trigger Scorecard / Task / OTP Email"] --> Pool["⚡ Multi-Node Load Balancer (roundRobinIndex)"]
+    
+    Pool --> Node1{"Node 1: Brevo Primary (300/day)"}
+    Node1 -- "Success (200 OK)" --> Delivered["✅ Email Delivered"]
+    Node1 -- "Exhausted / Error" --> Node2{"Node 2: Brevo Secondary (300/day)"}
+    
+    Node2 -- "Success (200 OK)" --> Delivered
+    Node2 -- "Exhausted / Error" --> Node3{"Node 3: Brevo Tertiary (300/day)"}
+    
+    Node3 -- "Success (200 OK)" --> Delivered
+    Node3 -- "Exhausted / Error" --> Resend{"Resend API Gateway"}
+    
+    Resend -- "Success (200 OK)" --> Delivered
+    Resend -- "Error" --> SMTP["Fallback: SMTP / Gmail Relay"]
+    
+    SMTP --> Delivered
+```
 
 ---
 
-## ⚡ High-Performance In-Memory RAM Directory Cache
+## 5. Anti-Cheat Security & Exam Lockdown Subsystem
 
-To guarantee instant responsiveness across hundreds of enrolled students:
-* **Sub-Millisecond Search (<0.01ms)**: Student directory records are pre-indexed in memory on server startup for instantaneous autocompletion, profile retrieval, and class-list generation.
-* **Dual-Mode Git Sync (`studentDirectoryService.ts`)**: Supports both GitHub Contents REST API synchronization and direct local Git CLI commits to ensure directory state remains synchronized with version control.
+| Security Layer | Implementation Details | Protective Action |
+| :--- | :--- | :--- |
+| **💻 Device Restriction** | `src/lib/deviceCheck.ts` inspecting `navigator.userAgent`, touch heuristics, and screen viewport $< 1024\text{px}$. | **Strict Mobile & Tablet Block**: Assessments can only be attended on standard Desktop or Laptop PCs. |
+| **🔒 Fullscreen Lockdown** | `fullscreenchange` & `webkitfullscreenchange` listeners tracking element containment. | Exiting full-screen mode increments violation counters and triggers modal warnings. |
+| **👀 Tab-Switch Detection** | `document.hidden` & `visibilitychange` event listeners. | Window blur or tab switching immediately records high-severity proctoring incidents. |
+| **🚫 Clipboard Lockdown** | Intercepts `copy`, `cut`, `paste`, `selectstart`, and `dragstart` on window and Monaco IDE dom nodes. | Copying problem statements or pasting external code is strictly prohibited. |
+| **🛠️ DevTools Blocker** | Keydown interceptor for `F12`, `Ctrl+Shift+I/J/C`, `Ctrl+U/S/P`. | Developer inspection consoles and source code viewers are disabled. |
+| **📷 Draggable Webcam PIP** | Live stream via `navigator.mediaDevices.getUserMedia` with `framer-motion` draggable handle. | Continuously captures verification photos without obstructing code editor or console tabs. |
+| **⏱️ 3-Strike Auto Submit** | Automated violation accumulator. | $\ge 3$ security incidents automatically submits the assessment for institutional review. |
 
 ---
 
-## 🗄️ Database Schema Architecture (35 Relational Tables)
+## 6. Multi-Language Compiler Sandbox Architecture
 
-The database schema is organized into 5 relational modules:
+The sandboxed execution engine executes code submissions in an isolated environment with strict resource bounds:
+
+| Language | Compiler / VM | Compilation & Execution Flags | Security Limits |
+| :--- | :--- | :--- | :--- |
+| **C** | GCC (v6.3.0+) | `gcc -O2 -std=c11 solution.c -o solution.exe` | 4000ms CPU Timeout • Isolated Temp Dir |
+| **C++** | G++ (v6.3.0+) | `g++ -O2 -std=c++17 solution.cpp -o solution.exe` | 4000ms CPU Timeout • Isolated Temp Dir |
+| **Java** | OpenJDK 17 | `javac Solution.java && java -Xmx256m Solution` | 6000ms CPU Timeout • Isolated Temp Dir |
+| **Python 3** | Python 3.10+ | `python -u solution.py` | 4000ms CPU Timeout • Isolated Temp Dir |
+
+---
+
+## 7. In-Memory RAM Directory Cache & Performance Optimization
+
+* **Sub-Millisecond Lookup (<0.01ms)**: Student directory records are pre-indexed into server memory on startup for instant autocompletion and class section grouping.
+* **Dual-Mode Git Synchronization (`studentDirectoryService.ts`)**: Supports both GitHub Contents REST API synchronization and direct local Git CLI commits.
+* **Libuv Worker Threadpool Expansion**: `UV_THREADPOOL_SIZE=128` handles concurrent bcrypt, compression, and crypto operations without thread starvation.
+
+---
+
+## 8. Database Schema Architecture (35 Relational Tables)
 
 ```mermaid
 erDiagram
@@ -365,59 +370,44 @@ erDiagram
 ```
 
 ### Table Breakdown by Module
-
-1. **Authentication & Identity Matrix (5 Tables)**:
-   - `users` — Core account records with hashed credentials, roles, and status.
-   - `departments` — Academic departments (Information Technology, etc.).
-   - `classes` — Sections and year cohorts (e.g. 3-IT-A, 2-IT-B).
-   - `notification_preferences` — Per-user alert preferences (Telegram, Push, Email).
-   - `password_resets` — 6-digit cryptographic OTP tokens with expiration.
-
-2. **Academic Task Governance (6 Tables)**:
-   - `tasks` — Assigned academic tasks, deadlines, rubrics, and target classes.
-   - `submissions` — Student task proof submissions, notes, and multi-tier verification statuses.
-   - `submission_history` — Comprehensive audit trail of status changes, reviews, and rejections.
-   - `task_attachments` — Reference materials and instructional documents.
-   - `task_templates` — Reusable task presets for faculty convenience.
-   - `task_discussions` — Threaded task-specific Q&A conversations.
-
-3. **Coding Velocity & Habit Metrics (4 Tables)**:
-   - `student_coding_profiles` — Linked LeetCode usernames, GitHub handles, cached stats.
-   - `leetcode_daily_progress` — Daily historical LeetCode solve records and difficulty metrics.
-   - `github_daily_progress` — Daily historical GitHub commit counts.
-   - `coding_targets` — 4-level target rules (Student, Class, Year, Department).
-
-4. **Skill Assessment & Examination Engine (7 Tables)**:
-   - `skill_assessments` — Assessment metadata, durations, and passing thresholds.
-   - `skill_assessment_tracks` — Company-specific tracks (Cognizant, TCS, Zoho, etc.).
-   - `skill_questions` — Categorized multiple-choice questions with options and explanations.
-   - `assessment_attempts` — Candidate test sessions, timestamps, and proctoring metrics.
-   - `assessment_answers` — Candidate responses and evaluation scores.
-   - `student_skills` — Verified student technical proficiencies.
-   - `student_profiles` — Extended student career profiles, resumes, and project portfolios.
-
-5. **Corporate Hiring & Industry Engine (10 Tables)**:
-   - `company_profiles` — Verified corporate partner accounts and contact points.
-   - `industry_postings` — Job, internship, and research opportunities.
-   - `posting_applications` — Student job application submissions and tracking.
-   - `short_coding_assessments` — Timed corporate coding tests with 10-question pools.
-   - `coding_assessment_questions` — Algorithmic challenges with starter code templates.
-   - `coding_assessment_test_cases` — Public and hidden test cases with execution limits.
-   - `coding_assessment_attempts` — Candidate coding sessions and proctoring violation logs.
-   - `coding_assessment_submissions` — Submitted source code, test results, and runtime logs.
-   - `faculty_industry_collaborations` — Joint research projects and MOUs.
-   - `skill_gap_recommendations` — AI-generated student remediation roadmaps.
-
-6. **Infrastructure & Platform Operations (3 Tables)**:
-   - `push_subscriptions` — Browser VAPID web push endpoints.
-   - `notice_board` — Department announcements, priority flags, and attachments.
-   - `team_tasks` — Group assignment configurations and member rosters.
+1. **Authentication & Identity Matrix (5 Tables)**: `users`, `departments`, `classes`, `notification_preferences`, `password_resets`.
+2. **Academic Task Governance (6 Tables)**: `tasks`, `submissions`, `submission_history`, `task_attachments`, `task_templates`, `task_discussions`.
+3. **Coding Velocity & Habit Metrics (4 Tables)**: `student_coding_profiles`, `leetcode_daily_progress`, `github_daily_progress`, `coding_targets`.
+4. **Skill Assessment & Examination Engine (7 Tables)**: `student_assessments`, `assessment_questions`, `assessment_tracks`, `remedial_modules`, `student_skills`, `student_profiles`, `resumes`.
+5. **Corporate Hiring & Industry Engine (10 Tables)**: `company_profiles`, `industry_postings`, `posting_applications`, `coding_assessments`, `coding_questions`, `coding_assignments`, `coding_assignment_questions`, `coding_submissions`, `coding_proctoring_events`, `faculty_industry_collaborations`.
+6. **Infrastructure & Platform Operations (3 Tables)**: `push_subscriptions`, `notice_board`, `team_tasks`.
 
 ---
 
-## ⚙️ Environment Configuration Reference
+## 9. Automated Scorecard & Email Notification Templates
 
-Create a `.env` file in the project root based on the following template:
+Outbound email templates feature responsive, institutional branding with **Smart India Hackathon (SIH Demo)** headers:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 🏆 SIH DEMO: Smart India Hackathon Institutional Assessment Scorecard       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ VSB ENGINEERING COLLEGE • DEPARTMENT OF INFORMATION TECHNOLOGY              │
+│ Candidate: Tharunkumar K (Reg: 922524205171)                                │
+│ Track: Tata Consultancy Services — National Placement Qualifier 2026       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 🎯 FINAL SCORE: 90 / 100 PTS  [ ✓ RECRUITMENT QUALIFIER PASSED ]            │
+│ Passing Benchmark: 60% • Duration: 60 Mins • Anti-Cheat: Fully Proctored   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 💻 Problem Evaluation:                                                      │
+│ • Q1: Array Subarray Maximum Sum (C++) — 50/50 pts [Hidden Tests: 3/3 Pass] │
+│ • Q2: Graph Shortest Path (Python 3)   — 40/50 pts [Hidden Tests: 2/3 Pass] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 🧠 Skills Matrix Updated: Dynamic Programming · Graph Theory · C++          │
+│ 🚀 [ View Official Scorecard on Placement Portal ]                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 10. Environment Variables Reference
+
+Create a `.env` file in the project root:
 
 ```env
 # ==============================================================================
@@ -425,7 +415,7 @@ Create a `.env` file in the project root based on the following template:
 # ==============================================================================
 PORT=3000
 NODE_ENV=development
-FRONTEND_URL=http://localhost:3000
+APP_URL=https://it-taskmanager.vercel.app
 
 # ==============================================================================
 # DATABASE CONNECTION (POSTGRESQL / SUPABASE / NEON)
@@ -483,13 +473,13 @@ BREVO_SENDER_NAME_3="VSBEC IT Department"
 # GITHUB INTEGRATION & SENTRY TELEMETRY
 # ==============================================================================
 GITHUB_TOKEN=ghp_your_github_personal_access_token
-GITHUB_REPO=Tharun4743/IT_taskmanager
+GITHUB_REPO=Tharun4743/taskmanager
 SENTRY_DSN=https://your_sentry_dsn_here
 ```
 
 ---
 
-## 🚀 Installation & Local Deployment Guide
+## 11. Installation & Local Deployment Guide
 
 ### Prerequisites
 * **Node.js**: `v20.x` or higher
@@ -500,29 +490,24 @@ SENTRY_DSN=https://your_sentry_dsn_here
   - Python: `python` (v3.10+)
 
 ### Step-by-Step Setup
-
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/Tharun4743/taskmanager.git
    cd taskmanager
    ```
-
 2. **Install Dependencies**:
    ```bash
    npm install
    ```
-
 3. **Configure Environment Variables**:
    ```bash
    cp .env.example .env
    # Edit .env with your PostgreSQL credentials and API keys
    ```
-
 4. **Build Frontend Bundle**:
    ```bash
    npm run build
    ```
-
 5. **Start Development Server**:
    ```bash
    npm run dev
@@ -531,23 +516,22 @@ SENTRY_DSN=https://your_sentry_dsn_here
 
 ---
 
-## ☁️ Production Deployment (Vercel & Render)
+## 12. Production Deployment Guide (Vercel & Render)
 
 ### Deploying to Vercel (Serverless Frontend + API)
-The repository includes a ready-to-use [`vercel.json`](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/vercel.json) configuration:
+The repository includes a ready-to-use [`vercel.json`](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/vercel.json):
 1. Import repository into [Vercel Dashboard](https://vercel.com).
-2. Set Environment Variables from your `.env` in the Vercel Project Settings.
-3. Deploy — Vercel will automatically build the React frontend and execute the serverless API routes under `api/index.ts`.
+2. Set Environment Variables in Project Settings.
+3. Deploy — Vercel builds the React frontend and executes serverless API routes under `api/index.ts`.
 
 ### Deploying to Render (Full Node.js Server + Sandbox)
 The repository includes a [`render.yaml`](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/render.yaml) Blueprint:
 1. Connect repository in [Render Dashboard](https://render.com).
 2. Use Web Service configuration with `npm install && npm run build` build command and `npm start` start command.
-3. Add Environment Variables in the Environment tab.
 
 ---
 
-## 🧪 Verification & Automated Test Suite
+## 13. System Verification & Automated Test Suite
 
 Run the full system audit suite covering database integrity, foreign keys, compiler sandboxing, infinite loop guards, and report generation:
 
@@ -555,7 +539,6 @@ Run the full system audit suite covering database integrity, foreign keys, compi
 npx tsx scratch/deep_system_audit.ts
 ```
 
-**Audit Execution Summary**:
 ```
 ════════════════════════════════════════════════════════════════════
        🔍 DEEP SYSTEM & REPOSITORY AUDIT (FULL SUITE)
@@ -582,30 +565,30 @@ Audit Complete: 13/13 PASSED (0 FAILED)
 
 ---
 
-## 🔌 API Endpoints Reference
+## 14. API Endpoints Reference
 
 | Method | Endpoint | Access Level | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/login` | Public | Multi-identifier user authentication (Email / Register Number). |
+| `POST` | `/api/auth/login` | Public | Multi-identifier authentication (Email / Register Number). |
 | `POST` | `/api/auth/forgot-password` | Public | Dispatches 6-digit password reset OTP to user email. |
 | `POST` | `/api/auth/verify-otp` | Public | Verifies password reset OTP. |
-| `GET` | `/health` | Public | High-speed uptime and database connectivity health probe. |
+| `GET` | `/health` | Public | Uptime and database connectivity health probe. |
 | `GET` | `/api/tasks` | Authenticated | Fetches role-scoped academic task lists with filters. |
-| `POST` | `/api/tasks` | Faculty / HOD / Admin | Creates a new academic assignment with deadlines and rubrics. |
+| `POST` | `/api/tasks` | Faculty / HOD / Admin | Creates academic assignment with deadlines and rubrics. |
 | `POST` | `/api/submissions` | Student | Uploads proof screenshot and submits task. |
 | `PUT` | `/api/submissions/:id/peer-review` | Coordinator | Peer review approval or revision request. |
 | `PUT` | `/api/submissions/:id/verify` | Faculty / HOD | Final verification or rejection with feedback. |
 | `GET` | `/api/coding/dashboard` | Authenticated | Live LeetCode & GitHub combined analytics matrix. |
-| `POST` | `/api/sandbox/run` | Authenticated | Executes C, C++, Java, or Python code in sandbox with sample test cases. |
-| `GET` | `/api/industry/coding-assessments` | HR / Admin | Retrieves recruiter coding assessment configurations. |
-| `POST` | `/api/student/coding-assessments/:id/start` | Student | Initializes candidate assessment session and assigns 2 randomized questions. |
-| `POST` | `/api/student/coding-assessments/:id/submit` | Student | Submits code for automated grading against all hidden test cases. |
+| `POST` | `/api/student/coding-assessments/run` | Student | Executes C, C++, Java, or Python code in sandbox with sample test cases. |
+| `POST` | `/api/student/coding-assessments/:id/start` | Student | Initializes candidate session, enforcing desktop/laptop and assigning 2 randomized questions. |
+| `POST` | `/api/student/coding-assessments/:id/finish` | Student | Evaluates code against hidden test cases and dispatches scorecard email. |
+| `POST` | `/api/assessment/submit` | Student | Submits proctored aptitude test, records scores, and dispatches Telegram + email reports. |
 | `GET` | `/api/industry/assessments/:id/export/excel` | HR / Admin | Generates boundary-trimmed OpenXML Excel assessment scorecard. |
 | `GET` | `/api/industry/assessments/:id/export/pdf` | HR / Admin | Generates printable PDF candidate report. |
 
 ---
 
-## 📜 License & Intellectual Property
+## 15. License & Intellectual Property
 
 This project is developed and maintained for the **Department of Information Technology, VSB Engineering College, Karur** as part of the **Smart India Hackathon (SIH26044)** innovation initiative.
 
