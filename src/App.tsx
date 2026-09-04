@@ -6422,6 +6422,13 @@ export default function App() {
         dataRows.forEach((rowObj) => {
           const dataRow = worksheet.getRow(currentRowNum);
           dataRow.height = 20;
+
+          // Check row status for conditional styling
+          const rowStatus = String(rowObj['Task Status'] || '').trim().toLowerCase();
+          const isRowRejected = rowStatus === 'rejected';
+          const isRowNotRegistered = rowStatus === 'not registered' || rowStatus === 'not submitted';
+          const isRowNotInterested = rowStatus === 'not interested' || rowStatus === 'not participating';
+
           cols.forEach((colName, cIdx) => {
             const cell = dataRow.getCell(cIdx + 1);
             const val = rowObj[colName] ?? '';
@@ -6438,26 +6445,43 @@ export default function App() {
               right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
             };
 
+            // Requirement 1 & 2: Text color Not Registered / Rejected names as Red, Not Interested as Yellow
+            if (colName === 'Name' || colName === 'Reg No') {
+              if (isRowRejected || isRowNotRegistered) {
+                cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFDC2626' } }; // Red
+              } else if (isRowNotInterested) {
+                cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFD97706' } }; // Yellow / Amber
+              }
+            }
+
             // Status color highlight & Hyperlink styling
             if (val && typeof val === 'object' && val.hyperlink) {
-              const textVal = String(val.text || '').toLowerCase();
+              const textVal = String(val.text || '').trim().toLowerCase();
               if (textVal === 'verified' || textVal === 'yes') {
                 cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF16A34A' }, underline: true };
-              } else if (textVal === 'rejected' || textVal === 'no') {
+              } else if (textVal === 'rejected' || textVal === 'no' || textVal === 'not registered' || textVal === 'not submitted') {
                 cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFDC2626' }, underline: true };
-              } else if (textVal === 'submitted') {
+              } else if (textVal === 'not interested' || textVal === 'not participating') {
                 cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFD97706' }, underline: true };
+              } else if (textVal === 'submitted') {
+                cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF2563EB' }, underline: true };
               } else {
                 cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF2563EB' }, underline: true };
               }
             } else if (typeof val === 'string') {
-              const lower = val.toLowerCase();
+              const lower = val.trim().toLowerCase();
               if (lower === 'verified' || lower === 'yes') {
                 cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF16A34A' } };
-              } else if (lower === 'rejected' || lower === 'no') {
+              } else if (lower === 'rejected' || lower === 'not registered' || lower === 'not submitted' || lower === 'no') {
                 cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFDC2626' } };
-              } else if (lower === 'submitted') {
+              } else if (lower === 'not interested' || lower === 'not participating') {
                 cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFD97706' } };
+              } else if (lower === 'submitted') {
+                cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF2563EB' } };
+              } else if (isRowNotInterested && (colName.includes('Reason') || colName === 'Participating / Interested')) {
+                cell.font = { name: 'Calibri', size: 10, color: { argb: 'FFD97706' } };
+              } else if (isRowRejected && colName.includes('Reason')) {
+                cell.font = { name: 'Calibri', size: 10, color: { argb: 'FFDC2626' } };
               }
             }
           });
@@ -6749,7 +6773,7 @@ export default function App() {
             rawStatus === 'VERIFIED' ? 'Verified' :
               rawStatus === 'SUBMITTED' ? 'Submitted' :
                 rawStatus === 'REJECTED' ? 'Rejected' :
-                  rawStatus === 'NOT_PARTICIPATING' ? 'Not Interested' : 'Not Submitted';
+                  rawStatus === 'NOT_PARTICIPATING' ? 'Not Interested' : 'Not Registered';
 
           const cellVal = (sub?.screenshot_url && !sub.screenshot_url.startsWith('PURGED'))
             ? { text: statusLabel, hyperlink: sub.screenshot_url }
@@ -6792,7 +6816,7 @@ export default function App() {
             rawStatus === 'VERIFIED' ? 'Verified' :
               rawStatus === 'SUBMITTED' ? 'Submitted' :
                 rawStatus === 'REJECTED' ? 'Rejected' :
-                  rawStatus === 'NOT_PARTICIPATING' ? 'Not Interested' : 'Not Submitted';
+                  rawStatus === 'NOT_PARTICIPATING' ? 'Not Interested' : 'Not Registered';
 
           let include = false;
           if (selectedStatus === 'ALL') include = true;
@@ -6806,6 +6830,12 @@ export default function App() {
             ? { text: 'View Proof', hyperlink: sub.screenshot_url }
             : (sub?.screenshot_url?.startsWith('PURGED') ? 'Purged (30d+)' : (isParticipating ? 'No File' : '—'));
 
+          const reasonVal = isNotParticipating
+            ? (sub?.not_participating_reason || '—')
+            : rawStatus === 'REJECTED'
+              ? (sub?.rejection_reason || '—')
+              : '—';
+
           if (include) {
             detailedRows.push({
               'S.No': sno++,
@@ -6817,7 +6847,7 @@ export default function App() {
               'Task Status': statusLabel,
               'Custom Field': customFieldValue,
               'Proof Screenshot': screenshotVal,
-              'Reason (If Not Participating)': isNotParticipating ? (sub?.not_participating_reason || '—') : '—',
+              'Reason (If Not Participating / Rejection)': reasonVal,
             });
           }
         });
@@ -6908,7 +6938,7 @@ export default function App() {
         'Task Status',
         'Custom Field',
         'Proof Screenshot',
-        'Reason (If Not Participating)'
+        'Reason (If Not Participating / Rejection)'
       ];
     }
     const sheet2Cols = ['Task Name', 'Class', 'Total Students', 'Verified', 'Submitted', 'Rejected', 'Not Participating', 'Not Submitted'];
