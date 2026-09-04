@@ -6830,10 +6830,10 @@ export default function App() {
             ? { text: 'View Proof', hyperlink: sub.screenshot_url }
             : (sub?.screenshot_url?.startsWith('PURGED') ? 'Purged (30d+)' : (isParticipating ? 'No File' : '—'));
 
-          const reasonVal = isNotParticipating
-            ? (sub?.not_participating_reason || '—')
-            : rawStatus === 'REJECTED'
-              ? (sub?.rejection_reason || '—')
+          const reasonVal = rawStatus === 'REJECTED'
+            ? (sub?.rejection_reason || sub?.verification_note || teamInfo?.remarks || 'Rejected')
+            : isNotParticipating
+              ? (sub?.not_participating_reason || 'Not Interested')
               : '—';
 
           const participatingVal = rawStatus === 'REJECTED'
