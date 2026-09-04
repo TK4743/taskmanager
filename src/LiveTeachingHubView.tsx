@@ -55,13 +55,10 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
-            <button
-              onClick={handleOpenGoatCE}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs md:text-sm font-bold rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center gap-2 cursor-pointer group"
-            >
-              <span>🚀 Enter Live Teaching Hub</span>
-              <ExternalLink size={15} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            </button>
+            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Peer Voice & IDE Gateway Active</span>
+            </span>
           </div>
         </div>
 
@@ -284,7 +281,7 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
               onClick={handleOpenGoatCE}
               className="w-full sm:w-auto py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs md:text-sm rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>🚀 Enter Live Teaching Hub</span>
+              <span>Launch Collaborative Room</span>
               <ExternalLink size={15} />
             </button>
           </div>
