@@ -31,21 +31,21 @@
 
 html.dark {
   color-scheme: dark;
-  --bg-primary: #0f0f12;
-  --bg-subtle: #141418;
-  --bg-surface: #18181c;
-  --bg-surface-elevated: #202026;
+  --bg-primary: #0b0b0e;
+  --bg-subtle: #101014;
+  --bg-surface: #141418;
+  --bg-surface-elevated: #1a1a20;
   --text-primary: #ffffff;
-  --text-secondary: #f1f5f9;
-  --text-muted: #cbd5e1;
-  --border-color: #27272a;
-  --border-subtle: #1f1f24;
-  --input-bg: #18181c;
-  --input-border: #32323a;
-  --scrollbar-thumb: #2e2e38;
+  --text-secondary: #f8fafc;
+  --text-muted: #e2e8f0;
+  --border-color: #26262e;
+  --border-subtle: #1e1e24;
+  --input-bg: #141418;
+  --input-border: #2e2e38;
+  --scrollbar-thumb: #2c2c36;
   --scrollbar-hover: #3f3f4c;
-  --skeleton-base: #18181c;
-  --skeleton-highlight: #282832;
+  --skeleton-base: #141418;
+  --skeleton-highlight: #22222a;
 }
 
 @layer base {
@@ -78,9 +78,9 @@ html.dark {
   }
 }
 
-/* ── Dark Mode Universal Color Harmonization (Light-Black BG & Very Bright Text) ── */
+/* ── Deep Dark Zinc Background & Ultra-Bright Typography in Dark Mode ──────── */
 html.dark {
-  /* 1. Universal Page & Container Light-Black Backgrounds */
+  /* 1. Deep Dark Zinc for All Page Layouts and Canvas Backgrounds */
   .bg-\[\#F5F5F4\],
   .bg-\[\#F8FAFC\],
   .bg-\[\#f5f5f4\],
@@ -90,150 +90,181 @@ html.dark {
   .bg-gray-50,
   .bg-neutral-50,
   .bg-stone-50 {
-    background-color: #0f0f12 !important;
+    background-color: #0b0b0e !important;
   }
 
-  /* 2. Card Surfaces, Sidebars, Modals & Elevated Panels */
+  /* 2. Deep Dark Zinc for All Cards, Headers, Sidebars, Modals & Panels */
   .bg-white {
-    background-color: #18181c !important;
-  }
-  .bg-zinc-100, .bg-slate-100, .bg-gray-100 {
-    background-color: #202026 !important;
-  }
-  .bg-zinc-200, .bg-slate-200, .bg-gray-200 {
-    background-color: #2b2b34 !important;
-  }
-  
-  /* 3. Hover Backgrounds */
-  .hover\:bg-zinc-50:hover, .hover\:bg-slate-50:hover, .hover\:bg-gray-50:hover {
-    background-color: #202026 !important;
-  }
-  .hover\:bg-zinc-100:hover, .hover\:bg-slate-100:hover, .hover\:bg-gray-100:hover {
-    background-color: #282832 !important;
-  }
-  .hover\:bg-white:hover {
-    background-color: #22222a !important;
+    background-color: #141418 !important;
   }
 
-  /* 4. Borders & Dividers */
-  .border-zinc-100, .border-slate-100, .border-gray-100,
-  .border-zinc-200, .border-slate-200, .border-gray-200,
-  .border-zinc-300, .border-slate-300, .border-gray-300 {
-    border-color: #27272a !important;
+  /* Replace ALL intermediate lighter zinc/slate/gray backgrounds with deep dark zinc */
+  .bg-zinc-950, .bg-zinc-900, .bg-zinc-800, .bg-zinc-700, .bg-zinc-600, .bg-zinc-500,
+  .bg-slate-950, .bg-slate-900, .bg-slate-800, .bg-slate-700, .bg-slate-600, .bg-slate-500,
+  .bg-gray-950, .bg-gray-900, .bg-gray-800, .bg-gray-700, .bg-gray-600, .bg-gray-500,
+  .bg-neutral-900, .bg-neutral-800, .bg-neutral-700 {
+    background-color: #16161b !important;
+  }
+
+  .bg-zinc-400, .bg-zinc-300, .bg-zinc-200, .bg-zinc-100,
+  .bg-slate-400, .bg-slate-300, .bg-slate-200, .bg-slate-100,
+  .bg-gray-400, .bg-gray-300, .bg-gray-200, .bg-gray-100,
+  .bg-neutral-300, .bg-neutral-200, .bg-neutral-100 {
+    background-color: #1a1a20 !important;
+  }
+
+  /* Translucent zinc backgrounds */
+  [class*="bg-zinc-50/"], [class*="bg-slate-50/"], [class*="bg-gray-50/"],
+  [class*="bg-zinc-100/"], [class*="bg-slate-100/"], [class*="bg-gray-100/"],
+  [class*="bg-zinc-900/"], [class*="bg-slate-900/"], [class*="bg-gray-900/"] {
+    background-color: #121216 !important;
+  }
+
+  /* 3. Deep Dark Zinc Hover States */
+  .hover\:bg-zinc-50:hover, .hover\:bg-slate-50:hover, .hover\:bg-gray-50:hover,
+  .hover\:bg-zinc-100:hover, .hover\:bg-slate-100:hover, .hover\:bg-gray-100:hover,
+  .hover\:bg-zinc-200:hover, .hover\:bg-slate-200:hover, .hover\:bg-gray-200:hover,
+  .hover\:bg-white:hover {
+    background-color: #202028 !important;
+  }
+
+  /* 4. Subtle Dark Borders */
+  .border-zinc-50, .border-zinc-100, .border-zinc-200, .border-zinc-300,
+  .border-slate-50, .border-slate-100, .border-slate-200, .border-slate-300,
+  .border-gray-50, .border-gray-100, .border-gray-200, .border-gray-300,
+  .border-blue-100, .border-emerald-100, .border-indigo-100, .border-amber-100, .border-purple-100, .border-red-100 {
+    border-color: #26262e !important;
   }
   .divide-zinc-100 > :not([hidden]) ~ :not([hidden]),
   .divide-zinc-200 > :not([hidden]) ~ :not([hidden]),
   .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
-    border-color: #27272a !important;
+    border-color: #26262e !important;
   }
 
-  /* 5. VERY BRIGHT High-Contrast Typography */
-  /* Primary Headings & Bold Text -> Pure Ultra-Bright White */
-  .text-zinc-950, .text-zinc-900, .text-slate-900, .text-gray-900,
-  .text-zinc-800, .text-slate-800, .text-gray-800,
-  h1, h2, h3, h4, h5, h6 {
+  /* 5. ULTRA-BRIGHT High-Contrast Typography */
+  /* Headings, Big Numbers, Metric Counts, Card Titles -> Pure 100% Bright White */
+  .text-zinc-950, .text-zinc-900, .text-zinc-800,
+  .text-slate-950, .text-slate-900, .text-slate-800,
+  .text-gray-950, .text-gray-900, .text-gray-800,
+  .text-neutral-900, .text-neutral-800,
+  .text-black,
+  h1, h2, h3, h4, h5, h6,
+  strong, b, th {
     color: #ffffff !important;
   }
 
-  /* Secondary Text & Descriptions -> Crisp Bright White / Slate 100 */
-  .text-zinc-700, .text-slate-700, .text-gray-700,
-  .text-zinc-600, .text-slate-600, .text-gray-600,
+  /* Descriptions, Notice Content, Subheadings, Paragraphs -> Crisp Bright White */
+  .text-zinc-700, .text-zinc-600,
+  .text-slate-700, .text-slate-600,
+  .text-gray-700, .text-gray-600,
   p {
-    color: #f1f5f9 !important;
+    color: #f8fafc !important;
   }
 
-  /* Captions & Subtitles -> Light High-Contrast Slate */
-  .text-zinc-500, .text-slate-500, .text-gray-500,
-  .text-zinc-400, .text-slate-400, .text-gray-400 {
-    color: #cbd5e1 !important;
+  /* Labels, Subtitles, Timestamps, Muted Info -> Crisp Light Bright Slate (Never dark gray) */
+  .text-zinc-500, .text-zinc-400, .text-zinc-300,
+  .text-slate-500, .text-slate-400, .text-slate-300,
+  .text-gray-500, .text-gray-400, .text-gray-300,
+  .text-neutral-500, .text-neutral-400,
+  label, small {
+    color: #e2e8f0 !important;
   }
 
-  /* 6. Vibrant Glowing Badges, Tags & Colored Statuses */
-  /* Amber / Gold */
-  .bg-amber-50, .bg-amber-100, .bg-yellow-50, .bg-yellow-100, .bg-amber-50\/20, .bg-amber-50\/30, .bg-amber-50\/50, .bg-amber-50\/70, .bg-amber-50\/90 {
-    background-color: rgba(245, 158, 11, 0.15) !important;
-    border-color: rgba(245, 158, 11, 0.35) !important;
+  /* 6. Vibrant Glowing Colored Badges & Highlights */
+  /* Amber / Gold / Yellow */
+  .bg-amber-50, .bg-amber-100, .bg-yellow-50, .bg-yellow-100,
+  .bg-amber-50\/20, .bg-amber-50\/30, .bg-amber-50\/40, .bg-amber-50\/50, .bg-amber-50\/70, .bg-amber-50\/90 {
+    background-color: rgba(245, 158, 11, 0.16) !important;
+    border-color: rgba(245, 158, 11, 0.4) !important;
   }
-  .text-amber-600, .text-amber-700, .text-amber-800, .text-amber-900, .text-yellow-700, .text-yellow-600 {
+  .text-amber-500, .text-amber-600, .text-amber-700, .text-amber-800, .text-amber-900,
+  .text-yellow-500, .text-yellow-600, .text-yellow-700 {
     color: #fde047 !important;
   }
 
   /* Emerald / Green */
-  .bg-emerald-50, .bg-emerald-100, .bg-green-50, .bg-green-100, .bg-emerald-50\/20, .bg-emerald-50\/30 {
-    background-color: rgba(16, 185, 129, 0.15) !important;
-    border-color: rgba(16, 185, 129, 0.35) !important;
+  .bg-emerald-50, .bg-emerald-100, .bg-green-50, .bg-green-100,
+  .bg-emerald-50\/20, .bg-emerald-50\/30, .bg-emerald-50\/40 {
+    background-color: rgba(16, 185, 129, 0.16) !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
   }
-  .text-emerald-600, .text-emerald-700, .text-emerald-800, .text-emerald-900, .text-green-700 {
+  .text-emerald-500, .text-emerald-600, .text-emerald-700, .text-emerald-800, .text-emerald-900, .text-green-600, .text-green-700 {
     color: #4ade80 !important;
   }
 
   /* Sky / Blue / Indigo */
-  .bg-blue-50, .bg-blue-100, .bg-sky-50, .bg-sky-100, .bg-indigo-50, .bg-indigo-100, .bg-indigo-50\/20, .bg-indigo-50\/30 {
-    background-color: rgba(56, 189, 248, 0.15) !important;
-    border-color: rgba(56, 189, 248, 0.35) !important;
+  .bg-blue-50, .bg-blue-100, .bg-sky-50, .bg-sky-100,
+  .bg-indigo-50, .bg-indigo-100, .bg-indigo-50\/20, .bg-indigo-50\/30, .bg-indigo-50\/40 {
+    background-color: rgba(56, 189, 248, 0.16) !important;
+    border-color: rgba(56, 189, 248, 0.4) !important;
   }
-  .text-blue-600, .text-blue-700, .text-blue-800, .text-blue-900, .text-sky-600, .text-indigo-600, .text-indigo-700 {
+  .text-blue-500, .text-blue-600, .text-blue-700, .text-blue-800, .text-blue-900,
+  .text-sky-500, .text-sky-600,
+  .text-indigo-500, .text-indigo-600, .text-indigo-700 {
     color: #38bdf8 !important;
   }
 
   /* Purple / Violet */
   .bg-purple-50, .bg-purple-100, .bg-violet-50, .bg-violet-100 {
-    background-color: rgba(168, 85, 247, 0.15) !important;
-    border-color: rgba(168, 85, 247, 0.35) !important;
+    background-color: rgba(168, 85, 247, 0.16) !important;
+    border-color: rgba(168, 85, 247, 0.4) !important;
   }
-  .text-purple-600, .text-purple-700, .text-purple-800, .text-purple-900, .text-violet-600 {
+  .text-purple-500, .text-purple-600, .text-purple-700, .text-purple-800, .text-purple-900, .text-violet-600 {
     color: #c084fc !important;
   }
 
   /* Rose / Pink / Red / Orange */
   .bg-rose-50, .bg-rose-100, .bg-pink-50, .bg-pink-100, .bg-red-50, .bg-red-100, .bg-orange-50, .bg-orange-100 {
-    background-color: rgba(244, 63, 94, 0.15) !important;
-    border-color: rgba(244, 63, 94, 0.35) !important;
+    background-color: rgba(244, 63, 94, 0.16) !important;
+    border-color: rgba(244, 63, 94, 0.4) !important;
   }
-  .text-rose-600, .text-rose-700, .text-rose-800, .text-pink-600, .text-pink-700, .text-red-600, .text-red-700, .text-orange-600, .text-orange-700 {
+  .text-rose-500, .text-rose-600, .text-rose-700, .text-rose-800,
+  .text-pink-500, .text-pink-600, .text-pink-700,
+  .text-red-500, .text-red-600, .text-red-700,
+  .text-orange-500, .text-orange-600, .text-orange-700 {
     color: #fb7185 !important;
   }
 
   /* 7. Input fields, Selects & Textareas */
   input:not([type="checkbox"]):not([type="radio"]), textarea, select {
-    background-color: #18181c !important;
+    background-color: #141418 !important;
     color: #ffffff !important;
-    border-color: #32323a !important;
+    border-color: #2e2e38 !important;
   }
   input::placeholder, textarea::placeholder {
-    color: #64748b !important;
+    color: #94a3b8 !important;
   }
 
   /* 8. Fix Gradients Ending in White */
   .to-white {
-    --tw-gradient-to: #18181c !important;
+    --tw-gradient-to: #141418 !important;
   }
   .from-white {
-    --tw-gradient-from: #18181c !important;
+    --tw-gradient-from: #141418 !important;
   }
   .from-indigo-50\/30 {
-    --tw-gradient-from: rgba(99, 102, 241, 0.15) !important;
+    --tw-gradient-from: rgba(99, 102, 241, 0.16) !important;
   }
 
   /* 9. Tables */
   table {
-    border-color: #27272a !important;
+    border-color: #26262e !important;
   }
   thead, thead th {
-    background-color: #141418 !important;
+    background-color: #101014 !important;
     color: #ffffff !important;
-    border-color: #27272a !important;
+    border-color: #26262e !important;
   }
   tbody tr {
-    border-color: #27272a !important;
+    border-color: #26262e !important;
   }
   tbody tr:hover {
-    background-color: rgba(39, 39, 42, 0.5) !important;
+    background-color: rgba(44, 44, 54, 0.5) !important;
   }
 
   /* 10. Modals & Shadows */
   .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl {
-    box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.6), 0 0 0 1px #27272a !important;
+    box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.7), 0 0 0 1px #26262e !important;
   }
 }
 
