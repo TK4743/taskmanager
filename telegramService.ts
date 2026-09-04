@@ -1175,11 +1175,22 @@ export async function getProfileCard(user: any): Promise<{ html: string; keyboar
 export async function getFacultyTaskStatusCard(): Promise<{ html: string; keyboard: any }> {
   const tasksRes = await pool.query(`
     SELECT t.id, t.title, t.deadline,
+           string_agg(DISTINCT c.name, ', ') as class_names,
            COUNT(DISTINCT tc.class_id) as class_count,
-           COUNT(DISTINCT ts.id) FILTER (WHERE ts.status IN ('SUBMITTED', 'VERIFIED')) as completed_count
+           (
+             SELECT COUNT(DISTINCT ts.id)
+             FROM task_submissions ts
+             WHERE ts.task_id = t.id AND ts.status IN ('SUBMITTED', 'VERIFIED')
+           ) as completed_count,
+           (
+             SELECT COUNT(DISTINCT u.id)
+             FROM users u
+             JOIN task_classes tcl ON tcl.class_id = u.class_id
+             WHERE tcl.task_id = t.id AND u.role = 'STUDENT'
+           ) as total_targeted
     FROM tasks t
     LEFT JOIN task_classes tc ON tc.task_id = t.id
-    LEFT JOIN task_submissions ts ON ts.task_id = t.id
+    LEFT JOIN classes c ON tc.class_id = c.id
     WHERE t.status = 'OPEN' AND (t.deadline IS NULL OR t.deadline >= CURRENT_TIMESTAMP)
     GROUP BY t.id, t.title, t.deadline
     ORDER BY t.deadline ASC NULLS LAST
@@ -1194,8 +1205,11 @@ export async function getFacultyTaskStatusCard(): Promise<{ html: string; keyboa
       const dStr = t.deadline
         ? new Date(t.deadline).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
         : 'No deadline';
-      html += `📌 <b>${i + 1}. ${escapeHtml(t.title)}</b>\n`;
-      html += `   ⏰ <i>Due:</i> ${dStr}  |  ✅ <i>Submissions:</i> <b>${t.completed_count}</b>\n\n`;
+      const targetCount = Number(t.total_targeted) || 0;
+      const completedCount = Number(t.completed_count) || 0;
+      const classInfo = t.class_names ? ` <i>[${escapeHtml(t.class_names)}]</i>` : '';
+      html += `📌 <b>${i + 1}. ${escapeHtml(t.title)}</b>${classInfo}\n`;
+      html += `   ⏰ <i>Due:</i> ${dStr}  |  ✅ <i>Submissions:</i> <b>${completedCount}${targetCount > 0 ? ` / ${targetCount}` : ''}</b>\n\n`;
     });
   }
   html += getWatermarkHtml();
@@ -1733,9 +1747,10 @@ export async function getClassOrYearAnalysisCard(
       const taskSubmissionsRes = await pool.query(`
         SELECT u.full_name, u.register_number, c.name as class_name
         FROM users u
+        JOIN task_classes tc ON tc.class_id = u.class_id AND tc.task_id = $1
         LEFT JOIN classes c ON c.id = u.class_id
         LEFT JOIN task_submissions ts ON ts.task_id = $1 AND ts.user_id = u.id AND ts.status IN ('SUBMITTED', 'VERIFIED')
-        WHERE u.id = ANY($2)
+        WHERE u.id = ANY($2) AND u.role = 'STUDENT'
           AND ts.id IS NULL
         ORDER BY u.register_number ASC
       `, [t.id, studentIds]);
@@ -2057,40 +2072,7 @@ export async function notifyNewTaskCreated(task: {
     ? new Date(task.deadline).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
     : 'No deadline set';
 
-  let html = `📢 <b>NEW ASSIGNMENT POSTED!</b>  🚀\n──────────────────────────────\n`;
-  html += `<blockquote>📌 <b>Assignment:</b> <b>${escapeHtml(task.title)}</b>\n`;
-  if (task.category) html += `📂 <b>Category:</b> <code>${escapeHtml(task.category)}</code>\n`;
-  if (task.creator_name) html += `👤 <b>Assigned By:</b> ${escapeHtml(task.creator_name)}\n`;
-  html += `⏰ <b>Deadline:</b> <i>${deadlineStr}</i></blockquote>\n\n`;
-  html += `👉 <i>Log in to the portal now to review the requirements and submit your proof!</i>\n`;
-  html += getWatermarkHtml();
-
-  const keyboard = {
-    inline_keyboard: [
-      [
-        { text: '📋 View My Tasks', callback_data: 'cb_tasks' },
-        { text: '🌐 Submit on Portal', url: portalUrl }
-      ]
-    ]
-  };
-
-  // 1. Dispatch exactly ONCE to Telegram Group Chat if configured
-  const groupChatId = await getGroupChatId();
-  const normalizedGroupChatId = groupChatId ? String(groupChatId).trim() : '';
-  if (normalizedGroupChatId) {
-    console.log(`[Telegram Notifications] 🚀 Sending new task alert for "${task.title}" to group chat: ${normalizedGroupChatId}`);
-    sendTelegramMessage(normalizedGroupChatId, html, { reply_markup: keyboard }).catch(err => {
-      console.error('[Telegram] Failed to send new task alert to group:', err);
-    });
-  } else {
-    const adminChatId = getAdminChatId();
-    if (adminChatId) {
-      console.log(`[Telegram Notifications] Sending new task alert to admin chat: ${adminChatId}`);
-      sendTelegramMessage(adminChatId, html, { reply_markup: keyboard }).catch(() => { });
-    }
-  }
-
-  // 2. Sanitize and resolve class IDs
+  // 1. Sanitize and resolve class IDs & names
   let targetClassIds: string[] = Array.isArray(classIds)
     ? classIds.filter(id => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id).trim())).map(id => String(id).trim())
     : [];
@@ -2108,6 +2090,48 @@ export async function notifyNewTaskCreated(task: {
       }
     } catch (lookupErr) {
       console.warn('[Telegram] Could not lookup classes for new task:', lookupErr);
+    }
+  }
+
+  let targetClassNames = '';
+  if (targetClassIds.length > 0) {
+    try {
+      const namesRes = await pool.query('SELECT name FROM classes WHERE id = ANY($1::uuid[]) ORDER BY name ASC', [targetClassIds]);
+      targetClassNames = namesRes.rows.map(r => r.name).join(', ');
+    } catch {}
+  }
+
+  let html = `📢 <b>NEW ASSIGNMENT POSTED!</b>  🚀\n──────────────────────────────\n`;
+  html += `<blockquote>📌 <b>Assignment:</b> <b>${escapeHtml(task.title)}</b>\n`;
+  if (targetClassNames) html += `🏫 <b>Target Class:</b> <code>${escapeHtml(targetClassNames)}</code>\n`;
+  if (task.category) html += `📂 <b>Category:</b> <code>${escapeHtml(task.category)}</code>\n`;
+  if (task.creator_name) html += `👤 <b>Assigned By:</b> ${escapeHtml(task.creator_name)}\n`;
+  html += `⏰ <b>Deadline:</b> <i>${deadlineStr}</i></blockquote>\n\n`;
+  html += `👉 <i>Log in to the portal now to review the requirements and submit your proof!</i>\n`;
+  html += getWatermarkHtml();
+
+  const keyboard = {
+    inline_keyboard: [
+      [
+        { text: '📋 View My Tasks', callback_data: 'cb_tasks' },
+        { text: '🌐 Submit on Portal', url: portalUrl }
+      ]
+    ]
+  };
+
+  // 2. Dispatch exactly ONCE to Telegram Group Chat if configured
+  const groupChatId = await getGroupChatId();
+  const normalizedGroupChatId = groupChatId ? String(groupChatId).trim() : '';
+  if (normalizedGroupChatId) {
+    console.log(`[Telegram Notifications] 🚀 Sending new task alert for "${task.title}" to group chat: ${normalizedGroupChatId}`);
+    sendTelegramMessage(normalizedGroupChatId, html, { reply_markup: keyboard }).catch(err => {
+      console.error('[Telegram] Failed to send new task alert to group:', err);
+    });
+  } else {
+    const adminChatId = getAdminChatId();
+    if (adminChatId) {
+      console.log(`[Telegram Notifications] Sending new task alert to admin chat: ${adminChatId}`);
+      sendTelegramMessage(adminChatId, html, { reply_markup: keyboard }).catch(() => { });
     }
   }
 
@@ -2179,42 +2203,7 @@ export async function notifyTaskReopened(task: {
       })
     : 'No deadline set';
 
-  let html = `🔄 <b>ASSIGNMENT REOPENED!</b>  ⏰\n──────────────────────────────\n`;
-  html += `<blockquote>📌 <b>Assignment:</b> <b>${escapeHtml(task.title)}</b>\n`;
-  if (task.category) html += `📂 <b>Category:</b> <code>${escapeHtml(task.category)}</code>\n`;
-  if (task.reopened_by) html += `👤 <b>Extended By:</b> ${escapeHtml(task.reopened_by)}\n`;
-  html += `⏰ <b>New Extended Deadline:</b> <i>${deadlineStr}</i>\n`;
-  html += `🏷 <b>Status:</b> 🟢 <code>OPEN FOR SUBMISSIONS</code></blockquote>\n\n`;
-  html += `📢 <i>The submission window for this assignment has been reopened and the deadline has been extended!</i>\n\n`;
-  html += `👉 <i>If you have pending or incomplete submissions, please submit your proof on the portal before the new deadline.</i>\n`;
-  html += getWatermarkHtml();
-
-  const keyboard = {
-    inline_keyboard: [
-      [
-        { text: '📋 View My Tasks', callback_data: 'cb_tasks' },
-        { text: '🌐 Submit on Portal', url: portalUrl }
-      ]
-    ]
-  };
-
-  // 1. Dispatch exactly ONCE to Telegram Group Chat if configured
-  const groupChatId = await getGroupChatId();
-  const normalizedGroupChatId = groupChatId ? String(groupChatId).trim() : '';
-  if (normalizedGroupChatId) {
-    console.log(`[Telegram Notifications] 🚀 Sending reopened task alert for "${task.title}" to group chat: ${normalizedGroupChatId}`);
-    sendTelegramMessage(normalizedGroupChatId, html, { reply_markup: keyboard }).catch(err => {
-      console.error('[Telegram] Failed to send reopened task alert to group:', err);
-    });
-  } else {
-    const adminChatId = getAdminChatId();
-    if (adminChatId) {
-      console.log(`[Telegram Notifications] Sending reopened task alert to admin chat: ${adminChatId}`);
-      sendTelegramMessage(adminChatId, html, { reply_markup: keyboard }).catch(() => { });
-    }
-  }
-
-  // 2. Resolve class IDs if not supplied or empty
+  // 1. Resolve class IDs & names if not supplied or empty
   let targetClassIds: string[] = Array.isArray(classIds)
     ? classIds.filter(id => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id).trim())).map(id => String(id).trim())
     : [];
@@ -2232,6 +2221,50 @@ export async function notifyTaskReopened(task: {
       }
     } catch (lookupErr) {
       console.warn('[Telegram] Could not lookup classes for reopened task:', lookupErr);
+    }
+  }
+
+  let targetClassNames = '';
+  if (targetClassIds.length > 0) {
+    try {
+      const namesRes = await pool.query('SELECT name FROM classes WHERE id = ANY($1::uuid[]) ORDER BY name ASC', [targetClassIds]);
+      targetClassNames = namesRes.rows.map(r => r.name).join(', ');
+    } catch {}
+  }
+
+  let html = `🔄 <b>ASSIGNMENT REOPENED!</b>  ⏰\n──────────────────────────────\n`;
+  html += `<blockquote>📌 <b>Assignment:</b> <b>${escapeHtml(task.title)}</b>\n`;
+  if (targetClassNames) html += `🏫 <b>Target Class:</b> <code>${escapeHtml(targetClassNames)}</code>\n`;
+  if (task.category) html += `📂 <b>Category:</b> <code>${escapeHtml(task.category)}</code>\n`;
+  if (task.reopened_by) html += `👤 <b>Extended By:</b> ${escapeHtml(task.reopened_by)}\n`;
+  html += `⏰ <b>New Extended Deadline:</b> <i>${deadlineStr}</i>\n`;
+  html += `🏷 <b>Status:</b> 🟢 <code>OPEN FOR SUBMISSIONS</code></blockquote>\n\n`;
+  html += `📢 <i>The submission window for this assignment has been reopened and the deadline has been extended!</i>\n\n`;
+  html += `👉 <i>If you have pending or incomplete submissions, please submit your proof on the portal before the new deadline.</i>\n`;
+  html += getWatermarkHtml();
+
+  const keyboard = {
+    inline_keyboard: [
+      [
+        { text: '📋 View My Tasks', callback_data: 'cb_tasks' },
+        { text: '🌐 Submit on Portal', url: portalUrl }
+      ]
+    ]
+  };
+
+  // 2. Dispatch exactly ONCE to Telegram Group Chat if configured
+  const groupChatId = await getGroupChatId();
+  const normalizedGroupChatId = groupChatId ? String(groupChatId).trim() : '';
+  if (normalizedGroupChatId) {
+    console.log(`[Telegram Notifications] 🚀 Sending reopened task alert for "${task.title}" to group chat: ${normalizedGroupChatId}`);
+    sendTelegramMessage(normalizedGroupChatId, html, { reply_markup: keyboard }).catch(err => {
+      console.error('[Telegram] Failed to send reopened task alert to group:', err);
+    });
+  } else {
+    const adminChatId = getAdminChatId();
+    if (adminChatId) {
+      console.log(`[Telegram Notifications] Sending reopened task alert to admin chat: ${adminChatId}`);
+      sendTelegramMessage(adminChatId, html, { reply_markup: keyboard }).catch(() => { });
     }
   }
 
