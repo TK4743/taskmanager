@@ -1247,7 +1247,7 @@ const Footer = ({ onShowModal }: { onShowModal: (type: 'PRIVACY' | 'TERMS' | 'SU
 const PageLayout = ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const onShowModal = React.useContext(FooterContext);
   return (
-    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] flex flex-col min-h-0">
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] dark:bg-[#0f0f12] flex flex-col min-h-0 custom-scrollbar">
       <div className="w-full flex flex-col min-h-full">
         <div className={cn("flex-1 flex flex-col space-y-6 w-full", className)} {...props}>
           {children}
@@ -8079,15 +8079,15 @@ export default function App() {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-indigo-200 flex items-center justify-between shadow-sm bg-gradient-to-br from-indigo-50/30 to-white">
+          <div className="bg-white dark:bg-[#18181c] p-4 rounded-2xl border border-indigo-200 dark:border-indigo-500/40 flex items-center justify-between shadow-sm">
             <div>
-              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Responded Students</p>
-              <p className="text-2xl font-black text-indigo-700 mt-0.5">{respondedCount}</p>
-              <span className="text-[9px] font-semibold text-indigo-500">Interested</span>
+              <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Responded Students</p>
+              <p className="text-2xl font-black text-indigo-700 dark:text-indigo-300 mt-0.5">{respondedCount}</p>
+              <span className="text-[9px] font-semibold text-indigo-500 dark:text-indigo-400">Interested</span>
             </div>
             <div className="text-right text-xs font-semibold space-y-0.5">
-              <p className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md flex items-center justify-end gap-1"><User size={12} /> Boys: {boysResponded}</p>
-              <p className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md flex items-center justify-end gap-1"><User size={12} /> Girls: {girlsResponded}</p>
+              <p className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md flex items-center justify-end gap-1"><User size={12} /> Boys: {boysResponded}</p>
+              <p className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md flex items-center justify-end gap-1"><User size={12} /> Girls: {girlsResponded}</p>
             </div>
           </div>
 
@@ -10855,7 +10855,7 @@ export default function App() {
 
   return (
     <FooterContext.Provider value={setShowFooterModal}>
-      <div className="h-screen min-h-[100dvh] bg-[#F5F5F4] flex overflow-hidden">
+      <div className="h-screen min-h-[100dvh] bg-[#F5F5F4] dark:bg-[#0f0f12] flex overflow-hidden">
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         {renderAssignTargetModal()}
         {renderTelegramLinkModal()}
@@ -11326,7 +11326,7 @@ export default function App() {
             </div>
           </header>
 
-          <div className="flex-1 min-h-0 bg-[#F5F5F4] relative">
+          <div className="flex-1 min-h-0 bg-[#F5F5F4] dark:bg-[#0f0f12] relative">
             <AnimatePresence mode="wait">
               {view === 'dashboard' && isIndustry && (
                 <motion.div
@@ -14528,10 +14528,10 @@ export default function App() {
                                 className={cn(
                                   "p-6 relative transition-all border",
                                   isHighlighted
-                                    ? "border-indigo-500 ring-2 ring-indigo-500/50 bg-indigo-50/20 shadow-lg"
+                                    ? "border-indigo-500 ring-2 ring-indigo-500/50 bg-indigo-50/20 dark:bg-indigo-950/20 shadow-lg"
                                     : notice.is_pinned
-                                      ? "border-amber-300 bg-amber-50/20 shadow-md"
-                                      : "border-zinc-200 hover:border-zinc-300"
+                                      ? "border-amber-400 dark:border-amber-500/60 bg-amber-50/30 dark:bg-amber-950/20 shadow-md"
+                                      : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
                                 )}
                               >
                                 <div className="flex items-start justify-between gap-4 mb-3">
@@ -14543,7 +14543,7 @@ export default function App() {
                                         </span>
                                       )}
                                       {notice.is_pinned && (
-                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
                                           <Pin size={10} /> PINNED
                                         </span>
                                       )}
@@ -14556,17 +14556,17 @@ export default function App() {
                                       )}>
                                         {notice.priority}
                                       </span>
-                                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200 uppercase">
+                                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 uppercase">
                                         {notice.scope === 'ALL' ? '🌐 GLOBAL' : notice.scope === 'DEPARTMENT' ? `🏢 DEPT: ${notice.department_name || 'DEPARTMENT'}` : notice.scope === 'CLASS' ? `🎓 CLASS: ${notice.class_name || 'CLASS'}` : `${notice.scope} SCOPE`}
                                       </span>
                                     </div>
-                                    <h3 className="text-lg font-black text-zinc-900 leading-snug">{notice.title}</h3>
+                                    <h3 className="text-lg font-black text-zinc-900 dark:text-white leading-snug">{notice.title}</h3>
                                   </div>
 
                                   <div className="flex items-center gap-1 shrink-0">
                                     <button
                                       onClick={() => handleShareNotice(notice.id, notice.title)}
-                                      className="p-1.5 text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold px-2.5 border border-zinc-200 hover:border-indigo-300"
+                                      className="p-1.5 text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold px-2.5 border border-zinc-200 dark:border-zinc-700 hover:border-indigo-300"
                                       title="Share Notice Link"
                                     >
                                       <Share2 size={14} />
@@ -14575,7 +14575,7 @@ export default function App() {
                                     {(isAdvisor || isHOD || isAdmin) && (
                                       <button
                                         onClick={() => handlePinNotice(notice.id)}
-                                        className={cn("p-1.5 rounded-lg hover:bg-zinc-100 transition-colors", notice.is_pinned ? "text-amber-600" : "text-zinc-400")}
+                                        className={cn("p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors", notice.is_pinned ? "text-amber-600 dark:text-amber-400" : "text-zinc-400")}
                                         title={notice.is_pinned ? "Unpin Notice" : "Pin Notice"}
                                       >
                                         <Pin size={16} />
@@ -14584,7 +14584,7 @@ export default function App() {
                                     {(isAdmin || String(notice.created_by) === String(user?.id)) && (
                                       <button
                                         onClick={() => handleDeleteNotice(notice.id)}
-                                        className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
                                         title="Delete Notice"
                                       >
                                         <Trash2 size={16} />
@@ -14593,7 +14593,7 @@ export default function App() {
                                   </div>
                                 </div>
 
-                                <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed mb-4">{notice.description}</p>
+                                <p className="text-sm text-zinc-700 dark:text-zinc-100 whitespace-pre-wrap leading-relaxed mb-4">{notice.description}</p>
 
                                 {notice.attachment_url && (
                                   <div className="mb-4">
@@ -14601,15 +14601,15 @@ export default function App() {
                                       href={notice.attachment_url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-colors border border-indigo-200"
+                                      className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-colors border border-indigo-200 dark:border-indigo-800"
                                     >
                                       <Paperclip size={14} /> Download Notice Attachment
                                     </a>
                                   </div>
                                 )}
 
-                                <div className="flex items-center justify-between text-xs font-medium text-zinc-400 border-t border-zinc-100 pt-3">
-                                  <span>Posted by <strong className="text-zinc-700">{notice.creator_name}</strong> ({notice.creator_role})</span>
+                                <div className="flex items-center justify-between text-xs font-medium text-zinc-400 dark:text-zinc-400 border-t border-zinc-100 dark:border-zinc-800 pt-3">
+                                  <span>Posted by <strong className="text-zinc-700 dark:text-white">{notice.creator_name}</strong> ({notice.creator_role})</span>
                                   <span>{new Date(notice.created_at).toLocaleString()}</span>
                                 </div>
                               </Card>
