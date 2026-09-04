@@ -16,6 +16,7 @@ import SkillGapAnalyzerView from './SkillGapAnalyzerView';
 import FacultyIndustryHubView from './FacultyIndustryHubView';
 import StudentCodingAssessmentView from './StudentCodingAssessmentView';
 import InstitutionalSkillHeatmapView from './InstitutionalSkillHeatmapView';
+import PortalTutorGuide from './PortalTutorGuide';
 import { generateStudentResumePdf, downloadStudentResumePdf } from './studentProfilePdfGenerator';
 import PWAInstallOverlay from './PWAInstallOverlay';
 import PushNotificationPromptModal from './PushNotificationPromptModal';
@@ -4306,6 +4307,26 @@ export default function App() {
       setIndustryActionLoading(null);
     }
   };
+
+  // Portal Tutor & Onboarding Tour State - Shows each time on login for all roles
+  const [showTutorModal, setShowTutorModal] = useState(false);
+  const [tutorInitialMode, setTutorInitialMode] = useState<'TOUR' | 'DIRECTORY'>('TOUR');
+
+  // Auto-launch tutor on each login / startup for all roles (Student, Coordinator, Advisor, HOD, Supreme Admin, Industry HR)
+  useEffect(() => {
+    if (user?.role && token) {
+      const sessionKey = `portal_tutor_shown_session_${user.id || user.username}`;
+      const hasShownThisSession = sessionStorage.getItem(sessionKey);
+      if (!hasShownThisSession) {
+        const timer = setTimeout(() => {
+          setTutorInitialMode('TOUR');
+          setShowTutorModal(true);
+          sessionStorage.setItem(sessionKey, 'true');
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user?.role, user?.id, token]);
 
   // Student Profile Completion Prompt Modal State
   const [showProfilePromptModal, setShowProfilePromptModal] = useState(false);
@@ -11169,6 +11190,20 @@ export default function App() {
                   <CheckCircle2 size={12} /> Telegram Linked
                 </span>
               )}
+              {/* Interactive Portal Tutor & Feature Guide Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTutorInitialMode('TOUR');
+                  setShowTutorModal(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 border border-indigo-200/80 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
+                title="Launch Interactive Portal Tutor & Feature Guide"
+              >
+                <Sparkles size={15} className="text-indigo-600 transition-transform group-hover:scale-110" />
+                <span className="hidden sm:inline">Portal Tutor</span>
+              </button>
+
               <div className="relative" ref={notificationDropdownRef}>
                 <button
                   className={cn(
@@ -15875,6 +15910,16 @@ export default function App() {
           {renderHistoryDetailsModal()}
           <PushNotificationPromptModal token={token} apiUrl={API_URL} addToast={addToast} />
           <PWAInstallOverlay />
+          <PortalTutorGuide
+            userRole={user?.role}
+            isCoordinator={Boolean(user?.is_coordinator)}
+            userName={user?.full_name || user?.username}
+            currentView={view}
+            onNavigateView={(newView) => setView(newView)}
+            isOpen={showTutorModal}
+            onClose={() => setShowTutorModal(false)}
+            initialMode={tutorInitialMode}
+          />
         </AnimatePresence>
       </div>
     </FooterContext.Provider>
