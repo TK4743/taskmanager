@@ -9616,49 +9616,220 @@ async function startServer() {
   }
 
   const LEARNING_RESOURCES: Record<string, { title: string; platform: string; url: string; duration: string }[]> = {
-    'react': [{ title: 'React Official Docs', platform: 'react.dev', url: 'https://react.dev/learn', duration: '20 hrs' }, { title: 'Full React Course', platform: 'freeCodeCamp', url: 'https://www.youtube.com/watch?v=bMknfKXIFA8', duration: '12 hrs' }],
-    'node.js': [{ title: 'Node.js Docs', platform: 'nodejs.org', url: 'https://nodejs.org/en/docs', duration: '15 hrs' }, { title: 'Node.js Crash Course', platform: 'Traversy Media', url: 'https://www.youtube.com/watch?v=fBNz5xF-Kx4', duration: '90 min' }],
-    'nodejs': [{ title: 'Node.js Docs', platform: 'nodejs.org', url: 'https://nodejs.org/en/docs', duration: '15 hrs' }],
-    'python': [{ title: 'Python Official Tutorial', platform: 'python.org', url: 'https://docs.python.org/3/tutorial', duration: '20 hrs' }],
-    'sql': [{ title: 'SQL Tutorial', platform: 'W3Schools', url: 'https://www.w3schools.com/sql', duration: '10 hrs' }],
-    'postgresql': [{ title: 'PostgreSQL Tutorial', platform: 'postgresql.org', url: 'https://www.postgresql.org/docs/current/tutorial.html', duration: '10 hrs' }],
-    'aws': [{ title: 'AWS Cloud Practitioner', platform: 'AWS Training', url: 'https://aws.amazon.com/training/digital/aws-cloud-practitioner-essentials', duration: '6 hrs' }, { title: 'AWS Free Tier Practice', platform: 'AWS', url: 'https://aws.amazon.com/free', duration: 'Self-paced' }],
-    'docker': [{ title: 'Docker 101 Tutorial', platform: 'Play with Docker', url: 'https://training.play-with-docker.com', duration: '4 hrs' }, { title: 'Docker Docs', platform: 'docker.com', url: 'https://docs.docker.com/get-started', duration: '3 hrs' }],
-    'kubernetes': [{ title: 'Kubernetes Basics', platform: 'kubernetes.io', url: 'https://kubernetes.io/docs/tutorials/kubernetes-basics', duration: '8 hrs' }],
-    'typescript': [{ title: 'TypeScript Handbook', platform: 'typescriptlang.org', url: 'https://www.typescriptlang.org/docs/handbook/intro.html', duration: '10 hrs' }],
-    'git': [{ title: 'Git Handbook', platform: 'GitHub Docs', url: 'https://guides.github.com/introduction/git-handbook', duration: '2 hrs' }],
-    'java': [{ title: 'Java Tutorial', platform: 'Oracle', url: 'https://dev.java/learn', duration: '30 hrs' }],
-    'spring boot': [{ title: 'Spring Boot Guide', platform: 'spring.io', url: 'https://spring.io/guides/gs/spring-boot', duration: '10 hrs' }],
-    'machine learning': [{ title: 'ML Crash Course', platform: 'Google', url: 'https://developers.google.com/machine-learning/crash-course', duration: '15 hrs' }],
-    'deep learning': [{ title: 'Deep Learning Specialization', platform: 'Coursera', url: 'https://www.coursera.org/specializations/deep-learning', duration: '60 hrs' }],
-    'graphql': [{ title: 'GraphQL Tutorial', platform: 'graphql.org', url: 'https://graphql.org/learn', duration: '6 hrs' }],
-    'mongodb': [{ title: 'MongoDB University', platform: 'MongoDB', url: 'https://university.mongodb.com', duration: '10 hrs' }],
-    'redis': [{ title: 'Redis Docs', platform: 'redis.io', url: 'https://redis.io/docs', duration: '5 hrs' }],
-    'linux': [{ title: 'Linux Command Line', platform: 'LinuxCommand.org', url: 'https://linuxcommand.org/tlcl.php', duration: '8 hrs' }],
-    'devops': [{ title: 'DevOps Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/devops', duration: 'Self-paced' }],
-    'ci/cd': [{ title: 'GitHub Actions Docs', platform: 'GitHub', url: 'https://docs.github.com/en/actions', duration: '5 hrs' }],
-    'figma': [{ title: 'Figma Learn', platform: 'Figma', url: 'https://www.figma.com/resources/learn-design', duration: '6 hrs' }],
-    'flutter': [{ title: 'Flutter Docs', platform: 'flutter.dev', url: 'https://docs.flutter.dev/get-started/codelab', duration: '15 hrs' }],
-    'android': [{ title: 'Android Developers', platform: 'Google', url: 'https://developer.android.com/courses', duration: '20 hrs' }],
-    'ios': [{ title: 'Swift Playgrounds', platform: 'Apple', url: 'https://developer.apple.com/swift/playgrounds', duration: '20 hrs' }],
-    'c++': [{ title: 'Learn C++', platform: 'learncpp.com', url: 'https://www.learncpp.com', duration: '30 hrs' }],
-    'c': [{ title: 'C Tutorial', platform: 'W3Schools', url: 'https://www.w3schools.com/c', duration: '15 hrs' }],
-    'system design': [{ title: 'System Design Primer', platform: 'GitHub', url: 'https://github.com/donnemartin/system-design-primer', duration: 'Self-paced' }],
-    'dsa': [{ title: 'DSA Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/datastructures-and-algorithms', duration: 'Self-paced' }, { title: 'LeetCode Problems', platform: 'LeetCode', url: 'https://leetcode.com/problemset', duration: 'Self-paced' }],
-    'rest api': [{ title: 'REST API Tutorial', platform: 'restfulapi.net', url: 'https://restfulapi.net', duration: '4 hrs' }],
-    'cybersecurity': [{ title: 'Cyber Security Course', platform: 'Cybrary', url: 'https://www.cybrary.it', duration: '20 hrs' }],
-    'blockchain': [{ title: 'Blockchain Basics', platform: 'Coursera', url: 'https://www.coursera.org/learn/blockchain-basics', duration: '10 hrs' }],
-    'excel': [{ title: 'Excel Tutorial', platform: 'Microsoft', url: 'https://support.microsoft.com/en-us/excel', duration: '5 hrs' }],
-    'data analysis': [{ title: 'Data Analysis with Python', platform: 'freeCodeCamp', url: 'https://www.freecodecamp.org/learn/data-analysis-with-python', duration: '25 hrs' }],
-    'tableau': [{ title: 'Tableau Public Training', platform: 'Tableau', url: 'https://public.tableau.com/en-us/s/resources', duration: '8 hrs' }],
+    'pytorch': [
+      { title: 'PyTorch Official Beginner Basics & Tensors', platform: 'pytorch.org', url: 'https://pytorch.org/tutorials/beginner/basics/intro.html', duration: '10 hrs' },
+      { title: 'PyTorch Documentation & API Reference', platform: 'pytorch.org', url: 'https://pytorch.org/docs/stable/index.html', duration: 'Self-paced' },
+      { title: 'AI & Deep Learning Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ai-data-scientist', duration: 'Self-paced' }
+    ],
+    'computer vision': [
+      { title: 'OpenCV Official Tutorials & Core Pipeline', platform: 'opencv.org', url: 'https://docs.opencv.org/4.x/d9/df8/tutorial_root.html', duration: '20 hrs' },
+      { title: 'PyTorch TorchVision Computer Vision Guide', platform: 'pytorch.org', url: 'https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html', duration: '12 hrs' },
+      { title: 'Computer Vision & AI Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ai-data-scientist', duration: 'Self-paced' }
+    ],
+    'cv': [
+      { title: 'OpenCV Official Tutorials & Core Pipeline', platform: 'opencv.org', url: 'https://docs.opencv.org/4.x/d9/df8/tutorial_root.html', duration: '20 hrs' },
+      { title: 'PyTorch TorchVision Computer Vision Guide', platform: 'pytorch.org', url: 'https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html', duration: '12 hrs' }
+    ],
+    'c++': [
+      { title: 'Learn C++ Complete Guide & Tutorials', platform: 'learncpp.com', url: 'https://www.learncpp.com/', duration: '30 hrs' },
+      { title: 'C++ Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/cpp', duration: 'Self-paced' },
+      { title: 'C++ Standard Reference & STL Handbook', platform: 'cppreference.com', url: 'https://en.cppreference.com/w/cpp', duration: 'Self-paced' }
+    ],
+    'cpp': [
+      { title: 'Learn C++ Complete Guide & Tutorials', platform: 'learncpp.com', url: 'https://www.learncpp.com/', duration: '30 hrs' },
+      { title: 'C++ Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/cpp', duration: 'Self-paced' },
+      { title: 'C++ Standard Reference & STL Handbook', platform: 'cppreference.com', url: 'https://en.cppreference.com/w/cpp', duration: 'Self-paced' }
+    ],
+    'c': [
+      { title: 'C Programming Tutorial & Exercises', platform: 'W3Schools', url: 'https://www.w3schools.com/c/', duration: '15 hrs' },
+      { title: 'C Language Reference', platform: 'cppreference.com', url: 'https://en.cppreference.com/w/c', duration: 'Self-paced' }
+    ],
+    'react': [
+      { title: 'React Official Documentation & Guides', platform: 'react.dev', url: 'https://react.dev/learn', duration: '20 hrs' },
+      { title: 'React Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/react', duration: 'Self-paced' }
+    ],
+    'node.js': [
+      { title: 'Node.js Official Documentation', platform: 'nodejs.org', url: 'https://nodejs.org/en/docs', duration: '15 hrs' },
+      { title: 'Node.js Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/nodejs', duration: 'Self-paced' }
+    ],
+    'nodejs': [
+      { title: 'Node.js Official Documentation', platform: 'nodejs.org', url: 'https://nodejs.org/en/docs', duration: '15 hrs' },
+      { title: 'Node.js Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/nodejs', duration: 'Self-paced' }
+    ],
+    'python': [
+      { title: 'Python Official Tutorial & Standard Library', platform: 'python.org', url: 'https://docs.python.org/3/tutorial/', duration: '20 hrs' },
+      { title: 'Python Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/python', duration: 'Self-paced' }
+    ],
+    'sql': [
+      { title: 'SQL Tutorial & Hands-on Exercises', platform: 'W3Schools', url: 'https://www.w3schools.com/sql/', duration: '10 hrs' },
+      { title: 'PostgreSQL & SQL DBA Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/postgresql-dba', duration: 'Self-paced' }
+    ],
+    'postgresql': [
+      { title: 'PostgreSQL Official Documentation & Tutorial', platform: 'postgresql.org', url: 'https://www.postgresql.org/docs/current/tutorial.html', duration: '10 hrs' },
+      { title: 'PostgreSQL DBA Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/postgresql-dba', duration: 'Self-paced' }
+    ],
+    'aws': [
+      { title: 'AWS Cloud Practitioner Essentials', platform: 'AWS Training', url: 'https://aws.amazon.com/training/digital/aws-cloud-practitioner-essentials', duration: '6 hrs' },
+      { title: 'AWS Cloud Architect Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/aws', duration: 'Self-paced' }
+    ],
+    'docker': [
+      { title: 'Docker Official Getting Started Guide', platform: 'docker.com', url: 'https://docs.docker.com/get-started/', duration: '4 hrs' },
+      { title: 'Docker Roadmap & Cheat Sheet', platform: 'roadmap.sh', url: 'https://roadmap.sh/docker', duration: 'Self-paced' }
+    ],
+    'kubernetes': [
+      { title: 'Kubernetes Official Interactive Basics', platform: 'kubernetes.io', url: 'https://kubernetes.io/docs/tutorials/kubernetes-basics/', duration: '8 hrs' },
+      { title: 'Kubernetes Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/kubernetes', duration: 'Self-paced' }
+    ],
+    'typescript': [
+      { title: 'TypeScript Official Handbook', platform: 'typescriptlang.org', url: 'https://www.typescriptlang.org/docs/handbook/intro.html', duration: '10 hrs' },
+      { title: 'TypeScript Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/typescript', duration: 'Self-paced' }
+    ],
+    'git': [
+      { title: 'Git & GitHub Comprehensive Handbook', platform: 'git-scm.com', url: 'https://git-scm.com/book/en/v2', duration: '4 hrs' },
+      { title: 'Git & GitHub Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/git-github', duration: 'Self-paced' }
+    ],
+    'java': [
+      { title: 'Java Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/java', duration: 'Self-paced' },
+      { title: 'Java Official Tutorials & Best Practices', platform: 'Oracle dev.java', url: 'https://dev.java/learn/', duration: '30 hrs' }
+    ],
+    'spring boot': [
+      { title: 'Spring Boot Official Getting Started Guides', platform: 'spring.io', url: 'https://spring.io/guides/gs/spring-boot', duration: '10 hrs' },
+      { title: 'Spring Boot Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/spring-boot', duration: 'Self-paced' }
+    ],
+    'machine learning': [
+      { title: 'Google Machine Learning Crash Course', platform: 'Google Developers', url: 'https://developers.google.com/machine-learning/crash-course', duration: '15 hrs' },
+      { title: 'AI & Data Scientist Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ai-data-scientist', duration: 'Self-paced' }
+    ],
+    'deep learning': [
+      { title: 'Deep Learning Specialization & Architectures', platform: 'Coursera (DeepLearning.AI)', url: 'https://www.coursera.org/specializations/deep-learning', duration: '60 hrs' },
+      { title: 'PyTorch Deep Learning with PyTorch', platform: 'pytorch.org', url: 'https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html', duration: '12 hrs' }
+    ],
+    'tensorflow': [
+      { title: 'TensorFlow Core Tutorials & Keras Workflow', platform: 'tensorflow.org', url: 'https://www.tensorflow.org/tutorials', duration: '15 hrs' },
+      { title: 'AI & Machine Learning Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ai-data-scientist', duration: 'Self-paced' }
+    ],
+    'nlp': [
+      { title: 'Hugging Face NLP Course & Transformer Models', platform: 'huggingface.co', url: 'https://huggingface.co/learn/nlp-course', duration: '20 hrs' }
+    ],
+    'natural language processing': [
+      { title: 'Hugging Face NLP Course & Transformer Models', platform: 'huggingface.co', url: 'https://huggingface.co/learn/nlp-course', duration: '20 hrs' }
+    ],
+    'generative ai': [
+      { title: 'Generative AI for Beginners Curriculum', platform: 'Microsoft GitHub', url: 'https://github.com/microsoft/generative-ai-for-beginners', duration: '18 hrs' },
+      { title: 'Prompt Engineering & LLM Architecture Guide', platform: 'promptingguide.ai', url: 'https://www.promptingguide.ai/', duration: '6 hrs' }
+    ],
+    'graphql': [
+      { title: 'GraphQL Official Tutorial & Schema Design', platform: 'graphql.org', url: 'https://graphql.org/learn/', duration: '6 hrs' },
+      { title: 'GraphQL Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/graphql', duration: 'Self-paced' }
+    ],
+    'mongodb': [
+      { title: 'MongoDB Official Developer University', platform: 'MongoDB', url: 'https://learn.mongodb.com/', duration: '10 hrs' },
+      { title: 'MongoDB Database Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/mongodb', duration: 'Self-paced' }
+    ],
+    'redis': [
+      { title: 'Redis Official Documentation & Data Structures', platform: 'redis.io', url: 'https://redis.io/docs/latest/develop/get-started/', duration: '5 hrs' },
+      { title: 'Redis Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/redis', duration: 'Self-paced' }
+    ],
+    'linux': [
+      { title: 'Linux Command Line Guide & Shell Scripting', platform: 'LinuxCommand.org', url: 'https://linuxcommand.org/tlcl.php', duration: '8 hrs' },
+      { title: 'Linux Operating System Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/linux', duration: 'Self-paced' }
+    ],
+    'devops': [
+      { title: 'DevOps Complete Mastery Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/devops', duration: 'Self-paced' },
+      { title: 'DevOps Hands-on Exercises & Scenarios', platform: 'GitHub', url: 'https://github.com/bregman-arie/devops-exercises', duration: '20 hrs' }
+    ],
+    'ci/cd': [
+      { title: 'GitHub Actions Official Workflows & CI/CD', platform: 'GitHub Docs', url: 'https://docs.github.com/en/actions', duration: '5 hrs' },
+      { title: 'DevOps CI/CD Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/devops', duration: 'Self-paced' }
+    ],
+    'figma': [
+      { title: 'Figma Official Design Systems & UI Learning', platform: 'Figma', url: 'https://www.figma.com/resources/learn-design/', duration: '6 hrs' },
+      { title: 'UX / UI Design Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ux-design', duration: 'Self-paced' }
+    ],
+    'flutter': [
+      { title: 'Flutter Official Code Labs & UI Development', platform: 'flutter.dev', url: 'https://docs.flutter.dev/get-started/codelab', duration: '15 hrs' },
+      { title: 'Flutter Mobile Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/flutter', duration: 'Self-paced' }
+    ],
+    'android': [
+      { title: 'Android Developers Official Training Courses', platform: 'Google Android', url: 'https://developer.android.com/courses', duration: '20 hrs' },
+      { title: 'Android Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/android', duration: 'Self-paced' }
+    ],
+    'ios': [
+      { title: 'Apple Swift & SwiftUI Developer Documentation', platform: 'Apple Developer', url: 'https://developer.apple.com/swift/', duration: '20 hrs' },
+      { title: 'iOS Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ios', duration: 'Self-paced' }
+    ],
+    'system design': [
+      { title: 'System Design Complete Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/system-design', duration: 'Self-paced' },
+      { title: 'System Design Primer (Architecture & Tradeoffs)', platform: 'GitHub', url: 'https://github.com/donnemartin/system-design-primer', duration: 'Self-paced' }
+    ],
+    'dsa': [
+      { title: 'Data Structures & Algorithms Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/datastructures-and-algorithms', duration: 'Self-paced' },
+      { title: 'LeetCode Problem Solving Platform', platform: 'LeetCode', url: 'https://leetcode.com/problemset/', duration: 'Self-paced' }
+    ],
+    'rest api': [
+      { title: 'RESTful API Architecture & Design Principles', platform: 'restfulapi.net', url: 'https://restfulapi.net/', duration: '4 hrs' },
+      { title: 'Backend API Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/backend', duration: 'Self-paced' }
+    ],
+    'cybersecurity': [
+      { title: 'Cyber Security Complete Career Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/cyber-security', duration: 'Self-paced' },
+      { title: 'TryHackMe Practical Hands-On Labs', platform: 'TryHackMe', url: 'https://tryhackme.com/', duration: '30 hrs' }
+    ],
+    'blockchain': [
+      { title: 'Blockchain Specialization & Smart Contracts', platform: 'Coursera', url: 'https://www.coursera.org/learn/blockchain-basics', duration: '10 hrs' },
+      { title: 'Blockchain Developer Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/blockchain', duration: 'Self-paced' }
+    ],
+    'excel': [
+      { title: 'Microsoft Excel Training Center', platform: 'Microsoft Support', url: 'https://support.microsoft.com/en-us/excel', duration: '5 hrs' }
+    ],
+    'data analysis': [
+      { title: 'Data Analysis with Python Certification', platform: 'freeCodeCamp', url: 'https://www.freecodecamp.org/learn/data-analysis-with-python/', duration: '25 hrs' },
+      { title: 'AI & Data Scientist Roadmap', platform: 'roadmap.sh', url: 'https://roadmap.sh/ai-data-scientist', duration: 'Self-paced' }
+    ],
+    'tableau': [
+      { title: 'Tableau Public Visual Analytics Training', platform: 'Tableau', url: 'https://public.tableau.com/en-us/s/resources', duration: '8 hrs' }
+    ],
+    'pandas': [
+      { title: 'Pandas Official User Guide & DataFrames', platform: 'pandas.pydata.org', url: 'https://pandas.pydata.org/docs/user_guide/index.html', duration: '8 hrs' }
+    ],
+    'numpy': [
+      { title: 'NumPy Absolute Basics for Beginners', platform: 'numpy.org', url: 'https://numpy.org/doc/stable/user/absolute_beginners.html', duration: '6 hrs' }
+    ],
+    'scikit-learn': [
+      { title: 'Scikit-Learn Machine Learning Tutorials', platform: 'scikit-learn.org', url: 'https://scikit-learn.org/stable/tutorial/index.html', duration: '12 hrs' }
+    ],
+    'sklearn': [
+      { title: 'Scikit-Learn Machine Learning Tutorials', platform: 'scikit-learn.org', url: 'https://scikit-learn.org/stable/tutorial/index.html', duration: '12 hrs' }
+    ]
   };
+
+  function getCuratedSkillResources(skillName: string): { title: string; platform: string; url: string; duration: string }[] {
+    const raw = (skillName || '').trim().toLowerCase();
+    const normalized = normalizeSkillKey(raw);
+
+    if (LEARNING_RESOURCES[raw]) return LEARNING_RESOURCES[raw];
+    if (LEARNING_RESOURCES[normalized]) return LEARNING_RESOURCES[normalized];
+
+    // Check partial matches
+    for (const [k, list] of Object.entries(LEARNING_RESOURCES)) {
+      if (raw === k || raw.startsWith(k) || k.startsWith(raw)) {
+        return list;
+      }
+    }
+
+    // Smart fallback routing with dedicated developer documentation platforms
+    const slug = encodeURIComponent(skillName.trim());
+    return [
+      { title: `${skillName} Developer Handbook & Documentation`, platform: 'DevDocs.io', url: `https://devdocs.io/#q=${slug}`, duration: 'Self-paced' },
+      { title: `${skillName} Tutorials & Placement Examples`, platform: 'GeeksforGeeks', url: `https://www.geeksforgeeks.org/search/${slug}/`, duration: '10 hrs' }
+    ];
+  }
 
   function deriveRecommendations(gaps: { skill: string; requiredLevel: number; impact: number }[]): { skill: string; resources: typeof LEARNING_RESOURCES[string]; priority: 'HIGH' | 'MEDIUM' | 'LOW' }[] {
     return gaps
       .sort((a, b) => b.impact - a.impact)
       .map(g => ({
         skill: g.skill,
-        resources: LEARNING_RESOURCES[g.skill.toLowerCase()] || [{ title: `Search: ${g.skill} Tutorial`, platform: 'Google', url: `https://www.google.com/search?q=${encodeURIComponent(g.skill + ' tutorial')}`, duration: 'Self-paced' }],
+        resources: getCuratedSkillResources(g.skill),
         priority: g.impact >= 0.25 ? 'HIGH' : g.impact >= 0.15 ? 'MEDIUM' : 'LOW',
       }));
   }
@@ -9891,18 +10062,11 @@ async function startServer() {
     gaps.sort((a, b) => b.impact - a.impact);
 
     // Curated learning recommendations
-    const recommendations = gaps.map(g => {
-      const key = g.skill.toLowerCase().trim();
-      const directResource = LEARNING_RESOURCES[key] || LEARNING_RESOURCES[normalizeSkillKey(key)];
-      return {
-        skill: g.skill,
-        priority: g.severity,
-        resources: directResource || [
-          { title: `${g.skill} Complete Mastery Roadmap`, platform: 'roadmap.sh', url: `https://roadmap.sh`, duration: '10 hrs' },
-          { title: `${g.skill} Hands-On Reference & Labs`, platform: 'Documentation', url: `https://www.google.com/search?q=${encodeURIComponent(g.skill + ' documentation tutorial')}`, duration: 'Self-paced' }
-        ]
-      };
-    });
+    const recommendations = gaps.map(g => ({
+      skill: g.skill,
+      priority: g.severity,
+      resources: getCuratedSkillResources(g.skill)
+    }));
 
     // Native Algorithmic AI Insights (Mathematical Summary)
     const topMissing = gaps.slice(0, 3).map(g => g.skill);
