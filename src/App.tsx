@@ -3,23 +3,26 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { API_URL, FEATURE_FLAGS } from './config';
-import SkillAssessmentView from './SkillAssessmentView';
-import PlacementReadinessView from './PlacementReadinessView';
-import LiveTeachingHubView from './LiveTeachingHubView';
-import IndustryPortalView from './IndustryPortalView';
-import StudentOpportunitiesView from './StudentOpportunitiesView';
-import SkillGapAnalyzerView from './SkillGapAnalyzerView';
-import FacultyIndustryHubView from './FacultyIndustryHubView';
-import StudentCodingAssessmentView from './StudentCodingAssessmentView';
-import InstitutionalSkillHeatmapView from './InstitutionalSkillHeatmapView';
+
+// Lazy-loaded feature views for code-splitting and faster initial page load
+const SkillAssessmentView = lazy(() => import('./SkillAssessmentView'));
+const PlacementReadinessView = lazy(() => import('./PlacementReadinessView'));
+const LiveTeachingHubView = lazy(() => import('./LiveTeachingHubView'));
+const IndustryPortalView = lazy(() => import('./IndustryPortalView'));
+const StudentOpportunitiesView = lazy(() => import('./StudentOpportunitiesView'));
+const SkillGapAnalyzerView = lazy(() => import('./SkillGapAnalyzerView'));
+const FacultyIndustryHubView = lazy(() => import('./FacultyIndustryHubView'));
+const StudentCodingAssessmentView = lazy(() => import('./StudentCodingAssessmentView'));
+const InstitutionalSkillHeatmapView = lazy(() => import('./InstitutionalSkillHeatmapView'));
+const PWAInstallOverlay = lazy(() => import('./PWAInstallOverlay'));
+const PushNotificationPromptModal = lazy(() => import('./PushNotificationPromptModal'));
+
 import { generateStudentResumePdf, downloadStudentResumePdf } from './studentProfilePdfGenerator';
 import { generateMergedProofsPdf, ProofPdfItem } from './proofPdfGenerator';
-import PWAInstallOverlay from './PWAInstallOverlay';
-import PushNotificationPromptModal from './PushNotificationPromptModal';
 import ThemeToggle from './ThemeToggle';
 import {
   isPushSupported,
@@ -11629,7 +11632,8 @@ export default function App() {
           </header>
 
           <div className="flex-1 min-h-0 bg-[#F5F5F4] dark:bg-[#0f0f12] relative">
-            <AnimatePresence mode="wait">
+            <Suspense fallback={<ViewLoadingFallback />}>
+              <AnimatePresence mode="wait">
               {view === 'dashboard' && isIndustry && (
                 <motion.div
                   key="industry-portal-dash"
@@ -15162,6 +15166,7 @@ export default function App() {
                 )
               }
             </AnimatePresence>
+            </Suspense>
           </div>
 
           <AnimatePresence>
@@ -16284,8 +16289,10 @@ export default function App() {
 
           {renderAssignTargetModal()}
           {renderHistoryDetailsModal()}
-          <PushNotificationPromptModal token={token} apiUrl={API_URL} addToast={addToast} />
-          <PWAInstallOverlay />
+          <Suspense fallback={null}>
+            <PushNotificationPromptModal token={token} apiUrl={API_URL} addToast={addToast} />
+            <PWAInstallOverlay />
+          </Suspense>
         </AnimatePresence>
       </div>
     </FooterContext.Provider>
@@ -16295,6 +16302,17 @@ export default function App() {
 }
 
 // --- Helper Components ---
+
+function ViewLoadingFallback() {
+  return (
+    <div className="w-full h-full min-h-[400px] flex flex-col items-center justify-center p-8 text-zinc-500">
+      <div className="w-10 h-10 border-3 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-3.5" />
+      <span className="text-xs font-bold uppercase tracking-widest text-zinc-400 animate-pulse">
+        Loading View...
+      </span>
+    </div>
+  );
+}
 
 function SidebarItem({ icon, label, active, onClick, badge }: { icon: React.ReactNode; label: string; active?: boolean; onClick: () => void; badge?: string }) {
   return (

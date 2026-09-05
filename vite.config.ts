@@ -26,22 +26,18 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom')) {
-                return 'vendor-react';
-              }
               if (id.includes('lucide-react')) {
                 return 'vendor-icons';
               }
               if (id.includes('motion')) {
                 return 'vendor-motion';
               }
-              if (id.includes('exceljs') || id.includes('xlsx')) {
+              if (id.includes('exceljs') || id.includes('xlsx') || id.includes('jszip')) {
                 return 'vendor-excel';
               }
-              if (id.includes('zod')) {
-                return 'vendor-zod';
+              if (id.includes('jspdf') || id.includes('html2canvas')) {
+                return 'vendor-pdf';
               }
-              return 'vendor-core';
             }
           },
         },
