@@ -12,10 +12,10 @@ All sidebar feature visibilities are centrally managed in [`src/config.ts`](./sr
 export const FEATURE_FLAGS = {
   // Toggle UI visibility of features on the sidebar dashboard
   // Set to `false` to hide temporarily, set to `true` to bring back anytime!
-  placementRating: false,    // Placement Rating (PlacementReadinessView)
-  opportunities: false,      // Opportunities (StudentOpportunitiesView)
-  codingTests: false,        // Coding Tests (StudentCodingAssessmentView)
-  skillGapAi: false,         // Skill Gap AI (SkillGapAnalyzerView)
+  placementRating: true,     // Placement Rating (PlacementReadinessView)
+  opportunities: true,       // Opportunities (StudentOpportunitiesView)
+  codingTests: true,         // Coding Tests (StudentCodingAssessmentView)
+  skillGapAi: true,          // Skill Gap AI (SkillGapAnalyzerView)
   liveTeachingHub: true,     // Live Teaching Hub (LiveTeachingHubView)
   skillAssessment: true,     // Skill Assessment (SkillAssessmentView)
   facultyHub: true,          // Faculty Hub (FacultyIndustryHubView)
@@ -45,10 +45,10 @@ To bring any hidden feature back to the sidebar dashboard:
 
 | Feature Name | Flag Name in `src/config.ts` | Default State | Component File | Associated Roles |
 | :--- | :--- | :--- | :--- | :--- |
-| **Placement Rating** | `placementRating` | `false` (Hidden) | [`src/PlacementReadinessView.tsx`](./src/PlacementReadinessView.tsx) | Student, Faculty, HOD, Admin |
-| **Opportunities** | `opportunities` | `false` (Hidden) | [`src/StudentOpportunitiesView.tsx`](./src/StudentOpportunitiesView.tsx) | Student |
-| **Coding Tests** | `codingTests` | `false` (Hidden) | [`src/StudentCodingAssessmentView.tsx`](./src/StudentCodingAssessmentView.tsx) | Student |
-| **Skill Gap AI** | `skillGapAi` | `false` (Hidden) | [`src/SkillGapAnalyzerView.tsx`](./src/SkillGapAnalyzerView.tsx) | Student |
+| **Placement Rating** | `placementRating` | `true` (Visible) | [`src/PlacementReadinessView.tsx`](./src/PlacementReadinessView.tsx) | Student, Faculty, HOD, Admin |
+| **Opportunities** | `opportunities` | `true` (Visible) | [`src/StudentOpportunitiesView.tsx`](./src/StudentOpportunitiesView.tsx) | Student |
+| **Coding Tests** | `codingTests` | `true` (Visible) | [`src/StudentCodingAssessmentView.tsx`](./src/StudentCodingAssessmentView.tsx) | Student |
+| **Skill Gap AI** | `skillGapAi` | `true` (Visible) | [`src/SkillGapAnalyzerView.tsx`](./src/SkillGapAnalyzerView.tsx) | Student |
 | **Live Teaching Hub** | `liveTeachingHub` | `true` (Visible) | [`src/LiveTeachingHubView.tsx`](./src/LiveTeachingHubView.tsx) | All Roles |
 | **Skill Assessment** | `skillAssessment` | `true` (Visible) | [`src/SkillAssessmentView.tsx`](./src/SkillAssessmentView.tsx) | Student |
 | **Faculty Hub** | `facultyHub` | `true` (Visible) | [`src/FacultyIndustryHubView.tsx`](./src/FacultyIndustryHubView.tsx) | Faculty, HOD, Industry |

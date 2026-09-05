@@ -173,48 +173,55 @@ html.dark {
   /* 6. Vibrant Glowing Colored Badges & Highlights */
   /* Amber / Gold / Yellow */
   .bg-amber-50, .bg-amber-100, .bg-yellow-50, .bg-yellow-100,
-  .bg-amber-50\/20, .bg-amber-50\/30, .bg-amber-50\/40, .bg-amber-50\/50, .bg-amber-50\/70, .bg-amber-50\/90 {
+  [class*="bg-amber-50"], [class*="bg-amber-100"], [class*="bg-yellow-50"], [class*="bg-yellow-100"] {
     background-color: rgba(245, 158, 11, 0.16) !important;
     border-color: rgba(245, 158, 11, 0.4) !important;
   }
-  .text-amber-500, .text-amber-600, .text-amber-700, .text-amber-800, .text-amber-900,
-  .text-yellow-500, .text-yellow-600, .text-yellow-700 {
+  .text-amber-500, .text-amber-600, .text-amber-700, .text-amber-800, .text-amber-900, .text-amber-950,
+  .text-yellow-500, .text-yellow-600, .text-yellow-700, .text-yellow-800, .text-yellow-900 {
     color: #fde047 !important;
   }
 
   /* Emerald / Green */
   .bg-emerald-50, .bg-emerald-100, .bg-green-50, .bg-green-100,
-  .bg-emerald-50\/20, .bg-emerald-50\/30, .bg-emerald-50\/40 {
+  [class*="bg-emerald-50"], [class*="bg-emerald-100"], [class*="bg-green-50"], [class*="bg-green-100"] {
     background-color: rgba(16, 185, 129, 0.16) !important;
     border-color: rgba(16, 185, 129, 0.4) !important;
   }
-  .text-emerald-500, .text-emerald-600, .text-emerald-700, .text-emerald-800, .text-emerald-900, .text-green-600, .text-green-700 {
+  .text-emerald-500, .text-emerald-600, .text-emerald-700, .text-emerald-800, .text-emerald-900, .text-emerald-950,
+  .text-green-600, .text-green-700, .text-green-800, .text-green-900 {
     color: #4ade80 !important;
   }
 
   /* Sky / Blue / Indigo */
   .bg-blue-50, .bg-blue-100, .bg-sky-50, .bg-sky-100,
-  .bg-indigo-50, .bg-indigo-100, .bg-indigo-50\/20, .bg-indigo-50\/30, .bg-indigo-50\/40 {
-    background-color: rgba(56, 189, 248, 0.16) !important;
-    border-color: rgba(56, 189, 248, 0.4) !important;
+  .bg-indigo-50, .bg-indigo-100,
+  [class*="bg-blue-50"], [class*="bg-blue-100"], [class*="bg-sky-50"], [class*="bg-sky-100"],
+  [class*="bg-indigo-50"], [class*="bg-indigo-100"] {
+    background-color: rgba(56, 189, 248, 0.14) !important;
+    border-color: rgba(56, 189, 248, 0.35) !important;
   }
-  .text-blue-500, .text-blue-600, .text-blue-700, .text-blue-800, .text-blue-900,
-  .text-sky-500, .text-sky-600,
-  .text-indigo-500, .text-indigo-600, .text-indigo-700 {
+  .text-blue-500, .text-blue-600, .text-blue-700, .text-blue-800, .text-blue-900, .text-blue-950,
+  .text-sky-500, .text-sky-600, .text-sky-700, .text-sky-800, .text-sky-900,
+  .text-indigo-500, .text-indigo-600, .text-indigo-700, .text-indigo-800, .text-indigo-900 {
     color: #38bdf8 !important;
   }
 
   /* Purple / Violet */
-  .bg-purple-50, .bg-purple-100, .bg-violet-50, .bg-violet-100 {
+  .bg-purple-50, .bg-purple-100, .bg-violet-50, .bg-violet-100,
+  [class*="bg-purple-50"], [class*="bg-purple-100"], [class*="bg-violet-50"], [class*="bg-violet-100"] {
     background-color: rgba(168, 85, 247, 0.16) !important;
     border-color: rgba(168, 85, 247, 0.4) !important;
   }
-  .text-purple-500, .text-purple-600, .text-purple-700, .text-purple-800, .text-purple-900, .text-violet-600 {
+  .text-purple-500, .text-purple-600, .text-purple-700, .text-purple-800, .text-purple-900,
+  .text-violet-600, .text-violet-700, .text-violet-800 {
     color: #c084fc !important;
   }
 
   /* Rose / Pink / Red / Orange */
-  .bg-rose-50, .bg-rose-100, .bg-pink-50, .bg-pink-100, .bg-red-50, .bg-red-100, .bg-orange-50, .bg-orange-100 {
+  .bg-rose-50, .bg-rose-100, .bg-pink-50, .bg-pink-100, .bg-red-50, .bg-red-100, .bg-orange-50, .bg-orange-100,
+  [class*="bg-rose-50"], [class*="bg-rose-100"], [class*="bg-pink-50"], [class*="bg-pink-100"],
+  [class*="bg-red-50"], [class*="bg-red-100"], [class*="bg-orange-50"], [class*="bg-orange-100"] {
     background-color: rgba(244, 63, 94, 0.16) !important;
     border-color: rgba(244, 63, 94, 0.4) !important;
   }

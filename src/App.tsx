@@ -17,6 +17,7 @@ import FacultyIndustryHubView from './FacultyIndustryHubView';
 import StudentCodingAssessmentView from './StudentCodingAssessmentView';
 import InstitutionalSkillHeatmapView from './InstitutionalSkillHeatmapView';
 import { generateStudentResumePdf, downloadStudentResumePdf } from './studentProfilePdfGenerator';
+import { generateMergedProofsPdf, ProofPdfItem } from './proofPdfGenerator';
 import PWAInstallOverlay from './PWAInstallOverlay';
 import PushNotificationPromptModal from './PushNotificationPromptModal';
 import ThemeToggle from './ThemeToggle';
@@ -7342,6 +7343,269 @@ export default function App() {
     }
   };
 
+  // ── Download Screenshots as Merged Multi-Page PDF ───────────────────────────
+  const downloadScreenshotsPdf = async (
+    filters?: { classIds?: string[]; taskId?: string; year?: string; status?: string; },
+    explicitSubmissions?: any[]
+  ) => {
+    const isAdminRole = user?.role === 'SUPREME_ADMIN';
+    const isHODRole = user?.role === 'HOD';
+    const isClsRole = user?.role === 'CLASS_ADVISOR' || (user?.role === 'STUDENT' && user?.is_coordinator);
+    const selectedClassIds = filters?.classIds || [];
+    const selectedYear = filters?.year || '';
+    const selectedStatus = filters?.status || 'ALL';
+    const romanYearMap: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
+
+    const pdfItems: ProofPdfItem[] = [];
+
+    // Mode 1: Explicit submissions (e.g. from Verification Table)
+    if (explicitSubmissions && explicitSubmissions.length > 0) {
+      explicitSubmissions.forEach(s => {
+        if (!s.screenshot_url || s.screenshot_url.startsWith('PURGED')) return;
+        const sClass = classes.find(c => c.id?.toString() === s.class_id?.toString());
+        const std = users.find(u => u.id === s.user_id);
+        const yrNum = sClass?.year || s.class_year || std?.year;
+        const romanYr = yrNum ? (romanYearMap[yrNum] || yrNum) : '';
+        const taskObj = tasks.find(t => t.id === s.task_id);
+
+        pdfItems.push({
+          url: s.screenshot_url,
+          studentName: s.student_name || std?.full_name || 'Student',
+          registerNumber: s.register_number || std?.register_number || 'N/A',
+          className: s.class_name || sClass?.name || 'Class',
+          year: romanYr,
+          deptName: s.department_name || (std as any)?.department_name || 'Information Technology',
+          taskTitle: s.task_title || taskObj?.title || 'Task',
+          status: s.status || 'SUBMITTED',
+          submittedAt: s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('en-GB') : undefined,
+          isTeam: false
+        });
+      });
+    } else {
+      // Mode 2: Report Studio filters
+      const targetStudents = users.filter(u => {
+        if (u.role !== 'STUDENT') return false;
+        if (selectedYear) {
+          const uClass = classes.find(c => c.id?.toString() === u.class_id?.toString());
+          if (!uClass || String(uClass.year) !== String(selectedYear)) return false;
+        }
+        if (isAdminRole) {
+          if (selectedClassIds.length > 0) return selectedClassIds.includes(u.class_id?.toString() || '');
+          return true;
+        }
+        if (isHODRole) {
+          const inDept = u.department_id?.toString() === user?.department_id?.toString();
+          if (!inDept) return false;
+          if (selectedClassIds.length > 0) return selectedClassIds.includes(u.class_id?.toString() || '');
+          return true;
+        }
+        if (isClsRole) {
+          const userClassId = (user?.class_id || myClass?.id)?.toString();
+          return u.class_id?.toString() === userClassId;
+        }
+        if (selectedClassIds.length > 0) {
+          return selectedClassIds.includes(u.class_id?.toString() || '');
+        }
+        return true;
+      });
+
+      let targetTasks = tasks;
+      if (filters?.taskId) {
+        targetTasks = tasks.filter(t => t.id?.toString() === filters.taskId);
+      } else {
+        targetTasks = tasks.filter(t => {
+          if (isAdminRole) return true;
+          if (isHODRole) {
+            return t.department_id?.toString() === user?.department_id?.toString() || (!t.department_id && (!t.class_ids || !t.class_ids.length));
+          }
+          const userClassId = (user?.class_id || myClass?.id)?.toString();
+          if (Array.isArray(t.class_ids) && t.class_ids.length > 0) {
+            return t.class_ids.some((cid: any) => cid.toString() === userClassId);
+          }
+          return t.department_id?.toString() === user?.department_id?.toString() || (!t.department_id);
+        });
+      }
+
+      const getSub = (studentId: number, regNo: string | undefined, taskId: number) =>
+        submissions.find(s =>
+          (s.user_id?.toString() === studentId.toString() || (regNo && s.register_number === regNo)) &&
+          s.task_id?.toString() === taskId.toString()
+        );
+
+      targetStudents.forEach(student => {
+        targetTasks.forEach(task => {
+          if (Array.isArray(task.class_ids) && task.class_ids.length > 0 && !task.class_ids.some((cid: any) => cid.toString() === student.class_id?.toString())) {
+            return;
+          }
+          const sub = getSub(student.id, student.register_number, task.id);
+          if (!sub || !sub.screenshot_url || sub.screenshot_url.startsWith('PURGED')) return;
+
+          let include = false;
+          if (selectedStatus === 'ALL') include = true;
+          else if (selectedStatus === 'VERIFIED') include = sub.status === 'VERIFIED';
+          else if (selectedStatus === 'SUBMITTED') include = sub.status === 'SUBMITTED';
+          else if (selectedStatus === 'REJECTED') include = sub.status === 'REJECTED';
+
+          if (include) {
+            const studentClass = classes.find(c => c.id?.toString() === student.class_id?.toString());
+            const yrNum = studentClass?.year || (student as any).year;
+            const romanYr = yrNum ? (romanYearMap[yrNum] || yrNum) : '';
+
+            pdfItems.push({
+              url: sub.screenshot_url,
+              studentName: student.full_name || 'Student',
+              registerNumber: student.register_number || 'N/A',
+              className: student.class_name || studentClass?.name || 'Class',
+              year: romanYr,
+              deptName: (student as any).department_name || 'Information Technology',
+              taskTitle: task.title || 'Task',
+              status: sub.status || 'SUBMITTED',
+              submittedAt: sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString('en-GB') : undefined,
+              isTeam: false
+            });
+          }
+        });
+      });
+
+      // Team proofs
+      try {
+        const classQuery = selectedClassIds.length > 0 ? `?class_ids=${encodeURIComponent(selectedClassIds.join(','))}` : '';
+        const taskQuery = filters?.taskId ? `${classQuery ? '&' : '?'}task_id=${encodeURIComponent(filters.taskId)}` : '';
+        const teamRes = await fetch(`${API_URL}/api/team/report${classQuery}${taskQuery}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (teamRes.ok) {
+          const teamData: any[] = await teamRes.json();
+          teamData.forEach(t => {
+            if (filters?.taskId && t.task_id?.toString() !== filters.taskId.toString()) return;
+            if (!t.proof_url || t.proof_url.startsWith('PURGED')) return;
+
+            const teamClass = classes.find(c => c.id?.toString() === t.class_id?.toString());
+            if (selectedYear) {
+              if (!teamClass || String(teamClass.year) !== String(selectedYear)) return;
+            }
+
+            const subStat = (t.submission_status || '').toUpperCase();
+            const teamStat = (t.team_status || '').toUpperCase();
+            let mappedStatus = 'NOT_SUBMITTED';
+            if (subStat === 'APPROVED' || subStat === 'VERIFIED' || teamStat === 'APPROVED') mappedStatus = 'VERIFIED';
+            else if (subStat === 'PENDING' || subStat === 'SUBMITTED' || teamStat === 'SUBMITTED') mappedStatus = 'SUBMITTED';
+            else if (subStat === 'REJECTED' || teamStat === 'REJECTED') mappedStatus = 'REJECTED';
+
+            let includeTeam = false;
+            if (selectedStatus === 'ALL') includeTeam = true;
+            else if (selectedStatus === 'VERIFIED') includeTeam = mappedStatus === 'VERIFIED';
+            else if (selectedStatus === 'SUBMITTED') includeTeam = mappedStatus === 'SUBMITTED';
+            else if (selectedStatus === 'REJECTED') includeTeam = mappedStatus === 'REJECTED';
+
+            if (includeTeam) {
+              const teamYrNum = teamClass?.year;
+              const romanYr = teamYrNum ? (romanYearMap[teamYrNum] || teamYrNum) : '';
+
+              pdfItems.push({
+                url: t.proof_url,
+                studentName: t.team_name || 'Team Submission',
+                registerNumber: t.leader_regno || 'LEADER',
+                className: teamClass?.name || 'Class',
+                year: romanYr,
+                deptName: (teamClass as any)?.department_name || 'Information Technology',
+                taskTitle: t.task_title || 'Task',
+                status: mappedStatus,
+                submittedAt: t.submitted_at ? new Date(t.submitted_at).toLocaleDateString('en-GB') : undefined,
+                isTeam: true,
+                teamName: t.team_name,
+                teamLeader: t.leader_regno,
+                members: t.members?.map((m: any) => m.register_number || m.full_name || m) || []
+              });
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Error fetching team report for PDF proof:', err);
+      }
+    }
+
+    // Deduplicate by URL
+    const seenUrls = new Set<string>();
+    const uniqueItems = pdfItems.filter(item => {
+      if (seenUrls.has(item.url)) return false;
+      seenUrls.add(item.url);
+      return true;
+    });
+
+    if (uniqueItems.length === 0) {
+      addToast('No proof screenshots found to generate PDF for the selected filters.', 'info');
+      return;
+    }
+
+    abortScreenshotDownloadRef.current = false;
+    setScreenshotDownloadProgress({
+      current: 0,
+      total: uniqueItems.length,
+      percent: 0,
+      statusText: `Preparing to generate ${uniqueItems.length}-page Proof PDF...`
+    });
+
+    const fetchImageBlob = async (url: string): Promise<Blob | null> => {
+      try {
+        const directRes = await fetch(url);
+        if (directRes.ok) return await directRes.blob();
+      } catch (e) { }
+
+      // Fallback to authenticated proxy
+      try {
+        const proxyRes = await fetch(`${API_URL}/api/submissions/screenshot-proxy?url=${encodeURIComponent(url)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (proxyRes.ok) return await proxyRes.blob();
+      } catch (e) {
+        console.warn('[Screenshot PDF] Proxy failed for:', url, e);
+      }
+      return null;
+    };
+
+    try {
+      const pdfBlob = await generateMergedProofsPdf(
+        uniqueItems,
+        fetchImageBlob,
+        (progress) => {
+          setScreenshotDownloadProgress(progress);
+        },
+        () => abortScreenshotDownloadRef.current
+      );
+
+      if (abortScreenshotDownloadRef.current || !pdfBlob) {
+        setScreenshotDownloadProgress(null);
+        addToast('Proof PDF download cancelled.', 'info');
+        return;
+      }
+
+      const dateTag = new Date().toISOString().split('T')[0];
+      const roleTag = isAdminRole ? 'SuperAdmin' : isHODRole ? 'HOD' : 'Class';
+      const yearTag = selectedYear ? `Year${selectedYear}_` : '';
+      const taskObj = tasks.find(t => t.id?.toString() === filters?.taskId);
+      const taskTag = taskObj ? `${(taskObj.title || 'Task').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 18)}_` : '';
+      const statusTag = selectedStatus === 'ALL' ? 'All' : selectedStatus.charAt(0) + selectedStatus.slice(1).toLowerCase();
+      const pdfFileName = `${roleTag}_${yearTag}${taskTag}Proofs_${statusTag}_${dateTag}.pdf`;
+
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = pdfFileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(downloadUrl);
+
+      addToast(`Downloaded ${uniqueItems.length}-page proof PDF (${pdfFileName})!`, 'success');
+    } catch (pdfErr) {
+      console.error('Error generating proof PDF:', pdfErr);
+      addToast('Failed to create merged proofs PDF document', 'error');
+    } finally {
+      setScreenshotDownloadProgress(null);
+    }
+  };
+
   if (!token) {
     const roles = [
       { id: 'STUDENT', title: 'Student', icon: <Users className="w-6 h-6" />, desc: 'Submit and track your academic tasks' },
@@ -13776,6 +14040,48 @@ export default function App() {
                             </>
                           )}
                         </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            const filteredForPdf = (selectedSubmissions.length > 0
+                              ? submissions.filter(s => selectedSubmissions.includes(s.id))
+                              : submissions
+                            ).filter(s => {
+                              const std = users.find(u => u.id === s.user_id);
+                              const subClassId = s.class_id?.toString() || std?.class_id?.toString();
+                              if (!isAdmin && !isHOD) {
+                                const userClassId = user?.class_id?.toString();
+                                return userClassId ? subClassId === userClassId : true;
+                              }
+                              if (verificationDeptFilter) {
+                                const c = classes.find(cls => cls.id?.toString() === subClassId);
+                                if (c && c.department_id?.toString() !== verificationDeptFilter) return false;
+                              }
+                              if (verificationClassFilter && subClassId !== verificationClassFilter) return false;
+                              if (verificationYearFilter) {
+                                const c = classes.find(cls => cls.id?.toString() === subClassId);
+                                if (c && String(c.year) !== verificationYearFilter) return false;
+                              }
+                              return true;
+                            });
+
+                            downloadScreenshotsPdf(undefined, filteredForPdf);
+                          }}
+                          disabled={screenshotDownloadProgress !== null}
+                          className="flex items-center gap-1.5 text-xs py-2 px-3.5 rounded-full font-bold border-zinc-200 hover:border-red-600 hover:text-red-700 transition-colors shadow-2xs"
+                        >
+                          {screenshotDownloadProgress ? (
+                            <>
+                              <Loader2 size={13} className="animate-spin text-red-600" />
+                              <span>{screenshotDownloadProgress.percent}%</span>
+                            </>
+                          ) : (
+                            <>
+                              <FileText size={14} className="text-red-600" />
+                              <span>Download Proofs (.PDF)</span>
+                            </>
+                          )}
+                        </Button>
                         {selectedSubmissions.length > 0 && (
                           <Button
                             variant="success"
@@ -14994,21 +15300,21 @@ export default function App() {
 
 
                     {/* Screenshot count banner */}
-                    <div className="flex items-center justify-between p-3.5 rounded-2xl bg-blue-50/70 border border-blue-100">
+                    <div className="flex items-center justify-between p-3.5 rounded-2xl bg-blue-50/80 dark:bg-sky-950/40 border border-blue-100 dark:border-sky-800/60 transition-colors">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                        <div className="w-8 h-8 rounded-xl bg-blue-600 dark:bg-sky-500 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
                           <Camera size={16} />
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-blue-950 leading-none mb-1">Student Proof Screenshots</p>
-                          <p className="text-[11px] text-blue-700 font-medium leading-none">
+                          <p className="text-xs font-bold text-blue-950 dark:text-sky-100 leading-none mb-1">Student Proof Screenshots</p>
+                          <p className="text-[11px] text-blue-700 dark:text-sky-300 font-medium leading-none">
                             {availableScreenshotCount > 0
                               ? `${availableScreenshotCount} proof screenshot${availableScreenshotCount > 1 ? 's' : ''} available for export`
                               : 'No proof screenshots matching current filters'}
                           </p>
                         </div>
                       </div>
-                      <span className="text-xs font-black px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 font-mono shrink-0">
+                      <span className="text-xs font-black px-2.5 py-1 rounded-full bg-blue-100 dark:bg-sky-900/60 text-blue-800 dark:text-sky-200 font-mono shrink-0 border border-blue-200 dark:border-sky-800/80">
                         {availableScreenshotCount} Files
                       </span>
                     </div>
@@ -15049,36 +15355,57 @@ export default function App() {
                             <FileDown size={17} /> Download Excel
                           </Button>
                           <Button
-                            onClick={() => downloadScreenshotsZip(reportFilters)}
+                            onClick={() => downloadScreenshotsPdf(reportFilters)}
                             disabled={availableScreenshotCount === 0}
                             className={cn(
                               "rounded-2xl flex items-center justify-center gap-2 py-3 shadow-sm font-bold transition-all",
                               availableScreenshotCount > 0
-                                ? "bg-blue-600 hover:bg-blue-700 text-white"
+                                ? "bg-red-600 hover:bg-red-700 text-white shadow-red-200"
+                                : "bg-zinc-100 text-zinc-400 border border-zinc-200 cursor-not-allowed"
+                            )}
+                          >
+                            <FileText size={17} /> Download Proofs (.PDF)
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <Button
+                            onClick={() => downloadScreenshotsZip(reportFilters)}
+                            disabled={availableScreenshotCount === 0}
+                            variant="secondary"
+                            className={cn(
+                              "rounded-2xl flex items-center justify-center gap-2 py-3 shadow-sm font-bold transition-all border border-zinc-200",
+                              availableScreenshotCount > 0
+                                ? "text-zinc-700 hover:bg-zinc-100"
                                 : "bg-zinc-100 text-zinc-400 border border-zinc-200 cursor-not-allowed"
                             )}
                           >
                             <Camera size={17} /> Download Proofs (.ZIP)
                           </Button>
+                          <Button
+                            onClick={async () => {
+                              await exportToExcel(reportFilters);
+                              if (availableScreenshotCount > 0) {
+                                await downloadScreenshotsPdf(reportFilters);
+                              }
+                            }}
+                            disabled={availableScreenshotCount === 0}
+                            className={cn(
+                              "rounded-2xl text-white font-bold flex items-center justify-center gap-2 py-3 shadow-sm transition-all",
+                              availableScreenshotCount > 0
+                                ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                                : "bg-zinc-100 text-zinc-400 border border-zinc-200 cursor-not-allowed"
+                            )}
+                          >
+                            <Sparkles size={16} /> Export Excel + Proofs PDF
+                          </Button>
                         </div>
-                        <div className="flex gap-2.5">
+                        <div className="flex justify-end pt-1">
                           <Button
                             variant="ghost"
                             onClick={() => { setShowExportModal(false); setReportFilters({ classIds: [], taskId: '', year: '', status: 'ALL' }); }}
                             className="rounded-2xl text-zinc-500 hover:text-zinc-800 px-4"
                           >
                             Cancel
-                          </Button>
-                          <Button
-                            onClick={async () => {
-                              await exportToExcel(reportFilters);
-                              if (availableScreenshotCount > 0) {
-                                await downloadScreenshotsZip(reportFilters);
-                              }
-                            }}
-                            className="flex-1 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold flex items-center justify-center gap-2 py-3 shadow-sm"
-                          >
-                            <Sparkles size={16} /> Download Both (Excel + ZIP)
                           </Button>
                         </div>
                       </div>
