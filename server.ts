@@ -820,6 +820,90 @@ async function startServer() {
     }
   };
 
+  /**
+   * Universal In-App Notification Dispatcher
+   * Inserts in-app notifications for any user role (Students, Advisors, Coordinators, HOD, Supreme Admin, Industry)
+   * and immediately invalidates in-memory notification caches.
+   */
+  const createInAppNotification = async (
+    userIds: string | string[] | null | undefined,
+    message: string,
+    type: string = 'INFO',
+    title?: string
+  ) => {
+    if (!userIds) return;
+    const rawList = Array.isArray(userIds) ? userIds : [userIds];
+    const uniqueIds = Array.from(new Set(rawList.filter(Boolean)));
+    if (uniqueIds.length === 0) return;
+
+    try {
+      await pool.query(
+        `INSERT INTO notifications (user_id, message, type, title, status, is_read, sent_at, created_at)
+         SELECT u_id, $1, $2, $3, 'SENT', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+         FROM UNNEST($4::uuid[]) AS u_id`,
+        [message, type, title || null, uniqueIds]
+      );
+      invalidateApiCache('notifs_');
+    } catch (err: any) {
+      console.warn('[createInAppNotification warning]:', err.message);
+    }
+  };
+
+  /**
+   * Helper: Send In-App notification to all students in given class IDs
+   */
+  const notifyStudentsInClasses = async (classIds: string[], message: string, type: string = 'NEW_TASK', title?: string) => {
+    if (!classIds || classIds.length === 0) return;
+    try {
+      const res = await pool.query(
+        `SELECT id FROM users WHERE class_id = ANY($1::uuid[]) AND role = 'STUDENT'`,
+        [classIds]
+      );
+      const uIds = res.rows.map(r => r.id);
+      await createInAppNotification(uIds, message, type, title);
+    } catch (e: any) {
+      console.warn('[notifyStudentsInClasses warning]:', e.message);
+    }
+  };
+
+  /**
+   * Helper: Send In-App notification to Class Advisors of given class IDs
+   */
+  const notifyAdvisorsOfClasses = async (classIds: string[], message: string, type: string = 'INFO', title?: string, excludeUserId?: string) => {
+    if (!classIds || classIds.length === 0) return;
+    try {
+      const res = await pool.query(
+        `SELECT id FROM users WHERE class_id = ANY($1::uuid[]) AND role = 'CLASS_ADVISOR' ${excludeUserId ? `AND id != '${excludeUserId}'` : ''}`,
+        [classIds]
+      );
+      const uIds = res.rows.map(r => r.id);
+      await createInAppNotification(uIds, message, type, title);
+    } catch (e: any) {
+      console.warn('[notifyAdvisorsOfClasses warning]:', e.message);
+    }
+  };
+
+  /**
+   * Helper: Send In-App notification to Department Leadership (HOD and Supreme Admin)
+   */
+  const notifyLeadership = async (deptId: string | null, message: string, type: string = 'INFO', title?: string, excludeUserId?: string) => {
+    try {
+      let query = `SELECT id FROM users WHERE role = 'SUPREME_ADMIN'`;
+      const params: any[] = [];
+      if (deptId) {
+        query += ` OR (role = 'HOD' AND department_id = $1)`;
+        params.push(deptId);
+      } else {
+        query += ` OR role = 'HOD'`;
+      }
+      const res = await pool.query(query, params);
+      const uIds = res.rows.map(r => r.id).filter(id => id !== excludeUserId);
+      await createInAppNotification(uIds, message, type, title);
+    } catch (e: any) {
+      console.warn('[notifyLeadership warning]:', e.message);
+    }
+  };
+
   // Auth Middleware - Fetches dynamic permissions with 45s in-memory caching
   const authenticate = async (req: any, res: any, next: any) => {
     const authHeader = req.headers.authorization;
@@ -2339,16 +2423,37 @@ async function startServer() {
 
       if (clsIds.length > 0) {
         await client.query(
-          `INSERT INTO notifications (user_id, message, type)
-           SELECT id, $1, 'NEW_TASK'
+          `INSERT INTO notifications (user_id, message, type, title, status, is_read, sent_at, created_at)
+           SELECT id, $1, 'NEW_TASK', 'New Task Assigned', 'SENT', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
            FROM users
            WHERE class_id = ANY($2::uuid[]) AND role = 'STUDENT'`,
-          [`New task posted by ${dbUser.full_name || 'HOD'}: "${t.title}"`, clsIds]
+          [`New task posted by ${dbUser.full_name || 'Faculty'}: "${t.title}"`, clsIds]
         );
+
+        // Notify Class Advisors of those classes (if not the creator)
+        await client.query(
+          `INSERT INTO notifications (user_id, message, type, title, status, is_read, sent_at, created_at)
+           SELECT id, $1, 'NEW_TASK', 'Class Task Assigned', 'SENT', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+           FROM users
+           WHERE class_id = ANY($2::uuid[]) AND role = 'CLASS_ADVISOR' AND id != $3`,
+          [`New task posted for your class by ${dbUser.full_name || 'Faculty'}: "${t.title}"`, clsIds, dbUser.id]
+        );
+
+        // Notify HOD & Supreme Admin if task created by Advisor or Coordinator
+        if (dbUser.role === 'CLASS_ADVISOR' || (dbUser.role === 'STUDENT' && dbUser.is_coordinator)) {
+          await client.query(
+            `INSERT INTO notifications (user_id, message, type, title, status, is_read, sent_at, created_at)
+             SELECT id, $1, 'NEW_TASK', 'Task Created', 'SENT', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+             FROM users
+             WHERE role IN ('HOD', 'SUPREME_ADMIN') AND id != $2`,
+            [`Task "${t.title}" posted by ${dbUser.full_name || dbUser.role}`, dbUser.id]
+          );
+        }
       }
 
       await client.query('COMMIT');
       invalidateApiCache('tasks_');
+      invalidateApiCache('notifs_');
 
       // Dispatch real-time Telegram notification to assigned classes & group
       notifyNewTaskCreated({
@@ -2463,13 +2568,8 @@ async function startServer() {
 
       // 1. In-App Notification Dispatch
       if (taskClassIds.length > 0) {
-        await pool.query(
-          `INSERT INTO notifications (user_id, message, type)
-           SELECT id, $1, 'TASK_REOPENED'
-           FROM users
-           WHERE class_id = ANY($2::uuid[]) AND role = 'STUDENT'`,
-          [`Task reopened by ${req.user.full_name || req.user.role}: "${task.title}".`, taskClassIds]
-        ).catch(e => console.error('[In-App Notification Reopen Error]:', e));
+        await notifyStudentsInClasses(taskClassIds, `Task reopened by ${req.user.full_name || req.user.role}: "${task.title}". Please submit your work!`, 'TASK_REOPENED', 'Task Reopened');
+        await notifyAdvisorsOfClasses(taskClassIds, `Task "${task.title}" was reopened by ${req.user.full_name || req.user.role}.`, 'TASK_REOPENED', 'Task Reopened', req.user.id);
       }
 
       // 2. Telegram Bot Group & Personal Notification Dispatch
@@ -2571,13 +2671,9 @@ async function startServer() {
 
     // 1. In-App Notification Dispatch
     if (taskClassIds.length > 0) {
-      await pool.query(
-        `INSERT INTO notifications (user_id, message, type)
-         SELECT id, $1, 'TASK_REOPENED'
-         FROM users
-         WHERE class_id = ANY($2::uuid[]) AND role = 'STUDENT'`,
-        [`Deadline extended & task reopened by ${req.user.full_name || req.user.role} for "${task.title}". New deadline: ${newDeadline.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`, taskClassIds]
-      ).catch(e => console.error('[In-App Notification Reopen Error]:', e));
+      const deadlineStr = newDeadline.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+      await notifyStudentsInClasses(taskClassIds, `Deadline extended & task reopened by ${req.user.full_name || req.user.role} for "${task.title}". New deadline: ${deadlineStr}`, 'TASK_REOPENED', 'Deadline Extended');
+      await notifyAdvisorsOfClasses(taskClassIds, `Deadline extended & task reopened for your class for "${task.title}". New deadline: ${deadlineStr}`, 'TASK_REOPENED', 'Deadline Extended', req.user.id);
     }
 
     // 2. 🚀 Telegram Group & Personal Notification Dispatch
@@ -3564,6 +3660,7 @@ async function startServer() {
       await client.query('COMMIT');
       invalidateApiCache('tasks_');
       invalidateApiCache('submissions_');
+      invalidateApiCache('notifs_');
       res.json({ success: true });
     } catch (err: any) {
       await client.query('ROLLBACK');
@@ -4112,9 +4209,23 @@ async function startServer() {
           WHERE id = $5
         `, [screenshot_url, cloudinary_public_id, custom_field_value, newCount, existing.id]);
 
+        // In-App Notification to Student
+        await createInAppNotification(req.user.id, `Your submission for "${task.title}" has been resubmitted and is awaiting verification.`, 'TASK_SUBMITTED', 'Submission Received');
+
+        // In-App Notification to Class Advisor & Coordinators
+        if (req.user.class_id) {
+          await notifyAdvisorsOfClasses([req.user.class_id], `${req.user.full_name || 'Student'} resubmitted task "${task.title}" for verification.`, 'SUBMISSION_RECEIVED', 'New Submission', req.user.id);
+          const coordRes = await pool.query(`SELECT id FROM users WHERE class_id = $1 AND role = 'STUDENT' AND is_coordinator = TRUE AND id != $2`, [req.user.class_id, req.user.id]);
+          const coordIds = coordRes.rows.map((r: any) => r.id);
+          if (coordIds.length > 0) {
+            await createInAppNotification(coordIds, `${req.user.full_name || 'Student'} resubmitted task "${task.title}" for verification.`, 'SUBMISSION_RECEIVED', 'New Submission');
+          }
+        }
+
         notifyTaskSubmissionReceived(req.user.id, task_id).catch(err => console.error('[Telegram Notify Submission Error]:', err));
         invalidateApiCache('tasks_');
         invalidateApiCache('submissions_');
+        invalidateApiCache('notifs_');
         invalidateApiCache(`stats_coord_${req.user.class_id}`);
         return res.json({ success: true, id: existing.id });
       }
@@ -4125,9 +4236,23 @@ async function startServer() {
         RETURNING id
       `, [task_id, req.user.id, screenshot_url, cloudinary_public_id, custom_field_value]);
 
+      // In-App Notification to Student
+      await createInAppNotification(req.user.id, `Your submission for "${task.title}" has been received and is awaiting verification.`, 'TASK_SUBMITTED', 'Submission Received');
+
+      // In-App Notification to Class Advisor & Coordinators
+      if (req.user.class_id) {
+        await notifyAdvisorsOfClasses([req.user.class_id], `${req.user.full_name || 'Student'} submitted task "${task.title}" for verification.`, 'SUBMISSION_RECEIVED', 'New Submission', req.user.id);
+        const coordRes = await pool.query(`SELECT id FROM users WHERE class_id = $1 AND role = 'STUDENT' AND is_coordinator = TRUE AND id != $2`, [req.user.class_id, req.user.id]);
+        const coordIds = coordRes.rows.map((r: any) => r.id);
+        if (coordIds.length > 0) {
+          await createInAppNotification(coordIds, `${req.user.full_name || 'Student'} submitted task "${task.title}" for verification.`, 'SUBMISSION_RECEIVED', 'New Submission');
+        }
+      }
+
       notifyTaskSubmissionReceived(req.user.id, task_id).catch(err => console.error('[Telegram Notify Submission Error]:', err));
       invalidateApiCache('tasks_');
       invalidateApiCache('submissions_');
+      invalidateApiCache('notifs_');
       invalidateApiCache(`stats_coord_${req.user.class_id}`);
       res.json({ success: true, id: subRes.rows[0].id });
     } catch (err: any) {
@@ -4184,6 +4309,8 @@ async function startServer() {
     }
 
     await pool.query('DELETE FROM task_submissions WHERE id = $1', [subId]);
+    invalidateApiCache('tasks_');
+    invalidateApiCache('submissions_');
     res.json({ success: true });
   });
 
@@ -4231,6 +4358,19 @@ async function startServer() {
       WHERE id = ANY($2) AND status != 'VERIFIED'
     `, [note, submission_ids]);
 
+    // Dispatch In-App Notifications to all verified students
+    try {
+      const subsInfo = await pool.query(
+        `SELECT ts.user_id, t.title FROM task_submissions ts JOIN tasks t ON ts.task_id = t.id WHERE ts.id = ANY($1)`,
+        [submission_ids]
+      );
+      for (const row of subsInfo.rows) {
+        await createInAppNotification(row.user_id, `Your submission for "${row.title}" has been verified by ${req.user.full_name || 'Faculty'}.${note ? ' Note: ' + note : ''}`, 'VERIFIED', 'Task Verified');
+      }
+    } catch (e: any) {
+      console.warn('[Batch Verify In-App Notif Error]:', e.message);
+    }
+
     notifySubmissionBatchVerified(submission_ids).catch(err => console.error('[Telegram Batch Verify Error]:', err));
     
     // Dispatch Web Push notification to verified students
@@ -4249,6 +4389,7 @@ async function startServer() {
 
     invalidateApiCache('tasks_');
     invalidateApiCache('submissions_');
+    invalidateApiCache('notifs_');
     res.json({ success: true, count: submission_ids.length });
   });
 
@@ -4275,18 +4416,18 @@ async function startServer() {
       return res.status(400).json({ error: 'This submission has already been verified and cannot be modified.' });
     }
 
-    // Role-based scope checks
+    // Role-based scope verification
     if (req.user.role === 'STUDENT' && req.user.is_coordinator) {
       if (sub.class_id?.toString() !== req.user.class_id?.toString()) {
-        return res.status(403).json({ error: 'Forbidden' });
+        return res.status(403).json({ error: 'Forbidden: You can only verify submissions from your own class.' });
       }
     } else if (req.user.role === 'CLASS_ADVISOR') {
       if (sub.class_id?.toString() !== req.user.class_id?.toString()) {
-        return res.status(403).json({ error: 'Forbidden' });
+        return res.status(403).json({ error: 'Forbidden: You can only verify submissions from your assigned class.' });
       }
     } else if (req.user.role === 'HOD') {
       if (sub.department_id?.toString() !== req.user.department_id?.toString()) {
-        return res.status(403).json({ error: 'Forbidden' });
+        return res.status(403).json({ error: 'Forbidden: You can only verify submissions from your department.' });
       }
     }
 
@@ -4339,7 +4480,12 @@ async function startServer() {
       ? `Your submission for "${taskTitle}" has been verified.${verification_note ? ` Note: ${verification_note}` : ''}`
       : `Your submission for "${taskTitle}" has been rejected. Reason: ${rejection_reason}`;
 
-    await pool.query('INSERT INTO notifications (user_id, message, type) VALUES ($1, $2, $3)', [sub.user_id, message, status]);
+    await createInAppNotification(sub.user_id, message, status, status === 'VERIFIED' ? 'Task Verified' : 'Submission Rejected');
+
+    // Notify Advisor if verified by Coordinator
+    if (sub.class_id && req.user.role === 'STUDENT' && req.user.is_coordinator) {
+      await notifyAdvisorsOfClasses([sub.class_id], `${req.user.full_name || 'Coordinator'} ${status === 'VERIFIED' ? 'verified' : 'reviewed'} a submission for "${taskTitle}".`, 'SUBMISSION_VERIFIED', 'Submission Reviewed', req.user.id);
+    }
 
     notifySubmissionVerifiedOrRejected(req.params.id, status, status === 'VERIFIED' ? verification_note : rejection_reason).catch(err => console.error('[Telegram Notify Verify Error]:', err));
 
@@ -4415,7 +4561,7 @@ async function startServer() {
 
     const notifsRes = await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [req.user.id]);
     const data = notifsRes.rows.map(n => ({
-      id: n.id, message: n.message, type: n.type,
+      id: n.id, message: n.message, type: n.type, title: n.title,
       is_read: n.is_read, created_at: n.created_at,
     }));
     setApiCache(cacheKey, data, 8);
@@ -4471,7 +4617,7 @@ async function startServer() {
     const buildNotifsQuery = async () => {
       if (cachedNotifs) return cachedNotifs;
       const nRes = await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [dbUser.id]);
-      const data = nRes.rows.map((n: any) => ({ id: n.id, message: n.message, type: n.type, is_read: n.is_read, created_at: n.created_at }));
+      const data = nRes.rows.map((n: any) => ({ id: n.id, message: n.message, type: n.type, title: n.title, is_read: n.is_read, created_at: n.created_at }));
       setApiCache(notifsKey, data, 8);
       return data;
     };
@@ -5496,10 +5642,14 @@ async function startServer() {
           u.id, publish_at || new Date().toISOString(), expire_at || null,
         ]);
         insertedNotices.push(result.rows[0]);
+        // Trigger in-app notification
+        await notifyStudentsInClasses([cid], `📢 Announcement: ${result.rows[0].title}`, 'NOTICE', 'Class Announcement');
+        await notifyAdvisorsOfClasses([cid], `📢 Announcement: ${result.rows[0].title}`, 'NOTICE', 'Class Announcement', u.id);
         // Trigger email announcement asynchronously
         notifyNoticeBoardAnnouncementEmail(result.rows[0]).catch(e => console.error('[Email Notice Multi] Error:', e));
       }
       invalidateApiCache('notices_');
+      invalidateApiCache('notifs_');
       return res.status(201).json(insertedNotices[0] || { success: true });
     }
 
@@ -5517,9 +5667,33 @@ async function startServer() {
       u.id, publish_at || new Date().toISOString(), expire_at || null,
     ]);
 
-    // Trigger email & push announcement asynchronously
+    // Trigger in-app, email & push announcement asynchronously
     if (result.rows[0]) {
       const nRow = result.rows[0];
+
+      // In-App Notification dispatch
+      try {
+        if (nRow.scope === 'ALL') {
+          const uRes = await pool.query(`SELECT id FROM users WHERE id != $1`, [u.id]);
+          await createInAppNotification(uRes.rows.map((r: any) => r.id), `📢 Announcement: ${nRow.title}`, 'NOTICE', 'Notice Board Announcement');
+        } else if (nRow.class_id) {
+          await notifyStudentsInClasses([nRow.class_id], `📢 Announcement: ${nRow.title}`, 'NOTICE', 'Class Announcement');
+          await notifyAdvisorsOfClasses([nRow.class_id], `📢 Announcement: ${nRow.title}`, 'NOTICE', 'Class Announcement', u.id);
+        } else if (nRow.year) {
+          const clsRes = await pool.query('SELECT id FROM classes WHERE year = $1 AND department_id = $2', [nRow.year, nRow.department_id]);
+          const cids = clsRes.rows.map((x: any) => x.id);
+          if (cids.length > 0) {
+            await notifyStudentsInClasses(cids, `📢 Batch Announcement: ${nRow.title}`, 'NOTICE', 'Batch Announcement');
+            await notifyAdvisorsOfClasses(cids, `📢 Batch Announcement: ${nRow.title}`, 'NOTICE', 'Batch Announcement', u.id);
+          }
+        } else if (nRow.department_id) {
+          const uRes = await pool.query(`SELECT id FROM users WHERE department_id = $1 AND id != $2`, [nRow.department_id, u.id]);
+          await createInAppNotification(uRes.rows.map((r: any) => r.id), `📢 Department Announcement: ${nRow.title}`, 'NOTICE', 'Department Notice');
+        }
+      } catch (e: any) {
+        console.warn('[Notice In-App Notif Error]:', e.message);
+      }
+
       notifyNoticeBoardAnnouncementEmail(nRow).catch(e => console.error('[Email Notice] Error:', e));
 
       const pushTitle = `📢 Notice: ${nRow.title}`;
@@ -5544,6 +5718,7 @@ async function startServer() {
     }
 
     invalidateApiCache('notices_');
+    invalidateApiCache('notifs_');
     res.status(201).json(result.rows[0]);
   }));
 
@@ -9077,6 +9252,42 @@ async function startServer() {
       force_resend: force_resend !== undefined ? !!force_resend : true
     });
 
+    // In-App Notification Dispatch
+    try {
+      let targetStudentQuery = `SELECT id FROM users WHERE role = 'STUDENT'`;
+      const targetParams: any[] = [];
+      if (target_class_id && target_class_id !== 'ALL') {
+        targetStudentQuery += ` AND class_id = $1`;
+        targetParams.push(target_class_id);
+      } else if (target_year && target_year !== 'ALL') {
+        targetStudentQuery += ` AND class_id IN (SELECT id FROM classes WHERE year = $1)`;
+        targetParams.push(parseInt(target_year, 10));
+      }
+      const stdTargetRes = await pool.query(targetStudentQuery, targetParams);
+      const stdTargetIds = stdTargetRes.rows.map((r: any) => r.id);
+      if (stdTargetIds.length > 0) {
+        await createInAppNotification(stdTargetIds, `📝 Skill Assessment Assigned: "${trackTitle}"${deadline ? ' — Deadline: ' + new Date(deadline).toLocaleString('en-IN') : ''}`, 'ASSESSMENT_ASSIGNED', 'Skill Assessment');
+      }
+
+      // Also notify class advisors
+      let advQuery = `SELECT id FROM users WHERE role = 'CLASS_ADVISOR'`;
+      const advParams: any[] = [];
+      if (target_class_id && target_class_id !== 'ALL') {
+        advQuery += ` AND class_id = $1`;
+        advParams.push(target_class_id);
+      } else if (target_year && target_year !== 'ALL') {
+        advQuery += ` AND class_id IN (SELECT id FROM classes WHERE year = $1)`;
+        advParams.push(parseInt(target_year, 10));
+      }
+      const advRes = await pool.query(advQuery, advParams);
+      const advIds = advRes.rows.map((r: any) => r.id).filter((id: string) => id !== req.user.id);
+      if (advIds.length > 0) {
+        await createInAppNotification(advIds, `📝 Skill Assessment Campaign: "${trackTitle}" assigned to your students`, 'ASSESSMENT_ASSIGNED', 'Assessment Campaign');
+      }
+    } catch (e: any) {
+      console.warn('[Assessment In-App Notif Error]:', e.message);
+    }
+
     // Also dispatch a Telegram group alert if Telegram bot is active
     try {
       const yearLabel = target_year === 'ALL' ? 'All Batches' : `Year ${target_year}`;
@@ -9092,6 +9303,7 @@ async function startServer() {
       }
     } catch (_) {}
 
+    invalidateApiCache('notifs_');
     res.json({
       success: true,
       assignment: assignRes.rows[0],

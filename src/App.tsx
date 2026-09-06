@@ -300,7 +300,8 @@ interface Submission {
 interface Notification {
   id: string | number;
   message: string;
-  type: 'VERIFIED' | 'REJECTED' | 'TASK_CREATED' | 'DISCUSSION_REPLY' | 'DISCUSSION_MENTION' | 'NOTICE_PUBLISHED' | 'TASK_DEADLINE_TOMORROW' | 'TASK_OVERDUE';
+  type: string;
+  title?: string;
   is_read: boolean;
   created_at: string;
 }
@@ -5070,8 +5071,11 @@ export default function App() {
       setClasses(sortedClasses);
       setUsers(users);
       setTasks(sortedTasks);
-      setSubmissions(submissions);
       setNotifications(notifications);
+      if (Array.isArray(notifications)) {
+        notifications.forEach((n: any) => knownNotificationIdsRef.current.add(n.id));
+      }
+      initialNotifsLoadedRef.current = true;
 
       try {
         sessionStorage.setItem('app_cache_depts', JSON.stringify(sortedDepts));
@@ -11582,7 +11586,12 @@ export default function App() {
                               <img src="/logo.png" alt="VSBEC IT" className="w-8 h-8 rounded-full object-contain bg-white p-1 border border-zinc-200 shrink-0 shadow-xs mt-0.5" />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-1 mb-1">
-                                  <p className="text-zinc-900 font-semibold leading-snug">{n.message}</p>
+                                  <div>
+                                    {n.title && (
+                                      <p className="text-[11px] font-extrabold text-indigo-600 tracking-tight leading-none mb-0.5">{n.title}</p>
+                                    )}
+                                    <p className="text-zinc-900 font-semibold leading-snug">{n.message}</p>
+                                  </div>
                                   {!n.is_read && (
                                     <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0 mt-1" title="Unread" />
                                   )}
