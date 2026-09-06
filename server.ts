@@ -5172,7 +5172,7 @@ async function startServer() {
 
       // Security check for class advisor: only allow students in their class
       if (currentUser.role === 'CLASS_ADVISOR' && currentUser.class_id) {
-        const allowed = await client.query('SELECT id FROM users WHERE id = ANY($1::int[]) AND class_id = $2', [targetUserIds, currentUser.class_id]);
+        const allowed = await client.query('SELECT id FROM users WHERE id = ANY($1::uuid[]) AND class_id = $2', [targetUserIds, currentUser.class_id]);
         targetUserIds = allowed.rows.map(r => r.id);
       }
 
@@ -5200,19 +5200,19 @@ async function startServer() {
           FROM users u
           LEFT JOIN departments d ON u.department_id = d.id
           LEFT JOIN classes c ON u.class_id = c.id
-          WHERE u.id = ANY($1::int[]) AND u.role = 'STUDENT'
+          WHERE u.id = ANY($1::uuid[]) AND u.role = 'STUDENT'
           ORDER BY u.register_number ASC, u.full_name ASC
         `, [targetUserIds]),
-        client.query('SELECT * FROM student_profiles WHERE user_id = ANY($1::int[])', [targetUserIds]),
-        client.query('SELECT * FROM student_skills WHERE user_id = ANY($1::int[]) ORDER BY created_at DESC', [targetUserIds]),
-        client.query('SELECT * FROM student_projects WHERE user_id = ANY($1::int[]) ORDER BY created_at DESC', [targetUserIds]),
-        client.query('SELECT * FROM student_internships WHERE user_id = ANY($1::int[]) ORDER BY created_at DESC', [targetUserIds]),
-        client.query('SELECT * FROM student_certifications WHERE user_id = ANY($1::int[]) ORDER BY created_at DESC', [targetUserIds]),
-        client.query('SELECT * FROM student_coding_profiles WHERE user_id = ANY($1::int[])', [targetUserIds]),
-        client.query('SELECT * FROM student_resumes WHERE user_id = ANY($1::int[])', [targetUserIds]),
-        client.query('SELECT * FROM student_achievements WHERE user_id = ANY($1::int[]) ORDER BY created_at DESC', [targetUserIds]),
-        client.query('SELECT * FROM student_languages WHERE user_id = ANY($1::int[]) ORDER BY created_at DESC', [targetUserIds]),
-        client.query('SELECT * FROM student_career_preferences WHERE user_id = ANY($1::int[])', [targetUserIds])
+        client.query('SELECT * FROM student_profiles WHERE user_id = ANY($1::uuid[])', [targetUserIds]),
+        client.query('SELECT * FROM student_skills WHERE user_id = ANY($1::uuid[]) ORDER BY created_at DESC', [targetUserIds]),
+        client.query('SELECT * FROM student_projects WHERE user_id = ANY($1::uuid[]) ORDER BY created_at DESC', [targetUserIds]),
+        client.query('SELECT * FROM student_internships WHERE user_id = ANY($1::uuid[]) ORDER BY created_at DESC', [targetUserIds]),
+        client.query('SELECT * FROM student_certifications WHERE user_id = ANY($1::uuid[]) ORDER BY created_at DESC', [targetUserIds]),
+        client.query('SELECT * FROM student_coding_profiles WHERE user_id = ANY($1::uuid[])', [targetUserIds]),
+        client.query('SELECT * FROM student_resumes WHERE user_id = ANY($1::uuid[])', [targetUserIds]),
+        client.query('SELECT * FROM student_achievements WHERE user_id = ANY($1::uuid[]) ORDER BY created_at DESC', [targetUserIds]),
+        client.query('SELECT * FROM student_languages WHERE user_id = ANY($1::uuid[]) ORDER BY created_at DESC', [targetUserIds]),
+        client.query('SELECT * FROM student_career_preferences WHERE user_id = ANY($1::uuid[])', [targetUserIds])
       ]);
 
       const personalMap = new Map(personalRes.rows.map(r => [r.user_id, r]));
