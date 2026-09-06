@@ -37,24 +37,39 @@
 - [1. Executive Overview & Institutional Vision](#1-executive-overview--institutional-vision)
 - [2. System Architecture & Infrastructure Topology](#2-system-architecture--infrastructure-topology)
 - [3. Multi-Role Hierarchy & Governance Matrix](#3-multi-role-hierarchy--governance-matrix)
-- [4. End-to-End System Workflows & Deep Audit](#4-end-to-end-system-workflows--deep-audit)
+- [4. Comprehensive 14-Module Architecture & Role-by-Role Feature Matrix](#4-comprehensive-14-module-architecture--role-by-role-feature-matrix)
+  - [1. Dashboard Module](#1-dashboard-module)
+  - [2. Tasks Module](#2-tasks-module)
+  - [3. Coding Progress Module](#3-coding-progress-module)
+  - [4. Notice Board Module](#4-notice-board-module)
+  - [5. Skill Assessment Module](#5-skill-assessment-module)
+  - [6. Placement Rating & Readiness Index 2.0](#6-placement-rating--readiness-index-20)
+  - [7. Live Teaching Hub Module](#7-live-teaching-hub-module)
+  - [8. Faculty Hub & Industry Engagement Module](#8-faculty-hub--industry-engagement-module)
+  - [9. Skill Heatmap & Department Competency Matrix](#9-skill-heatmap--department-competency-matrix)
+  - [10. Industry Partners & Corporate Recruitment Portal](#10-industry-partners--corporate-recruitment-portal)
+  - [11. Classes & Section Management Module](#11-classes--section-management-module)
+  - [12. Users & RBAC Directory Management Module](#12-users--rbac-directory-management-module)
+  - [13. Verifications & 3-Tier Proof Audit Module](#13-verifications--3-tier-proof-audit-module)
+  - [14. Settings, System Governance & Communication Integrations](#14-settings-system-governance--communication-integrations)
+- [5. End-to-End System Workflows & Deep Audit](#5-end-to-end-system-workflows--deep-audit)
   - [Workflow A: Academic Task Lifecycle & 3-Tier Verification](#workflow-a-academic-task-lifecycle--3-tier-verification)
   - [Workflow B: Live Coding Velocity & LeetCode/GitHub Daemon Sync](#workflow-b-live-coding-velocity--leetcodegithub-daemon-sync)
   - [Workflow C: Corporate Industry Portal & Sandboxed Coding Qualifier](#workflow-c-corporate-industry-portal--sandboxed-coding-qualifier)
   - [Workflow D: Proctored Aptitude Assessments & Automated Email Scorecards](#workflow-d-proctored-aptitude-assessments--automated-email-scorecards)
   - [Workflow E: Placement Readiness Index 2.0 & Algorithmic Tier Routing](#workflow-e-placement-readiness-index-20--algorithmic-tier-routing)
   - [Workflow F: Multi-Node Brevo Email Load Balancer & Instant Failover](#workflow-f-multi-node-brevo-email-load-balancer--instant-failover)
-- [5. Anti-Cheat Security & Exam Lockdown Subsystem](#5-anti-cheat-security--exam-lockdown-subsystem)
-- [6. Multi-Language Compiler Sandbox Architecture](#6-multi-language-compiler-sandbox-architecture)
-- [7. In-Memory RAM Directory Cache & Performance Optimization](#7-in-memory-ram-directory-cache--performance-optimization)
-- [8. Database Schema Architecture (35 Relational Tables)](#8-database-schema-architecture-35-relational-tables)
-- [9. Automated Scorecard & Email Notification Templates](#9-automated-scorecard--email-notification-templates)
-- [10. Environment Variables Reference](#10-environment-variables-reference)
-- [11. Installation & Local Deployment Guide](#11-installation--local-deployment-guide)
-- [12. Production Deployment Guide (Vercel & Render)](#12-production-deployment-guide-vercel--render)
-- [13. System Verification & Automated Test Suite](#13-system-verification--automated-test-suite)
-- [14. API Endpoints Reference](#14-api-endpoints-reference)
-- [15. License & Intellectual Property](#15-license--intellectual-property)
+- [6. Anti-Cheat Security & Exam Lockdown Subsystem](#6-anti-cheat-security--exam-lockdown-subsystem)
+- [7. Multi-Language Compiler Sandbox Architecture](#7-multi-language-compiler-sandbox-architecture)
+- [8. In-Memory RAM Directory Cache & Performance Optimization](#8-in-memory-ram-directory-cache--performance-optimization)
+- [9. Database Schema Architecture (35 Relational Tables)](#8-database-schema-architecture-35-relational-tables)
+- [10. Automated Scorecard & Email Notification Templates](#10-automated-scorecard--email-notification-templates)
+- [11. Environment Variables Reference](#11-environment-variables-reference)
+- [12. Installation & Local Deployment Guide](#12-installation--local-deployment-guide)
+- [13. Production Deployment Guide (Vercel & Render)](#13-production-deployment-guide-vercel--render)
+- [14. System Verification & Automated Test Suite](#14-system-verification--automated-test-suite)
+- [15. API Endpoints Reference](#15-api-endpoints-reference)
+- [16. License & Intellectual Property](#16-license--intellectual-property)
 
 ---
 
@@ -129,7 +144,246 @@ The platform implements a strict, multi-tiered Role-Based Access Control (RBAC) 
 
 ---
 
-## 4. End-to-End System Workflows & Deep Audit
+## 4. Comprehensive 14-Module Architecture & Role-by-Role Feature Matrix
+
+The platform is structured into **14 integrated enterprise modules**, each delivering role-tailored workspaces and governance controls across **Students**, **Student Coordinators**, **Class Advisors (Faculty)**, **Staff**, **Head of Department (HOD)**, **Supreme Administrators**, and **Corporate Industry Partners (HR)**.
+
+```mermaid
+mindmap
+  root((🎓 IT Task Manager))
+    Core Governance
+      Dashboard
+      Tasks
+      Verifications
+      Classes
+      Users
+      Settings
+    Competency & Industry
+      Coding Progress
+      Skill Assessment
+      Placement Rating 2.0
+      Industry Partners
+      Skill Heatmap
+    Pedagogy & Broadcast
+      Notice Board
+      Live Teaching Hub
+      Faculty Hub
+```
+
+---
+
+### 1. Dashboard Module
+The **Dashboard** serves as the dynamic central command center, automatically adapting its telemetry, analytics widgets, quick-action triggers, and alerts to the authenticated user's role.
+
+* **Student / Candidate View**:
+  - **Live Task Status Counters**: Active, Pending Verification, Revisions Required, and Completed assignment summaries.
+  - **Coding Streak & Velocity Widget**: Today's LeetCode problems solved, weekly target progress bar, and GitHub commit counts.
+  - **Placement Readiness Gauge**: Real-time score (0–100%) and Tier badge (`Tier-1 Product`, `Tier-2 IT Services`, `Tier-3 Baseline`).
+  - **Mandatory Compliance Status Pill**: Header badge tracking Push Notifications, Telegram Bot connection, and Profile completion.
+  - **24-Hour Urgent Deadline Banner**: Highlighted countdown for upcoming submissions.
+* **Student Coordinator View**:
+  - Class-wide submission velocity charts and peer review backlog counter.
+  - Quick access to peer-verification queue and classmate pending defaulter list.
+* **Class Advisor / Faculty View**:
+  - Section-level task completion percentage, verification queue counts, and recent student submissions.
+  - Class coding podium (Top LeetCode solvers and GitHub committers of the day).
+* **HOD & Supreme Admin View**:
+  - Department-wide macro statistics across all academic years (I, II, III, IV Year IT).
+  - Verification turnaround rate, placement tier distribution graph, and faculty audit trail.
+  - 1-Click quick actions for daily summary Telegram broadcasts, system-wide notices, and database backup exports.
+* **Industry Partner (HR) View**:
+  - Active corporate job & internship postings overview, total applicant pipeline counters, and pending assessment reviews.
+
+---
+
+### 2. Tasks Module
+The **Tasks Module** provides comprehensive academic assignment lifecycle management, supporting individual submissions, collaborative group work, rubric evaluations, and proof verifications.
+
+* **Core Capabilities & Categories**:
+  - **5 Academic Categories**: `Competition / Hackathon`, `Course Assignment`, `Workshop / Certifications`, `College Work`, and `General Academic Tasks`.
+  - **Rich Task Specifications**: Detailed markdown descriptions, reference attachments, rubrics, hard/soft deadlines, and target cohort scopes.
+  - **Collaborative Team Tasks**: Supports team configurations (2–5 members) with team leader nomination, member invitation codes, and unified group submission.
+  - **Student Opt-Out Governance**: Structured opt-out mechanism requiring justification, logged for institutional compliance.
+* **Role-Specific Capabilities**:
+  - **Student**: View active tasks filtered by category/status, upload screenshot proof via Cloudinary CDN, manage team members, submit revisions with corrective notes.
+  - **Coordinator**: Peer review classmate submissions, request revisions with peer feedback.
+  - **Advisor & Staff**: Author new tasks for assigned classes/years, configure team constraints, set verification rubrics, verify/reject submissions with granular feedback.
+  - **HOD & Supreme Admin**: Publish department-wide tasks, override verification decisions, inspect task audit history, and export class-wise submission reports to OpenXML Excel.
+
+---
+
+### 3. Coding Progress Module
+The **Coding Progress Module** delivers automated, live tracking of student software engineering and algorithmic problem-solving momentum through continuous API synchronizations.
+
+* **Dual-Engine Sync Pipeline**:
+  - **LeetCode GraphQL API**: Extracts total solved counts, Easy/Medium/Hard problem distribution, contest rating, and global ranking.
+  - **GitHub REST API v3**: Synchronizes public push events, commit frequency, active streak days, and repository activity.
+* **4-Tier Target Inheritance Engine**:
+  $$\text{Student Custom Target} \longrightarrow \text{Class Target} \longrightarrow \text{Year Target} \longrightarrow \text{Department Baseline}$$
+* **Role-Specific Capabilities**:
+  - **Student**: Inspect daily/weekly problem solve velocity, track commit heatmaps, view target completion badges, and compare progress against class benchmarks.
+  - **Advisor & Faculty**: Monitor section-wise coding podiums, identify inactive students with 0 daily solves, and set custom weekly class quotas.
+  - **HOD & Supreme Admin**: Department-wide coding leaderboard, batch progress sync triggers, manual sync controls, and datewise/classwise CSV exports pushed automatically to GitHub.
+
+---
+
+### 4. Notice Board Module
+The **Notice Board Module** is an institutional broadcast system ensuring urgent notices, academic circulars, placement drives, and hackathon announcements reach students instantly.
+
+* **Multi-Channel Dispatch Engine**:
+  - **In-App Real-Time Feed**: Categorized notice stream with priority tags (`Urgent`, `Academic`, `Placement`, `Hackathons`, `General`).
+  - **Web Push Notifications**: Browser & lock-screen push alerts via VAPID standard.
+  - **Telegram Bot Broadcasting**: Instant push to official Department Telegram Group and private student chats.
+  - **Transactional Email**: Multi-node Brevo pool email delivery for mission-critical notifications.
+* **Role-Specific Capabilities**:
+  - **Student**: Filter notices by category, download circular attachments, acknowledge read receipts.
+  - **Advisor & Staff**: Post notices scoped to assigned sections or years, attach PDF guidelines and schedules.
+  - **HOD & Supreme Admin**: Publish high-priority pinned notices across the entire department, trigger multi-channel broadcasts, and track notice view analytics.
+
+---
+
+### 5. Skill Assessment Module
+The **Skill Assessment Module** is a proctored diagnostic testing and aptitude evaluation engine featuring AI-remedial generation and institutional question bank management.
+
+* **Diagnostic Tracks & Architecture**:
+  - **4 Standard Tracks**: `General IT Aptitude`, `Core Computer Science`, `Web & Full-Stack`, and `Algorithmic Problem Solving`.
+  - **Proctored Lockdown Subsystem**: Fullscreen enforcement, tab-switch counters, copy-paste prevention, and webcam picture-in-picture (PIP) monitoring.
+  - **AI Remedial Tracks**: Auto-generates targeted remedial question modules for candidates scoring below competency thresholds.
+* **Role-Specific Capabilities**:
+  - **Student**: Take timed proctored quizzes, view instant scorecards, review explanations, and complete assigned remedial tracks.
+  - **Advisor & Staff**: Review class assessment completion rates, analyze student score distributions, and assign practice tracks.
+  - **HOD & Supreme Admin**: Upload Excel question banks with automated format validation, publish new assessment tracks, generate cohort analytics, and export student performance scorecards.
+
+---
+
+### 6. Placement Rating & Readiness Index 2.0
+The **Placement Rating Module** implements an algorithmic evaluation model scoring students from 0 to 100% across four core technical competency pillars to determine enterprise placement readiness.
+
+* **4-Pillar Algorithmic Weighting**:
+  $$\text{Score} = (\text{Aptitude} \times 0.35) + (\text{LeetCode} \times 0.25) + (\text{GitHub / Projects} \times 0.20) + (\text{Task Discipline} \times 0.20)$$
+* **Enterprise Tier Classification**:
+  - 🥇 **Tier-1 Product Track (85%–100%)**: Eligible for top-tier product companies (FAANG, Unicorns, Tier-1 Product firms).
+  - 🥈 **Tier-2 IT Services & Systems Track (70%–84%)**: Targeted for enterprise IT solutions and systems engineering roles.
+  - 🥉 **Tier-3 Baseline Development Track (50%–69%)**: Enrolled in focused technical remediation and aptitude mentorship.
+* **Role-Specific Capabilities**:
+  - **Student**: Access personalized readiness radar charts, breakdown analysis per pillar, and personalized action recommendations.
+  - **Advisor & Faculty**: Filter class rosters by readiness tier to prioritize placement training sessions.
+  - **HOD & Supreme Admin**: Comprehensive departmental readiness matrix, batch filtering for visiting company criteria, and 1-click export of eligible candidate dossiers for the Corporate Placement Cell.
+
+---
+
+### 7. Live Teaching Hub Module
+The **Live Teaching Hub Module** bridges faculty pedagogy and classroom interaction with real-time engagement tools, live polling, and shared code demonstrations.
+
+* **Interactive Pedagogy Suite**:
+  - **Instant Live Concept Polls**: Faculty broadcast multiple-choice conceptual questions with live real-time bar charts.
+  - **Code Blackboard & Screen Sharing**: Real-time code syntax demonstration and lecture notes distribution.
+  - **Attendance Logging**: Automatic logging of attendee student register numbers and engagement duration.
+* **Role-Specific Capabilities**:
+  - **Student**: Join ongoing faculty sessions, participate in real-time concept polls, and download session reference materials.
+  - **Faculty & Staff**: Launch live teaching sessions, broadcast instant polls, track student responses in real time, and record attendance.
+  - **HOD & Admin**: Overview of active department teaching sessions, faculty teaching hour analytics, and syllabus coverage audits.
+
+---
+
+### 8. Faculty Hub & Industry Engagement Module
+The **Faculty Hub Module** manages academic research, industrial consultancy projects, corporate training hours, and Faculty Development Programs (FDP).
+
+* **Industrial Engagement Tracking**:
+  - **Consultancy & Industry Projects**: Logging corporate problem statements, project timelines, and commercial revenue generation.
+  - **Faculty Certifications & FDPs**: Archival of faculty continuous learning credits, workshops attended, and research publications.
+  - **Corporate MOU Management**: Lifecycle management and renewal tracking for corporate partnerships.
+* **Role-Specific Capabilities**:
+  - **Faculty & Staff**: Log new industrial consultancy engagements, record corporate training hours, upload patent/research publications.
+  - **HOD & Supreme Admin**: Audit departmental faculty industrial interaction index, track revenue generation metrics, and generate annual accreditation reports (NAAC / NBA / NIRF).
+
+---
+
+### 9. Skill Heatmap & Department Competency Matrix
+The **Skill Heatmap Module** provides multi-dimensional visual analytics of technical strengths and deficiencies across classes, academic years, and specialized technical domains.
+
+* **Domain Competency Dimensions**:
+  - `Data Structures & Algorithms`, `Full-Stack Web Development`, `Cloud Computing & DevOps`, `Artificial Intelligence / Machine Learning`, and `Core Systems / Database Management`.
+* **Role-Specific Capabilities**:
+  - **Student**: Benchmark individual competencies against class, section, and department averages.
+  - **Advisor & Faculty**: Identify class-wide knowledge gaps to schedule specialized tutorial sessions.
+  - **HOD & Supreme Admin**: Macro institutional heatmap identifying curriculum gaps, trending industry technologies, and training cohort clustering.
+
+---
+
+### 10. Industry Partners & Corporate Recruitment Portal
+The **Industry Partners Module** connects accredited corporate recruiters with pre-screened student candidates through a multi-compiler coding qualification studio.
+
+* **Corporate Hiring Architecture**:
+  - **Job & Internship Postings**: Verified corporate postings with eligibility filters, CTC specifications, and deadline dates.
+  - **10-Question Sandboxed Qualifier**: Automated 10-question pool assessment with 2 randomized questions per candidate in an isolated Monaco IDE runtime (**C, C++, Java 17, Python 3**).
+  - **Anti-Cheat Webcam Proctoring**: Tab-switch tracking, copy-paste blocking, and automated candidate screenshot proctoring.
+* **Role-Specific Capabilities**:
+  - **Student**: Browse verified corporate openings, apply with 1-click student profile, and take timed sandboxed qualifiers.
+  - **Corporate Recruiter (HR)**: Post job openings, create coding assessments, review test case pass rates, inspect candidate code submissions, and download OpenXML Excel/PDF candidate dossiers.
+  - **HOD & Supreme Admin**: Approve corporate recruiter accounts, moderate job listings, and monitor departmental recruitment conversion rates.
+
+---
+
+### 11. Classes & Section Management Module
+The **Classes Module** governs the institutional academic hierarchy, cohort section allocations, and faculty mentorship assignments.
+
+* **Class Hierarchy & Structure**:
+  - Standardized department sections across all 4 academic years (e.g., `I IT-A`, `I IT-B`, `II IT-A`, `II IT-B`, `III IT-A`, `III IT-B`, `III IT-C`, `IV IT-A`, `IV IT-B`).
+* **Role-Specific Capabilities**:
+  - **Student**: View class cohort roster, designated Class Advisor, and Student Coordinators.
+  - **Advisor**: Manage assigned class section, assign Student Coordinator badges, and monitor cohort attendance.
+  - **HOD & Supreme Admin**: Create and rename class sections, assign/reassign Class Advisors, configure academic year baselines, and execute annual bulk student section migrations.
+
+---
+
+### 12. Users & RBAC Directory Management Module
+The **Users Module** provides high-speed institutional identity governance, credential management, role provisioning, and profile directory services.
+
+* **Performance & Security Features**:
+  - **In-Memory RAM Cache**: Sub-0.01ms directory lookups and search filtering for over 1,000+ departmental users.
+  - **Multi-Identifier Authentication**: Supports login via institutional Email ID or Student Register Number.
+  - **Bulk CSV Provisioning**: Automated parsing, validation, and batch insertion of student cohorts.
+* **Role-Specific Capabilities**:
+  - **Student**: Edit profile details, generate standardized PDF resumes, update social/coding links, link Telegram and Web Push notifications.
+  - **Advisor**: View section student roster, reset student passwords, and update academic status.
+  - **HOD & Supreme Admin**: Full user lifecycle management, role promotion/demotion (`STUDENT` $\leftrightarrow$ `COORDINATOR` $\leftrightarrow$ `CLASS_ADVISOR` $\leftrightarrow$ `STAFF` $\leftrightarrow$ `HOD`), account deactivation, and global directory CSV exports.
+
+---
+
+### 13. Verifications & 3-Tier Proof Audit Module
+The **Verifications Module** is the dedicated command center for inspecting, peer-reviewing, approving, and rejecting academic task submissions with a complete audit trail.
+
+* **3-Tier Verification Pipeline**:
+  $$\text{Student Submission} \xrightarrow[\text{Peer Review}]{\text{Tier 1: Coordinator}} \text{Pending Faculty} \xrightarrow[\text{Final Approval}]{\text{Tier 2: Advisor}} \text{Verified} \xrightarrow[\text{Audit Override}]{\text{Tier 3: HOD}}$$
+* **Inspection & Audit Tools**:
+  - **Cloudinary CDN Proof Lightbox**: Full-resolution image zoom, side-by-side rubric verification, and submission metadata display.
+  - **Rejection Feedback Presets**: Quick-select corrective feedback with mandatory revision instructions.
+  - **Historical Audit Trail**: Immutable logging of reviewer identity, decision timestamps, and revision histories.
+* **Role-Specific Capabilities**:
+  - **Student**: Track submission stage, review feedback notes, and resubmit rejected work.
+  - **Coordinator**: Peer review classmate submissions, approve for advisor sign-off or request revisions.
+  - **Advisor & Faculty**: Final verification or rejection of submissions, grading, and batch approvals.
+  - **HOD & Supreme Admin**: Department-wide verification dashboard, dispute resolution overrides, and advisor verification turnaround analytics.
+
+---
+
+### 14. Settings, System Governance & Communication Integrations
+The **Settings Module** gives administrators and department heads complete control over communication gateways, security parameters, automated background tasks, and institutional branding.
+
+* **Integrated Subsystems**:
+  - **Telegram Bot Webhook Engine**: Webhook registration, health check telemetry, and official department group chat ID mapping (`/setgroup`).
+  - **Brevo Multi-Node Email Dispatch Pool**: Real-time monitoring of multi-node transactional email credits and automatic failover health.
+  - **Web Push (VAPID) Gateway**: Push key generation and subscriber broadcast management.
+  - **Database Snapshots & Maintenance**: Manual and automated snapshot backups, in-memory cache clearing, and cron execution logs.
+* **Role-Specific Capabilities**:
+  - **Student**: Theme preference toggles (Dark/Light mode), notification channel opt-ins (Email, Push, Telegram), account password updates.
+  - **Advisor & Faculty**: Class notification preferences and target baseline configurations.
+  - **HOD & Supreme Admin**: Telegram bot controls, webhook registration, cron execution triggers, multi-node email telemetry, database backup exports, and platform maintenance toggles.
+
+---
+
+## 5. End-to-End System Workflows & Deep Audit
 
 ### Workflow A: Academic Task Lifecycle & 3-Tier Verification
 
@@ -319,7 +573,7 @@ flowchart TD
 
 ---
 
-## 5. Anti-Cheat Security & Exam Lockdown Subsystem
+## 6. Anti-Cheat Security & Exam Lockdown Subsystem
 
 | Security Layer | Implementation Details | Protective Action |
 | :--- | :--- | :--- |
@@ -333,7 +587,7 @@ flowchart TD
 
 ---
 
-## 6. Multi-Language Compiler Sandbox Architecture
+## 7. Multi-Language Compiler Sandbox Architecture
 
 The sandboxed execution engine executes code submissions in an isolated environment with strict resource bounds:
 
@@ -346,7 +600,7 @@ The sandboxed execution engine executes code submissions in an isolated environm
 
 ---
 
-## 7. In-Memory RAM Directory Cache & Performance Optimization
+## 8. In-Memory RAM Directory Cache & Performance Optimization
 
 * **Sub-Millisecond Lookup (<0.01ms)**: Student directory records are pre-indexed into server memory on startup for instant autocompletion and class section grouping.
 * **Dual-Mode Git Synchronization (`studentDirectoryService.ts`)**: Supports both GitHub Contents REST API synchronization and direct local Git CLI commits.
@@ -354,7 +608,7 @@ The sandboxed execution engine executes code submissions in an isolated environm
 
 ---
 
-## 8. Database Schema Architecture (35 Relational Tables)
+## 9. Database Schema Architecture (35 Relational Tables)
 
 ```mermaid
 erDiagram
@@ -381,7 +635,7 @@ erDiagram
 
 ---
 
-## 9. Automated Scorecard & Email Notification Templates
+## 10. Automated Scorecard & Email Notification Templates
 
 Outbound email templates feature responsive, institutional branding with **Smart India Hackathon (SIH Demo)** headers:
 
@@ -407,7 +661,7 @@ Outbound email templates feature responsive, institutional branding with **Smart
 
 ---
 
-## 10. Environment Variables Reference
+## 11. Environment Variables Reference
 
 Create a `.env` file in the project root:
 
@@ -481,7 +735,7 @@ SENTRY_DSN=https://your_sentry_dsn_here
 
 ---
 
-## 11. Installation & Local Deployment Guide
+## 12. Installation & Local Deployment Guide
 
 ### Prerequisites
 * **Node.js**: `v20.x` or higher
@@ -518,7 +772,7 @@ SENTRY_DSN=https://your_sentry_dsn_here
 
 ---
 
-## 12. Production Deployment Guide (Vercel & Render)
+## 13. Production Deployment Guide (Vercel & Render)
 
 ### Deploying to Vercel (Serverless Frontend + API)
 The repository includes a ready-to-use [`vercel.json`](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/vercel.json):
@@ -533,7 +787,7 @@ The repository includes a [`render.yaml`](file:///c:/Users/tharu/Documents/GITHU
 
 ---
 
-## 13. System Verification & Automated Test Suite
+## 14. System Verification & Automated Test Suite
 
 Run the full system audit suite covering database integrity, foreign keys, compiler sandboxing, infinite loop guards, and report generation:
 
@@ -567,7 +821,7 @@ Audit Complete: 13/13 PASSED (0 FAILED)
 
 ---
 
-## 14. API Endpoints Reference
+## 15. API Endpoints Reference
 
 | Method | Endpoint | Access Level | Description |
 | :--- | :--- | :--- | :--- |
@@ -603,7 +857,7 @@ Audit Complete: 13/13 PASSED (0 FAILED)
 
 ---
 
-## 15. License & Intellectual Property
+## 16. License & Intellectual Property
 
 This project is developed and maintained for the **Department of Information Technology, VSB Engineering College, Karur** as part of the **Smart India Hackathon (SIH26044)** innovation initiative.
 
