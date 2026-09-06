@@ -1204,7 +1204,7 @@ const Footer = ({ onShowModal }: { onShowModal: (type: 'PRIVACY' | 'TERMS' | 'SU
     <div className="w-full flex flex-col lg:flex-row items-center justify-between gap-3 text-xs min-w-0">
       {/* Brand Logo & Name */}
       <div className="flex items-center gap-2.5 shrink-0 min-w-0">
-        <div className="w-8 h-8 rounded-lg bg-white p-0.5 overflow-hidden shrink-0 border border-zinc-200 shadow-2xs flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-white p-0.5 overflow-hidden shrink-0 border border-zinc-200 shadow-2xs flex items-center justify-center">
           <img src="/logo.png" alt="VSBEC Logo" className="w-full h-full object-contain" />
         </div>
         <span className="font-extrabold text-zinc-900 text-xs tracking-tight whitespace-nowrap">VSBEC IT Task Manager</span>
@@ -2882,7 +2882,7 @@ function SettingsView({
         <Card className="p-6 bg-white border-zinc-200 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-100">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center border border-zinc-200 shadow-sm p-1.5 shrink-0">
+              <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center border border-zinc-200 shadow-sm p-1.5 shrink-0">
                 <img src="/logo.png" alt="VSBEC IT Logo" className="w-full h-full object-contain" />
               </div>
               <div>
@@ -7629,7 +7629,7 @@ export default function App() {
           className="w-full max-w-4xl"
         >
           <div className="flex flex-col items-center mb-12">
-            <div className="w-24 h-24 rounded-3xl bg-white p-3 mb-6 shadow-2xl border-2 border-zinc-200 ring-4 ring-indigo-50 flex items-center justify-center">
+            <div className="w-24 h-24 rounded-full bg-white p-3 mb-6 shadow-2xl border-2 border-zinc-200 ring-4 ring-indigo-50 flex items-center justify-center">
               <img src="/logo.png" alt="VSBEC Logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Academic Portal</h1>
@@ -10419,7 +10419,7 @@ export default function App() {
     <div className="flex flex-col h-full bg-white">
       <div className="p-4 border-b border-zinc-100 flex items-center justify-between shrink-0 h-20">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-white p-1.5 overflow-hidden shrink-0 shadow-sm border border-zinc-200 flex items-center justify-center">
+          <div className="w-11 h-11 rounded-full bg-white p-1.5 overflow-hidden shrink-0 shadow-sm border border-zinc-200 flex items-center justify-center">
             <img src="/logo.png" alt="VSBEC Logo" className="w-full h-full object-contain" />
           </div>
           <span className={cn(
@@ -11579,7 +11579,7 @@ export default function App() {
                                   : "bg-indigo-50/80 hover:bg-indigo-100/80 border border-indigo-100 shadow-2xs"
                               )}
                             >
-                              <img src="/logo.png" alt="VSBEC IT" className="w-8 h-8 rounded-lg object-contain bg-white p-1 border border-zinc-200 shrink-0 shadow-xs mt-0.5" />
+                              <img src="/logo.png" alt="VSBEC IT" className="w-8 h-8 rounded-full object-contain bg-white p-1 border border-zinc-200 shrink-0 shadow-xs mt-0.5" />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-1 mb-1">
                                   <p className="text-zinc-900 font-semibold leading-snug">{n.message}</p>

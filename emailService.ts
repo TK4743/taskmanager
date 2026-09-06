@@ -1597,7 +1597,7 @@ export async function sendTaskPendingReminderEmail(
         <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto 12px auto;">
           <tr>
             <td align="center" style="vertical-align: middle;">
-              <img src="https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png" alt="VSBEC Emblem" width="68" height="68" style="display: block; border-radius: 8px; border: 2px solid #d97706; box-shadow: 0 2px 8px rgba(0,0,0,0.12);" />
+              <img src="https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png" alt="VSBEC Emblem" width="68" height="68" style="display: block; border-radius: 50%; border: 2px solid #d97706; box-shadow: 0 2px 8px rgba(0,0,0,0.12);" />
             </td>
           </tr>
         </table>
@@ -2296,7 +2296,7 @@ export async function sendAssessmentInvitationEmail(
 
     <!-- Institutional Header -->
     <div style="background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 50%, #e0f2fe 100%); padding: 32px 28px; text-align: center; border-bottom: 3px solid #0284c7;">
-      <img src="https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png" width="68" height="68" style="display: block; margin: 0 auto 12px auto; background: #ffffff; border-radius: 12px; border: 2px solid #0284c7; padding: 4px;" alt="VSBEC IT Task Manager Logo" />
+      <img src="https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png" width="68" height="68" style="display: block; margin: 0 auto 12px auto; background: #ffffff; border-radius: 50%; border: 2px solid #0284c7; padding: 4px;" alt="VSBEC IT Task Manager Logo" />
       <p style="color: #0369a1; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; margin: 0 0 4px 0;">
         VSB Engineering College (Autonomous)
       </p>
