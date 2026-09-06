@@ -3278,7 +3278,7 @@ export async function linkStudentTelegram(
   identifier: string,
   personalChatId: string | number,
   telegramUsername?: string
-): Promise<{ success: boolean; studentName?: string; message: string }> {
+): Promise<{ success: boolean; studentName?: string; userRole?: string; message: string }> {
   try {
     let rawClean = identifier.trim().replace(/^[\/#]?(?:link|start|user)[_\s-]+/i, '').trim();
     if (!rawClean) rawClean = identifier.trim();
@@ -3288,25 +3288,26 @@ export async function linkStudentTelegram(
     if (strChatId.startsWith('-')) {
       return {
         success: false,
-        message: 'Cannot link a Telegram group or channel chat ID as a student account. Please message the bot in a private DM.'
+        message: 'Cannot link a Telegram group or channel chat ID as a personal account. Please message the bot in a private DM.'
       };
     }
 
     const res = await pool.query(`
-      SELECT id, full_name, register_number, username, role
+      SELECT id, full_name, register_number, username, email, role
       FROM users
-      WHERE REPLACE(LOWER(register_number), ' ', '') = $1
-         OR REPLACE(LOWER(username), ' ', '') = $1
-         OR REPLACE(LOWER(email), ' ', '') = $1
-         OR LOWER(register_number) = LOWER($2)
-         OR LOWER(username) = LOWER($2)
+      WHERE REPLACE(LOWER(COALESCE(register_number, '')), ' ', '') = $1
+         OR REPLACE(LOWER(COALESCE(username, '')), ' ', '') = $1
+         OR REPLACE(LOWER(COALESCE(email, '')), ' ', '') = $1
+         OR LOWER(COALESCE(register_number, '')) = LOWER($2)
+         OR LOWER(COALESCE(username, '')) = LOWER($2)
+         OR LOWER(COALESCE(email, '')) = LOWER($2)
       LIMIT 1
     `, [cleanNoSpaces, rawClean]);
 
     if (res.rows.length === 0) {
       return {
         success: false,
-        message: `Student with Register Number or Username "${identifier}" was not found in the database. Please check your Register Number.`
+        message: `Account with Register Number, Username, or Email "${identifier}" was not found in the database. Please verify your registered email ID or username.`
       };
     }
 
@@ -3322,7 +3323,8 @@ export async function linkStudentTelegram(
     return {
       success: true,
       studentName: user.full_name,
-      message: `Successfully linked Telegram for ${user.full_name} (${user.register_number || user.username}).`
+      userRole: user.role,
+      message: `Successfully linked Telegram for ${user.full_name} (${user.email || user.register_number || user.username}).`
     };
   } catch (err: any) {
     console.error('[Telegram] linkStudentTelegram error:', err);
@@ -3606,7 +3608,8 @@ export async function processTelegramUpdate(update: any): Promise<void> {
 
     // Command: /start <param> or /link <param>
     if (text.startsWith('/start') || text.startsWith('/link')) {
-      const cleanText = text.replace(/@\w+/g, '');
+      // Strip bot mention only from the command prefix e.g. /start@BotName or /link@BotName
+      const cleanText = text.replace(/^(\/\w+)@\w+/i, '$1').trim();
       const parts = cleanText.split(/\s+/);
       const param = parts.slice(1).join(' ').trim();
 
@@ -3629,7 +3632,7 @@ export async function processTelegramUpdate(update: any): Promise<void> {
           return;
         }
 
-        // Otherwise link student account with register number / username
+        // Otherwise link account with register number / username / email
         if (isGroup) {
           await sendPrivateActionWarning(chatId);
           return;
@@ -3638,52 +3641,73 @@ export async function processTelegramUpdate(update: any): Promise<void> {
         const linkResult = await linkStudentTelegram(param, senderUserId, fromUsername);
         if (linkResult.success) {
           const groupInviteUrl = await getGroupInviteLink();
-          let welcomeHtml = `🎉 <b>ACCOUNT LINKED SUCCESSFULLY!</b>  ✅\n──────────────────────────────\n`;
-          welcomeHtml += `<blockquote>👤 <b>Student:</b> <b>${escapeHtml(linkResult.studentName)}</b>\n`;
-          welcomeHtml += `✨ <i>Your Telegram is now securely connected to IT TaskManager! You will receive private deadline alerts, grade verifications, and scorecards here.</i></blockquote>\n\n`;
+          const role = linkResult.userRole;
 
-          welcomeHtml += `🎯 <b>ESSENTIAL STUDENT COMMANDS:</b>\n`;
-          welcomeHtml += `• 📋 <code>/tasks</code> - View assigned pending & submitted assignments\n`;
-          welcomeHtml += `• 📊 <code>/stats</code> - Complete live scorecard (Tasks + LC + GH)\n`;
-          welcomeHtml += `• 🧩 <code>/leetcode</code> - Check daily LeetCode solved count & targets\n`;
-          welcomeHtml += `• 💻 <code>/github</code> - Check daily GitHub commits & streak\n`;
-          welcomeHtml += `• ⏰ <code>/deadlines</code> - 24-hour upcoming assignment deadlines\n`;
-          welcomeHtml += `• 🏆 <code>/leaderboard</code> - Daily department coding rankings\n`;
-          welcomeHtml += `• 👤 <code>/status</code> - Connected profile info\n`;
-          welcomeHtml += `• 👥 <code>/group</code> - Join official department community group\n\n`;
+          if (role && (role === 'SUPREME_ADMIN' || role === 'STAFF' || role === 'COORDINATOR' || role === 'HOD' || role === 'CLASS_ADVISOR')) {
+            const roleName = role.replace(/_/g, ' ');
+            let welcomeHtml = `🎉 <b>${roleName} ACCOUNT LINKED SUCCESSFULLY!</b>  ✅\n──────────────────────────────\n`;
+            welcomeHtml += `<blockquote>👤 <b>${roleName}:</b> <b>${escapeHtml(linkResult.studentName)}</b>\n`;
+            welcomeHtml += `🏛 <i>Your Telegram is now securely connected to IT TaskManager as ${roleName}! You will receive administrative alerts, defaulter lists, and executive broadcast controls.</i></blockquote>\n\n`;
 
-          welcomeHtml += `👥 <b>RECOMMENDED NEXT STEP:</b>\n`;
-          welcomeHtml += `Join our <b>Official Department Telegram Group</b> for daily coding podiums and announcements!\n`;
-          welcomeHtml += getWatermarkHtml();
+            welcomeHtml += `👑 <b>EXECUTIVE FACULTY COMMANDS:</b>\n`;
+            welcomeHtml += `• 📊 <code>/summary</code> - Live department brief & task metrics\n`;
+            welcomeHtml += `• ⚠️ <code>/defaulters</code> - View student pending task & coding defaulters\n`;
+            welcomeHtml += `• 📱 <code>/unlinked</code> - List students pending Telegram connection\n`;
+            welcomeHtml += `• ⏰ <code>/deadlines</code> - 24-hour upcoming assignment deadlines\n`;
+            welcomeHtml += `• 🏆 <code>/leaderboard</code> - Daily department coding rankings\n`;
+            welcomeHtml += `• 👥 <code>/group</code> - Join or view official department group\n\n`;
+            welcomeHtml += getWatermarkHtml();
 
-          const keyboard: any = {
-            inline_keyboard: []
-          };
-
-          if (groupInviteUrl) {
-            keyboard.inline_keyboard.push([
-              { text: '👥 Join Official Telegram Group', url: groupInviteUrl }
-            ]);
+            const keyboard = getInteractiveMenuKeyboard(role);
+            await sendTelegramMessage(chatId, welcomeHtml, { reply_markup: keyboard });
           } else {
+            let welcomeHtml = `🎉 <b>ACCOUNT LINKED SUCCESSFULLY!</b>  ✅\n──────────────────────────────\n`;
+            welcomeHtml += `<blockquote>👤 <b>Student:</b> <b>${escapeHtml(linkResult.studentName)}</b>\n`;
+            welcomeHtml += `✨ <i>Your Telegram is now securely connected to IT TaskManager! You will receive private deadline alerts, grade verifications, and scorecards here.</i></blockquote>\n\n`;
+
+            welcomeHtml += `🎯 <b>ESSENTIAL STUDENT COMMANDS:</b>\n`;
+            welcomeHtml += `• 📋 <code>/tasks</code> - View assigned pending & submitted assignments\n`;
+            welcomeHtml += `• 📊 <code>/stats</code> - Complete live scorecard (Tasks + LC + GH)\n`;
+            welcomeHtml += `• 🧩 <code>/leetcode</code> - Check daily LeetCode solved count & targets\n`;
+            welcomeHtml += `• 💻 <code>/github</code> - Check daily GitHub commits & streak\n`;
+            welcomeHtml += `• ⏰ <code>/deadlines</code> - 24-hour upcoming assignment deadlines\n`;
+            welcomeHtml += `• 🏆 <code>/leaderboard</code> - Daily department coding rankings\n`;
+            welcomeHtml += `• 👤 <code>/status</code> - Connected profile info\n`;
+            welcomeHtml += `• 👥 <code>/group</code> - Join official department community group\n\n`;
+
+            welcomeHtml += `👥 <b>RECOMMENDED NEXT STEP:</b>\n`;
+            welcomeHtml += `Join our <b>Official Department Telegram Group</b> for daily coding podiums and announcements!\n`;
+            welcomeHtml += getWatermarkHtml();
+
+            const keyboard: any = {
+              inline_keyboard: []
+            };
+
+            if (groupInviteUrl) {
+              keyboard.inline_keyboard.push([
+                { text: '👥 Join Official Telegram Group', url: groupInviteUrl }
+              ]);
+            } else {
+              keyboard.inline_keyboard.push([
+                { text: '👥 Join Official Telegram Group', callback_data: 'cb_group_link' }
+              ]);
+            }
+
             keyboard.inline_keyboard.push([
-              { text: '👥 Join Official Telegram Group', callback_data: 'cb_group_link' }
+              { text: '📋 My Tasks', callback_data: 'cb_tasks' },
+              { text: '📊 My Scorecard', callback_data: 'cb_stats' }
             ]);
+            keyboard.inline_keyboard.push([
+              { text: '📱 Main Menu', callback_data: 'cb_menu' },
+              { text: '🌐 Open Portal', url: getPortalUrl() }
+            ]);
+
+            await sendTelegramMessage(chatId, welcomeHtml, { reply_markup: keyboard });
           }
-
-          keyboard.inline_keyboard.push([
-            { text: '📋 My Tasks', callback_data: 'cb_tasks' },
-            { text: '📊 My Scorecard', callback_data: 'cb_stats' }
-          ]);
-          keyboard.inline_keyboard.push([
-            { text: '📱 Main Menu', callback_data: 'cb_menu' },
-            { text: '🌐 Open Portal', url: getPortalUrl() }
-          ]);
-
-          await sendTelegramMessage(chatId, welcomeHtml, { reply_markup: keyboard });
         } else {
           await sendTelegramMessage(
             chatId,
-            `⚠️ <b>Could Not Link Account</b>\n\n${escapeHtml(linkResult.message)}\n\nPlease check your Register Number or connect via the IT TaskManager portal.\n${getWatermarkHtml()}`
+            `⚠️ <b>Could Not Link Account</b>\n\n${escapeHtml(linkResult.message)}\n\nPlease verify your email ID / username or connect via the IT TaskManager portal.\n${getWatermarkHtml()}`
           );
         }
       } else {
