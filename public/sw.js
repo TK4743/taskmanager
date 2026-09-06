@@ -1,6 +1,6 @@
 // VSBEC IT TaskManager - Service Worker (Web Push & Caching)
 
-const CACHE_NAME = 'vsbec-it-cache-v2.0';
+const CACHE_NAME = 'vsbec-it-cache-v2.1';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
