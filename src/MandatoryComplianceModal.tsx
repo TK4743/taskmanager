@@ -10,7 +10,6 @@ import {
   ChevronRight,
   ExternalLink,
   Copy,
-  Smartphone,
   ShieldCheck,
   RefreshCw,
   Loader2,

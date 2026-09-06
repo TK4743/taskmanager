@@ -11,9 +11,7 @@ import {
   Headphones,
   Eye,
   Code2,
-  Users,
-  Bus,
-  CheckCircle2
+  Bus
 } from 'lucide-react';
 import { GOAT_CE_URL } from './config';
 

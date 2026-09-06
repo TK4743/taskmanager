@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, BellRing, Sparkles, CheckCircle2, X, Smartphone, ShieldCheck, Zap } from 'lucide-react';
+import { Bell, BellRing, X, Smartphone, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   isPushSupported,

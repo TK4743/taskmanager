@@ -3,7 +3,7 @@ import { API_URL } from './config';
 import { 
   BarChart3, Sparkles, AlertTriangle, CheckCircle2, TrendingUp, 
   Layers, Search, Download, ShieldCheck, 
-  Activity, RefreshCw, Users, Zap
+  Activity, RefreshCw, Users
 } from 'lucide-react';
 
 const API = API_URL || '';

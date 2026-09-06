@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { API_URL } from './config';
 import { 
   BrainCircuit, Sparkles, CheckCircle2, AlertTriangle, BookOpen, 
-  ExternalLink, Clock, Target, Plus, X, RefreshCw, Award, Code2, 
-  Layers, ChevronRight, BarChart3
+  ExternalLink, Clock, Target, Plus, X, RefreshCw, Code2, 
+  ChevronRight, BarChart3
 } from 'lucide-react';
 
 const API = API_URL || '';

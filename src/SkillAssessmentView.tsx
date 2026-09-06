@@ -30,9 +30,6 @@ import {
   BookOpen,
   Send,
   ExternalLink,
-  Code,
-  Building2,
-  Briefcase,
   Zap,
   Target,
   Award,
@@ -42,8 +39,7 @@ import {
   Mail,
   GripVertical,
   Laptop,
-  Monitor,
-  Smartphone
+  Monitor
 } from 'lucide-react';
 import { API_URL } from './config';
 import { checkIsMobileOrTablet } from './lib/deviceCheck';

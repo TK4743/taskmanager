@@ -2,23 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Code,
   Plus,
-  Play,
   CheckCircle2,
   XCircle,
   FileCode2,
-  Users,
   Eye,
-  Award,
   Sparkles,
-  Download,
-  ShieldAlert,
-  Clock,
-  Layers,
-  ChevronRight,
-  ExternalLink,
-  RotateCcw,
-  Trash2,
-  Check
+  Trash2
 } from 'lucide-react';
 import { API_URL } from './config';
 

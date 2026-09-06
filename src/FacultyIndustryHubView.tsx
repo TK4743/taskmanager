@@ -8,15 +8,11 @@ import {
   MapPin, 
   Building2, 
   Send, 
-  CheckCircle2, 
-  XCircle, 
   FileText, 
   UserCheck, 
   Sparkles, 
   Filter, 
-  Calendar,
-  Layers,
-  ChevronRight,
+  ChevronRight, 
   AlertCircle
 } from 'lucide-react';
 import { API_URL } from './config';

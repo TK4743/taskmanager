@@ -52,7 +52,6 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
-    "vite-plugin-singlefile": "^2.3.3",
     "web-push": "^3.6.7",
     "xlsx": "^0.18.5",
     "zod": "^4.3.6"

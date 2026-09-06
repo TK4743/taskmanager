@@ -12,13 +12,11 @@ import {
   Filter,
   Sparkles,
   Code,
-  GitCommit,
   FileCheck,
   Building2,
   Star,
   RefreshCw,
   UserCheck,
-  ChevronRight,
   ArrowUpRight
 } from 'lucide-react';
 import { API_URL } from './config';
