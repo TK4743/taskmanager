@@ -287,17 +287,36 @@ The **Placement Rating Module** implements an algorithmic evaluation model scori
 
 ---
 
-### 7. Live Teaching Hub Module
-The **Live Teaching Hub Module** bridges faculty pedagogy and classroom interaction with real-time engagement tools, live polling, and shared code demonstrations.
+### 7. Live Teaching Hub Module (Powered by GOAT Code Editor — GOAT CE)
+The **Live Teaching Hub Module** bridges faculty-student pedagogy, peer-to-peer programming, and real-time interactive technical tutorials through deep integration with the **GOAT Code Editor (GOAT CE)** engine (`https://github.com/Tharun4743/GOAT-CE`).
 
-* **Interactive Pedagogy Suite**:
-  - **Instant Live Concept Polls**: Faculty broadcast multiple-choice conceptual questions with live real-time bar charts.
-  - **Code Blackboard & Screen Sharing**: Real-time code syntax demonstration and lecture notes distribution.
-  - **Attendance Logging**: Automatic logging of attendee student register numbers and engagement duration.
+```mermaid
+graph TD
+    subgraph LiveHub["📻 Live Teaching Hub (P2P Collaborative Studio)"]
+        Teacher["👨‍🏫 Faculty / Peer Mentor (Monaco IDE)"] <-->|Socket.io: Live Operational Code Sync| Relay["⚙️ Express 5 + Socket.io Server"]
+        Student["🎓 Student / Learner (Monaco IDE)"] <-->|Socket.io: Real-Time Remote Cursors| Relay
+        Teacher <===>|WebRTC P2P Voice Stream: AEC + NS + AGC| Student
+
+        Relay -->|Ephemeral Memory Cache & DB Snapshots| Cache[("⚡ In-Memory Buffer & PostgreSQL")]
+        Teacher -->|Sandboxed Multi-Language Execution| Piston["⚡ Piston API v2 Runner (13+ Languages)"]
+        Teacher -->|Contextual Code Assistance| AI["🤖 OpenRouter AI — Llama 3.1 70B"]
+    end
+```
+
+* **Core Subsystems & Technical Capabilities**:
+  - 📞 **1-to-1 WebRTC Direct Full-Duplex Voice Calling**: High-definition browser audio streaming with synthetic telephone ringtones, incoming call modals, Accept/Decline actions, active speaker pulse indicators, and instant mute toggling.
+  - 🔇 **Hardware Acoustic Echo Cancellation Pipeline**: Built-in Acoustic Echo Cancellation (AEC), Noise Suppression (NS), and Auto Gain Control (AGC) ensuring clean voice delivery without feedback loops.
+  - 🔴 **Real-Time Code Collaboration**: Multi-user live code synchronization powered by Socket.io operational transformation with sub-pixel Monaco cursor calibration and color-coded developer presence badges.
+  - ⚡ **Monaco Editor Kernel (VS Code Core)**: Full VS Code editor core featuring Fira Code font ligatures, syntax highlighting, minimap navigation, and smooth cursor animation.
+  - 🤖 **GOAT CE AI Assistant (Llama 3.1 70B)**: Context-aware code explanations, unit test generation, bug detection, and 1-click code injection.
+  - 🖥️ **Built-in Compiler Runner & Sandbox**: Sandboxed execution across 13+ languages (C, C++, Java, Python, JavaScript, TypeScript, Go, Rust, C#, PHP, Ruby, Swift, Kotlin, SQL) via Piston API v2 with neural execution fallback.
+  - 👁️ **Live HTML/CSS Sandbox Preview**: Zero-latency in-browser iframe preview for web development lectures.
+  - 🧹 **Ephemeral Auto-Purge Lifecycle**: Workspaces, voice streams, timeline snapshots, and chats are strictly partitioned per room and automatically purged from memory upon room exit.
+  - 🔒 **Duplicate Room Overwrite Guard**: Real-time `/api/room-status/:roomId` validation prevents accidental workspace overwriting and seamlessly routes students via **Join Room**.
 * **Role-Specific Capabilities**:
-  - **Student**: Join ongoing faculty sessions, participate in real-time concept polls, and download session reference materials.
-  - **Faculty & Staff**: Launch live teaching sessions, broadcast instant polls, track student responses in real time, and record attendance.
-  - **HOD & Admin**: Overview of active department teaching sessions, faculty teaching hour analytics, and syllabus coverage audits.
+  - **Student**: Join interactive faculty lectures, collaborate peer-to-peer on assignments, engage in full-duplex voice calls with peer mentors, and run code with instant output.
+  - **Faculty & Class Advisor**: Launch live coding classrooms, teach concepts over WebRTC voice, debug student code in real time, broadcast concept polls, and record register number attendance.
+  - **HOD & Supreme Admin**: Monitor active departmental live teaching sessions, track faculty interactive teaching hours, and audit curriculum demonstration metrics.
 
 ---
 
