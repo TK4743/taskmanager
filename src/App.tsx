@@ -11724,14 +11724,14 @@ export default function App() {
                 </div>
                 <div className="hidden sm:flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300 font-medium">
                   <span>Required:</span>
-                  <span className={cn("px-2 py-0.5 rounded-md text-[11px] font-bold border", isPushDone ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" : "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800")}>
-                    {isPushDone ? '✓ Push Notifications' : '⚠️ Push Notifications'}
+                  <span className={cn("px-2 py-0.5 rounded-md text-[11px] font-bold border", isPushCompliant ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" : "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800")}>
+                    {isPushCompliant ? '✓ Push Notifications' : '⚠️ Push Notifications'}
                   </span>
-                  <span className={cn("px-2 py-0.5 rounded-md text-[11px] font-bold border", isTelegramDone ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" : "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800")}>
-                    {isTelegramDone ? '✓ Telegram Bot' : '⚠️ Telegram Bot'}
+                  <span className={cn("px-2 py-0.5 rounded-md text-[11px] font-bold border", isTelegramCompliant ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" : "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800")}>
+                    {isTelegramCompliant ? '✓ Telegram Bot' : '⚠️ Telegram Bot'}
                   </span>
-                  <span className={cn("px-2 py-0.5 rounded-md text-[11px] font-bold border", isProfileDone ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" : "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800")}>
-                    {isProfileDone ? '✓ Profile Info' : '⚠️ Profile Info'}
+                  <span className={cn("px-2 py-0.5 rounded-md text-[11px] font-bold border", isProfileCompliant ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" : "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800")}>
+                    {isProfileCompliant ? '✓ Profile Info' : '⚠️ Profile Info'}
                   </span>
                 </div>
               </div>
