@@ -4281,7 +4281,7 @@ export default function App() {
   const fetchIndustryData = async (passedToken?: string) => {
     try {
       const activeUser = user || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null);
-      if (activeUser && activeUser.role !== 'SUPREME_ADMIN' && activeUser.role !== 'HOD') return;
+      if (!activeUser || (activeUser.role !== 'SUPREME_ADMIN' && activeUser.role !== 'HOD')) return;
       const activeToken = passedToken || token || localStorage.getItem('token');
       if (!activeToken) return;
       const headers = { Authorization: `Bearer ${activeToken}` };
