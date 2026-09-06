@@ -23,6 +23,7 @@
     "productivity",
     "utilities"
   ],
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "icons": [
     {
       "src": "/logo.png",
@@ -141,16 +142,16 @@
   ],
   "screenshots": [
     {
-      "src": "/logo.png",
+      "src": "/screenshot-desktop.svg",
       "sizes": "1280x720",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "form_factor": "wide",
       "label": "VSBEC IT Task Manager Desktop Dashboard"
     },
     {
-      "src": "/logo.png",
+      "src": "/screenshot-mobile.svg",
       "sizes": "720x1280",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "form_factor": "narrow",
       "label": "VSBEC IT Task Manager Mobile App"
     }
@@ -193,8 +194,8 @@
       "type": "application/json",
       "screenshots": [
         {
-          "src": "/logo.png",
-          "sizes": "512x512",
+          "src": "/screenshot-desktop.svg",
+          "sizes": "1280x720",
           "label": "Task Manager Widget Preview"
         }
       ],
