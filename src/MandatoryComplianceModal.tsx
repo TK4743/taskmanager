@@ -67,6 +67,7 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
 
   // Telegram Linking State
   const [verifyingTelegram, setVerifyingTelegram] = useState<boolean>(false);
+  const [copiedCmd, setCopiedCmd] = useState<boolean>(false);
 
   // Staff/Faculty Profile Edit State
   const [isEditingStaffProfile, setIsEditingStaffProfile] = useState<boolean>(false);
@@ -423,12 +424,29 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
                       type="button"
                       onClick={() => {
                         navigator.clipboard.writeText(`/link ${effectiveIdentifier}`);
+                        setCopiedCmd(true);
+                        setTimeout(() => setCopiedCmd(false), 2500);
                         addToast?.(`Copied "/link ${effectiveIdentifier}"! Paste it into @${botUsername} on Telegram.`, 'success');
                       }}
-                      className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-zinc-500 cursor-pointer"
+                      className={cn(
+                        "px-2 py-0.5 rounded-md text-[11px] font-bold transition flex items-center gap-1 cursor-pointer",
+                        copiedCmd
+                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300"
+                          : "bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 border border-zinc-200 dark:border-zinc-600"
+                      )}
                       title="Copy link command"
                     >
-                      <Copy size={13} />
+                      {copiedCmd ? (
+                        <>
+                          <CheckCircle2 size={12} className="text-emerald-600 dark:text-emerald-400" />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={12} />
+                          <span>Copy</span>
+                        </>
+                      )}
                     </button>
                   </div>
 
