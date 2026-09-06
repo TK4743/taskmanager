@@ -10710,7 +10710,7 @@ async function startServer() {
   }));
 
   // ── Admin: Industry Approval ───────────────────────────────────────────────
-  app.get('/api/admin/industry/pending', authenticate, authorize(['SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
+  app.get('/api/admin/industry/pending', authenticate, authorize(['SUPREME_ADMIN', 'HOD']), asyncHandler(async (req: Request, res: Response) => {
     const result = await pool.query(
       `SELECT cp.*, u.username, u.full_name, u.email, u.created_at as registered_at FROM company_profiles cp JOIN users u ON u.id = cp.user_id WHERE cp.is_verified = FALSE AND u.role = 'INDUSTRY' ORDER BY u.created_at DESC`
     );
@@ -10724,7 +10724,7 @@ async function startServer() {
     res.json(result.rows);
   }));
 
-  app.post('/api/admin/industry/approve/:userId', authenticate, authorize(['SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
+  app.post('/api/admin/industry/approve/:userId', authenticate, authorize(['SUPREME_ADMIN', 'HOD']), asyncHandler(async (req: Request, res: Response) => {
     const { userId } = req.params;
     const { approved, rejection_reason } = req.body;
     const adminId = (req as any).user.id;
