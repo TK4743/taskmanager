@@ -142,18 +142,25 @@
   ],
   "screenshots": [
     {
-      "src": "/screenshot-desktop.svg",
-      "sizes": "1280x720",
-      "type": "image/svg+xml",
+      "src": "/screenshot-dashboard.png",
+      "sizes": "1366x768",
+      "type": "image/png",
       "form_factor": "wide",
-      "label": "VSBEC IT Task Manager Desktop Dashboard"
+      "label": "VSBEC IT Task Manager Dashboard & Class Analyzer"
     },
     {
-      "src": "/screenshot-mobile.svg",
-      "sizes": "720x1280",
-      "type": "image/svg+xml",
-      "form_factor": "narrow",
-      "label": "VSBEC IT Task Manager Mobile App"
+      "src": "/screenshot-verifications.png",
+      "sizes": "1366x768",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "VSBEC IT Task Manager Student Submissions Verification"
+    },
+    {
+      "src": "/screenshot-coding.png",
+      "sizes": "1366x768",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "VSBEC IT Task Manager LeetCode & GitHub Progress Tracking"
     }
   ],
   "share_target": {
@@ -194,8 +201,8 @@
       "type": "application/json",
       "screenshots": [
         {
-          "src": "/screenshot-desktop.svg",
-          "sizes": "1280x720",
+          "src": "/screenshot-dashboard.png",
+          "sizes": "1366x768",
           "label": "Task Manager Widget Preview"
         }
       ],
