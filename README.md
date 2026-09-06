@@ -64,12 +64,9 @@
 - [8. In-Memory RAM Directory Cache & Performance Optimization](#8-in-memory-ram-directory-cache--performance-optimization)
 - [9. Database Schema Architecture (35 Relational Tables)](#8-database-schema-architecture-35-relational-tables)
 - [10. Automated Scorecard & Email Notification Templates](#10-automated-scorecard--email-notification-templates)
-- [11. Environment Variables Reference](#11-environment-variables-reference)
-- [12. Installation & Local Deployment Guide](#12-installation--local-deployment-guide)
-- [13. Production Deployment Guide (Vercel & Render)](#13-production-deployment-guide-vercel--render)
-- [14. System Verification & Automated Test Suite](#14-system-verification--automated-test-suite)
-- [15. API Endpoints Reference](#15-api-endpoints-reference)
-- [16. License & Intellectual Property](#16-license--intellectual-property)
+- [11. System Verification & Automated Test Suite](#11-system-verification--automated-test-suite)
+- [12. API Endpoints Reference](#12-api-endpoints-reference)
+- [13. License & Intellectual Property](#13-license--intellectual-property)
 
 ---
 
@@ -695,139 +692,9 @@ Outbound email templates feature responsive, institutional branding with **Smart
 
 ---
 
-## 11. Environment Variables Reference
+## 11. System Verification & Automated Test Suite
 
-Create a `.env` file in the project root:
-
-```env
-# ==============================================================================
-# SERVER & APPLICATION CONFIGURATION
-# ==============================================================================
-PORT=3000
-NODE_ENV=development
-APP_URL=https://it-taskmanager.vercel.app
-
-# ==============================================================================
-# DATABASE CONNECTION (POSTGRESQL / SUPABASE / NEON)
-# ==============================================================================
-DATABASE_URL=postgresql://postgres:password@localhost:5432/it_taskmanager
-DB_POOL_MAX=25
-DB_POOL_MIN=4
-DB_CONNECTION_TIMEOUT_MS=20000
-DB_STATEMENT_TIMEOUT_MS=30000
-
-# ==============================================================================
-# AUTHENTICATION & SECURITY
-# ==============================================================================
-JWT_SECRET=your-super-secure-64-character-jwt-secret-key-here
-RATE_LIMIT_MAX=10000
-CRON_SECRET=your-secure-cron-trigger-secret
-
-# ==============================================================================
-# CLOUDINARY CDN (TASK PROOFS & WEBCAM SNAPSHOTS)
-# ==============================================================================
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-
-# ==============================================================================
-# TELEGRAM BOT ALERTS & COMMANDS
-# ==============================================================================
-TELEGRAM_BOT_TOKEN=123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ
-TELEGRAM_ADMIN_CHAT_ID=your_telegram_admin_chat_id
-TELEGRAM_GROUP_CHAT_ID=your_telegram_group_chat_id
-
-# ==============================================================================
-# WEB PUSH VAPID NOTIFICATIONS (PWA)
-# ==============================================================================
-VAPID_PUBLIC_KEY=your_vapid_public_key
-VAPID_PRIVATE_KEY=your_vapid_private_key
-VAPID_SUBJECT=mailto:vsbecitc2428@gmail.com
-
-# ==============================================================================
-# MULTI-NODE BREVO TRANSACTIONAL EMAIL POOL
-# ==============================================================================
-BREVO_API_KEY=xkeysib-your-primary-api-key
-BREVO_SENDER_EMAIL=vsbecitc2428@gmail.com
-BREVO_SENDER_NAME="VSBEC IT Department"
-
-BREVO_API_KEY_2=xkeysib-your-secondary-api-key
-BREVO_SENDER_EMAIL_2=campusvsb4743@gmail.com
-BREVO_SENDER_NAME_2="VSBEC IT Department"
-
-BREVO_API_KEY_3=xkeysib-your-tertiary-api-key
-BREVO_SENDER_EMAIL_3=campusconnectvsb@gmail.com
-BREVO_SENDER_NAME_3="VSBEC IT Department"
-
-# ==============================================================================
-# GITHUB INTEGRATION & SENTRY TELEMETRY
-# ==============================================================================
-GITHUB_TOKEN=ghp_your_github_personal_access_token
-GITHUB_REPO=Tharun4743/taskmanager
-SENTRY_DSN=https://your_sentry_dsn_here
-```
-
----
-
-## 12. Installation & Local Deployment Guide
-
-### Prerequisites
-* **Node.js**: `v20.x` or higher
-* **PostgreSQL**: `v14.x` or higher
-* **Compilers** (for local sandbox code execution):
-  - C / C++: `gcc` / `g++` (v6.3.0+)
-  - Java: OpenJDK 17 (`javac`, `java`)
-  - Python: `python` (v3.10+)
-
-### Step-by-Step Setup
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/Tharun4743/taskmanager.git
-   cd taskmanager
-   ```
-2. **Install Dependencies**:
-   ```bash
-   npm install
-   ```
-3. **Configure Environment Variables**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your PostgreSQL credentials and API keys
-   ```
-4. **Build Frontend Bundle**:
-   ```bash
-   npm run build
-   ```
-5. **Start Development Server**:
-   ```bash
-   npm run dev
-   ```
-   The application will start on **`http://localhost:3000`**.
-
----
-
-## 13. Production Deployment Guide (Vercel & Render)
-
-### Deploying to Vercel (Serverless Frontend + API)
-The repository includes a ready-to-use [`vercel.json`](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/vercel.json):
-1. Import repository into [Vercel Dashboard](https://vercel.com).
-2. Set Environment Variables in Project Settings.
-3. Deploy — Vercel builds the React frontend and executes serverless API routes under `api/index.ts`.
-
-### Deploying to Render (Full Node.js Server + Sandbox)
-The repository includes a [`render.yaml`](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/render.yaml) Blueprint:
-1. Connect repository in [Render Dashboard](https://render.com).
-2. Use Web Service configuration with `npm install && npm run build` build command and `npm start` start command.
-
----
-
-## 14. System Verification & Automated Test Suite
-
-Run the full system audit suite covering database integrity, foreign keys, compiler sandboxing, infinite loop guards, and report generation:
-
-```bash
-npx tsx scratch/deep_system_audit.ts
-```
+Full system audit results covering database integrity, foreign keys, compiler sandboxing, infinite loop guards, and report generation:
 
 ```
 ════════════════════════════════════════════════════════════════════
@@ -855,7 +722,7 @@ Audit Complete: 13/13 PASSED (0 FAILED)
 
 ---
 
-## 15. API Endpoints Reference
+## 12. API Endpoints Reference
 
 | Method | Endpoint | Access Level | Description |
 | :--- | :--- | :--- | :--- |
@@ -891,7 +758,7 @@ Audit Complete: 13/13 PASSED (0 FAILED)
 
 ---
 
-## 16. License & Intellectual Property
+## 13. License & Intellectual Property
 
 This project is developed and maintained for the **Department of Information Technology, VSB Engineering College, Karur** as part of the **Smart India Hackathon (SIH26044)** innovation initiative.
 
