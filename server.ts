@@ -90,6 +90,9 @@ import {
   sendPushToUser,
   sendPushToUsers,
   sendPushToClasses,
+  sendPushToClassAdvisors,
+  sendPushToCoordinators,
+  sendPushToRole,
   sendPushToAll
 } from './pushNotificationService.js';
 import { sendUnifiedNotification, getUserNotificationPreferences } from './notificationService.js';
@@ -3635,10 +3638,17 @@ async function startServer() {
           }
 
           await client.query(`
-            INSERT INTO notifications (user_id, message, type)
-            VALUES ($1, $2, 'TEAM_REVIEW')
+            INSERT INTO notifications (user_id, message, type, title, status, is_read, sent_at, created_at)
+            VALUES ($1, $2, 'TEAM_REVIEW', 'Team Task Approved', 'SENT', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           `, [m.student_id, `Your team submission for task "${task.title}" has been APPROVED!`]);
         }
+
+        const memberIds = acceptedMembersRes.rows.map(m => m.student_id);
+        sendPushToUsers(memberIds, {
+          title: '🏆 Team Task Approved!',
+          body: `Team submission for "${task.title}" has been approved.${feedback ? ' Note: ' + feedback : ''}`,
+          url: '/'
+        }).catch(() => {});
       } else {
         await client.query(`
           UPDATE team_submissions 
@@ -3651,10 +3661,17 @@ async function startServer() {
         const acceptedMembersRes = await client.query('SELECT student_id FROM team_members WHERE team_id = $1 AND status = \'ACCEPTED\'', [team.id]);
         for (const m of acceptedMembersRes.rows) {
           await client.query(`
-            INSERT INTO notifications (user_id, message, type)
-            VALUES ($1, $2, 'TEAM_REVIEW')
+            INSERT INTO notifications (user_id, message, type, title, status, is_read, sent_at, created_at)
+            VALUES ($1, $2, 'TEAM_REVIEW', 'Team Submission Rejected', 'SENT', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           `, [m.student_id, `Your team submission for task "${task.title}" was REJECTED: ${feedback || 'Please resubmit'}`]);
         }
+
+        const memberIds = acceptedMembersRes.rows.map(m => m.student_id);
+        sendPushToUsers(memberIds, {
+          title: '❌ Team Submission Rejected',
+          body: `Team submission for "${task.title}" was rejected: ${feedback || 'Please resubmit.'}`,
+          url: '/'
+        }).catch(() => {});
       }
 
       await client.query('COMMIT');
@@ -4209,17 +4226,45 @@ async function startServer() {
           WHERE id = $5
         `, [screenshot_url, cloudinary_public_id, custom_field_value, newCount, existing.id]);
 
-        // In-App Notification to Student
+        // 1. In-App + Chrome Notification to Student
         await createInAppNotification(req.user.id, `Your submission for "${task.title}" has been resubmitted and is awaiting verification.`, 'TASK_SUBMITTED', 'Submission Received');
+        sendPushToUser(req.user.id, {
+          title: '📤 Task Resubmitted',
+          body: `Your submission for "${task.title}" is pending review.`,
+          url: '/'
+        }).catch(() => {});
 
-        // In-App Notification to Class Advisor & Coordinators
+        // 2. In-App + Chrome Notification to HOD, Class Advisor & Coordinators
         if (req.user.class_id) {
-          await notifyAdvisorsOfClasses([req.user.class_id], `${req.user.full_name || 'Student'} resubmitted task "${task.title}" for verification.`, 'SUBMISSION_RECEIVED', 'New Submission', req.user.id);
+          const studentLabel = `${req.user.full_name || 'Student'}${req.user.register_number ? ` (${req.user.register_number})` : ''}`;
+          
+          // Advisor
+          await notifyAdvisorsOfClasses([req.user.class_id], `${studentLabel} resubmitted task "${task.title}" for verification.`, 'SUBMISSION_RECEIVED', 'New Submission', req.user.id);
+          sendPushToClassAdvisors([req.user.class_id], {
+            title: '📥 New Task Submission to Verify',
+            body: `${studentLabel} resubmitted "${task.title}".`,
+            url: '/'
+          }).catch(() => {});
+
+          // Coordinator
           const coordRes = await pool.query(`SELECT id FROM users WHERE class_id = $1 AND role = 'STUDENT' AND is_coordinator = TRUE AND id != $2`, [req.user.class_id, req.user.id]);
           const coordIds = coordRes.rows.map((r: any) => r.id);
           if (coordIds.length > 0) {
-            await createInAppNotification(coordIds, `${req.user.full_name || 'Student'} resubmitted task "${task.title}" for verification.`, 'SUBMISSION_RECEIVED', 'New Submission');
+            await createInAppNotification(coordIds, `${studentLabel} resubmitted task "${task.title}" for verification.`, 'SUBMISSION_RECEIVED', 'New Submission');
+            sendPushToCoordinators(req.user.class_id, {
+              title: '📥 New Submission to Verify',
+              body: `${studentLabel} resubmitted "${task.title}".`,
+              url: '/'
+            }, req.user.id).catch(() => {});
           }
+
+          // HOD & Supreme Admin
+          await notifyLeadership(req.user.department_id, `${studentLabel} resubmitted task "${task.title}".`, 'SUBMISSION_RECEIVED', 'Submission Received', req.user.id);
+          sendPushToRole('HOD', {
+            title: '📥 Department Task Submission',
+            body: `${studentLabel} submitted work for "${task.title}".`,
+            url: '/'
+          }, req.user.department_id).catch(() => {});
         }
 
         notifyTaskSubmissionReceived(req.user.id, task_id).catch(err => console.error('[Telegram Notify Submission Error]:', err));
@@ -4236,17 +4281,45 @@ async function startServer() {
         RETURNING id
       `, [task_id, req.user.id, screenshot_url, cloudinary_public_id, custom_field_value]);
 
-      // In-App Notification to Student
+      // 1. In-App + Chrome Notification to Student
       await createInAppNotification(req.user.id, `Your submission for "${task.title}" has been received and is awaiting verification.`, 'TASK_SUBMITTED', 'Submission Received');
+      sendPushToUser(req.user.id, {
+        title: '📤 Task Submitted Successfully',
+        body: `Your submission for "${task.title}" is pending verification.`,
+        url: '/'
+      }).catch(() => {});
 
-      // In-App Notification to Class Advisor & Coordinators
+      // 2. In-App + Chrome Notification to HOD, Class Advisor & Coordinators
       if (req.user.class_id) {
-        await notifyAdvisorsOfClasses([req.user.class_id], `${req.user.full_name || 'Student'} submitted task "${task.title}" for verification.`, 'SUBMISSION_RECEIVED', 'New Submission', req.user.id);
+        const studentLabel = `${req.user.full_name || 'Student'}${req.user.register_number ? ` (${req.user.register_number})` : ''}`;
+
+        // Advisor
+        await notifyAdvisorsOfClasses([req.user.class_id], `${studentLabel} submitted task "${task.title}" for verification.`, 'SUBMISSION_RECEIVED', 'New Submission', req.user.id);
+        sendPushToClassAdvisors([req.user.class_id], {
+          title: '📥 New Task Submission to Verify',
+          body: `${studentLabel} submitted "${task.title}".`,
+          url: '/'
+        }).catch(() => {});
+
+        // Coordinator
         const coordRes = await pool.query(`SELECT id FROM users WHERE class_id = $1 AND role = 'STUDENT' AND is_coordinator = TRUE AND id != $2`, [req.user.class_id, req.user.id]);
         const coordIds = coordRes.rows.map((r: any) => r.id);
         if (coordIds.length > 0) {
-          await createInAppNotification(coordIds, `${req.user.full_name || 'Student'} submitted task "${task.title}" for verification.`, 'SUBMISSION_RECEIVED', 'New Submission');
+          await createInAppNotification(coordIds, `${studentLabel} submitted task "${task.title}" for verification.`, 'SUBMISSION_RECEIVED', 'New Submission');
+          sendPushToCoordinators(req.user.class_id, {
+            title: '📥 New Submission to Verify',
+            body: `${studentLabel} submitted "${task.title}".`,
+            url: '/'
+          }, req.user.id).catch(() => {});
         }
+
+        // HOD & Supreme Admin
+        await notifyLeadership(req.user.department_id, `${studentLabel} submitted task "${task.title}".`, 'SUBMISSION_RECEIVED', 'Submission Received', req.user.id);
+        sendPushToRole('HOD', {
+          title: '📥 Department Task Submission',
+          body: `${studentLabel} submitted work for "${task.title}".`,
+          url: '/'
+        }, req.user.department_id).catch(() => {});
       }
 
       notifyTaskSubmissionReceived(req.user.id, task_id).catch(err => console.error('[Telegram Notify Submission Error]:', err));
@@ -4480,24 +4553,41 @@ async function startServer() {
       ? `Your submission for "${taskTitle}" has been verified.${verification_note ? ` Note: ${verification_note}` : ''}`
       : `Your submission for "${taskTitle}" has been rejected. Reason: ${rejection_reason}`;
 
-    await createInAppNotification(sub.user_id, message, status, status === 'VERIFIED' ? 'Task Verified' : 'Submission Rejected');
+    const statusIcon = status === 'VERIFIED' ? '✅' : '❌';
+    const statusTitle = status === 'VERIFIED' ? 'Task Approved & Verified' : 'Submission Rejected';
 
-    // Notify Advisor if verified by Coordinator
-    if (sub.class_id && req.user.role === 'STUDENT' && req.user.is_coordinator) {
-      await notifyAdvisorsOfClasses([sub.class_id], `${req.user.full_name || 'Coordinator'} ${status === 'VERIFIED' ? 'verified' : 'reviewed'} a submission for "${taskTitle}".`, 'SUBMISSION_VERIFIED', 'Submission Reviewed', req.user.id);
+    // 1. In-App + Chrome Push Notification to the Student
+    await createInAppNotification(sub.user_id, message, status, statusTitle);
+    sendPushToUser(sub.user_id, {
+      title: `${statusIcon} ${statusTitle}: ${taskTitle}`,
+      body: status === 'VERIFIED'
+        ? `Your submission has been verified.${verification_note ? ` Note: ${verification_note}` : ''}`
+        : `Your submission was rejected. Reason: ${rejection_reason || 'Please review and resubmit.'}`,
+      url: '/'
+    }).catch(() => {});
+
+    // 2. In-App Notification to Class Advisor & Coordinators
+    if (sub.class_id) {
+      const verifierLabel = req.user.full_name || (req.user.is_coordinator ? 'Coordinator' : req.user.role);
+      await notifyAdvisorsOfClasses([sub.class_id], `${verifierLabel} ${status === 'VERIFIED' ? 'approved' : 'rejected'} a submission for "${taskTitle}".`, 'SUBMISSION_VERIFIED', `Task ${status === 'VERIFIED' ? 'Approved' : 'Rejected'}`, req.user.id);
+      
+      const coordRes = await pool.query(`SELECT id FROM users WHERE class_id = $1 AND role = 'STUDENT' AND is_coordinator = TRUE AND id != $2`, [sub.class_id, req.user.id]);
+      const coordIds = coordRes.rows.map((r: any) => r.id);
+      if (coordIds.length > 0) {
+        await createInAppNotification(coordIds, `${verifierLabel} ${status === 'VERIFIED' ? 'approved' : 'rejected'} a submission for "${taskTitle}".`, 'SUBMISSION_VERIFIED', `Task ${status === 'VERIFIED' ? 'Approved' : 'Rejected'}`);
+      }
+    }
+
+    // 3. In-App Notification to HOD
+    if (sub.department_id) {
+      await notifyLeadership(sub.department_id, `${req.user.full_name || 'Faculty'} ${status === 'VERIFIED' ? 'approved' : 'rejected'} a submission for "${taskTitle}".`, 'SUBMISSION_VERIFIED', `Task ${status === 'VERIFIED' ? 'Approved' : 'Rejected'}`, req.user.id);
     }
 
     notifySubmissionVerifiedOrRejected(req.params.id, status, status === 'VERIFIED' ? verification_note : rejection_reason).catch(err => console.error('[Telegram Notify Verify Error]:', err));
 
-    // Dispatch real-time Web Push notification to student's phone/desktop
-    sendPushToUser(sub.user_id, {
-      title: status === 'VERIFIED' ? '✅ Task Verified!' : '❌ Submission Rejected',
-      body: status === 'VERIFIED'
-        ? `Your submission for "${taskTitle}" has been approved.${verification_note ? ` Note: ${verification_note}` : ''}`
-        : `Your submission for "${taskTitle}" was rejected. Reason: ${rejection_reason || 'Please review and resubmit.'}`,
-      url: '/'
-    }).catch(e => console.error('[Push Verify Error]:', e));
     invalidateApiCache('tasks_');
+    invalidateApiCache('submissions_');
+    invalidateApiCache('notifs_');
 
     res.json({ success: true });
   });

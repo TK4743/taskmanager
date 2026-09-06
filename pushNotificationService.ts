@@ -245,6 +245,73 @@ export async function sendPushToClasses(classIds: string[], payload: PushPayload
 }
 
 /**
+ * Dispatches a push notification to users with a specific role (e.g. HOD, SUPREME_ADMIN)
+ */
+export async function sendPushToRole(role: string, payload: PushPayload, departmentId?: string): Promise<{ sent: number; failed: number }> {
+  try {
+    let query = `
+      SELECT ps.endpoint, ps.p256dh, ps.auth
+      FROM push_subscriptions ps
+      JOIN users u ON ps.user_id = u.id
+      WHERE u.role = $1
+    `;
+    const params: any[] = [role];
+    if (departmentId) {
+      query += ` AND u.department_id = $2`;
+      params.push(departmentId);
+    }
+    const res = await pool.query(query, params);
+    return await dispatchPushToSubscriptions(res.rows, payload);
+  } catch (err: any) {
+    console.error(`[WebPush] sendPushToRole error for role ${role}:`, err.message);
+    return { sent: 0, failed: 0 };
+  }
+}
+
+/**
+ * Dispatches a push notification to Class Advisors of given classes
+ */
+export async function sendPushToClassAdvisors(classIds: string[], payload: PushPayload): Promise<{ sent: number; failed: number }> {
+  if (!classIds || classIds.length === 0) return { sent: 0, failed: 0 };
+  try {
+    const res = await pool.query(`
+      SELECT ps.endpoint, ps.p256dh, ps.auth
+      FROM push_subscriptions ps
+      JOIN users u ON ps.user_id = u.id
+      WHERE u.class_id = ANY($1) AND u.role = 'CLASS_ADVISOR'
+    `, [classIds]);
+    return await dispatchPushToSubscriptions(res.rows, payload);
+  } catch (err: any) {
+    console.error('[WebPush] sendPushToClassAdvisors error:', err.message);
+    return { sent: 0, failed: 0 };
+  }
+}
+
+/**
+ * Dispatches a push notification to Student Coordinators of given class
+ */
+export async function sendPushToCoordinators(classId: string, payload: PushPayload, excludeUserId?: string): Promise<{ sent: number; failed: number }> {
+  try {
+    let query = `
+      SELECT ps.endpoint, ps.p256dh, ps.auth
+      FROM push_subscriptions ps
+      JOIN users u ON ps.user_id = u.id
+      WHERE u.class_id = $1 AND u.role = 'STUDENT' AND u.is_coordinator = TRUE
+    `;
+    const params: any[] = [classId];
+    if (excludeUserId) {
+      query += ` AND u.id != $2`;
+      params.push(excludeUserId);
+    }
+    const res = await pool.query(query, params);
+    return await dispatchPushToSubscriptions(res.rows, payload);
+  } catch (err: any) {
+    console.error(`[WebPush] sendPushToCoordinators error for class ${classId}:`, err.message);
+    return { sent: 0, failed: 0 };
+  }
+}
+
+/**
  * Dispatches a broadcast push notification to all registered devices in the system
  */
 export async function sendPushToAll(payload: PushPayload): Promise<{ sent: number; failed: number }> {
