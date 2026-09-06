@@ -5612,6 +5612,50 @@ async function startServer() {
     res.json({ message: 'Password changed successfully in database' });
   }));
 
+  // ── Settings: Update Profile Information (All Roles) ────────────────────────
+  app.put('/api/settings/profile', authenticate, asyncHandler(async (req: any, res: Response) => {
+    const { full_name, email, phone, bio, gender, avatar_url, github_url, linkedin_url } = req.body;
+
+    // Check if email already used by another user
+    if (email && email.trim()) {
+      const emailCheck = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id != $2 LIMIT 1', [email.trim(), req.user.id]);
+      if (emailCheck.rows.length > 0) {
+        return res.status(400).json({ error: 'Email address is already in use by another account.' });
+      }
+    }
+
+    const updated = await pool.query(`
+      UPDATE users
+      SET full_name = COALESCE($1, full_name),
+          email = COALESCE($2, email),
+          phone = COALESCE($3, phone),
+          bio = COALESCE($4, bio),
+          gender = COALESCE($5, gender),
+          avatar_url = COALESCE($6, avatar_url),
+          github_url = COALESCE($7, github_url),
+          linkedin_url = COALESCE($8, linkedin_url),
+          updated_at = NOW()
+      WHERE id = $9
+      RETURNING id, username, role, full_name, email, phone, bio, gender, avatar_url, github_url, linkedin_url, register_number, telegram_chat_id, telegram_username
+    `, [
+      full_name !== undefined ? full_name.trim() : null,
+      email !== undefined ? (email ? email.trim().toLowerCase() : null) : null,
+      phone !== undefined ? (phone ? phone.trim() : null) : null,
+      bio !== undefined ? bio.trim() : null,
+      gender !== undefined ? gender : null,
+      avatar_url !== undefined ? avatar_url : null,
+      github_url !== undefined ? github_url.trim() : null,
+      linkedin_url !== undefined ? linkedin_url.trim() : null,
+      req.user.id
+    ]);
+
+    invalidateUserAuthCache(req.user.id);
+    invalidateApiCache(`me_${req.user.id}`);
+    invalidateApiCache('users');
+
+    res.json({ message: 'Profile updated successfully', user: updated.rows[0] });
+  }));
+
   // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // MODULE 2 â€” DIGITAL NOTICE BOARD
   // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
