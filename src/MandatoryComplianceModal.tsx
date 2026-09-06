@@ -269,17 +269,17 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
           </div>
 
           {/* Body: 3 Mandatory Tasks */}
-          <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
+          <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
 
             {/* ── 1. Push Notifications ── */}
             <div className={cn(
-              "p-4 sm:p-5 rounded-2xl border transition-all",
+              "p-4 sm:p-5 rounded-2xl border transition-all overflow-hidden",
               isPushDone
                 ? "bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60"
                 : "bg-white dark:bg-zinc-800/80 border-amber-200 dark:border-amber-800/70 shadow-xs"
             )}>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                   <div className={cn(
                     "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs",
                     isPushDone
@@ -288,27 +288,29 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
                   )}>
                     {isPushDone ? <CheckCircle2 size={20} /> : <BellRing size={20} className="animate-bounce" />}
                   </div>
-                  <div>
-                    <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                      1. Enable Browser & Lock-Screen Notifications
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                        1. Enable Browser Notifications
+                      </h3>
                       <span className={cn(
-                        "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border",
+                        "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shrink-0",
                         isPushDone
                           ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-700"
                           : "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-700"
                       )}>
                         {isPushDone ? '🟢 Enabled' : '⚡ Required'}
                       </span>
-                    </h3>
+                    </div>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       Receive instant Chrome & desktop alerts for new tasks, submissions, deadline reminders & verifications.
                     </p>
                   </div>
                 </div>
 
-                <div className="shrink-0">
+                <div className="shrink-0 flex items-center justify-start sm:justify-end">
                   {isPushDone ? (
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-white dark:bg-zinc-800 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-700">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-white dark:bg-zinc-800 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-700 shadow-xs">
                       <CheckCircle2 size={14} /> Active on this Device
                     </div>
                   ) : (
@@ -316,7 +318,7 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
                       type="button"
                       onClick={handleEnablePush}
                       disabled={pushLoading}
-                      className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                      className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 shrink-0"
                     >
                       {pushLoading ? (
                         <>
@@ -335,7 +337,7 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
               </div>
 
               {pushPermission === 'denied' && (
-                <div className="mt-2 p-2.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
+                <div className="mt-3 p-2.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
                   <AlertTriangle size={15} className="shrink-0 text-rose-600" />
                   <span>
                     Notifications are blocked in your browser settings. Please click the padlock/settings icon in the address bar to allow notifications.
@@ -346,13 +348,13 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
 
             {/* ── 2. Telegram Bot Alerts & Group ── */}
             <div className={cn(
-              "p-4 sm:p-5 rounded-2xl border transition-all",
+              "p-4 sm:p-5 rounded-2xl border transition-all overflow-hidden",
               isTelegramDone
                 ? "bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60"
                 : "bg-white dark:bg-zinc-800/80 border-sky-200 dark:border-sky-800/70 shadow-xs"
             )}>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                   <div className={cn(
                     "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs",
                     isTelegramDone
@@ -361,37 +363,39 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
                   )}>
                     {isTelegramDone ? <CheckCircle2 size={20} /> : <Send size={18} className="-rotate-12" />}
                   </div>
-                  <div>
-                    <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                      2. Connect Telegram Bot & Official Group
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                        2. Connect Telegram Bot & Group
+                      </h3>
                       <span className={cn(
-                        "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border",
+                        "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shrink-0",
                         isTelegramDone
                           ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-700"
                           : "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-700"
                       )}>
                         {isTelegramDone ? '🟢 Connected' : '⚡ Required'}
                       </span>
-                    </h3>
+                    </div>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       Link your Telegram account to <b>@{botUsername}</b> for 1-to-1 deadline reminders, verification results, and department broadcasts.
                     </p>
                   </div>
                 </div>
 
-                <div className="shrink-0 flex items-center gap-2">
+                <div className="shrink-0 flex items-center gap-2 justify-start sm:justify-end">
                   <button
                     type="button"
                     onClick={handleVerifyTelegram}
                     disabled={verifyingTelegram}
-                    className="p-2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 rounded-xl transition cursor-pointer"
+                    className="p-2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 rounded-xl transition cursor-pointer shrink-0"
                     title="Refresh Telegram Connection Status"
                   >
                     <RefreshCw size={14} className={cn(verifyingTelegram && "animate-spin text-indigo-600")} />
                   </button>
 
                   {isTelegramDone ? (
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-white dark:bg-zinc-800 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-700">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-white dark:bg-zinc-800 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-700 shadow-xs shrink-0">
                       <CheckCircle2 size={14} /> Linked: @{user?.telegram_username || 'Active'}
                     </div>
                   ) : (
@@ -410,7 +414,7 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
 
               {!isTelegramDone && (
                 <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-700/60 flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300 font-mono text-[11px]">
+                  <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300 font-mono text-[11px] flex-wrap">
                     <span>Or send:</span>
                     <code className="bg-zinc-100 dark:bg-zinc-700 px-2 py-0.5 rounded text-indigo-600 dark:text-indigo-300 font-bold border border-zinc-200 dark:border-zinc-600">
                       /link {effectiveIdentifier}
@@ -444,13 +448,13 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
 
             {/* ── 3. Profile Information Update ── */}
             <div className={cn(
-              "p-4 sm:p-5 rounded-2xl border transition-all",
+              "p-4 sm:p-5 rounded-2xl border transition-all overflow-hidden",
               isProfileDone
                 ? "bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60"
                 : "bg-white dark:bg-zinc-800/80 border-purple-200 dark:border-purple-800/70 shadow-xs"
             )}>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                   <div className={cn(
                     "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs",
                     isProfileDone
@@ -459,18 +463,20 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
                   )}>
                     {isProfileDone ? <CheckCircle2 size={20} /> : <User size={18} />}
                   </div>
-                  <div>
-                    <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                      3. Update Account & Profile Information
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                        3. Update Profile Information
+                      </h3>
                       <span className={cn(
-                        "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border",
+                        "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shrink-0",
                         isProfileDone
                           ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-700"
                           : "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-700"
                       )}>
                         {isProfileDone ? '🟢 Complete' : isStudent ? `${studentProfileCompletion?.percentage || 0}% Filled` : '⚡ Action Required'}
                       </span>
-                    </h3>
+                    </div>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {isStudent
                         ? 'Fill your contact phone, bio, technical skills, projects, and coding profiles (GitHub, LeetCode).'
@@ -479,7 +485,7 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
                   </div>
                 </div>
 
-                <div className="shrink-0">
+                <div className="shrink-0 flex items-center justify-start sm:justify-end">
                   {isStudent ? (
                     <button
                       type="button"
@@ -488,7 +494,7 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
                         onNavigateToProfile?.();
                       }}
                       className={cn(
-                        "px-4 py-2 text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer",
+                        "w-full sm:w-auto px-4 py-2 text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0",
                         isProfileDone
                           ? "bg-white dark:bg-zinc-800 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700"
                           : "bg-purple-600 hover:bg-purple-700 text-white"
@@ -503,7 +509,7 @@ export const MandatoryComplianceModal: React.FC<MandatoryComplianceProps> = ({
                       type="button"
                       onClick={() => setIsEditingStaffProfile(prev => !prev)}
                       className={cn(
-                        "px-4 py-2 text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer",
+                        "w-full sm:w-auto px-4 py-2 text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0",
                         isProfileDone
                           ? "bg-white dark:bg-zinc-800 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700"
                           : "bg-purple-600 hover:bg-purple-700 text-white"
