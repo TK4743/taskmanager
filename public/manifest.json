@@ -1,62 +1,20 @@
 {
-  "$schema": "https://json.schemastore.org/web-manifest-combined.json",
-  "id": "https://it-taskmanager.vercel.app/",
   "name": "VSBEC IT Academic Task Management System",
   "short_name": "VSBEC IT",
-  "description": "Academic task governance, coding competency tracking, student progress monitoring, and verification portal for VSB Engineering College IT Department.",
-  "lang": "en-US",
-  "dir": "ltr",
-  "start_url": "/?source=pwa",
+  "description": "Academic task governance, coding competency tracking, and student progress monitoring portal for VSB Engineering College IT Department.",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": [
-    "window-controls-overlay",
-    "standalone",
-    "minimal-ui",
-    "browser"
-  ],
-  "orientation": "any",
+  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#4f46e5",
   "categories": [
     "education",
-    "productivity",
-    "utilities"
+    "productivity"
   ],
-  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "icons": [
     {
       "src": "/logo.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/logo.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/logo.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/logo.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/logo.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
@@ -66,12 +24,6 @@
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "/logo.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "any"
     },
     {
       "src": "/logo.png",
@@ -85,145 +37,5 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ],
-  "shortcuts": [
-    {
-      "name": "Academic Tasks",
-      "short_name": "Tasks",
-      "description": "View assignments, lab exercises and tasks",
-      "url": "/?tab=tasks",
-      "icons": [
-        {
-          "src": "/logo.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "Coding Progress",
-      "short_name": "Coding",
-      "description": "Monitor LeetCode and GitHub coding velocity",
-      "url": "/?tab=coding",
-      "icons": [
-        {
-          "src": "/logo.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "Department Notice Board",
-      "short_name": "Notices",
-      "description": "View official announcements and circulars",
-      "url": "/?tab=notices",
-      "icons": [
-        {
-          "src": "/logo.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "Live Teaching Hub",
-      "short_name": "Teaching Hub",
-      "description": "Interactive learning modules and assessments",
-      "url": "/?tab=teaching",
-      "icons": [
-        {
-          "src": "/logo.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshot-dashboard.png",
-      "sizes": "1366x768",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "VSBEC IT Task Manager Dashboard & Class Analyzer"
-    },
-    {
-      "src": "/screenshot-verifications.png",
-      "sizes": "1366x768",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "VSBEC IT Task Manager Student Submissions Verification"
-    },
-    {
-      "src": "/screenshot-coding.png",
-      "sizes": "1366x768",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "VSBEC IT Task Manager LeetCode & GitHub Progress Tracking"
-    }
-  ],
-  "share_target": {
-    "action": "/?source=share_target",
-    "method": "GET",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  },
-  "file_handlers": [
-    {
-      "action": "/?source=file_handler",
-      "accept": {
-        "application/pdf": [".pdf"],
-        "image/png": [".png"],
-        "image/jpeg": [".jpg", ".jpeg"],
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"]
-      }
-    }
-  ],
-  "launch_handler": {
-    "client_mode": "auto"
-  },
-  "edge_side_panel": {
-    "preferred_width": 420
-  },
-  "widgets": [
-    {
-      "name": "VSBEC IT Quick Tasks",
-      "short_name": "IT Tasks",
-      "description": "Quick view of pending academic tasks and coding progress",
-      "tag": "it_tasks_widget",
-      "template": "widget-template",
-      "ms_ac_template": "widgets/task-card.json",
-      "data": "api/tasks/summary",
-      "type": "application/json",
-      "screenshots": [
-        {
-          "src": "/screenshot-dashboard.png",
-          "sizes": "1366x768",
-          "label": "Task Manager Widget Preview"
-        }
-      ],
-      "icons": [
-        {
-          "src": "/logo.png",
-          "sizes": "192x192"
-        }
-      ],
-      "auth": false,
-      "update": 3600
-    }
-  ],
-  "protocol_handlers": [
-    {
-      "protocol": "web+ittask",
-      "url": "/?task=%s"
-    }
-  ],
-  "note_taking": {
-    "new_note_url": "/?action=new_note"
-  },
-  "prefer_related_applications": false
+  ]
 }

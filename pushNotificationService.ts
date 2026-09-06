@@ -156,7 +156,11 @@ async function dispatchPushToSubscriptions(subs: any[], payload: PushPayload): P
       };
 
       try {
-        await webpush.sendNotification(pushConfig, formattedPayload);
+        await webpush.sendNotification(pushConfig, formattedPayload, {
+          urgency: 'high',
+          TTL: 86400,
+          topic: 'taskmanager-alerts'
+        });
         sent++;
       } catch (err: any) {
         failed++;
