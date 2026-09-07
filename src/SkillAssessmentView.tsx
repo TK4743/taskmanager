@@ -1111,9 +1111,6 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                 </h1>
               </div>
             </div>
-            <p className="text-xs text-zinc-500 font-semibold mt-1">
-              Standardized Technical & Company Mock Assessments • AI Remedial Recommendations • Telegram Alerting
-            </p>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
@@ -1553,28 +1550,6 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
             ═════════════════════════════════════════════════════════════════════ */}
         {!isLockdownActive && activeTab === 'tracks' && (
           <div className="space-y-6">
-            <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
-                    Campus Placement Suites
-                  </span>
-                </div>
-                <h3 className="text-xl font-bold text-zinc-900 mt-2">
-                  Company-Specific & Technical Mock Tracks
-                </h3>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Choose a specialized evaluation track patterned after top recruiters. Each track enforces strict proctoring and calculates separate eligibility scores.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-zinc-600 bg-zinc-100 px-3 py-1.5 rounded-xl border border-zinc-200 flex items-center gap-1.5">
-                  <Send size={13} className="text-indigo-600" /> Telegram Alerts Active
-                </span>
-              </div>
-            </div>
-
             {/* Track Selection Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {tracks.map(t => {
