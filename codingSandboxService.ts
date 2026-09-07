@@ -216,8 +216,8 @@ async function evaluateViaJudge0(
   // Adapt class name for Java on Judge0 (which compiles Main.java)
   let preparedCode = sourceCode;
   if (language === 'java') {
-    if (/public\s+class\s+[A-Za-z0-9_]+/.test(preparedCode)) {
-      preparedCode = preparedCode.replace(/public\s+class\s+[A-Za-z0-9_]+/, 'public class Main');
+    if (/\bpublic\s+class\s+[A-Za-z0-9_]+/.test(preparedCode)) {
+      preparedCode = preparedCode.replace(/\bpublic\s+class\s+[A-Za-z0-9_]+/, 'public class Main');
     } else if (/\bclass\s+Solution\b/.test(preparedCode)) {
       preparedCode = preparedCode.replace(/\bclass\s+Solution\b/, 'public class Main');
     } else if (!/\bclass\s+Main\b/.test(preparedCode)) {
@@ -227,27 +227,64 @@ async function evaluateViaJudge0(
 
   const endpoint = process.env.JUDGE0_URL || 'https://ce.judge0.com/submissions?wait=true';
 
-  const runSingle = async (tc: TestCaseInput) => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 12000);
-    try {
-      const resp = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source_code: preparedCode,
-          language_id: langId,
-          stdin: tc.input_data || '',
-        }),
-        signal: controller.signal,
-      });
-      if (!resp.ok) {
-        throw new Error(`Judge0 responded with HTTP ${resp.status}`);
+  const runSingle = async (tc: TestCaseInput): Promise<any> => {
+    const stdinData = (tc.input_data || '').endsWith('\n') ? tc.input_data : (tc.input_data || '') + '\n';
+
+    // Up to 3 attempts to gracefully handle free-tier rate limits or transient hiccups
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 18000);
+      try {
+        const resp = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            source_code: preparedCode,
+            language_id: langId,
+            stdin: stdinData,
+          }),
+          signal: controller.signal,
+        });
+
+        if (resp.status === 429) {
+          clearTimeout(timer);
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+
+        if (!resp.ok) {
+          throw new Error(`Judge0 responded with HTTP ${resp.status}`);
+        }
+
+        let result = await resp.json();
+
+        // If Judge0 queued the execution, poll by submission token until complete
+        if (result.token && result.status && result.status.id <= 2) {
+          const baseJudgeUrl = endpoint.split('?')[0].replace(/\/+$/, '');
+          for (let pollAttempt = 0; pollAttempt < 10; pollAttempt++) {
+            await new Promise(r => setTimeout(r, 600));
+            try {
+              const pollResp = await fetch(`${baseJudgeUrl}/${result.token}`);
+              if (pollResp.ok) {
+                const polled = await pollResp.json();
+                if (polled.status && polled.status.id >= 3) {
+                  result = polled;
+                  break;
+                }
+              }
+            } catch {}
+          }
+        }
+
+        return result;
+      } catch (err: any) {
+        if (attempt === 2) throw err;
+        await new Promise(r => setTimeout(r, 800));
+      } finally {
+        clearTimeout(timer);
       }
-      return await resp.json();
-    } finally {
-      clearTimeout(timer);
     }
+    throw new Error('Judge0 request failed after retries');
   };
 
   try {
@@ -279,8 +316,13 @@ async function evaluateViaJudge0(
       };
     }
 
-    // Run remaining test cases in parallel
-    const remainingJudges = await Promise.all(testCases.slice(1).map(tc => runSingle(tc)));
+    // Run remaining test cases smoothly with slight pacing to prevent free tier rate limits
+    const remainingJudges: any[] = [];
+    for (let i = 1; i < testCases.length; i++) {
+      if (i > 1) await new Promise(r => setTimeout(r, 60));
+      const res = await runSingle(testCases[i]);
+      remainingJudges.push(res);
+    }
     const allJudges = [firstJudge, ...remainingJudges];
 
     const results: ExecutionResult[] = [];

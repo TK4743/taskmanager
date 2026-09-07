@@ -524,7 +524,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
     if (!attemptId || questions.length === 0) return;
     const currentQ = questions[currentQIdx];
     const lang = selectedLanguage[currentQIdx] || 'cpp';
-    const code = codeBuffers[currentQIdx]?.[lang] || '';
+    const code = codeBuffers[currentQIdx]?.[lang] ?? (starterTemplates[lang] || DEFAULT_STARTER_TEMPLATES[lang] || '');
 
     if (!code.trim()) {
       showToast('Please write some code before running.');
@@ -573,7 +573,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
     if (!attemptId || questions.length === 0) return;
     const currentQ = questions[currentQIdx];
     const lang = selectedLanguage[currentQIdx] || 'cpp';
-    const code = codeBuffers[currentQIdx]?.[lang] || '';
+    const code = codeBuffers[currentQIdx]?.[lang] ?? (starterTemplates[lang] || DEFAULT_STARTER_TEMPLATES[lang] || '');
 
     if (!code.trim()) {
       showToast('Cannot submit empty code.');
@@ -637,7 +637,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
   const currentQ = questions[currentQIdx];
   const activeLang = selectedLanguage[currentQIdx] || 'cpp';
-  const activeCode = codeBuffers[currentQIdx]?.[activeLang] ?? (starterTemplates[activeLang] || '');
+  const activeCode = codeBuffers[currentQIdx]?.[activeLang] ?? (starterTemplates[activeLang] || DEFAULT_STARTER_TEMPLATES[activeLang] || '');
 
   // Format timer
   const formatTime = (secs: number) => {
