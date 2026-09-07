@@ -741,6 +741,11 @@ async function startServer() {
   app.all('/api/cron/tick', healthCheckHandler);
   app.all('/api/cron/ping', healthCheckHandler);
 
+  // ── Redirect bare /api or /api/ to root to resolve GSC 404 indexing errors ──
+  app.get(['/api', '/api/'], (_req: Request, res: Response) => {
+    res.redirect(301, '/');
+  });
+
   // ── High-Speed In-Memory User Auth Cache (TTL: 45s) ──────────────────────
   interface CachedAuthUser {
     user: any;
@@ -12701,7 +12706,8 @@ async function startServer() {
     res.json({ success: true });
   }));
   // ── API 404 Fallback ──────────────────────────────────────────────────────
-  app.use('/api/*', (req, res) => {
+  app.use(['/api', '/api/*'], (req, res) => {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     res.status(404).json({ error: `API route ${req.originalUrl} not found` });
   });
 
