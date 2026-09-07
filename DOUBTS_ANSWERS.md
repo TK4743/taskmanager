@@ -1019,3 +1019,239 @@ Below is the definitive reference table and operational walkthrough for every co
   1. When the server boots, `dotenv` reads the local `.env` file and injects `process.env.DATABASE_URL` into the PostgreSQL connection pool.
 
 ---
+
+
+---
+
+## DOUBT 21: PWA Push Notifications — Architecture, Protocol & Lifecycle
+
+### 1. What is a PWA (Progressive Web Application)?
+A **Progressive Web App (PWA)** is a modern web application that uses service workers, manifest files, and browser APIs to deliver native-app capabilities:
+- **Installability:** Can be added directly to mobile home screens and desktop application menus without app store approval.
+- **Offline Resilience:** Caches application shell assets to function without network connectivity.
+- **Lock-Screen Background Push Notifications:** Can receive and display high-priority alerts even when the browser or tab is completely closed.
+
+---
+
+### 2. The 3-Party Web Push Architecture
+A web push notification is not a simple direct HTTP response from the server to the browser. Instead, it involves a three-party cryptographic pipeline defined by the **W3C Push API** and **IETF Web Push Protocol (RFC 8030)**:
+
+```
++-----------------------+              +---------------------------+              +-----------------------+
+|                       |  1. Register |                           |  2. Push Sub  |                       |
+|   Client Browser &    | ------------>|    Browser Push Service   |<------------ |    Node.js Express    |
+|    Service Worker     | <------------|   (Google FCM / Apple)    |  (VAPID req) |      App Server       |
+|      (sw.js)          |  3. Endpoint |                           |              |      (server.ts)      |
++-----------------------+              +---------------------------+              +-----------------------+
+           |                                         ^                                        |
+           |                                         | 5. Dispatch Notification                |
+           |                                         |    (Encrypted Payload)                 |
+           |                                         +----------------------------------------+
+           v
+  6. OS Lock Screen Banner
+  7. On Click -> Focus Tab
+```
+
+1. **The Client (User Browser & Service Worker):**
+   - Implemented in [src/pushNotificationClient.ts](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/src/pushNotificationClient.ts) and [public/sw.js](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/public/sw.js).
+   - Prompts the user for permission and registers a background worker thread.
+2. **The Push Service (Vendor Cloud):**
+   - Managed by the browser vendor (Google FCM for Chrome/Android, Apple APNs for Safari/iOS, Mozilla Push Service for Firefox).
+   - Holds an open low-power OS push socket to the user's physical device.
+3. **The Application Server:**
+   - Implemented in [server.ts](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/server.ts) using the `web-push` package.
+   - Stores subscriptions and dispatches signed, encrypted notifications.
+
+---
+
+### 3. VAPID: Voluntary Application Server Identification (RFC 8292)
+To prevent rogue servers from spamming users through the browser push service, **VAPID** keys are used.
+- **VAPID Keypair:** Consists of an **Elliptic Curve (P-256 / secp256r1)** Public and Private key.
+- **Public Key:** Exposed to the client browser via `GET /api/push/public-key` to identify the server during `pushManager.subscribe()`.
+- **Private Key:** Stored strictly on the backend in `.env` (`VAPID_PRIVATE_KEY`). Used to sign a JSON Web Token (JWT) sent with every push dispatch:
+  $$\text{Authorization Header} = \text{vapid t} = \text{JWT},\; \text{k} = \text{PublicKey}$$
+The push service verifies this signature against the public key attached to the subscription. If valid, the notification is routed to the device.
+
+---
+
+### 4. Step-by-Step Lifecycle in This Project
+
+#### Step 1: User Opt-In & Service Worker Registration
+In [src/pushNotificationClient.ts](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/src/pushNotificationClient.ts):
+```typescript
+const permission = await Notification.requestPermission();
+if (permission === 'granted') {
+  const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+  await navigator.serviceWorker.ready;
+}
+```
+
+#### Step 2: Generating the Device Subscription
+The client fetches the VAPID public key from [server.ts](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/server.ts#L1109) and calls the browser's `PushManager`:
+```typescript
+const subscription = await registration.pushManager.subscribe({
+  userVisibleOnly: true, // Guarantees an audible/visible notification is shown
+  applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+});
+```
+The returned subscription object contains:
+- `endpoint`: Unique URL hosted on Google/Apple/Mozilla push servers (e.g., `https://fcm.googleapis.com/fcm/send/dK8...`).
+- `keys.p256dh`: Client public key for message encryption (ECDH on Curve P-256).
+- `keys.auth`: 16-byte authentication secret to prevent man-in-the-middle tampering.
+
+#### Step 3: Persistence on Backend
+The client sends the subscription payload to `POST /api/push/subscribe`. The server writes it to the database:
+```sql
+INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, user_agent, created_at)
+VALUES ($1, $2, $3, $4, $5, NOW())
+ON CONFLICT (endpoint) DO UPDATE SET updated_at = NOW();
+```
+
+#### Step 4: Dispatching the Notification (Server-Side)
+When faculty publishes marks or creates a deadline, [server.ts](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/server.ts) triggers `webpush.sendNotification()`:
+```typescript
+const payload = JSON.stringify({
+  title: "Assignment Graded: Lab Exp 4",
+  body: "Staff has verified your submission with a score of 96/100.",
+  icon: "/logo.png",
+  badge: "/badge.png",
+  url: "/student/submissions"
+});
+
+await webpush.sendNotification(subscription, payload);
+```
+The `web-push` package encrypts the payload using **RFC 8291 AES-128-GCM** with the client's `p256dh` and `auth` keys before sending it to Google FCM/Apple APNs.
+
+#### Step 5: Background Reception in Service Worker (`sw.js`)
+Even if the student's browser is closed, the operating system wakes up [public/sw.js](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/public/sw.js) via the `push` event listener:
+```javascript
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {};
+  const options = {
+    body: data.body,
+    icon: data.icon || '/logo.png',
+    badge: data.badge || '/badge.png',
+    vibrate: [200, 100, 200],
+    data: { url: data.url || '/' }
+  };
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});
+```
+
+#### Step 6: User Tap / Click Handling
+When the student taps the notification banner:
+```javascript
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data.url;
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url.includes(self.location.origin)) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      return clients.openWindow(targetUrl);
+    })
+  );
+});
+```
+The app automatically focuses the existing browser tab or opens a new window directly to the task submission view!
+
+---
+
+## DOUBT 22: React vs TypeScript — Core Differences & Synergy
+
+### 1. Fundamental Classification
+
+| Criteria | React | TypeScript |
+| :--- | :--- | :--- |
+| **Category** | **Front-End JavaScript Library** | **Statically-Typed Programming Language** |
+| **Creator** | Meta (Facebook) — Jordan Walke (2013) | Microsoft — Anders Hejlsberg (2012) |
+| **Core Objective** | Constructing reusable, reactive User Interfaces (UI) | Providing compile-time type safety & advanced tooling to JavaScript |
+| **Execution Phase** | **Runtime** (in the browser or Node.js SSR) | **Compile-Time only** (erased during build; zero runtime footprint) |
+| **File Extensions** | `.jsx`, `.js` | `.ts`, `.tsx` (when combined with JSX) |
+| **Core Concepts** | Components, Virtual DOM, JSX, Hooks (`useState`, `useEffect`) | Types, Interfaces, Generics, Enums, Type Inference |
+| **Error Detection** | Runtime (errors crash the app or bubble up to error boundaries) | Compile-time (caught in the IDE before code runs) |
+| **Can it run directly in Browser?** | Yes (via bundled JavaScript) | **No** (Must be transpiled to JavaScript via `tsc`, Vite, or Babel) |
+
+---
+
+### 2. Why Are They Not Competitors?
+A common beginner misconception is thinking you must choose **between** React or TypeScript:
+- **React** answers the question: *"How do I structure and render my user interface?"*
+- **TypeScript** answers the question: *"How do I ensure my variables, props, and API responses are correct and bug-free?"*
+
+They work together hand-in-hand:
+$$\text{React} + \text{TypeScript} = \mathbf{\text{TSX}} \; (\text{Type-Safe React})$$
+
+---
+
+### 3. Practical Code Comparison Inside the Project
+
+#### Example A: Pure React (JavaScript - `TaskCard.jsx`)
+```jsx
+// TaskCard.jsx — Pure React without TypeScript
+export function TaskCard({ task, onComplete }) {
+  return (
+    <div className="card">
+      <h3>{task.title}</h3>
+      {/* If faculty forgets to pass task.dueDate or spells it task.due_date, */}
+      {/* this renders undefined with NO IDE warning or compile error! */}
+      <p>Due: {task.dueDate.toLocaleDateString()}</p>
+      {/* If onComplete is not passed as a function, clicking crashes the page! */}
+      <button onClick={() => onComplete(task.id)}>Mark Complete</button>
+    </div>
+  );
+}
+```
+**Downsides of Pure React:**
+- Typos like `task.tile` or `task.duedate` go unnoticed until runtime.
+- No auto-complete in VS Code when typing `task.`.
+- Passing a number instead of a string compiles without complaint.
+
+---
+
+#### Example B: React with TypeScript (`TaskCard.tsx` - As Used in This Project)
+```tsx
+// TaskCard.tsx — React + TypeScript
+interface Task {
+  id: string;
+  title: string;
+  dueDate: Date;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+}
+
+interface TaskCardProps {
+  task: Task;
+  onComplete: (id: string) => Promise<void>;
+}
+
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete }) => {
+  return (
+    <div className="card">
+      <h3>{task.title}</h3>
+      {/* TypeScript guarantees task.dueDate is a valid Date instance */}
+      <p>Due: {task.dueDate.toLocaleDateString()}</p>
+      <button onClick={() => onComplete(task.id)}>Mark Complete</button>
+    </div>
+  );
+};
+```
+**Advantages with TypeScript:**
+1. **Immediate IDE Autocomplete:** Typing `task.` suggests `dueDate`, `id`, `priority`, `title`.
+2. **Prop Validation:** If a parent component writes `<TaskCard task={item} />` without `onComplete`, TypeScript red-squiggles immediately:
+   `Property 'onComplete' is missing in type '{ task: Task; }'`
+3. **Refactoring Safety:** Renaming a database column or interface property instantly highlights all broken files across the entire codebase.
+
+---
+
+### 4. Summary Table for Viva & Technical Interviews
+
+| Question | Short Answer |
+| :--- | :--- |
+| **"What is React?"** | A declarative, component-based front-end library used to build interactive UIs using a Virtual DOM and state management. |
+| **"What is TypeScript?"** | A syntactic superset of JavaScript that adds static typing, enabling compile-time error detection and superior developer tooling. |
+| **"Does TypeScript affect bundle size or app speed?"** | **No.** TypeScript types are completely stripped away (erased) during compilation. The browser only downloads standard, optimized JavaScript. |
+| **"Why did our project use TypeScript with React?"** | To prevent runtime crashes across our 4 distinct user portals (Student, Faculty, HOD, Admin), ensure strict API contracts between client and server, and provide autocomplete across 20+ packages. |
