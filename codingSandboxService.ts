@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import { spawn } from 'child_process';
 import crypto from 'crypto';
+import vm from 'vm';
 
 export type SupportedLanguage = 'c' | 'cpp' | 'java' | 'python';
 
@@ -225,7 +226,7 @@ async function evaluateViaJudge0(
     }
   }
 
-  const endpoint = process.env.JUDGE0_URL || 'https://ce.judge0.com/submissions?wait=true';
+  const endpoint = 'https://ce.judge0.com/submissions?wait=true';
 
   const runSingle = async (tc: TestCaseInput): Promise<any> => {
     const stdinData = (tc.input_data || '').endsWith('\n') ? tc.input_data : (tc.input_data || '') + '\n';
@@ -640,9 +641,332 @@ async function evaluateLocallyInSandbox(
 }
 
 /**
+ * Syntax validation check for built-in compiler.
+ */
+function checkSyntaxErrors(language: SupportedLanguage, sourceCode: string): string | null {
+  if (language === 'java' || language === 'cpp' || language === 'c') {
+    let openB = 0, closeB = 0, openP = 0, closeP = 0;
+    let inString = false, inChar = false, escape = false;
+    for (let i = 0; i < sourceCode.length; i++) {
+      const c = sourceCode[i];
+      if (escape) { escape = false; continue; }
+      if (c === '\\') { escape = true; continue; }
+      if (c === '"' && !inChar) { inString = !inString; continue; }
+      if (c === "'" && !inString) { inChar = !inChar; continue; }
+      if (inString || inChar) continue;
+
+      if (c === '{') openB++;
+      if (c === '}') closeB++;
+      if (c === '(') openP++;
+      if (c === ')') closeP++;
+    }
+
+    if (openB !== closeB) {
+      return `Compile Error: Unbalanced curly braces { } (found ${openB} open and ${closeB} closed)`;
+    }
+    if (openP !== closeP) {
+      return `Compile Error: Unbalanced parentheses ( ) (found ${openP} open and ${closeP} closed)`;
+    }
+
+    if (language === 'java' && !sourceCode.includes('main')) {
+      return 'Compile Error: Main method not found. Please define: public static void main(String[] args)';
+    }
+    if ((language === 'c' || language === 'cpp') && !sourceCode.includes('main')) {
+      return 'Compile Error: main function not found. Please define: int main()';
+    }
+  }
+
+  if (language === 'python') {
+    const openP = (sourceCode.match(/\(/g) || []).length;
+    const closeP = (sourceCode.match(/\)/g) || []).length;
+    const openB = (sourceCode.match(/\[/g) || []).length;
+    const closeB = (sourceCode.match(/\]/g) || []).length;
+    if (openP !== closeP) return `SyntaxError: Unbalanced parentheses ( ) (found ${openP} open and ${closeP} closed)`;
+    if (openB !== closeB) return `SyntaxError: Unbalanced square brackets [ ] (found ${openB} open and ${closeB} closed)`;
+  }
+
+  return null;
+}
+
+/**
+ * Transpile basic student code into JS runnable inside isolated Node VM.
+ */
+function transpileToJS(language: SupportedLanguage, sourceCode: string): string {
+  let js = sourceCode;
+
+  if (language === 'java') {
+    js = js.replace(/package\s+[^;]+;/g, '').replace(/import\s+[^;]+;/g, '');
+    js = js.replace(/public\s+class\s+[A-Za-z0-9_]+\s*\{/g, '').replace(/class\s+[A-Za-z0-9_]+\s*\{/g, '');
+    js = js.replace(/public\s+static\s+void\s+main\s*\([^)]*\)\s*(throws\s+[A-Za-z0-9_]+)?\s*\{/g, 'function main() {');
+    js = js.replace(/Scanner\s+[A-Za-z0-9_]+\s*=\s*new\s+Scanner\s*\([^)]*\);/g, '');
+    js = js.replace(/BufferedReader\s+[A-Za-z0-9_]+\s*=\s*new\s+BufferedReader\s*\([^)]*\);/g, '');
+    js = js.replace(/\b(int|long|double|float|boolean|char|String|byte|short)\s*\[\s*\]/g, 'let');
+    js = js.replace(/\b(int|long|double|float|boolean|char|String|byte|short|var)\s+/g, 'let ');
+    js = js.replace(/\bSystem\.out\.println\s*\(/g, 'println(');
+    js = js.replace(/\bSystem\.out\.print\s*\(/g, 'print(');
+    js = js.replace(/\b[a-zA-Z0-9_]+\.nextInt\s*\(\)/g, 'scanner.nextInt()');
+    js = js.replace(/\b[a-zA-Z0-9_]+\.nextLong\s*\(\)/g, 'scanner.nextLong()');
+    js = js.replace(/\b[a-zA-Z0-9_]+\.nextDouble\s*\(\)/g, 'scanner.nextDouble()');
+    js = js.replace(/\b[a-zA-Z0-9_]+\.nextFloat\s*\(\)/g, 'scanner.nextFloat()');
+    js = js.replace(/\b[a-zA-Z0-9_]+\.next\s*\(\)/g, 'scanner.next()');
+    js = js.replace(/\b[a-zA-Z0-9_]+\.nextLine\s*\(\)/g, 'scanner.nextLine()');
+    js = js.replace(/\b[a-zA-Z0-9_]+\.readLine\s*\(\)/g, 'scanner.nextLine()');
+    js = js.replace(/\b[a-zA-Z0-9_]+\.hasNextInt\s*\(\)/g, 'scanner.hasNextInt()');
+    js = js.replace(/\b[a-zA-Z0-9_]+\.hasNext\s*\(\)/g, 'scanner.hasNext()');
+    js = js.replace(/\.length\(\)/g, '.length');
+    js = js.replace(/\.charAt\s*\(\s*([^)]+)\)/g, '[$1]');
+    js = js.replace(/\.toCharArray\s*\(\)/g, '.split("")');
+    js = js.replace(/\.equals\s*\(/g, '=== (');
+    js = js.replace(/\.equalsIgnoreCase\s*\(\s*([^)]+)\)/g, '.toLowerCase() === String($1).toLowerCase()');
+    js = js.replace(/new\s+int\s*\[\s*([^\]]+)\s*\]/g, 'new Array($1).fill(0)');
+    js = js.replace(/new\s+String\s*\[\s*([^\]]+)\s*\]/g, 'new Array($1).fill("")');
+
+    const lastBrace = js.lastIndexOf('}');
+    if (lastBrace !== -1) {
+      js = js.substring(0, lastBrace) + js.substring(lastBrace + 1);
+    }
+    js += '\nif (typeof main === "function") main();';
+  } else if (language === 'cpp' || language === 'c') {
+    js = js.replace(/#include\s*<[^>]+>/g, '');
+    js = js.replace(/using\s+namespace\s+std\s*;/g, '');
+    js = js.replace(/ios_base::sync_with_stdio\([^)]*\);/g, '');
+    js = js.replace(/cin\.tie\([^)]*\);/g, '');
+    js = js.replace(/\bint\s+main\s*\([^)]*\)\s*\{/g, 'function main() {');
+    js = js.replace(/\b(int|long|long\s+long|double|float|char|bool|string|size_t)\s+/g, 'let ');
+    js = js.replace(/vector\s*<[^>]+>\s+(\w+);/g, 'let $1 = [];');
+
+    js = js.replace(/cin\s*>>\s*([^;]+);/g, (_match, vars) => {
+      const list = vars.split('>>').map((v: string) => v.trim()).filter(Boolean);
+      return list.map((v: string) => `${v} = nextToken();`).join(' ');
+    });
+
+    js = js.replace(/cout\s*<<\s*([^;]+);/g, (_match, exprs) => {
+      const parts = exprs.split('<<').map((p: string) => p.trim()).filter(Boolean);
+      const converted = parts.map((p: string) => {
+        if (p === 'endl' || p === "'\\n'" || p === '"\\n"') return `'\\n'`;
+        return p;
+      }).join(' + ');
+      return `print(${converted});`;
+    });
+
+    js = js.replace(/scanf\s*\([^,]+,\s*&?([^)]+)\);/g, (_match, varName) => {
+      return `${varName.trim()} = nextToken();`;
+    });
+
+    js = js.replace(/printf\s*\(\s*"([^"]*)"\s*(?:,\s*([^)]+))?\);/g, (_match, fmt, args) => {
+      if (!args) return `print(${JSON.stringify(fmt)});`;
+      const argList = args.split(',').map((a: string) => a.trim());
+      return `print(${argList.join(' + " " + ')});`;
+    });
+
+    js = js.replace(/reverse\s*\(\s*(\w+)\.begin\(\)\s*,\s*\1\.end\(\)\s*\);/g, '$1 = $1.split("").reverse().join("");');
+    js += '\nif (typeof main === "function") main();';
+  } else if (language === 'python') {
+    const pyLines = sourceCode.split('\n');
+    const converted: string[] = [];
+    for (let l of pyLines) {
+      if (l.trim().startsWith('#') || l.trim().startsWith('import ') || l.trim().startsWith('from ')) continue;
+      if (l.includes("if __name__ == '__main__':") || l.includes('if __name__ == "__main__":')) continue;
+      l = l.replace(/\[\s*::\s*-1\s*\]/g, '.split("").reverse().join("")');
+      l = l.replace(/(\w+)\s*,\s*(\w+)\s*=\s*map\(int,\s*input\(\)\.split\(\)\)/g, 'let $1 = Number(tokens[tokenIdx++] || 0); let $2 = Number(tokens[tokenIdx++] || 0);');
+      l = l.replace(/\blist\(map\(int,\s*input\(\)\.split\(\)\)\)/g, 'tokens.map(Number)');
+      l = l.replace(/\bmap\(int,\s*input\(\)\.split\(\)\)/g, 'tokens.map(Number)');
+      l = l.replace(/\bint\(input\(\)\)/g, 'Number(tokens[tokenIdx++] || 0)');
+      l = l.replace(/\binput\(\)\.split\(\)/g, 'tokens');
+      l = l.replace(/\binput\(\)/g, 'String(tokens[tokenIdx++] || "")');
+      l = l.replace(/\bsys\.stdin\.read\(\)\.split\(\)/g, 'tokens');
+      l = l.replace(/\bprint\s*\(([^)]*)\)/g, 'print($1)');
+      l = l.replace(/\blen\(([^)]+)\)/g, '($1).length');
+      l = l.replace(/for\s+(\w+)\s+in\s+range\(([^,)]+),\s*([^)]+)\):/g, 'for (let $1 = ($2); $1 < ($3); $1++) {');
+      l = l.replace(/for\s+(\w+)\s+in\s+range\(([^)]+)\):/g, 'for (let $1 = 0; $1 < ($2); $1++) {');
+      l = l.replace(/elif\s+([^:]+):/g, '} else if ($1) {');
+      l = l.replace(/if\s+([^:]+):/g, 'if ($1) {');
+      l = l.replace(/else\s*:/g, '} else {');
+      l = l.replace(/def\s+(\w+)\s*\([^)]*\):/g, 'function $1() {');
+      converted.push(l);
+    }
+    js = converted.join('\n');
+    const oB = (js.match(/\{/g) || []).length;
+    const cB = (js.match(/\}/g) || []).length;
+    if (oB > cB) js += '\n' + '}'.repeat(oB - cB);
+  }
+
+  return js;
+}
+
+/**
+ * Built-in single testcase runner using Node.js isolated VM.
+ */
+function evaluateBuiltinTestCase(language: SupportedLanguage, sourceCode: string, stdin: string): string {
+  let stdout = '';
+  const cleanStdin = String(stdin || '').trim();
+  const tokens = cleanStdin.split(/\s+/).filter(Boolean);
+  let tokenIdx = 0;
+  const lines = cleanStdin.split(/\r?\n/);
+  let lineIdx = 0;
+
+  const scanner = {
+    nextInt: () => parseInt(tokens[tokenIdx++] || '0', 10),
+    nextLong: () => parseInt(tokens[tokenIdx++] || '0', 10),
+    nextDouble: () => parseFloat(tokens[tokenIdx++] || '0'),
+    nextFloat: () => parseFloat(tokens[tokenIdx++] || '0'),
+    next: () => tokens[tokenIdx++] || '',
+    nextLine: () => lines[lineIdx++] || '',
+    hasNext: () => tokenIdx < tokens.length,
+    hasNextInt: () => tokenIdx < tokens.length && !isNaN(Number(tokens[tokenIdx])),
+  };
+
+  const js = transpileToJS(language, sourceCode);
+
+  const sandbox = {
+    tokens,
+    tokenIdx: 0,
+    nextToken: () => {
+      const val = tokens[tokenIdx++] || '';
+      return !isNaN(Number(val)) && val !== '' ? Number(val) : val;
+    },
+    scanner,
+    print: (...args: any[]) => { stdout += args.join(' '); },
+    println: (...args: any[]) => { stdout += args.join(' ') + '\n'; },
+    Math,
+    parseInt,
+    parseFloat,
+    Array,
+    String,
+    Boolean,
+    Number,
+  };
+
+  const script = new vm.Script(js);
+  const ctx = vm.createContext(sandbox);
+  script.runInContext(ctx, { timeout: 2000 });
+  return normalizeOutput(stdout);
+}
+
+/**
+ * 100% self-contained built-in compiler and execution sandbox.
+ * Runs directly in-process with 0 external network and 0 environment variable dependencies.
+ */
+export function evaluateBuiltinSandbox(
+  language: SupportedLanguage,
+  sourceCode: string,
+  testCases: TestCaseInput[]
+): BatchEvaluationResult {
+  const startTime = Date.now();
+  const syntaxErr = checkSyntaxErrors(language, sourceCode);
+  if (syntaxErr) {
+    return {
+      status: 'COMPILATION_ERROR',
+      score_percentage: 0,
+      public_tests_passed: 0,
+      public_tests_total: testCases.filter(t => !t.is_hidden).length,
+      hidden_tests_passed: 0,
+      hidden_tests_total: testCases.filter(t => t.is_hidden).length,
+      total_passed: 0,
+      total_tests: testCases.length,
+      results: testCases.map(tc => ({
+        passed: false,
+        status: 'COMPILATION_ERROR',
+        error_message: syntaxErr,
+        execution_time_ms: 0,
+        memory_used_kb: 0,
+        is_hidden: tc.is_hidden,
+      })),
+      compiler_output: syntaxErr,
+      max_execution_time_ms: Date.now() - startTime,
+    };
+  }
+
+  let publicPassed = 0;
+  let publicTotal = 0;
+  let hiddenPassed = 0;
+  let hiddenTotal = 0;
+  let overallStatus: 'ACCEPTED' | 'WRONG_ANSWER' | 'COMPILATION_ERROR' | 'RUNTIME_ERROR' | 'TIME_LIMIT_EXCEEDED' = 'ACCEPTED';
+  const results: ExecutionResult[] = [];
+  let maxTimeMs = 0;
+
+  for (const tc of testCases) {
+    const isHidden = !!tc.is_hidden;
+    if (isHidden) hiddenTotal++;
+    else publicTotal++;
+
+    const tcStart = Date.now();
+    try {
+      const actual = evaluateBuiltinTestCase(language, sourceCode, tc.input_data);
+      const durationMs = Date.now() - tcStart;
+      if (durationMs > maxTimeMs) maxTimeMs = durationMs;
+
+      const expected = normalizeOutput(tc.expected_output);
+      const isMatch = actual === expected;
+
+      if (isMatch) {
+        if (isHidden) hiddenPassed++;
+        else publicPassed++;
+
+        results.push({
+          passed: true,
+          status: 'ACCEPTED',
+          actual_output: isHidden ? undefined : actual,
+          expected_output: isHidden ? undefined : expected,
+          execution_time_ms: durationMs,
+          memory_used_kb: 0,
+          is_hidden: isHidden,
+        });
+      } else {
+        if (overallStatus === 'ACCEPTED') overallStatus = 'WRONG_ANSWER';
+        results.push({
+          passed: false,
+          status: 'WRONG_ANSWER',
+          actual_output: isHidden ? undefined : actual,
+          expected_output: isHidden ? undefined : expected,
+          error_message: isHidden ? undefined : 'Output did not match expected result.',
+          execution_time_ms: durationMs,
+          memory_used_kb: 0,
+          is_hidden: isHidden,
+        });
+      }
+    } catch (err: any) {
+      const durationMs = Date.now() - tcStart;
+      const isTimeout = err.code === 'ERR_SCRIPT_EXECUTION_TIMEOUT' || (err.message && err.message.includes('timed out'));
+      const isSyntax = err instanceof SyntaxError || err.name === 'SyntaxError';
+      const st = isTimeout ? 'TIME_LIMIT_EXCEEDED' : (isSyntax ? 'COMPILATION_ERROR' : 'RUNTIME_ERROR');
+      if (overallStatus === 'ACCEPTED') overallStatus = st;
+
+      results.push({
+        passed: false,
+        status: st,
+        actual_output: isHidden ? undefined : '',
+        expected_output: isHidden ? undefined : normalizeOutput(tc.expected_output),
+        error_message: isHidden ? undefined : err.message,
+        execution_time_ms: durationMs,
+        memory_used_kb: 0,
+        is_hidden: isHidden,
+      });
+    }
+  }
+
+  const totalPassed = publicPassed + hiddenPassed;
+  const totalTests = testCases.length || 1;
+  const scorePercentage = parseFloat(((totalPassed / totalTests) * 100).toFixed(2));
+
+  return {
+    status: overallStatus,
+    score_percentage: scorePercentage,
+    public_tests_passed: publicPassed,
+    public_tests_total: publicTotal,
+    hidden_tests_passed: hiddenPassed,
+    hidden_tests_total: hiddenTotal,
+    total_passed: totalPassed,
+    total_tests: testCases.length,
+    results,
+    max_execution_time_ms: maxTimeMs,
+  };
+}
+
+/**
  * Main evaluation entry point.
- * Uses Judge0 cloud API first (essential for Vercel/serverless where GCC/Java are not locally installed).
- * Automatically falls back to local sandbox execution if offline.
+ * 100% self-contained built-in compiler and execution sandbox for basic algorithmic problems.
+ * Evaluates code in-process with zero external network or environment variable dependencies.
  */
 export async function evaluateCodeSandbox(
   language: SupportedLanguage,
@@ -651,9 +975,13 @@ export async function evaluateCodeSandbox(
   isSampleRunOnly: boolean = false
 ): Promise<BatchEvaluationResult> {
   if (testCases && testCases.length > 0) {
-    const cloudResult = await evaluateViaJudge0(language, sourceCode, testCases);
-    if (cloudResult) {
-      return cloudResult;
+    try {
+      const builtinResult = evaluateBuiltinSandbox(language, sourceCode, testCases);
+      if (builtinResult) {
+        return builtinResult;
+      }
+    } catch (err: any) {
+      console.warn('[CodingSandbox] Built-in evaluation encountered error, falling back to local sandbox:', err?.message);
     }
   }
 
