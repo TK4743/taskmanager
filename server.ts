@@ -944,6 +944,17 @@ async function startServer() {
         return res.status(401).json({ error: 'Unauthorized: User not found' });
       }
 
+      // Enforce Supreme Admin approval for INDUSTRY role accounts
+      if (user.role === 'INDUSTRY') {
+        const cpRes = await pool.query(
+          'SELECT is_verified FROM company_profiles WHERE user_id = $1 LIMIT 1',
+          [user.id]
+        );
+        if (!cpRes.rows[0]?.is_verified) {
+          return res.status(403).json({ error: 'Your HR / Industry account is pending approval from Supreme Admin.' });
+        }
+      }
+
       req.user = {
         ...user,
         id: user.id,
@@ -1255,6 +1266,29 @@ async function startServer() {
 
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // ── Supreme Admin Approval Gatekeeper for HR / Industry Accounts ──
+    // HR accounts cannot log in until approved by Supreme Admin (is_verified = TRUE)
+    if (user.role === 'INDUSTRY') {
+      const cpRes = await pool.query(
+        'SELECT is_verified, rejection_reason, company_name FROM company_profiles WHERE user_id = $1 LIMIT 1',
+        [user.id]
+      );
+      const cp = cpRes.rows[0];
+
+      if (!cp || !cp.is_verified) {
+        if (cp?.rejection_reason) {
+          return res.status(403).json({
+            error: `Your HR account registration for "${cp.company_name || 'your company'}" was not approved. Reason: ${cp.rejection_reason}. Please contact the Supreme Admin.`,
+            status: 'REJECTED'
+          });
+        }
+        return res.status(403).json({
+          error: `Your HR account registration for "${cp?.company_name || 'your company'}" is currently waiting for Supreme Admin approval. You will be able to log in once Supreme Admin verifies and approves your account.`,
+          status: 'PENDING_APPROVAL'
+        });
+      }
     }
 
     const token = jwt.sign({

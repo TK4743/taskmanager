@@ -7701,13 +7701,26 @@ export default function App() {
                     </div>
                   </div>
                   {error && (
-                    <motion.p
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="text-red-500 text-sm font-medium"
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`p-3.5 rounded-2xl text-xs font-semibold border flex items-start gap-2.5 ${
+                        error.toLowerCase().includes('waiting for supreme admin') || error.toLowerCase().includes('pending')
+                          ? 'bg-amber-50 border-amber-200 text-amber-900'
+                          : error.toLowerCase().includes('rejected')
+                          ? 'bg-rose-50 border-rose-200 text-rose-900'
+                          : 'bg-red-50 border-red-200 text-red-700'
+                      }`}
                     >
-                      {error}
-                    </motion.p>
+                      <span className="text-sm shrink-0 mt-0.5">
+                        {error.toLowerCase().includes('waiting for supreme admin') || error.toLowerCase().includes('pending')
+                          ? '⏳'
+                          : '⚠️'}
+                      </span>
+                      <div className="leading-relaxed">
+                        {error}
+                      </div>
+                    </motion.div>
                   )}
                   <Button className="w-full py-3 text-lg mt-2">Sign In</Button>
 
