@@ -526,3 +526,68 @@ Students and faculty can interact directly with the bot via slash commands:
 | `/status` | Faculty command: shows class-wide completion percentage and boys/girls breakdown for active tasks. |
 
 ---
+
+## Doubt 19: Complete Inventory of Programming Languages Used in This Project
+
+The project employs a multi-tiered language ecosystem divided into **Core Platform Development Languages**, **Query & Markup Languages**, and **Sandboxed Execution Languages**:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    PROJECT PROGRAMMING LANGUAGE SPECTRUM                    │
+├─────────────────────────┬─────────────────────────┬─────────────────────────┤
+│ Core Development        │ Database & APIs         │ Sandboxed Execution     │
+│ • TypeScript (TSX / TS) │ • SQL (PostgreSQL)      │ • Python (Python 3)     │
+│ • JavaScript (ESM / V8) │ • GraphQL (LeetCode/GH) │ • Java (OpenJDK 17/21)  │
+│ • HTML5 (Canvas / Media)│ • JSON / REST Payloads  │ • C++ (GCC 11/17)       │
+│ • CSS3 / Tailwind CSS v4│ • Regular Expressions   │ • C (GCC)               │
+│                         │                         │ • JavaScript (Node V8)  │
+└─────────────────────────┴─────────────────────────┴─────────────────────────┘
+```
+
+---
+
+### Tier 1: Core Platform Development Languages
+
+#### 1. TypeScript (TSX & TS) — *The Primary Platform Language (95%+ of Codebase)*
+* **Frontend:** Built with React 19 + TypeScript. Powers all 28 views, state hooks, reactive interfaces, and PDF generators (`src/App.tsx`, `src/PlacementReadinessView.tsx`, `src/SkillGapAnalyzerView.tsx`, `src/studentProfilePdfGenerator.ts`).
+* **Backend:** The entire Express server, PostgreSQL connection layer, and Telegram bots are written strictly in TypeScript (`server.ts`, `db.ts`, `telegramService.ts`, `emailService.ts`, `sentryService.ts`).
+* **Why TypeScript:** Guarantees compile-time type safety across 54 database models and 218 API endpoints, preventing `undefined is not a function` runtime crashes.
+
+#### 2. JavaScript (ES2022+ / Node.js Engine)
+* Powers the Node.js V8 runtime, browser Service Workers for push notifications (`sw.js`), and Vite build bundling pipelines.
+
+#### 3. SQL (Structured Query Language — PostgreSQL Dialect)
+* Used across the database layer in `server.ts` and `db.ts`.
+* Implements complex multi-table joins, JSON aggregations (`json_agg`, `json_build_object`), window functions, subqueries, and conflict resolution (`ON CONFLICT DO UPDATE`).
+
+#### 4. HTML5 & Web APIs
+* Provides semantic markup, browser `MediaDevices.getUserMedia` for webcam proctoring, Canvas API for client-side image compression, and Fullscreen lockdown APIs.
+
+#### 5. CSS3 & Tailwind CSS v4
+* Modern utility-first styling engine controlling responsive flexbox/grid layouts, dark mode transitions, and SVG circular progress geometry (`strokeDashoffset`).
+
+#### 6. GraphQL (API Query Language)
+* Used in `telegramService.ts` and `server.ts` to perform deeply nested single-request data extractions from the official **LeetCode GraphQL API** and **GitHub v4 GraphQL API**.
+
+---
+
+### Tier 2: Programming Languages Evaluated in the Sandboxed Coding Assessment
+
+The portal's in-browser **Monaco Code Assessment Engine** ([StudentCodingAssessmentView.tsx](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/src/StudentCodingAssessmentView.tsx)) actively evaluates student code submissions in:
+
+1. **Python 3:** High-level scripting, data structures, algorithms, and AI/ML evaluation.
+2. **Java (OpenJDK):** Object-oriented programming, enterprise coding tests, and campus placement rounds.
+3. **C++ (GCC/G++):** Fast algorithmic competitive programming and memory management.
+4. **C (GCC):** Core low-level programming and pointer arithmetic.
+5. **JavaScript (Node.js V8):** Full-stack web development and event-driven scripting.
+
+---
+
+### Tier 3: Languages Supported in the Linked Live Teaching Hub (GOAT CE)
+
+For remote peer-to-peer tutoring in the **Live Teaching Hub**, the embedded GOAT Code Editor supports **16 languages**:
+* **Web:** JavaScript, TypeScript, HTML, CSS.
+* **Systems & Backend:** Python, Java, C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, SQL.
+* **Documentation:** Markdown.
+
+---
