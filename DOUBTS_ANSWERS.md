@@ -1782,3 +1782,28 @@ To prevent students from executing malicious actions (e.g. `while(true)`, `syste
    - Maximum RAM allocation is capped at **256MB** per execution using process flags. Exceeding this triggers `"Memory Limit Exceeded (MLE)"`.
 3. **Restricted File System Access:**
    - Compilers run in isolated temporary scratch directories with non-root user permissions, preventing read/write access to system binaries or `.env` credential files.
+
+
+---
+
+## DOUBT 32: The Master 200 Viva & Scenario Compendium
+
+A dedicated, comprehensive compendium of **200 verified questions and answers** has been created in [MASTER_200_VIVA_AND_SCENARIO_QA.md](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/MASTER_200_VIVA_AND_SCENARIO_QA.md):
+
+### 1. Section A: 100 Deep Technical Questions & Answers (Q1 to Q100)
+Covers in-depth architectural and mathematical topics:
+- **Q1–Q20:** Node.js, Express, TSX tooling, CORS, Compression, Rate Limiting, `bcryptjs` cost factor 10, JWT HMAC-SHA256, RBAC tiers, `pg.Pool` connection pooling, and Cloudinary media streaming.
+- **Q21–Q40:** VAPID RFC 8292 public/private keys, Service Worker `push` and `notificationclick` events, Telegram Bot API, Nodemailer TLS, crypto random OTPs, SVG circular progress gauge math, LeetCode GraphQL, GitHub REST API, and compiler sandbox watchdogs.
+- **Q41–Q60:** `exceljs` OpenXML streaming, `jspdf` client-side vector certificates, `jszip` in-memory compression, Vite `esbuild` compilation, `clsx` + `tailwind-merge`, Sentry error telemetry, React 19 Virtual DOM diffing, and PostgreSQL `ON CONFLICT` upserts.
+- **Q61–Q80:** JWT security, constant-time comparisons, WebRTC STUN/TURN traversal, Web Worker isolation, Pessimistic row locking (`FOR UPDATE`), and standard deviation formulas.
+- **Q81–Q100:** Lucide tree-shaking, UUID generation, B-Tree database indexing, timezone consistency, React memoization (`useCallback`, `useMemo`, `useRef`), and the end-to-end HTTP request lifecycle.
+
+### 2. Section B: 100 Real-World Scenario & Edge-Case Questions & Answers (Q101 to Q200)
+Covers real-world stress tests, attacks, and recovery procedures:
+- **Q101–Q120:** High-concurrency deadline surges (120 simultaneous submissions at 11:58 PM), malicious role manipulation in `localStorage`, network disconnection during 15MB PDF uploads, infinite loops (`while(true)`), SQL injection defense (`' OR '1'='1`), battery death during live assessment auto-saving, and SMTP relay rate limits.
+- **Q121–Q140:** AST code similarity detection, fork bomb protection (`:(){ :|:& };:`), database migration without downtime (`IF NOT EXISTS`), student clock tampering vs server UTC time, and phone hardware optimization.
+- **Q141–Q160:** NAAC/NBA on-site physical proof generation, campus firewall WebRTC traversal over TCP 443, raw socket creation blocking, 500-student simultaneous morning exam surge, and database capacity scaling.
+- **Q161–Q180:** Direct route tampering defense, 10MB payload size limits, zero-time auto-submission on exam expiration, non-ASCII script support, Android PWA installation, and decimal grading (`NUMERIC(5,2)`).
+- **Q181–Q200:** Audit trail logging, section-targeted announcements, multi-device session revocation, and multi-semester continuous improvement trend analytics.
+
+👉 **View the complete 200 Questions and Answers directly in [MASTER_200_VIVA_AND_SCENARIO_QA.md](file:///c:/Users/tharu/Documents/GITHUB%20REPO/taskmanage%20vercelr/MASTER_200_VIVA_AND_SCENARIO_QA.md).**
