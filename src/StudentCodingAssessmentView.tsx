@@ -122,7 +122,8 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
   const [finalResult, setFinalResult] = useState<any>(null);
 
   // Proctoring Video & Event Refs
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const preCheckVideoRef = useRef<HTMLVideoElement>(null);
+  const testVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [proctorViolations, setProctorViolations] = useState<number>(0);
   const [toast, setToast] = useState<string | null>(null);
@@ -161,13 +162,21 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
   const initWebcam = async () => {
     try {
       setCameraError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: 'user' },
-        audio: false
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      let stream = streamRef.current;
+      if (!stream || !stream.active) {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: 'user' },
+          audio: false
+        });
+        streamRef.current = stream;
+      }
+      if (preCheckVideoRef.current) {
+        preCheckVideoRef.current.srcObject = stream;
+        preCheckVideoRef.current.play().catch(() => {});
+      }
+      if (testVideoRef.current) {
+        testVideoRef.current.srcObject = stream;
+        testVideoRef.current.play().catch(() => {});
       }
       setCameraAllowed(true);
       logProctorEvent('CAMERA_STARTED', 'LOW');
@@ -177,6 +186,20 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
       setCameraError('Camera permission is mandatory for proctoring. Please allow camera access in browser permissions.');
     }
   };
+
+  // Ensure camera stream is active and attached whenever in active coding attempt
+  useEffect(() => {
+    if (attemptId && !overallCompleted) {
+      if (!streamRef.current || !streamRef.current.active) {
+        initWebcam();
+      } else if (testVideoRef.current) {
+        if (testVideoRef.current.srcObject !== streamRef.current) {
+          testVideoRef.current.srcObject = streamRef.current;
+        }
+        testVideoRef.current.play().catch(() => {});
+      }
+    }
+  }, [attemptId, overallCompleted]);
 
   const stopWebcam = () => {
     if (streamRef.current) {
@@ -1063,7 +1086,22 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
           </div>
 
           <div className="relative aspect-video bg-black">
-            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />
+            <video
+              ref={(el) => {
+                testVideoRef.current = el;
+                if (el && streamRef.current && streamRef.current.active) {
+                  if (el.srcObject !== streamRef.current) {
+                    el.srcObject = streamRef.current;
+                  }
+                  el.play().catch(() => {});
+                }
+              }}
+              autoPlay
+              playsInline
+              muted
+              onLoadedMetadata={(e) => (e.target as HTMLVideoElement).play().catch(() => {})}
+              className="w-full h-full object-cover transform -scale-x-100"
+            />
             <div className="absolute bottom-1 left-1.5 right-1.5 text-center text-[9px] font-bold text-white/90 bg-black/70 backdrop-blur-xs py-0.5 rounded">
               Camera Monitored
             </div>
@@ -1202,7 +1240,22 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
               <div className="space-y-2">
                 <label className="text-xs font-bold text-zinc-600 block">Webcam Feed Verification *</label>
                 <div className="relative aspect-video bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-300 shadow-inner flex items-center justify-center">
-                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                  <video
+                    ref={(el) => {
+                      preCheckVideoRef.current = el;
+                      if (el && streamRef.current && streamRef.current.active) {
+                        if (el.srcObject !== streamRef.current) {
+                          el.srcObject = streamRef.current;
+                        }
+                        el.play().catch(() => {});
+                      }
+                    }}
+                    autoPlay
+                    playsInline
+                    muted
+                    onLoadedMetadata={(e) => (e.target as HTMLVideoElement).play().catch(() => {})}
+                    className="w-full h-full object-cover"
+                  />
                   {!cameraAllowed && (
                     <div className="text-center p-4 text-xs text-zinc-400 space-y-2">
                       <Camera size={28} className="mx-auto text-zinc-500" />
