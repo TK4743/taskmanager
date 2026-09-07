@@ -10294,6 +10294,8 @@ async function startServer() {
     currentLevel: number;
     impact: number;
     severity: 'HIGH' | 'MEDIUM' | 'LOW';
+    matchPercentage?: number;
+    source?: string;
   }
 
   interface MathematicalMetrics {
@@ -10419,37 +10421,28 @@ async function startServer() {
       minIntersectSum += Math.min(vCand, vReq);
       maxUnionSum += Math.max(vCand, vReq);
 
-      if (candLvl > 0) {
+      if (candLvl >= reqLvl) {
+        // Fully satisfied prerequisite: Verified Fit!
         matched.push({
           skill: req.skill,
           studentLevel: candLvl,
           requiredLevel: reqLvl,
-          matchPercentage: Math.round(matchRatio * 100),
+          matchPercentage: 100,
           source: studentSkill?.source
         });
-
-        // If candidate proficiency is below prerequisite, register shortfall deficit
-        if (candLvl < reqLvl) {
-          const delta = reqLvl - candLvl;
-          const impact = parseFloat(((delta / reqLvl) * (w / totalWeight)).toFixed(3));
-          gaps.push({
-            skill: req.skill,
-            requiredLevel: reqLvl,
-            currentLevel: candLvl,
-            impact,
-            severity: 'LOW'
-          });
-        }
       } else {
-        // Complete gap
-        const delta = reqLvl;
+        // Prerequisite deficit exists (either partial proficiency below required level, or completely missing)
+        const delta = reqLvl - candLvl;
         const impact = parseFloat(((delta / reqLvl) * (w / totalWeight)).toFixed(3));
+        const matchPct = Math.round(matchRatio * 100);
         gaps.push({
           skill: req.skill,
           requiredLevel: reqLvl,
-          currentLevel: 0,
+          currentLevel: candLvl,
           impact,
-          severity: impact >= 0.20 ? 'HIGH' : impact >= 0.10 ? 'MEDIUM' : 'LOW'
+          severity: impact >= 0.20 ? 'HIGH' : impact >= 0.10 ? 'MEDIUM' : 'LOW',
+          matchPercentage: matchPct,
+          source: studentSkill?.source
         });
       }
     }
@@ -10517,10 +10510,14 @@ async function startServer() {
     // Native Algorithmic AI Insights (Mathematical Summary)
     const topMissing = gaps.slice(0, 3).map(g => g.skill);
     let readinessSummary = "";
+    const satisfiedCount = matched.length;
     if (finalScore >= 80) {
-      readinessSummary = `High-Alignment Candidate Vector (Cosine Similarity: ${cosineSimilarity}, Score: ${finalScore}%). You satisfy ${matched.length} of ${requiredList.length} requisite competencies with strong academic continuity (CGPA: ${cgpa || 'N/A'}). You are positioned in the prime interview selection quartile.`;
+      readinessSummary = `High-Alignment Candidate Vector (Cosine Similarity: ${cosineSimilarity}, Score: ${finalScore}%). You satisfy ${satisfiedCount} of ${requiredList.length} requisite competencies with strong academic continuity (CGPA: ${cgpa || 'N/A'}). You are positioned in the prime interview selection quartile.`;
     } else if (finalScore >= 55) {
-      readinessSummary = `Competitive Profile with ${finalScore}% Role Compatibility (Cosine Similarity: ${cosineSimilarity}, Jaccard Index: ${jaccardIndex}). Verified competencies in ${matched.map(m => m.skill).slice(0, 2).join(', ') || 'core areas'} form a solid foundation. Closing the primary shortfall in ${topMissing.join(', ')} will elevate compatibility above 80%.`;
+      const positiveHighlights = matched.length > 0
+        ? `Verified competencies in ${matched.map(m => m.skill).slice(0, 2).join(', ')}`
+        : `Foundational proficiency in ${gaps.filter(g => g.currentLevel > 0).map(g => g.skill).slice(0, 2).join(', ') || 'prerequisite domains'}`;
+      readinessSummary = `Competitive Profile with ${finalScore}% Role Compatibility (Cosine Similarity: ${cosineSimilarity}, Jaccard Index: ${jaccardIndex}). ${positiveHighlights} form a solid foundation. Closing the primary shortfall in ${topMissing.join(', ')} will elevate compatibility above 80%.`;
     } else {
       readinessSummary = `Foundational Capability Profile (${finalScore}% compatibility, Deficit Gap Loss: ${(totalDeficitLoss * 100).toFixed(0)}%). Key competencies required include ${topMissing.join(', ')}. Targeted preparation across these areas will yield significant score gains.`;
     }

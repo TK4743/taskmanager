@@ -487,104 +487,130 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
             )}
 
             {/* Matched vs Gap Comparison Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Matched Skills */}
-              <div className="bg-white border border-emerald-200/80 rounded-2xl p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-                  <div className="flex items-center gap-2 text-xs font-black text-emerald-800">
-                    <CheckCircle2 size={16} className="text-emerald-600" />
-                    <span>Matched Competencies ({gapData.analysis.matched.length})</span>
-                  </div>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                    Verified Fit
-                  </span>
-                </div>
+            {(() => {
+              const verifiedMatches = (gapData.analysis.matched || []).filter(m =>
+                (m.studentLevel >= m.requiredLevel || m.matchPercentage === 100) &&
+                !(gapData.analysis.gaps || []).some(g => g.skill.trim().toLowerCase() === m.skill.trim().toLowerCase())
+              );
+              const identifiedGaps = gapData.analysis.gaps || [];
 
-                {gapData.analysis.matched.length === 0 ? (
-                  <div className="p-6 bg-zinc-50 rounded-xl text-center space-y-2">
-                    <p className="text-xs text-zinc-500 font-semibold">No direct skills matched yet.</p>
-                    <button
-                      onClick={() => setShowAddSkillModal(true)}
-                      className="text-xs font-bold text-zinc-900 hover:underline cursor-pointer"
-                    >
-                      + Add your technical skills to improve this score
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-2.5">
-                    {gapData.analysis.matched.map((m, i) => (
-                      <div
-                        key={i}
-                        className="p-3 bg-emerald-50/40 rounded-xl border border-emerald-100/80 flex items-center justify-between"
-                      >
-                        <div>
-                          <div className="font-bold text-xs text-zinc-900 flex items-center gap-1.5">
-                            <span>{m.skill}</span>
-                            {m.source && (
-                              <span className="text-[9px] font-semibold text-zinc-400 bg-white px-1.5 py-0.2 rounded border border-zinc-200">
-                                {m.source}
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[10px] text-zinc-500 font-medium">
-                            Your Level: {levelLabel(m.studentLevel)} (Req: {levelLabel(m.requiredLevel)})
-                          </span>
-                        </div>
-                        <span className="text-xs font-black text-emerald-700 bg-white px-2.5 py-1 rounded-lg border border-emerald-200">
-                          {m.matchPercentage || 100}%
-                        </span>
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Matched Skills */}
+                  <div className="bg-white border border-emerald-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+                      <div className="flex items-center gap-2 text-xs font-black text-emerald-800">
+                        <CheckCircle2 size={16} className="text-emerald-600" />
+                        <span>Matched Competencies ({verifiedMatches.length})</span>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        Verified Fit
+                      </span>
+                    </div>
 
-              {/* Missing Skill Gaps */}
-              <div className="bg-white border border-amber-200/80 rounded-2xl p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-                  <div className="flex items-center gap-2 text-xs font-black text-amber-900">
-                    <AlertTriangle size={16} className="text-amber-600" />
-                    <span>Identified Skill Gaps ({gapData.analysis.gaps.length})</span>
-                  </div>
-                  <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                    Bridge Focus
-                  </span>
-                </div>
-
-                {gapData.analysis.gaps.length === 0 ? (
-                  <div className="p-6 bg-emerald-50 rounded-xl text-center">
-                    <p className="text-xs font-black text-emerald-800">
-                      🎉 Perfect Skill Alignment! You satisfy all mandated competencies for this role.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2.5">
-                    {gapData.analysis.gaps.map((g, i) => (
-                      <div
-                        key={i}
-                        className="p-3 bg-amber-50/40 rounded-xl border border-amber-100 flex items-center justify-between"
-                      >
-                        <div>
-                          <div className="font-bold text-xs text-zinc-900">{g.skill}</div>
-                          <span className="text-[10px] text-zinc-500 font-medium">
-                            Target Requirement: {levelLabel(g.requiredLevel)} · Impact: {(g.impact * 100).toFixed(0)}%
-                          </span>
-                        </div>
-                        <span
-                          className={`text-[10px] font-black px-2 py-1 rounded-md border uppercase ${
-                            g.severity === 'HIGH'
-                              ? 'bg-rose-50 text-rose-700 border-rose-200'
-                              : 'bg-amber-50 text-amber-800 border-amber-200'
-                          }`}
+                    {verifiedMatches.length === 0 ? (
+                      <div className="p-6 bg-zinc-50 rounded-xl text-center space-y-2">
+                        <p className="text-xs text-zinc-500 font-semibold">No direct skills fully satisfied yet.</p>
+                        <p className="text-[11px] text-zinc-400">Prerequisite levels exceed current proficiencies — review bridge focus areas on the right.</p>
+                        <button
+                          onClick={() => setShowAddSkillModal(true)}
+                          className="text-xs font-bold text-zinc-900 hover:underline cursor-pointer"
                         >
-                          {g.severity || 'MEDIUM'} Priority
-                        </span>
+                          + Add your technical skills to improve this score
+                        </button>
                       </div>
-                    ))}
+                    ) : (
+                      <div className="space-y-2.5">
+                        {verifiedMatches.map((m, i) => (
+                          <div
+                            key={i}
+                            className="p-3 bg-emerald-50/40 rounded-xl border border-emerald-100/80 flex items-center justify-between"
+                          >
+                            <div>
+                              <div className="font-bold text-xs text-zinc-900 flex items-center gap-1.5">
+                                <span>{m.skill}</span>
+                                {m.source && (
+                                  <span className="text-[9px] font-semibold text-zinc-400 bg-white px-1.5 py-0.2 rounded border border-zinc-200">
+                                    {m.source}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-zinc-500 font-medium">
+                                Your Level: {levelLabel(m.studentLevel)} (Req: {levelLabel(m.requiredLevel)})
+                              </span>
+                            </div>
+                            <span className="text-xs font-black text-emerald-700 bg-white px-2.5 py-1 rounded-lg border border-emerald-200">
+                              {m.matchPercentage || 100}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
+
+                  {/* Missing Skill Gaps */}
+                  <div className="bg-white border border-amber-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+                      <div className="flex items-center gap-2 text-xs font-black text-amber-900">
+                        <AlertTriangle size={16} className="text-amber-600" />
+                        <span>Identified Skill Gaps ({identifiedGaps.length})</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                        Bridge Focus
+                      </span>
+                    </div>
+
+                    {identifiedGaps.length === 0 ? (
+                      <div className="p-6 bg-emerald-50 rounded-xl text-center">
+                        <p className="text-xs font-black text-emerald-800">
+                          🎉 Perfect Skill Alignment! You satisfy all mandated competencies for this role.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {identifiedGaps.map((g, i) => (
+                          <div
+                            key={i}
+                            className="p-3 bg-amber-50/40 rounded-xl border border-amber-100 flex items-center justify-between"
+                          >
+                            <div>
+                              <div className="font-bold text-xs text-zinc-900 flex items-center gap-2">
+                                <span>{g.skill}</span>
+                                {g.currentLevel && g.currentLevel > 0 ? (
+                                  <span className="text-[9px] font-bold text-amber-800 bg-amber-100/90 px-1.5 py-0.5 rounded border border-amber-200">
+                                    Partial ({g.matchPercentage || Math.round((g.currentLevel / g.requiredLevel) * 100)}%)
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-bold text-rose-700 bg-rose-100/90 px-1.5 py-0.5 rounded border border-rose-200">
+                                    Missing
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-zinc-500 font-medium">
+                                {g.currentLevel && g.currentLevel > 0
+                                  ? `Your Level: ${levelLabel(g.currentLevel)} → Target: ${levelLabel(g.requiredLevel)} · Impact: ${(g.impact * 100).toFixed(0)}%`
+                                  : `Target Requirement: ${levelLabel(g.requiredLevel)} · Impact: ${(g.impact * 100).toFixed(0)}%`}
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[10px] font-black px-2 py-1 rounded-md border uppercase ${
+                                g.severity === 'HIGH'
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : g.severity === 'MEDIUM'
+                                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                  : 'bg-zinc-100 text-zinc-700 border-zinc-200'
+                              }`}
+                            >
+                              {g.severity || 'MEDIUM'} Priority
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* AI Recommended Portfolio Bridge Projects */}
             {gapData.analysis.ai_insights?.recommended_projects && gapData.analysis.ai_insights.recommended_projects.length > 0 && (
