@@ -11,3 +11,5 @@ scratch_*.js
 backups/
 sih-prep/
 scratch_*
+*.pdf
+*.cjs
