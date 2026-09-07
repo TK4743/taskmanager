@@ -472,6 +472,9 @@
     });
 
     if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        window.location.reload();
+      });
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js', { scope: '/' })
           .then((reg) => {
@@ -484,9 +487,13 @@
       });
     }
 
-    // Force purge obsolete service worker and runtime caches
+    // Force purge obsolete service worker, runtime caches, and modal flags
     try {
       sessionStorage.removeItem('mandatory_compliance_dismissed_v1');
+      localStorage.removeItem('pwa_install_dismissed');
+      localStorage.removeItem('pwa_prompt_dismissed');
+      localStorage.removeItem('pwa_install_dismissed_v1');
+      localStorage.removeItem('pwa_installed');
       if ('caches' in window) {
         caches.keys().then((keys) => {
           keys.forEach((k) => {

@@ -1,6 +1,6 @@
 // VSBEC IT TaskManager - Service Worker (Web Push & Caching)
 
-const CACHE_NAME = 'vsbec-it-cache-v3.0.0-purge';
+const CACHE_NAME = 'vsbec-it-cache-v4.0.0-kill-popups';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -10,8 +10,22 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(keys.map((k) => caches.delete(k)));
-    }).then(() => self.clients.claim())
+    }).then(() => self.clients.claim()).then(() => {
+      return self.clients.matchAll({ type: 'window' }).then((clients) => {
+        clients.forEach((client) => {
+          if (client.url) {
+            client.navigate(client.url);
+          }
+        });
+      });
+    })
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // ── Web Push Notification Handler (Google FCM / Apple APNs / Desktop) ────────
