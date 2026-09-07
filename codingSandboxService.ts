@@ -78,16 +78,12 @@ int main() {
 }
 `,
   java: `import java.util.*;
-import java.io.*;
 
 public class Solution {
-    public static void main(String[] args) throws Exception {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        String line = reader.readLine();
-        if (line != null && !line.trim().isEmpty()) {
-            // Write your solution here
-            System.out.println(line.trim());
-        }
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        // Write your solution here
+        
     }
 }
 `,

@@ -43,160 +43,166 @@ export const HRCodingAssessmentsManager: React.FC<HRCodingAssessmentsManagerProp
     'Authorization': `Bearer ${token}`
   };
 
-  // Standard 10 Questions Seed Template for Fast Deployment
+  // Standard 10 Questions Seed Template for Fast Deployment (Basic Beginner Friendly)
   const get10DefaultQuestions = () => [
     {
-      title: 'Two Sum Target Problem',
-      problem_statement: 'Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume each input has exactly one solution.\n\nInput: First line contains integer N. Second line contains N integers. Third line contains target.\nOutput: Print the two indices separated by a space.',
-      input_format: 'N\narr[0] arr[1] ... arr[N-1]\ntarget',
-      output_format: 'index1 index2',
-      constraints: '2 <= N <= 10^5, -10^9 <= nums[i] <= 10^9',
+      title: 'Sum of Two Numbers (Addition)',
+      problem_statement: 'Write a program that reads two integers A and B from standard input and prints their sum (A + B).',
+      input_format: 'Two integers A and B separated by space or newline.',
+      output_format: 'Print the integer sum (A + B).',
+      constraints: '-10^4 <= A, B <= 10^4',
       difficulty: 'EASY',
       marks: 50,
-      skills: ['Arrays', 'Hash Map', 'Two Pointers'],
+      skills: ['Basic Math', 'Java Basics', 'Arithmetic'],
       test_cases: [
-        { input_data: '4\n2 7 11 15\n9', expected_output: '0 1', is_hidden: false, explanation: 'nums[0] + nums[1] == 9' },
-        { input_data: '3\n3 2 4\n6', expected_output: '1 2', is_hidden: false, explanation: 'nums[1] + nums[2] == 6' },
-        { input_data: '2\n3 3\n6', expected_output: '0 1', is_hidden: true },
-        { input_data: '5\n1 5 8 11 14\n19', expected_output: '2 3', is_hidden: true }
+        { input_data: '5 7', expected_output: '12', is_hidden: false, explanation: '5 + 7 = 12' },
+        { input_data: '-3 10', expected_output: '7', is_hidden: false, explanation: '-3 + 10 = 7' },
+        { input_data: '0 0', expected_output: '0', is_hidden: true },
+        { input_data: '100 250', expected_output: '350', is_hidden: true }
       ]
     },
     {
-      title: 'Maximum Subarray Sum (Kadane)',
-      problem_statement: 'Given an integer array nums, find the contiguous subarray (containing at least one number) which has the largest sum and return its sum.',
-      input_format: 'N\narr[0] arr[1] ... arr[N-1]',
-      output_format: 'max_sum',
-      constraints: '1 <= N <= 10^5, -10^4 <= nums[i] <= 10^4',
-      difficulty: 'MEDIUM',
-      marks: 50,
-      skills: ['Dynamic Programming', 'Arrays'],
-      test_cases: [
-        { input_data: '9\n-2 1 -3 4 -1 2 1 -5 4', expected_output: '6', is_hidden: false, explanation: '[4,-1,2,1] has the largest sum = 6' },
-        { input_data: '1\n1', expected_output: '1', is_hidden: false },
-        { input_data: '5\n5 4 -1 7 8', expected_output: '23', is_hidden: true },
-        { input_data: '4\n-1 -2 -3 -4', expected_output: '-1', is_hidden: true }
-      ]
-    },
-    {
-      title: 'Valid Palindrome String',
-      problem_statement: 'A phrase is a palindrome if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward. Print "true" or "false".',
-      input_format: 'A single string S',
-      output_format: 'true or false',
-      constraints: '1 <= length(S) <= 2 * 10^5',
+      title: 'Difference of Two Numbers (Subtraction)',
+      problem_statement: 'Write a program that reads two integers A and B from standard input and prints the result of subtracting B from A (A - B).',
+      input_format: 'Two integers A and B separated by space or newline.',
+      output_format: 'Print the integer difference (A - B).',
+      constraints: '-10^4 <= A, B <= 10^4',
       difficulty: 'EASY',
       marks: 50,
-      skills: ['Strings', 'Two Pointers'],
+      skills: ['Basic Math', 'Java Basics', 'Arithmetic'],
       test_cases: [
-        { input_data: 'A man, a plan, a canal: Panama', expected_output: 'true', is_hidden: false },
-        { input_data: 'race a car', expected_output: 'false', is_hidden: false },
-        { input_data: '0P', expected_output: 'false', is_hidden: true },
-        { input_data: 'Madam, In Eden, Im Adam', expected_output: 'true', is_hidden: true }
+        { input_data: '15 6', expected_output: '9', is_hidden: false, explanation: '15 - 6 = 9' },
+        { input_data: '5 12', expected_output: '-7', is_hidden: false, explanation: '5 - 12 = -7' },
+        { input_data: '20 20', expected_output: '0', is_hidden: true },
+        { input_data: '100 -50', expected_output: '150', is_hidden: true }
       ]
     },
     {
-      title: 'Merge Two Sorted Arrays',
-      problem_statement: 'You are given two sorted integer arrays nums1 and nums2. Merge nums2 into nums1 as one sorted array and print the elements separated by space.',
-      input_format: 'N M\nN elements of nums1\nM elements of nums2',
-      output_format: 'Merged sorted elements separated by space',
-      constraints: '1 <= N, M <= 10^5',
+      title: 'Check Even or Odd Number',
+      problem_statement: 'Given an integer N, check whether it is Even or Odd. Print "EVEN" if N is even, and "ODD" if N is odd.',
+      input_format: 'A single integer N.',
+      output_format: 'Print EVEN or ODD in uppercase.',
+      constraints: '-10^6 <= N <= 10^6',
       difficulty: 'EASY',
       marks: 50,
-      skills: ['Two Pointers', 'Sorting'],
+      skills: ['Conditionals', 'Modulo Operator', 'Java Basics'],
       test_cases: [
-        { input_data: '3 3\n1 2 3\n2 5 6', expected_output: '1 2 2 3 5 6', is_hidden: false },
-        { input_data: '1 1\n1\n2', expected_output: '1 2', is_hidden: false },
-        { input_data: '4 2\n2 4 6 8\n1 3', expected_output: '1 2 3 4 6 8', is_hidden: true }
+        { input_data: '4', expected_output: 'EVEN', is_hidden: false, explanation: '4 is divisible by 2' },
+        { input_data: '7', expected_output: 'ODD', is_hidden: false, explanation: '7 is not divisible by 2' },
+        { input_data: '0', expected_output: 'EVEN', is_hidden: true },
+        { input_data: '-5', expected_output: 'ODD', is_hidden: true }
       ]
     },
     {
-      title: 'Longest Substring Without Repeating Characters',
-      problem_statement: 'Given a string s, find the length of the longest substring without repeating characters.',
-      input_format: 'A single string s',
-      output_format: 'An integer representing length',
-      constraints: '0 <= s.length <= 5 * 10^4',
-      difficulty: 'MEDIUM',
-      marks: 50,
-      skills: ['Sliding Window', 'Hash Set', 'Strings'],
-      test_cases: [
-        { input_data: 'abcabcbb', expected_output: '3', is_hidden: false, explanation: '"abc" length 3' },
-        { input_data: 'bbbbb', expected_output: '1', is_hidden: false },
-        { input_data: 'pwwkew', expected_output: '3', is_hidden: true },
-        { input_data: 'dvdf', expected_output: '3', is_hidden: true }
-      ]
-    },
-    {
-      title: 'Balanced Parentheses Expression',
-      problem_statement: 'Given a string s containing just the characters (, ), {, }, [ and ], determine if the input string is valid. Print "true" or "false".',
-      input_format: 'A single string s',
-      output_format: 'true or false',
-      constraints: '1 <= s.length <= 10^4',
+      title: 'Maximum of Three Numbers',
+      problem_statement: 'Given three integers A, B, and C, find and print the largest (maximum) value among them.',
+      input_format: 'Three integers A, B, and C separated by spaces or newlines.',
+      output_format: 'Print the maximum integer value.',
+      constraints: '-10^5 <= A, B, C <= 10^5',
       difficulty: 'EASY',
       marks: 50,
-      skills: ['Stack', 'Data Structures'],
+      skills: ['Conditionals', 'Logic', 'Comparison'],
       test_cases: [
-        { input_data: '()[]{}', expected_output: 'true', is_hidden: false },
-        { input_data: '(]', expected_output: 'false', is_hidden: false },
-        { input_data: '([{}])', expected_output: 'true', is_hidden: true },
-        { input_data: '((((', expected_output: 'false', is_hidden: true }
+        { input_data: '10 25 5', expected_output: '25', is_hidden: false, explanation: '25 is the largest' },
+        { input_data: '-5 -1 -10', expected_output: '-1', is_hidden: false, explanation: '-1 is greater than -5 and -10' },
+        { input_data: '7 7 7', expected_output: '7', is_hidden: true },
+        { input_data: '100 40 80', expected_output: '100', is_hidden: true }
       ]
     },
     {
-      title: 'Kth Largest Element in an Array',
-      problem_statement: 'Given an integer array nums and an integer k, return the kth largest element in the array.',
-      input_format: 'N K\nN integers',
-      output_format: 'The kth largest integer',
-      constraints: '1 <= k <= N <= 10^5',
-      difficulty: 'MEDIUM',
+      title: 'Sum of Array Elements',
+      problem_statement: 'Given an array of N integers, calculate and print the sum of all elements in the array.',
+      input_format: 'First line contains an integer N.\nSecond line contains N integers separated by space.',
+      output_format: 'Print the total sum of all elements.',
+      constraints: '1 <= N <= 1000, -1000 <= arr[i] <= 1000',
+      difficulty: 'EASY',
       marks: 50,
-      skills: ['Heap', 'Sorting', 'Divide and Conquer'],
+      skills: ['Arrays', 'Loops', 'Accumulation'],
       test_cases: [
-        { input_data: '6 2\n3 2 1 5 6 4', expected_output: '5', is_hidden: false },
-        { input_data: '9 4\n3 2 3 1 2 4 5 5 6', expected_output: '4', is_hidden: false },
-        { input_data: '4 1\n10 20 30 40', expected_output: '40', is_hidden: true }
+        { input_data: '5\n1 2 3 4 5', expected_output: '15', is_hidden: false, explanation: '1 + 2 + 3 + 4 + 5 = 15' },
+        { input_data: '3\n10 -5 2', expected_output: '7', is_hidden: false, explanation: '10 + (-5) + 2 = 7' },
+        { input_data: '1\n42', expected_output: '42', is_hidden: true },
+        { input_data: '4\n0 0 0 0', expected_output: '0', is_hidden: true }
       ]
     },
     {
-      title: 'Reverse Words in a String',
-      problem_statement: 'Given an input string s, reverse the order of the words. A word is defined as a sequence of non-space characters. Return a single string of words in reverse order joined by a single space.',
-      input_format: 'A line of text S',
-      output_format: 'Reversed words string',
-      constraints: '1 <= s.length <= 10^4',
-      difficulty: 'MEDIUM',
+      title: 'Find Maximum in an Array',
+      problem_statement: 'Given an array of N integers, find and print the maximum element present in the array.',
+      input_format: 'First line contains an integer N.\nSecond line contains N integers separated by space.',
+      output_format: 'Print the maximum integer found in the array.',
+      constraints: '1 <= N <= 1000, -10^5 <= arr[i] <= 10^5',
+      difficulty: 'EASY',
       marks: 50,
-      skills: ['Strings', 'Parsing'],
+      skills: ['Arrays', 'Loops', 'Search'],
       test_cases: [
-        { input_data: 'the sky is blue', expected_output: 'blue is sky the', is_hidden: false },
-        { input_data: '  hello world  ', expected_output: 'world hello', is_hidden: false },
-        { input_data: 'a good   example', expected_output: 'example good a', is_hidden: true }
+        { input_data: '5\n3 8 2 10 4', expected_output: '10', is_hidden: false, explanation: '10 is the maximum' },
+        { input_data: '4\n-10 -20 -3 -15', expected_output: '-3', is_hidden: false, explanation: '-3 is the maximum' },
+        { input_data: '1\n99', expected_output: '99', is_hidden: true },
+        { input_data: '6\n5 5 5 5 5 5', expected_output: '5', is_hidden: true }
       ]
     },
     {
-      title: 'Matrix Spiral Traversal',
-      problem_statement: 'Given an m x n matrix, return all elements of the matrix in spiral order separated by space.',
-      input_format: 'R C\nR lines with C integers each',
-      output_format: 'Spiral order elements separated by space',
-      constraints: '1 <= R, C <= 100',
-      difficulty: 'MEDIUM',
+      title: 'Count Vowels in a String',
+      problem_statement: 'Given a string S, count and print the total number of vowels (a, e, i, o, u, case-insensitive) present in the string.',
+      input_format: 'A single line containing string S.',
+      output_format: 'Print an integer representing the total count of vowels.',
+      constraints: '1 <= length(S) <= 1000',
+      difficulty: 'EASY',
       marks: 50,
-      skills: ['Matrix', '2D Array'],
+      skills: ['Strings', 'Characters', 'Loops'],
       test_cases: [
-        { input_data: '3 3\n1 2 3\n4 5 6\n7 8 9', expected_output: '1 2 3 6 9 8 7 4 5', is_hidden: false },
-        { input_data: '3 4\n1 2 3 4\n5 6 7 8\n9 10 11 12', expected_output: '1 2 3 4 8 12 11 10 9 5 6 7', is_hidden: true }
+        { input_data: 'hello', expected_output: '2', is_hidden: false, explanation: 'e, o (2 vowels)' },
+        { input_data: 'Java', expected_output: '2', is_hidden: false, explanation: 'a, a (2 vowels)' },
+        { input_data: 'rhythm', expected_output: '0', is_hidden: true },
+        { input_data: 'AEIOU', expected_output: '5', is_hidden: true }
       ]
     },
     {
-      title: 'Count Distinct Prime Factors',
-      problem_statement: 'Given an integer N, count the number of distinct prime factors of N.',
-      input_format: 'An integer N',
-      output_format: 'Count of distinct prime factors',
-      constraints: '2 <= N <= 10^9',
-      difficulty: 'MEDIUM',
+      title: 'Reverse a String',
+      problem_statement: 'Given a string S, reverse the characters of the string and print the reversed result.',
+      input_format: 'A single line containing string S.',
+      output_format: 'Print the reversed string.',
+      constraints: '1 <= length(S) <= 1000',
+      difficulty: 'EASY',
       marks: 50,
-      skills: ['Math', 'Number Theory'],
+      skills: ['Strings', 'StringBuilder', 'Loops'],
       test_cases: [
-        { input_data: '60', expected_output: '3', is_hidden: false, explanation: '2, 3, 5' },
-        { input_data: '13', expected_output: '1', is_hidden: false },
-        { input_data: '1000', expected_output: '2', is_hidden: true }
+        { input_data: 'hello', expected_output: 'olleh', is_hidden: false, explanation: '"hello" reversed is "olleh"' },
+        { input_data: 'Java', expected_output: 'avaJ', is_hidden: false, explanation: '"Java" reversed is "avaJ"' },
+        { input_data: 'radar', expected_output: 'radar', is_hidden: true },
+        { input_data: '12345', expected_output: '54321', is_hidden: true }
+      ]
+    },
+    {
+      title: 'Factorial of a Number',
+      problem_statement: 'Given a non-negative integer N, compute and print its factorial (N!). Note that 0! = 1.',
+      input_format: 'A single integer N.',
+      output_format: 'Print the factorial value of N.',
+      constraints: '0 <= N <= 12',
+      difficulty: 'EASY',
+      marks: 50,
+      skills: ['Loops', 'Basic Math', 'Arithmetic'],
+      test_cases: [
+        { input_data: '5', expected_output: '120', is_hidden: false, explanation: '5! = 5*4*3*2*1 = 120' },
+        { input_data: '3', expected_output: '6', is_hidden: false, explanation: '3! = 3*2*1 = 6' },
+        { input_data: '0', expected_output: '1', is_hidden: true },
+        { input_data: '7', expected_output: '5040', is_hidden: true }
+      ]
+    },
+    {
+      title: 'Search Element in Array (Linear Search)',
+      problem_statement: 'Given an array of N integers and a target value K, check whether K is present in the array. Print "YES" if K is present in the array, otherwise print "NO".',
+      input_format: 'First line contains two integers N and K.\nSecond line contains N integers separated by space.',
+      output_format: 'Print YES or NO in uppercase.',
+      constraints: '1 <= N <= 1000, -10^4 <= arr[i], K <= 10^4',
+      difficulty: 'EASY',
+      marks: 50,
+      skills: ['Arrays', 'Linear Search', 'Conditionals'],
+      test_cases: [
+        { input_data: '5 3\n1 2 3 4 5', expected_output: 'YES', is_hidden: false, explanation: '3 is present in the array' },
+        { input_data: '4 8\n10 20 30 40', expected_output: 'NO', is_hidden: false, explanation: '8 is not in the array' },
+        { input_data: '3 5\n5 15 25', expected_output: 'YES', is_hidden: true },
+        { input_data: '2 -1\n0 1', expected_output: 'NO', is_hidden: true }
       ]
     }
   ];

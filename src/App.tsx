@@ -18,9 +18,7 @@ const SkillGapAnalyzerView = lazy(() => import('./SkillGapAnalyzerView'));
 const FacultyIndustryHubView = lazy(() => import('./FacultyIndustryHubView'));
 const StudentCodingAssessmentView = lazy(() => import('./StudentCodingAssessmentView'));
 const InstitutionalSkillHeatmapView = lazy(() => import('./InstitutionalSkillHeatmapView'));
-const PWAInstallOverlay = lazy(() => import('./PWAInstallOverlay'));
-const PushNotificationPromptModal = lazy(() => import('./PushNotificationPromptModal'));
-const MandatoryComplianceModal = lazy(() => import('./MandatoryComplianceModal'));
+
 
 import { generateStudentResumePdf, downloadStudentResumePdf } from './studentProfilePdfGenerator';
 import { generateMergedProofsPdf, ProofPdfItem } from './proofPdfGenerator';
@@ -4405,52 +4403,6 @@ export default function App() {
     fetchTelegramStatus();
   }, [token]);
 
-  // ── Mandatory Compliance State (Push, Telegram, Profile) ───────────────────
-  const [showComplianceModal, setShowComplianceModal] = useState<boolean>(false);
-  const [pushSubscribedGlobal, setPushSubscribedGlobal] = useState<boolean>(false);
-
-  useEffect(() => {
-    const updatePushState = async () => {
-      if (!token) return;
-      const isSub = await checkIsPushSubscribed();
-      const perm = getNotificationPermissionState();
-      setPushSubscribedGlobal(isSub || perm === 'granted');
-    };
-    updatePushState();
-  }, [token, showComplianceModal]);
-
-  const isPushCompliant = useMemo(() => {
-    return pushSubscribedGlobal || (typeof Notification !== 'undefined' && Notification.permission === 'granted');
-  }, [pushSubscribedGlobal]);
-
-  const isTelegramCompliant = useMemo(() => {
-    return Boolean(user?.telegram_chat_id || telegramStats?.currentUserLinked);
-  }, [user?.telegram_chat_id, telegramStats?.currentUserLinked]);
-
-  const isProfileCompliant = useMemo(() => {
-    if (user?.role === 'STUDENT') {
-      return studentProfileCompletion.percentage === 100;
-    }
-    return Boolean(user?.phone && user?.email);
-  }, [user?.role, user?.phone, user?.email, studentProfileCompletion.percentage]);
-
-  const complianceCompletedCount = useMemo(() => {
-    return (isPushCompliant ? 1 : 0) + (isTelegramCompliant ? 1 : 0) + (isProfileCompliant ? 1 : 0);
-  }, [isPushCompliant, isTelegramCompliant, isProfileCompliant]);
-
-  const isComplianceComplete = complianceCompletedCount === 3;
-
-  // Auto-prompt compliance modal on login / page load if any requirement is incomplete
-  useEffect(() => {
-    if (!token || !user) return;
-    const isDismissed = sessionStorage.getItem('mandatory_compliance_dismissed_v1');
-    if (!isComplianceComplete && !isDismissed) {
-      const timer = setTimeout(() => {
-        setShowComplianceModal(true);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [token, user?.id, isComplianceComplete]);
 
   const handleSendTestMessage = async (targetId?: string) => {
     setSendingTest(true);
@@ -11549,32 +11501,7 @@ export default function App() {
                 </span>
               )}
               <ThemeToggle />
-              {/* Mandatory Compliance Status Pill Button in Header */}
-              {token && user && (
-                <button
-                  type="button"
-                  onClick={() => setShowComplianceModal(true)}
-                  className={cn(
-                    "hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black border transition-all cursor-pointer",
-                    isComplianceComplete
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800"
-                      : "bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-amber-500/10 text-amber-900 border-amber-300 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-700 animate-pulse"
-                  )}
-                  title={isComplianceComplete ? "All 3 Mandatory Compliances Met" : "Mandatory Compliance Incomplete"}
-                >
-                  {isComplianceComplete ? (
-                    <>
-                      <ShieldCheck size={14} className="text-emerald-600" />
-                      <span>Compliant (3/3)</span>
-                    </>
-                  ) : (
-                    <>
-                      <AlertTriangle size={14} className="text-amber-600" />
-                      <span>Setup ({complianceCompletedCount}/3)</span>
-                    </>
-                  )}
-                </button>
-              )}
+
               <div className="relative" ref={notificationDropdownRef}>
                 <button
                   className={cn(
@@ -11711,40 +11638,7 @@ export default function App() {
             </div>
           </header>
 
-          {/* Mandatory Compliance Alert Sticky Banner */}
-          {token && user && !isComplianceComplete && (
-            <div className="bg-gradient-to-r from-amber-500/15 via-indigo-500/10 to-emerald-500/15 border-b border-amber-200 dark:border-amber-900/50 px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 shrink-0 shadow-2xs">
-              <div className="flex items-center gap-2.5 flex-wrap min-w-0">
-                <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-xs">
-                  <AlertTriangle size={11} className="animate-pulse" />
-                  Mandatory Setup ({complianceCompletedCount}/3 Completed)
-                </div>
-                <div className="hidden sm:flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300 font-medium">
-                  <span>Required:</span>
-                  <span className={cn("px-2 py-0.5 rounded-md text-[11px] font-bold border", isPushCompliant ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" : "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800")}>
-                    {isPushCompliant ? '✓ Push Notifications' : '⚠️ Push Notifications'}
-                  </span>
-                  <span className={cn("px-2 py-0.5 rounded-md text-[11px] font-bold border", isTelegramCompliant ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" : "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800")}>
-                    {isTelegramCompliant ? '✓ Telegram Bot' : '⚠️ Telegram Bot'}
-                  </span>
-                  <span className={cn("px-2 py-0.5 rounded-md text-[11px] font-bold border", isProfileCompliant ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" : "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800")}>
-                    {isProfileCompliant ? '✓ Profile Info' : '⚠️ Profile Info'}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setShowComplianceModal(true)}
-                  className="px-3 py-1 bg-gradient-to-r from-amber-600 via-indigo-600 to-emerald-600 hover:from-amber-700 hover:to-emerald-700 text-white text-xs font-black rounded-lg shadow-sm hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-                >
-                  <Sparkles size={12} />
-                  <span>Complete Setup Now</span>
-                  <ChevronRight size={13} />
-                </button>
-              </div>
-            </div>
-          )}
+
 
           <div className="flex-1 min-h-0 bg-[#F5F5F4] dark:bg-[#0f0f12] relative">
             <Suspense fallback={<ViewLoadingFallback />}>
@@ -16404,26 +16298,7 @@ export default function App() {
 
           {renderAssignTargetModal()}
           {renderHistoryDetailsModal()}
-          <Suspense fallback={null}>
-            <MandatoryComplianceModal
-              isOpen={showComplianceModal}
-              onClose={() => {
-                sessionStorage.setItem('mandatory_compliance_dismissed_v1', 'true');
-                setShowComplianceModal(false);
-              }}
-              user={user}
-              token={token}
-              apiUrl={API_URL}
-              telegramStats={telegramStats}
-              studentProfileCompletion={studentProfileCompletion}
-              onRefreshTelegramStatus={fetchTelegramStatus}
-              onNavigateToProfile={() => setView('profile')}
-              onUpdateUser={(updated) => setUser(prev => prev ? { ...prev, ...updated } : updated)}
-              addToast={addToast}
-            />
-            <PushNotificationPromptModal token={token} apiUrl={API_URL} addToast={addToast} />
-            <PWAInstallOverlay />
-          </Suspense>
+
         </AnimatePresence>
       </div>
     </FooterContext.Provider>

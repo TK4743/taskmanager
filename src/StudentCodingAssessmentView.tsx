@@ -678,7 +678,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
   // ── Render 3: Active Coding IDE Screen ─────────────────────────────────────
   if (attemptId && currentQ) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0A0F1D] text-white flex flex-col overflow-hidden font-sans select-none">
+      <div className="fixed inset-0 z-50 bg-white text-zinc-900 flex flex-col overflow-hidden font-sans select-none">
         {toast && (
           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] px-5 py-2.5 bg-zinc-900/95 backdrop-blur-md text-white rounded-full text-xs font-bold shadow-2xl border border-zinc-700 animate-bounce flex items-center gap-2">
             <span>{toast}</span>
@@ -686,11 +686,11 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
         )}
 
         {/* Top Assessment Navigation & Status Bar */}
-        <div className="h-14 bg-[#111827] border-b border-slate-800 px-4 md:px-6 flex items-center justify-between shrink-0 shadow-xs z-20">
+        <div className="h-14 bg-white border-b border-zinc-200 px-4 md:px-6 flex items-center justify-between shrink-0 shadow-xs z-20">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 bg-[#0A0F1D] px-3 py-1.5 rounded-xl border border-slate-700/80 shadow-inner">
-              <Code size={15} className="text-indigo-400" />
-              <span className="text-xs font-extrabold text-slate-200">
+            <div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-zinc-200 shadow-2xs">
+              <Code size={15} className="text-indigo-600" />
+              <span className="text-xs font-extrabold text-zinc-800">
                 Question {currentQIdx + 1} of {questions.length}
               </span>
             </div>
@@ -705,10 +705,10 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                     currentQIdx === idx
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
+                      ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-200'
                       : submissionFeedback[idx]
-                      ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/80 hover:bg-emerald-900'
-                      : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100'
+                      : 'bg-zinc-100 text-zinc-700 hover:text-zinc-900 hover:bg-zinc-200 border border-zinc-200'
                   }`}
                 >
                   Q{idx + 1} {submissionFeedback[idx] ? '✓' : ''}
@@ -719,15 +719,15 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
           {/* Center Timer & Anti-Cheat Badge */}
           <div className="flex items-center gap-3">
-            <span className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[11px] font-bold">
-              <Lock size={12} className="text-rose-400" />
+            <span className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-bold">
+              <Lock size={12} className="text-rose-600" />
               <span>Copy & Right-Click Locked</span>
             </span>
 
-            <div className="flex items-center gap-2 bg-[#0A0F1D] px-4 py-1.5 rounded-xl border border-slate-700/80 shadow-inner">
-              <Clock size={15} className={remainingSeconds < 300 ? 'text-rose-400 animate-pulse' : 'text-amber-400 animate-pulse'} />
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold hidden sm:inline">Time Left:</span>
-              <span className={`font-mono text-sm font-extrabold tracking-wider tabular-nums ${remainingSeconds < 300 ? 'text-rose-400' : 'text-amber-300'}`}>
+            <div className="flex items-center gap-2 bg-zinc-50 px-4 py-1.5 rounded-xl border border-zinc-200 shadow-2xs">
+              <Clock size={15} className={remainingSeconds < 300 ? 'text-rose-600 animate-pulse' : 'text-amber-600 animate-pulse'} />
+              <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold hidden sm:inline">Time Left:</span>
+              <span className={`font-mono text-sm font-extrabold tracking-wider tabular-nums ${remainingSeconds < 300 ? 'text-rose-600' : 'text-zinc-900'}`}>
                 {formatTime(remainingSeconds)}
               </span>
             </div>
@@ -737,7 +737,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleFinishAssessment(false)}
-              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <span>Finish Assessment</span>
               <CheckCircle2 size={15} />
@@ -750,33 +750,33 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
           
           {/* LEFT: Problem Statement */}
           <div 
-            className="w-full md:w-1/2 border-r border-slate-800 bg-[#0B1120] flex flex-col overflow-y-auto p-6 md:p-7 custom-scrollbar min-h-0 select-none"
+            className="w-full md:w-1/2 border-r border-zinc-200 bg-white flex flex-col overflow-y-auto p-6 md:p-7 custom-scrollbar min-h-0 select-none"
             onContextMenu={e => { e.preventDefault(); showToast('🚫 Right click is disabled on problem statement!'); }}
             onCopy={e => { e.preventDefault(); showToast('🚫 Copying problem text is disabled!'); }}
             onPaste={e => { e.preventDefault(); showToast('🚫 Pasting is disabled!'); }}
           >
             <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-xs font-black px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+              <span className="text-xs font-black px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
                 {currentQ.difficulty} · {currentQ.marks} Marks
               </span>
               <div className="flex gap-1.5 flex-wrap">
                 {(currentQ.skills || []).map((sk, i) => (
-                  <span key={i} className="text-[10px] font-bold px-2.5 py-0.5 rounded-lg bg-slate-800/90 text-slate-300 border border-slate-700/80">
+                  <span key={i} className="text-[10px] font-bold px-2.5 py-0.5 rounded-lg bg-zinc-100 text-zinc-700 border border-zinc-200">
                     {sk}
                   </span>
                 ))}
               </div>
             </div>
 
-            <h1 className="text-xl md:text-2xl font-black text-white mb-4 leading-tight tracking-tight">{currentQ.title}</h1>
+            <h1 className="text-xl md:text-2xl font-black text-zinc-900 mb-4 leading-tight tracking-tight">{currentQ.title}</h1>
 
-            <div className="space-y-4 text-xs md:text-sm text-slate-300 leading-relaxed font-normal">
+            <div className="space-y-4 text-xs md:text-sm text-zinc-700 leading-relaxed font-normal">
               <div className="whitespace-pre-wrap leading-relaxed">{currentQ.problem_statement}</div>
 
               {currentQ.input_format && (
                 <div className="space-y-1.5 pt-1">
-                  <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-400">Input Format</h4>
-                  <div className="py-2.5 px-3.5 bg-[#131C31] rounded-xl text-xs text-slate-200 font-mono leading-relaxed whitespace-pre-wrap break-words border border-slate-800 shadow-inner">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-zinc-500">Input Format</h4>
+                  <div className="py-2.5 px-3.5 bg-zinc-50 rounded-xl text-xs text-zinc-800 font-mono leading-relaxed whitespace-pre-wrap break-words border border-zinc-200 shadow-2xs">
                     {currentQ.input_format}
                   </div>
                 </div>
@@ -784,8 +784,8 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
               {currentQ.output_format && (
                 <div className="space-y-1.5">
-                  <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-400">Output Format</h4>
-                  <div className="py-2.5 px-3.5 bg-[#131C31] rounded-xl text-xs text-slate-200 font-mono leading-relaxed whitespace-pre-wrap break-words border border-slate-800 shadow-inner">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-zinc-500">Output Format</h4>
+                  <div className="py-2.5 px-3.5 bg-zinc-50 rounded-xl text-xs text-zinc-800 font-mono leading-relaxed whitespace-pre-wrap break-words border border-zinc-200 shadow-2xs">
                     {currentQ.output_format}
                   </div>
                 </div>
@@ -793,8 +793,8 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
               {currentQ.constraints && (
                 <div className="space-y-1.5">
-                  <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-400">Constraints</h4>
-                  <div className="py-2.5 px-3.5 bg-[#131C31] rounded-xl text-xs text-slate-200 font-mono leading-relaxed whitespace-pre-wrap break-words border border-slate-800 shadow-inner">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-zinc-500">Constraints</h4>
+                  <div className="py-2.5 px-3.5 bg-zinc-50 rounded-xl text-xs text-zinc-800 font-mono leading-relaxed whitespace-pre-wrap break-words border border-zinc-200 shadow-2xs">
                     {currentQ.constraints}
                   </div>
                 </div>
@@ -802,28 +802,28 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
               {/* Sample Test Cases (Unclipped Monospace Rendering) */}
               <div className="space-y-3 pt-2">
-                <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
                   <span>SAMPLE TEST CASES</span>
                 </h4>
                 {(currentQ.sample_test_cases || []).map((tc, idx) => (
-                  <div key={tc.id || idx} className="p-4 bg-[#131C31] rounded-2xl border border-slate-700/80 space-y-2.5 shadow-sm">
-                    <div className="text-xs font-black text-indigo-400">Sample Case #{idx + 1}</div>
+                  <div key={tc.id || idx} className="p-4 bg-zinc-50 rounded-2xl border border-zinc-200 space-y-2.5 shadow-2xs">
+                    <div className="text-xs font-black text-indigo-600">Sample Case #{idx + 1}</div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Input</span>
-                        <div className="py-2.5 px-3 bg-[#0A0F1D] rounded-xl text-xs font-mono leading-relaxed text-slate-100 min-h-[38px] overflow-x-auto whitespace-pre-wrap break-all border border-slate-800/80">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Input</span>
+                        <div className="py-2.5 px-3 bg-white rounded-xl text-xs font-mono leading-relaxed text-zinc-900 min-h-[38px] overflow-x-auto whitespace-pre-wrap break-all border border-zinc-200 shadow-2xs">
                           {tc.input_data}
                         </div>
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Expected Output</span>
-                        <div className="py-2.5 px-3 bg-[#0A0F1D] rounded-xl text-xs font-mono leading-relaxed text-emerald-400 font-semibold min-h-[38px] overflow-x-auto whitespace-pre-wrap break-all border border-slate-800/80">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Expected Output</span>
+                        <div className="py-2.5 px-3 bg-white rounded-xl text-xs font-mono leading-relaxed text-emerald-700 font-semibold min-h-[38px] overflow-x-auto whitespace-pre-wrap break-all border border-zinc-200 shadow-2xs">
                           {tc.expected_output}
                         </div>
                       </div>
                     </div>
                     {tc.explanation && (
-                      <p className="text-[11px] text-slate-400 italic pt-1 border-t border-slate-800">
+                      <p className="text-[11px] text-zinc-500 italic pt-1 border-t border-zinc-200">
                         {tc.explanation}
                       </p>
                     )}
@@ -834,16 +834,16 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
           </div>
 
           {/* RIGHT: Monaco Editor & Interactive Test Runner */}
-          <div className="w-full md:w-1/2 flex flex-col bg-[#0A0F1D] min-h-0">
+          <div className="w-full md:w-1/2 flex flex-col bg-white min-h-0">
             
             {/* Editor Top Bar with Language Selector */}
-            <div className="h-11 bg-[#111827] px-4 flex items-center justify-between border-b border-slate-800 shrink-0 select-none z-10">
+            <div className="h-11 bg-white px-4 flex items-center justify-between border-b border-zinc-200 shrink-0 select-none z-10">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Language:</span>
+                <span className="text-[11px] font-black text-zinc-500 uppercase tracking-wider">Language:</span>
                 <select
                   value={activeLang}
                   onChange={e => handleLanguageChange(e.target.value)}
-                  className="bg-[#0A0F1D] text-indigo-300 text-xs font-bold px-3 py-1 rounded-xl border border-slate-700 hover:border-indigo-500/60 focus:border-indigo-500 outline-none shadow-xs transition-colors cursor-pointer"
+                  className="bg-zinc-50 text-zinc-900 text-xs font-bold px-3 py-1 rounded-xl border border-zinc-300 hover:border-indigo-500 focus:border-indigo-500 outline-none shadow-2xs transition-colors cursor-pointer"
                 >
                   <option value="c">C (GCC)</option>
                   <option value="cpp">C++ (G++)</option>
@@ -854,24 +854,24 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
               <div className="flex items-center gap-2.5">
                 {/* Autosave Status Pill */}
-                <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold bg-[#0A0F1D] border border-slate-800 shadow-inner">
+                <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold bg-zinc-50 border border-zinc-200 shadow-2xs">
                   {autosaveStatus === 'saving' && (
-                    <span className="text-amber-400 flex items-center gap-1 animate-pulse">
+                    <span className="text-amber-600 flex items-center gap-1 animate-pulse">
                       <RotateCcw size={11} className="animate-spin" /> Saving...
                     </span>
                   )}
                   {autosaveStatus === 'saved' && (
-                    <span className="text-emerald-400 flex items-center gap-1">
+                    <span className="text-emerald-600 flex items-center gap-1">
                       <Check size={11} /> Saved
                     </span>
                   )}
                   {autosaveStatus === 'error' && (
-                    <span className="text-rose-400 flex items-center gap-1">
+                    <span className="text-rose-600 flex items-center gap-1">
                       <AlertTriangle size={11} /> Save error
                     </span>
                   )}
                   {autosaveStatus === 'idle' && (
-                    <span className="text-slate-400">Ready</span>
+                    <span className="text-zinc-500">Ready</span>
                   )}
                 </div>
 
@@ -880,7 +880,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                     handleCodeChange(starterTemplates[activeLang] || '');
                     showToast('Template reset.');
                   }}
-                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                  className="p-1.5 text-zinc-400 hover:text-zinc-800 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
                   title="Reset to starter template"
                 >
                   <RotateCcw size={14} />
@@ -888,7 +888,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
               </div>
             </div>
 
-            {/* Monaco Code Editor */}
+            {/* Monaco Code Editor (Kept Dark as Sandbox Editor) */}
             <div className="flex-1 min-h-0 relative">
               <Editor
                 height="100%"
@@ -958,27 +958,27 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
             </div>
 
             {/* Bottom Test Runner Panel & Action Buttons */}
-            <div className="h-56 bg-[#111827] border-t border-slate-800 flex flex-col shrink-0 z-10">
-              <div className="h-11 px-4 bg-[#0A0F1D] flex items-center justify-between border-b border-slate-800">
+            <div className="h-56 bg-white border-t border-zinc-200 flex flex-col shrink-0 z-10">
+              <div className="h-11 px-4 bg-zinc-50 flex items-center justify-between border-b border-zinc-200">
                 <div className="flex items-center gap-2">
-                  <Terminal size={14} className="text-indigo-400" />
-                  <span className="text-xs font-extrabold text-slate-200">Test Cases Console</span>
+                  <Terminal size={14} className="text-indigo-600" />
+                  <span className="text-xs font-extrabold text-zinc-800">Test Cases Console</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
                   <button
                     disabled={isRunning || isSubmitting}
                     onClick={handleRunCode}
-                    className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                    className="px-4 py-1.5 bg-white hover:bg-zinc-100 text-emerald-700 border border-zinc-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs disabled:opacity-50 cursor-pointer"
                   >
-                    <Play size={13} className="text-emerald-400" />
+                    <Play size={13} className="text-emerald-600" />
                     <span>{isRunning ? 'Running...' : 'Run Code'}</span>
                   </button>
 
                   <button
                     disabled={isRunning || isSubmitting}
                     onClick={handleSubmitCode}
-                    className="px-5 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50 cursor-pointer"
+                    className="px-5 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-sm shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
                   >
                     <Send size={13} />
                     <span>{isSubmitting ? 'Evaluating...' : 'Submit'}</span>
@@ -987,22 +987,22 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
               </div>
 
               {/* Test Results Output */}
-              <div className="flex-1 overflow-y-auto p-3 text-xs font-mono space-y-2 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-3 text-xs font-mono space-y-2 custom-scrollbar bg-white">
                 {sampleTestResults.length === 0 && !submissionFeedback[currentQIdx] && (
-                  <div className="text-slate-500 py-6 text-center text-xs">
+                  <div className="text-zinc-400 py-6 text-center text-xs font-sans">
                     Click <strong>Run Code</strong> to test against sample cases or <strong>Submit</strong> to evaluate against all test cases.
                   </div>
                 )}
 
                 {submissionFeedback[currentQIdx] && (
-                  <div className="p-3 bg-indigo-950/40 border border-indigo-700/50 rounded-xl flex items-center justify-between">
+                  <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center justify-between font-sans">
                     <div>
-                      <span className="text-xs font-black text-indigo-300">Latest Submission Status: {submissionFeedback[currentQIdx].status}</span>
-                      <p className="text-[11px] text-slate-400">
+                      <span className="text-xs font-black text-indigo-900">Latest Submission Status: {submissionFeedback[currentQIdx].status}</span>
+                      <p className="text-[11px] text-zinc-600">
                         Public Tests: {submissionFeedback[currentQIdx].public_tests_passed}/{submissionFeedback[currentQIdx].public_tests_total} · Hidden Tests: {submissionFeedback[currentQIdx].hidden_tests_passed}/{submissionFeedback[currentQIdx].hidden_tests_total}
                       </p>
                     </div>
-                    <div className="text-right font-black text-emerald-400 text-sm">
+                    <div className="text-right font-black text-emerald-700 text-sm">
                       Score: {submissionFeedback[currentQIdx].score} / 50
                     </div>
                   </div>
@@ -1011,29 +1011,29 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                 {sampleTestResults.map((r, i) => (
                   <div
                     key={i}
-                    className={`p-3 rounded-xl border ${
-                      r.passed ? 'bg-emerald-950/20 border-emerald-800/60' : 'bg-rose-950/20 border-rose-800/60'
+                    className={`p-3 rounded-xl border font-sans ${
+                      r.passed ? 'bg-emerald-50/70 border-emerald-200' : 'bg-rose-50/70 border-rose-200'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-bold flex items-center gap-1.5">
-                        {r.passed ? <CheckCircle2 size={13} className="text-emerald-400" /> : <XCircle size={13} className="text-rose-400" />}
-                        <span className={r.passed ? 'text-emerald-300' : 'text-rose-300'}>
+                        {r.passed ? <CheckCircle2 size={13} className="text-emerald-600" /> : <XCircle size={13} className="text-rose-600" />}
+                        <span className={r.passed ? 'text-emerald-800' : 'text-rose-800'}>
                           {r.is_hidden ? `Hidden Test Case #${i + 1}` : `Sample Case #${i + 1}`} — {r.status}
                         </span>
                       </span>
-                      <span className="text-[10px] text-slate-500">{r.execution_time_ms} ms</span>
+                      <span className="text-[10px] text-zinc-500">{r.execution_time_ms} ms</span>
                     </div>
 
                     {!r.is_hidden && (
-                      <div className="grid grid-cols-2 gap-2 text-[11px] mt-1 pt-1 border-t border-slate-800">
+                      <div className="grid grid-cols-2 gap-2 text-[11px] mt-1 pt-1 border-t border-zinc-200 font-mono">
                         <div>
-                          <span className="text-slate-500 block">Your Output:</span>
-                          <span className="text-slate-200">{r.actual_output || '—'}</span>
+                          <span className="text-zinc-500 block font-sans">Your Output:</span>
+                          <span className="text-zinc-800 bg-white px-2 py-1 rounded border border-zinc-200 block mt-0.5">{r.actual_output || '—'}</span>
                         </div>
                         <div>
-                          <span className="text-slate-500 block">Expected Output:</span>
-                          <span className="text-emerald-400">{r.expected_output || '—'}</span>
+                          <span className="text-zinc-500 block font-sans">Expected Output:</span>
+                          <span className="text-emerald-700 font-semibold bg-white px-2 py-1 rounded border border-zinc-200 block mt-0.5">{r.expected_output || '—'}</span>
                         </div>
                       </div>
                     )}
@@ -1049,14 +1049,14 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
           drag
           dragMomentum={false}
           whileDrag={{ scale: 1.05 }}
-          className="fixed top-18 right-6 z-[9999] w-48 bg-slate-900/95 backdrop-blur-md rounded-2xl overflow-hidden border-2 border-indigo-500 shadow-2xl select-none cursor-move"
+          className="fixed top-18 right-6 z-[9999] w-48 bg-white/95 backdrop-blur-md rounded-2xl overflow-hidden border-2 border-indigo-500 shadow-xl select-none cursor-move"
           title="Click and drag to position webcam proctor anywhere on screen"
         >
-          <div className="flex items-center justify-between px-2.5 py-1 bg-slate-800/90 border-b border-slate-700/80 text-[10px] font-bold text-slate-300 cursor-grab active:cursor-grabbing">
-            <span className="flex items-center gap-1 text-slate-200">
-              <GripVertical size={13} className="text-slate-400" /> Move Camera
+          <div className="flex items-center justify-between px-2.5 py-1 bg-zinc-100 border-b border-zinc-200 text-[10px] font-bold text-zinc-700 cursor-grab active:cursor-grabbing">
+            <span className="flex items-center gap-1 text-zinc-800">
+              <GripVertical size={13} className="text-zinc-400" /> Move Camera
             </span>
-            <span className="flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 text-[9px] font-black border border-rose-500/40">
+            <span className="flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-700 text-[9px] font-black border border-rose-200">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
               LIVE
             </span>
@@ -1064,7 +1064,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
           <div className="relative aspect-video bg-black">
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />
-            <div className="absolute bottom-1 left-1.5 right-1.5 text-center text-[9px] font-bold text-white/80 bg-black/60 backdrop-blur-xs py-0.5 rounded">
+            <div className="absolute bottom-1 left-1.5 right-1.5 text-center text-[9px] font-bold text-white/90 bg-black/70 backdrop-blur-xs py-0.5 rounded">
               Camera Monitored
             </div>
           </div>
