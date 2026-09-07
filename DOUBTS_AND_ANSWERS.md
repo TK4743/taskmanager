@@ -491,3 +491,66 @@ This comprehensive reference document addresses all frequent questions, assessme
 | 1 | How do I run the full project locally? | Run `npm run dev` in the terminal to start the Vite dev server on port 5173. | Resolved |
 | 2 | Where are the database credentials stored? | In `.env` under `DATABASE_URL` connecting to the Supabase transaction pooler. | Resolved |
 | 3 | Can students switch tabs during the assessment? | Proctoring monitors tab switches, fullscreen exit, and face visibility, logging events in real time. | Active |
+
+---
+
+## Section 7: ⭐ AI Personalized Career Match - Full Calculation Formula
+
+The **AI Personalized Career Match** in the **Student Opportunities** view (`/api/student/recommendations` & `/api/postings/:id/match`) evaluates each student against company job/internship postings using **Multi-Attribute Utility Theory (MAUT)** and **Vector Space Modeling**.
+
+### 1. The Core 3-Pillar Formula
+$$\mathbf{\text{Final Match Score (0–100\%)}} = \mathbf{\text{Skill Score (70\%)}} + \mathbf{\text{Academic Score (15\%)}} + \mathbf{\text{LeetCode Score (15\%)}}$$
+
+$$\text{Final Score} = \min\Big(100, \max\big(0, \text{round}(\text{skillScore} + \text{cgpaScore} + \text{leetcodeScore})\big)\Big)$$
+
+---
+
+### 2. Pillar Breakdown & Mathematical Functions
+
+#### Pillar 1: Verified Technical & Domain Skills (70% Weight)
+- **Data Sources**:
+  1. `student_skills`: Explicit skills with verified levels and proficiency.
+  2. `student_projects`: Extracted technologies from project tech stacks.
+  3. `student_certifications`: Skill keywords parsed from industry certificates.
+- **Formula**:
+  For each required skill $i$ with weight $w_i$ and required level $L_{\text{req}, i}$:
+  $$\text{matchRatio}_i = \min\left(\frac{\text{studentLevel}_i}{L_{\text{req}, i}}, 1.0\right)$$
+  $$\text{skillCompetencyRatio} = \frac{\sum_{i} (\text{matchRatio}_i \times w_i)}{\sum_{i} w_i}$$
+  $$\mathbf{\text{Skill Score}} = \text{skillCompetencyRatio} \times \mathbf{70.0}$$
+
+#### Pillar 2: Academic Rigor / CGPA (15% Weight)
+- **Data Source**: `student_profiles.cgpa` (scaled from 0.0 to 10.0).
+- **Continuous Piecewise Normalization**:
+  - If $\text{CGPA} \ge 5.0$:
+    $$\text{academicRatio} = \min\left(\frac{\text{CGPA} - 5.0}{5.0}, 1.0\right)$$
+  - If $\text{CGPA} < 5.0$:
+    $$\text{academicRatio} = \left(\frac{\text{CGPA}}{10.0}\right) \times 0.5$$
+  $$\mathbf{\text{CGPA Score}} = \text{academicRatio} \times \mathbf{15.0}$$
+  *(e.g., CGPA 8.5 gives $(8.5 - 5.0) / 5.0 = 0.70 \implies 0.70 \times 15 = \mathbf{10.5\text{ pts}}$)*
+
+#### Pillar 3: Problem-Solving Vigor / LeetCode (15% Weight)
+- **Data Source**: Total LeetCode solved count $N$ from `leetcode_daily_progress`.
+- **Asymptotic Exponential Saturation Formula**:
+  $$\text{leetcodeRatio} = 1 - e^{-\frac{N}{150}}$$
+  $$\mathbf{\text{LeetCode Score}} = \text{leetcodeRatio} \times \mathbf{15.0}$$
+  - $N = 0 \implies 0.0$ pts
+  - $N = 50 \implies 4.2$ pts
+  - $N = 100 \implies 7.3$ pts
+  - $N = 150 \implies 9.5$ pts
+  - $N = 300 \implies 13.0$ pts
+  - $N \ge 450 \implies 15.0$ pts
+
+---
+
+### 3. Worked Example Calculation
+Suppose a student has:
+1. **Skills**: Matches 4 out of 5 required skills at required levels $\implies \text{skillCompetencyRatio} = 0.80$
+   - $\text{Skill Score} = 0.80 \times 70.0 = \mathbf{56.0}$
+2. **CGPA**: $8.5 \implies \text{academicRatio} = (8.5 - 5) / 5 = 0.70$
+   - $\text{CGPA Score} = 0.70 \times 15.0 = \mathbf{10.5}$
+3. **LeetCode**: 120 problems solved $\implies \text{leetcodeRatio} = 1 - e^{-120/150} \approx 0.551$
+   - $\text{LeetCode Score} = 0.551 \times 15.0 = \mathbf{8.3}$
+
+$$\mathbf{\text{Total AI Match Score}} = 56.0 + 10.5 + 8.3 = \mathbf{74.8} \approx \mathbf{75\%}$$
+*(Displayed as a high-compatibility green match with customized gap learning paths!)*
+
