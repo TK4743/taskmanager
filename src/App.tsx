@@ -16338,14 +16338,14 @@ function SidebarItem({ icon, label, active, onClick, badge }: { icon: React.Reac
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl transition-all font-semibold text-xs leading-none text-left group",
+        "flex items-center gap-2.5 w-full px-3 py-2 rounded-xl transition-all font-semibold text-xs leading-normal text-left group",
         active
           ? "bg-zinc-900 text-white shadow-md shadow-zinc-900/20"
           : "text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900"
       )}
     >
       <span className="shrink-0 transition-transform group-hover:scale-110 flex items-center justify-center">{icon}</span>
-      <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis min-w-0">{label}</span>
+      <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis min-w-0 py-0.5 leading-normal">{label}</span>
       {badge && (
         <span className={cn(
           "ml-1.5 text-[9px] font-bold px-2 py-0.5 rounded-md shrink-0 uppercase tracking-tight",
