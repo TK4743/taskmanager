@@ -155,6 +155,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sampleTestResults, setSampleTestResults] = useState<any[]>([]);
+  const [compilerOutput, setCompilerOutput] = useState<string | null>(null);
   const [activeSampleTab, setActiveSampleTab] = useState<number>(0);
   const [submissionFeedback, setSubmissionFeedback] = useState<Record<number, any>>({});
   const [overallCompleted, setOverallCompleted] = useState(false);
@@ -532,6 +533,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
     setIsRunning(true);
     setSampleTestResults([]);
+    setCompilerOutput(null);
 
     try {
       const res = await fetch(`${API_URL}/api/student/coding-assessments/run`, {
@@ -548,6 +550,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
       const data = await res.json();
       if (res.ok) {
         setSampleTestResults(data.results || []);
+        setCompilerOutput(data.compiler_output || null);
         if (data.status === 'ACCEPTED') {
           showToast('✅ All sample test cases passed!');
         } else if (data.status === 'COMPILATION_ERROR') {
@@ -578,6 +581,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
     }
 
     setIsSubmitting(true);
+    setCompilerOutput(null);
 
     try {
       const res = await fetch(`${API_URL}/api/student/coding-assessments/submit`, {
@@ -595,6 +599,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
       if (res.ok) {
         setSubmissionFeedback(prev => ({ ...prev, [currentQIdx]: data.submission }));
         setSampleTestResults(data.results || []);
+        setCompilerOutput(data.compiler_output || null);
         showToast(`🎉 Submitted! Score: ${data.submission.score}/${data.submission.max_marks}`);
       } else {
         showToast(data.error || 'Submission failed');
@@ -764,6 +769,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                   onClick={() => {
                     setCurrentQIdx(idx);
                     setSampleTestResults([]);
+                    setCompilerOutput(null);
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                     currentQIdx === idx
@@ -1070,6 +1076,18 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                   </div>
                 )}
 
+                {compilerOutput && (
+                  <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl font-mono text-xs text-rose-950 space-y-1.5 shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-bold font-sans text-rose-800 text-xs">
+                      <AlertTriangle size={14} className="text-rose-600 shrink-0" />
+                      <span>Compilation Error Diagnostics</span>
+                    </div>
+                    <pre className="whitespace-pre-wrap break-words text-[11px] leading-relaxed bg-white p-2.5 rounded-xl border border-rose-200 overflow-x-auto text-rose-800 font-mono">
+                      {compilerOutput}
+                    </pre>
+                  </div>
+                )}
+
                 {sampleTestResults.map((r, i) => (
                   <div
                     key={i}
@@ -1097,6 +1115,15 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                           <span className="text-zinc-500 block font-sans">Expected Output:</span>
                           <span className="text-emerald-700 font-semibold bg-white px-2 py-1 rounded border border-zinc-200 block mt-0.5">{r.expected_output || '—'}</span>
                         </div>
+                      </div>
+                    )}
+
+                    {r.error_message && !compilerOutput && (
+                      <div className="mt-2 p-2 bg-white rounded-lg text-[11px] font-mono text-rose-800 border border-rose-200 whitespace-pre-wrap break-words leading-relaxed">
+                        <span className="font-bold font-sans text-rose-700 block mb-0.5 text-[10px] uppercase">
+                          {r.status === 'COMPILATION_ERROR' ? 'Compiler Diagnostic' : 'Error Details'}:
+                        </span>
+                        {r.error_message}
                       </div>
                     )}
                   </div>

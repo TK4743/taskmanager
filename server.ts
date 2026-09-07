@@ -12471,12 +12471,14 @@ async function startServer() {
     res.json({
       submission: subRes.rows[0],
       total_score: updatedFinalScore,
+      compiler_output: evalResult.compiler_output,
       results: evalResult.results.map(r => ({
         passed: r.passed,
         status: r.status,
         is_hidden: r.is_hidden,
         actual_output: r.is_hidden ? undefined : r.actual_output,
         expected_output: r.is_hidden ? undefined : r.expected_output,
+        error_message: r.is_hidden ? undefined : r.error_message,
         execution_time_ms: r.execution_time_ms
       }))
     });
