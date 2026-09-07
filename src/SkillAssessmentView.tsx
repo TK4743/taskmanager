@@ -1253,44 +1253,6 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
           </div>
         </div>
 
-        {/* ── Instructions for Students ── */}
-        {!isHOD && !isAdvisor && !isLockdownActive && (
-          <div className="bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-purple-500/10 border-2 border-purple-200 rounded-2xl p-4 sm:p-5 shadow-xs">
-            <div className="grid grid-cols-[40px_1fr] gap-3.5 items-start">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-sm mt-0.5">
-                <Sparkles size={20} className="text-white" />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest bg-purple-100 text-purple-950 px-2.5 py-0.5 rounded-full border border-purple-200 shadow-2xs">
-                    Official Student Instructions
-                  </span>
-                  <span className="text-xs sm:text-sm font-extrabold text-zinc-900">
-                    🎯 Proctored Skill Assessment & Placement Readiness Evaluation
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-700 leading-relaxed font-medium">
-                  This skill assessment portal provides proctored technical evaluation tracks, scoring rubrics, and automated AI remedial recommendations.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-1">
-                  <div className="bg-white/80 border border-purple-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-zinc-800 flex items-center gap-1.5 font-medium shadow-2xs">
-                    <span className="font-bold text-purple-700">1.</span> Select Any Mock Track
-                  </div>
-                  <div className="bg-white/80 border border-purple-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-zinc-800 flex items-center gap-1.5 font-medium shadow-2xs">
-                    <span className="font-bold text-purple-700">2.</span> Webcam Identity Check
-                  </div>
-                  <div className="bg-white/80 border border-purple-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-zinc-800 flex items-center gap-1.5 font-medium shadow-2xs">
-                    <span className="font-bold text-purple-700">3.</span> Fullscreen Lockdown
-                  </div>
-                  <div className="bg-white/80 border border-purple-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-zinc-800 flex items-center gap-1.5 font-medium shadow-2xs">
-                    <span className="font-bold text-purple-700">4.</span> Verified Scorecard
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* ── Active Assessment Announcements Banner ── */}
         {assignments.length > 0 && !isLockdownActive && (
           <div className="bg-gradient-to-r from-indigo-50/90 via-violet-50/70 to-sky-50/90 border border-indigo-200/80 rounded-2xl p-4 shadow-xs">
