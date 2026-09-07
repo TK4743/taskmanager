@@ -201,7 +201,7 @@ export default function IndustryPortalView({
     hdr: { background:'#ffffff', borderBottom:'1px solid #e2e8f0', padding:'18px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'0 1px 2px 0 rgba(0,0,0,0.03)' },
     tabBar: { display:'flex', gap:6, padding:'14px 28px', borderBottom:'1px solid #e2e8f0', background:'#ffffff', flexWrap:'wrap' },
     tab: (a:boolean) => ({ padding:'8px 18px', borderRadius:10, border: a ? '1px solid #0f172a' : '1px solid #e2e8f0', cursor:'pointer', fontWeight:700, fontSize:13, background: a ? '#0f172a' : '#ffffff', color: a ? '#ffffff' : '#475569', transition:'all 0.15s ease-in-out' }),
-    body: { padding:'24px 28px', maxWidth:1200, margin:'0 auto' },
+    body: { padding:'24px 28px', width:'100%', boxSizing:'border-box' as const },
     card: { background:'#ffffff', border:'1px solid #e2e8f0', borderRadius:16, padding:22, marginBottom:14, boxShadow:'0 1px 3px 0 rgba(0, 0, 0, 0.05)' },
     btn: (bg='#0f172a') => ({ background:bg, color:'#ffffff', border:'none', borderRadius:10, padding:'9px 18px', cursor:'pointer', fontWeight:700, fontSize:13, transition:'opacity 0.15s' }),
     inp: { background:'#ffffff', border:'1px solid #cbd5e1', borderRadius:10, padding:'10px 13px', color:'#0f172a', width:'100%', fontSize:14, boxSizing:'border-box' as const, outline:'none' },

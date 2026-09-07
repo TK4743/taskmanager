@@ -253,7 +253,7 @@ export default function FacultyIndustryHubView({ token, user }: { token: string;
   };
 
   return (
-    <div className="min-h-full bg-zinc-50 text-zinc-900 font-sans p-4 md:p-8">
+    <div className="min-h-full w-full bg-[#F5F5F4] text-zinc-900 font-sans p-4 md:p-8">
       {/* Toast Alert */}
       {toast && (
         <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-xl border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-200 ${
