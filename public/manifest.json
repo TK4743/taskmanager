@@ -1,7 +1,7 @@
 {
-  "name": "VSBEC IT Task Manager | VSB Engineering College Karur",
+  "name": "VSBEC IT Task Manager | Tharunkumar K | VSB Engineering College Karur",
   "short_name": "VSBEC IT",
-  "description": "Official Academic task governance, coding competency tracking, and student progress monitoring portal for VSB Engineering College (VSBEC, VSB Karur), Department of Information Technology (VSBEC IT).",
+  "description": "Official Academic task governance, coding competency tracking, and student progress monitoring portal for VSB Engineering College (VSBEC, VSB Karur), Department of Information Technology (VSBEC IT), developed by Tharunkumar K.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
