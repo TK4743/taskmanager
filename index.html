@@ -17,6 +17,10 @@
   <meta name="google-site-verification" content="t1hrJIMI5rHn7K7Ze68i_pU8ALCJcSXJIZPaFYjNUqE" />
   <link rel="canonical" href="https://it-taskmanager.vercel.app/" />
 
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
   <!-- Favicon & PWA Icons -->
   <link rel="icon" type="image/png" href="/logo.png" />
   <link rel="apple-touch-icon" href="/logo.png" />
@@ -470,10 +474,29 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js', { scope: '/' })
-          .then((reg) => reg.update())
+          .then((reg) => {
+            reg.update();
+            if (reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+          })
           .catch(() => {});
       });
     }
+
+    // Force purge obsolete service worker and runtime caches
+    try {
+      sessionStorage.removeItem('mandatory_compliance_dismissed_v1');
+      if ('caches' in window) {
+        caches.keys().then((keys) => {
+          keys.forEach((k) => {
+            if (k !== 'vsbec-it-cache-v3.0.0-purge') {
+              caches.delete(k);
+            }
+          });
+        });
+      }
+    } catch (e) {}
   </script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
