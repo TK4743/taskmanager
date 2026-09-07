@@ -256,27 +256,27 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-zinc-900 pb-20 font-sans">
-      {/* Toast alert */}
-      {toast && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 bg-zinc-900 text-white rounded-full text-xs font-bold shadow-2xl border border-zinc-700 animate-bounce">
-          {toast}
-        </div>
-      )}
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] text-zinc-900 font-sans">
+      <div className="w-full space-y-6">
+        {/* Toast alert */}
+        {toast && (
+          <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 bg-zinc-900 text-white rounded-full text-xs font-bold shadow-2xl border border-zinc-700 animate-bounce">
+            {toast}
+          </div>
+        )}
 
-      {/* Top Banner Header */}
-      <div className="bg-white border-b border-zinc-200/80 px-6 py-6 shadow-xs">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Top Banner Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
           <div className="space-y-1">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-zinc-100 text-zinc-900 rounded-xl border border-zinc-200">
+              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100 shadow-2xs">
                 <BrainCircuit size={22} />
               </div>
-              <h1 className="text-xl font-black text-zinc-900 tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
                 AI Skill Gap & Career Intelligence
               </h1>
             </div>
-            <p className="text-xs text-zinc-500 font-medium">
+            <p className="text-xs text-zinc-500 font-semibold mt-1">
               Self-contained algorithmic comparative matching between your verified competencies and industry hiring standards
             </p>
           </div>
@@ -287,14 +287,14 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
             >
               <Plus size={14} /> Add Skill to Profile
             </button>
-            <div className="text-xs font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-3.5 py-2 rounded-xl hidden sm:block">
+            <div className="text-xs font-bold text-zinc-500 bg-white border border-zinc-200 px-3.5 py-2 rounded-xl hidden sm:block shadow-2xs">
               100% Native Algorithmic Engine
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-6xl mx-auto px-6 pt-6 space-y-6">
+        {/* Content Container */}
+        <div className="w-full space-y-6">
         {/* Selector Bar */}
         <div className="bg-white border border-zinc-200/80 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex-1 w-full">
@@ -786,6 +786,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

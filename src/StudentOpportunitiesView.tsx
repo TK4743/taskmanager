@@ -166,40 +166,44 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
   const applied = (postingId: string) => applications.some(a => a.posting_id === postingId);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F4] text-zinc-900 pb-16">
-      {toast && (
-        <div className={`fixed bottom-6 right-6 z-[99999] px-5 py-3 rounded-xl shadow-xl font-bold text-sm text-white transition-all ${toastType === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}>
-          {toastType === 'success' ? '✅' : '❌'} {toast}
-        </div>
-      )}
-
-      {/* Top Banner Header */}
-      <div className="bg-white border-b border-zinc-200 px-6 py-5 shadow-2xs">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🎯</span>
-              <h1 className="text-xl font-black text-zinc-900 tracking-tight">Industry Opportunities & Placements</h1>
-            </div>
-            <p className="text-xs text-zinc-500 mt-1 font-medium">Jobs · Internships · Training · Workshops · Joint Faculty R&D</p>
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] text-zinc-900">
+      <div className="w-full space-y-6">
+        {toast && (
+          <div className={`fixed bottom-6 right-6 z-[99999] px-5 py-3 rounded-xl shadow-xl font-bold text-sm text-white transition-all ${toastType === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}>
+            {toastType === 'success' ? '✅' : '❌'} {toast}
           </div>
-          <div className="text-xs font-semibold text-zinc-500 bg-zinc-50 border border-zinc-200 px-3.5 py-1.5 rounded-full w-fit">
+        )}
+
+        {/* ── Top Header Bar ────────────────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 shadow-2xs">
+                <span className="text-xl">🎯</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
+                Industry Opportunities & Placements
+              </h1>
+            </div>
+            <p className="text-xs text-zinc-500 font-semibold mt-1">
+              Jobs · Internships · Training · Workshops · Joint Faculty R&D
+            </p>
+          </div>
+          <div className="text-xs font-semibold text-zinc-500 bg-white border border-zinc-200 px-3.5 py-1.5 rounded-full w-fit shadow-2xs">
             Welcome, <span className="font-bold text-zinc-900">{user?.full_name || 'Candidate'}</span>
           </div>
         </div>
-      </div>
 
-      {/* Navigation Tabs */}
-      <div className="bg-white border-b border-zinc-200 px-6">
-        <div className="max-w-6xl mx-auto flex gap-2 pt-2">
+        {/* ── Navigation Tabs ────────────────────────────────────────────────── */}
+        <div className="flex gap-2 border-b border-zinc-200 pb-px">
           {(['browse', 'recommendations', 'applications'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-2.5 font-bold text-xs rounded-t-lg transition-all border-b-2 flex items-center gap-1.5 ${
+              className={`px-4 py-2.5 font-bold text-xs rounded-t-xl transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
                 tab === t
                   ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
-                  : 'border-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
               }`}
             >
               {t === 'browse' ? '🔍 Browse All' : t === 'recommendations' ? '⭐ AI Recommended' : '📋 My Applications'}
@@ -211,9 +215,9 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
             </button>
           ))}
         </div>
-      </div>
 
-      <div className="max-w-6xl mx-auto px-6 pt-6">
+        {/* ── Tab Content Area ──────────────────────────────────────────────── */}
+        <div className="w-full space-y-6">
         {/* BROWSE TAB */}
         {tab === 'browse' && (
           <>
@@ -720,6 +724,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

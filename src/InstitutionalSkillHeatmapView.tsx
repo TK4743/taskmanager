@@ -130,28 +130,27 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F4] text-zinc-900 pb-16">
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-[99999] bg-zinc-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-zinc-700 text-xs font-bold flex items-center gap-2 animate-bounce">
-          <Sparkles size={16} className="text-amber-400" />
-          {toast}
-        </div>
-      )}
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] text-zinc-900">
+      <div className="w-full space-y-6">
+        {toast && (
+          <div className="fixed bottom-6 right-6 z-[99999] bg-zinc-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-zinc-700 text-xs font-bold flex items-center gap-2 animate-bounce">
+            <Sparkles size={16} className="text-amber-400" />
+            {toast}
+          </div>
+        )}
 
-      {/* Top Banner Header */}
-      <div className="bg-white border-b border-zinc-200/90 px-6 py-5 shadow-2xs">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Top Banner Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
           <div>
             <div className="flex items-center gap-2.5">
               <span className="p-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600">
                 <BarChart3 size={20} />
               </span>
-              <h1 className="text-xl font-black text-zinc-900 tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
                 Institutional Skill Heatmap & Cohort Analytics
               </h1>
             </div>
-            <p className="text-xs text-zinc-500 mt-1 font-medium">
+            <p className="text-xs text-zinc-500 font-semibold mt-1">
               Real-time student competency mapping, domain sector readiness (including <strong>Ministry of Ayush & Health-Tech</strong>), and institutional deficit analytics for academic governance.
             </p>
           </div>
@@ -174,9 +173,7 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
             </button>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-6 pt-6 space-y-6">
         {/* Executive KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white border border-zinc-200/90 rounded-2xl p-5 shadow-2xs hover:shadow-xs transition-all">

@@ -1179,7 +1179,8 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
   // ── Render 3: Assessment Catalog & Pre-Check Modal ─────────────────────────
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] text-zinc-900">
+      <div className="w-full space-y-6">
       {toast && (
         <div className="fixed top-6 right-6 z-50 px-5 py-3 bg-zinc-900 text-white rounded-2xl text-xs font-bold shadow-2xl border border-zinc-700">
           {toast}
@@ -1408,6 +1409,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
           </div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 };
