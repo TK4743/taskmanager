@@ -220,7 +220,85 @@ When a student has **0 skill gaps** (`gaps.length === 0`), the engine skips reme
 
 ---
 
-## Section 5: Custom Doubts Scratchpad
+---
+
+## Section 5: How LeetCode Tracker & GitHub Tracker Work Under the Hood
+
+The portal features automated background trackers that continuously verify student coding consistency on **LeetCode** and **GitHub** without requiring manual screenshot uploads.
+
+---
+
+### 1. ⚡ LeetCode Daily Tracker
+
+#### A. Architecture & Workflow
+1. **Student Username Resolution**:
+   - The engine reads `users.leetcode_url` or `student_coding_profiles.leetcode` and extracts the clean username (e.g., `https://leetcode.com/u/tharun4743/` $\to$ `tharun4743`).
+2. **Direct GraphQL Query to LeetCode**:
+   - The backend sends a POST request to `https://leetcode.com/graphql`:
+     ```graphql
+     query userProblemsSolved($username: String!) {
+       matchedUser(username: $username) {
+         submitStats {
+           acSubmissionNum {
+             difficulty
+             count
+           }
+         }
+       }
+       recentAcSubmissionList(username: $username, limit: 50) {
+         title
+         titleSlug
+         timestamp
+       }
+     }
+     ```
+3. **Timezone Normalization (IST UTC+5:30)**:
+   - LeetCode records timestamps in epoch seconds.
+   - The engine converts the epoch timestamps to Indian Standard Time (IST) and filters submissions between `00:00:00 IST` and `23:59:59 IST` for the given date.
+4. **Target Evaluation & Streak Tracking**:
+   - Compares daily solved count against configured targets in `leetcode_targets` (set per Department, Year, or Section).
+   - If `daily_solved >= target_problems`, status is flagged as **Target Met** and increments the student's active daily streak.
+   - Saves records into `leetcode_daily_progress` and auto-generates audit CSVs.
+
+---
+
+### 2. 🐙 GitHub Commit & Velocity Tracker
+
+#### A. Architecture & Workflow
+1. **Username & Token Authentication**:
+   - Extracts the GitHub username from `users.github_url` or `student_coding_profiles.github`.
+   - Sends authenticated GraphQL queries using the department `GITHUB_TOKEN` (up to 5,000 requests/hr rate limit).
+2. **GraphQL Query to GitHub Contribution Calendar**:
+   - Queries `https://api.github.com/graphql`:
+     ```graphql
+     query ($username: String!, $from: DateTime!, $to: DateTime!) {
+       user(login: $username) {
+         contributionsCollection(from: $from, to: $to) {
+           contributionCalendar {
+             weeks {
+               contributionDays {
+                 date
+                 contributionCount
+               }
+             }
+           }
+         }
+       }
+     }
+     ```
+3. **Date-Accurate Commit Extraction**:
+   - Sets the date window precisely for IST:
+     - `from`: `YYYY-MM-DDT00:00:00+05:30`
+     - `to`: `YYYY-MM-DDT23:59:59+05:30`
+   - Reads the exact `contributionCount` (commits to public/private repositories, PR merges, code reviews).
+4. **Target Verification & Alerting**:
+   - Compares commit counts with `github_targets` (e.g., min 1 commit/day to maintain green contribution grid).
+   - Stores daily performance in `github_daily_commits`.
+   - Incomplete students can be notified automatically via Telegram and Email alerts before midnight.
+
+---
+
+## Section 6: Custom Doubts Scratchpad
 
 > *Have a new question or doubt? Add it right here!*
 
@@ -229,3 +307,5 @@ When a student has **0 skill gaps** (`gaps.length === 0`), the engine skips reme
 | 1 | How do I run the full project locally? | Run `npm run dev` in the terminal to start the Vite dev server on port 5173. | Resolved |
 | 2 | Where are the database credentials stored? | In `.env` under `DATABASE_URL` connecting to the Supabase transaction pooler. | Resolved |
 | 3 | Can students switch tabs during the assessment? | Proctoring monitors tab switches, fullscreen exit, and face visibility, logging events in real time. | Active |
+| 4 | How does LeetCode / GitHub tracking work? | Queries official LeetCode & GitHub GraphQL APIs directly, normalizes timestamps to IST (UTC+5:30), and tracks daily targets automatically. | Resolved |
+
