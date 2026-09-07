@@ -1,7 +1,7 @@
 {
-  "name": "VSBEC IT Academic Task Management System",
+  "name": "VSBEC IT Task Manager | VSB Engineering College Karur",
   "short_name": "VSBEC IT",
-  "description": "Academic task governance, coding competency tracking, and student progress monitoring portal for VSB Engineering College IT Department.",
+  "description": "Official Academic task governance, coding competency tracking, and student progress monitoring portal for VSB Engineering College (VSBEC, VSB Karur), Department of Information Technology (VSBEC IT).",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
