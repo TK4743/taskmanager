@@ -406,3 +406,123 @@ The portal features automated background trackers that continuously verify stude
 | 4 | How does LeetCode / GitHub tracking work? | Queries official LeetCode & GitHub GraphQL APIs directly, normalizes timestamps to IST (UTC+5:30), and tracks daily targets automatically. | Resolved |
 
 ---
+
+## Doubt 18: How Telegram Automation, Bot Webhooks, Student Account Linking, and Group Alerts Work
+
+The platform features a dedicated 4,200+ line Telegram engine (`telegramService.ts`) that connects the university database to the **Telegram Bot API** (`https://api.telegram.org/bot<TOKEN>/...`).
+
+```
+                              TELEGRAM AUTOMATION ARCHITECTURE
+                              
+  ┌─────────────────────────┐                                        ┌─────────────────────────┐
+  │   FACULTY / ADVISOR     │                                        │     STUDENT INBOX       │
+  │ • Posts New Task        │                                        │ • Receives Private DM   │
+  │ • Extends Deadline      │                                        │ • Solves Daily LeetCode │
+  └────────────┬────────────┘                                        └────────────▲────────────┘
+               │                                                                  │
+               ▼                                                                  │
+  ┌─────────────────────────┐      HTTP POST to Telegram API         ┌────────────┴────────────┐
+  │     NODE.JS BACKEND     │───────────────────────────────────────>│   OFFICIAL TELEGRAM     │
+  │ • telegramService.ts    │<───────────────────────────────────────│        BOT API          │
+  │ • PostgreSQL Database   │     Incoming Webhook (/api/webhook)    └────────────┬────────────┘
+  └─────────────────────────┘                                                     │
+                                                                                  ▼
+                                                                     ┌─────────────────────────┐
+                                                                     │   STUDENT BATCH GROUP   │
+                                                                     │ • Daily 24h Alert       │
+                                                                     │ • Live Leaderboard      │
+                                                                     │ • Excel Defaulters List │
+                                                                     └─────────────────────────┘
+```
+
+---
+
+### 1. Dual Operational Architecture: Webhook vs. Polling
+
+The bot operates in two modes to handle different deployment environments:
+
+1. **Production Mode (Webhook over HTTPS):**
+   * Configured via `POST /api/telegram/set-webhook` pointing to `https://it-taskmanager.vercel.app/api/telegram/webhook`.
+   * When a student types a command (e.g. `/tasks` or `/leetcode`), Telegram's cloud servers send an HTTP POST event with an `X-Telegram-Bot-Api-Secret-Token` header directly to the server.
+   * The server executes the response and replies in $<100\text{ms}$ with zero polling overhead.
+2. **Local Development Mode (Long-Polling):**
+   * Controlled via `startTelegramPoller()`.
+   * Continuously queries `https://api.telegram.org/bot<TOKEN>/getUpdates?offset=<last_id>&timeout=30` using persistent HTTP connections to test bot features locally without public HTTPS tunnels.
+
+---
+
+### 2. How a Student Links Their Telegram Account (Account Handshake)
+
+To receive private deadline reminders and check personal tasks, a student must link their Telegram account:
+
+```
+[Student in Telegram] ────> Types: /link 922524205171
+                                   │
+                                   ▼
+          Node Backend searches users WHERE register_number = '922524205171'
+                                   │
+                                   ▼
+          Updates PostgreSQL: users.telegram_chat_id = msg.chat.id
+                                   │
+                                   ▼
+          Bot replies: "✅ Successfully linked to Tharunkumar K (IV-Year IT)!"
+```
+
+1. In Telegram, the student searches for `@IT_TaskManager_Alerts_bot` and sends `/link <REGISTER_NUMBER>` or opens the portal profile and clicks **"Connect Telegram"** (which generates a deep-link: `https://t.me/IT_TaskManager_Alerts_bot?start=link_<token>`).
+2. The bot extracts the Telegram user's private `chat_id` (e.g. `148392019`).
+3. It validates the register number against PostgreSQL `users`.
+4. It updates PostgreSQL:
+   `UPDATE users SET telegram_chat_id = $1, telegram_username = $2, updated_at = NOW() WHERE id = $3;`
+5. From that moment forward, the backend can reach that student directly on their phone with personal alerts.
+
+---
+
+### 3. Automated Group & Individual Triggers
+
+The system automatically fires alerts based on real-time academic events:
+
+#### A. New Task Released (`notifyNewTaskCreated`)
+* **Trigger:** When a Class Advisor publishes an assignment in `src/App.tsx`.
+* **Payload:**
+  - Formatted HTML message: Task Title, Due Date, Priority badge (`🔴 URGENT` / `🟡 MEDIUM`), and Description.
+  - Interactive Inline Keyboard Button: `[ 🌐 Open & Submit in Portal ]` linking directly to the submission form.
+  - Broadcasted directly to the Department's official Telegram Class Group (`getGroupChatId()`).
+
+#### B. Urgent Deadline Alert (< 24 Hours Remaining) (`sendGroupDeadlineAlert`)
+* **Trigger:** An automated cron/scheduler job queries:
+  `SELECT * FROM tasks WHERE deadline BETWEEN NOW() AND NOW() + INTERVAL '24 hours' AND is_active = TRUE;`
+* **Payload:**
+  - Calculates remaining hours and minutes: `⏰ Due in 4 hours 30 mins!`.
+  - Displays a visual Unicode progress bar: `Progress: [████████░░░░] 67%`.
+  - Shows verified completion statistics (`Boys: 24/30 | Girls: 28/30`).
+  - Automatically attaches a generated Excel spreadsheet listing the exact names and register numbers of students who haven't submitted yet (`buildIncompleteExcelBuffer`).
+
+#### C. Personal Defaulter Reminders (`triggerPendingTaskReminders`)
+* **Trigger:** Faculty clicks **"Send Telegram Alerts to Defaulters"** in the Task Analyzer.
+* **Payload:**
+  - Loops strictly through students who have NOT submitted (`status = 'PENDING'`).
+  - Checks if `user.telegram_chat_id` is present.
+  - Sends a private direct message (DM) to their personal Telegram:
+    > *"Hi Tharun, you have 1 pending task due today: **Cloud Computing Lab 4**. Please upload your proof screenshot before 5:00 PM."*
+
+#### D. LeetCode Daily Streak Monitoring (`getStudentLeetCodeCard`)
+* Compares daily solves against class targets (`leetcode_targets`).
+* If a student solves their target, the bot increments their streak: `🔥 Current Streak: 14 Days!`.
+* If a student hasn't solved any problem by 8:00 PM IST, the bot sends a nudge: *"Don't break your 14-day streak! Solve 1 LeetCode problem before midnight."*
+
+---
+
+### 4. Interactive In-Bot Commands & Menus
+
+Students and faculty can interact directly with the bot via slash commands:
+
+| Command | What It Does Under the Hood |
+|---|---|
+| `/tasks` | Queries `tasks` and `task_submissions` to list the user's active, pending, and overdue assignments with direct submit buttons. |
+| `/leetcode` | Fetches real-time problem count (Easy, Medium, Hard) and today's acceptance status from LeetCode GraphQL API. |
+| `/github` | Displays today's commit count and active commit velocity. |
+| `/leaderboard` | Queries top 10 students ranked by LeetCode solved problems and task compliance. |
+| `/profile` | Displays verified CGPA, department, class advisor name, and placement readiness score. |
+| `/status` | Faculty command: shows class-wide completion percentage and boys/girls breakdown for active tasks. |
+
+---
