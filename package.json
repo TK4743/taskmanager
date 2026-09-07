@@ -8,7 +8,7 @@
   },
   "homepage": "https://it-taskmanager.vercel.app/",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "start": "tsx server.ts",
