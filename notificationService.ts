@@ -124,7 +124,7 @@ export async function sendUnifiedNotification(options: SendNotificationOptions):
               <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                 <div style="background: #0f172a; padding: 24px; text-align: center; color: #ffffff;">
                   <h2 style="margin: 0; font-size: 20px; font-weight: 800;">${title}</h2>
-                  <p style="margin: 4px 0 0 0; font-size: 12px; color: #94a3b8;">SIH26044 Academia–Industry Platform</p>
+                  <p style="margin: 4px 0 0 0; font-size: 12px; color: #94a3b8;">Academia–Industry Platform</p>
                 </div>
                 <div style="padding: 28px; color: #334155; line-height: 1.6;">
                   <p style="margin-top: 0;">Hello <strong>${recipient.full_name || 'User'}</strong>,</p>

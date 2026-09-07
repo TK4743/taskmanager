@@ -150,10 +150,6 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
               <h1 className="text-xl font-black text-zinc-900 tracking-tight">
                 Institutional Skill Heatmap & Cohort Analytics
               </h1>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
-                <Sparkles size={11} className="text-amber-600" />
-                SIH26044
-              </span>
             </div>
             <p className="text-xs text-zinc-500 mt-1 font-medium">
               Real-time student competency mapping, domain sector readiness (including <strong>Ministry of Ayush & Health-Tech</strong>), and institutional deficit analytics for academic governance.

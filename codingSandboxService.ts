@@ -39,65 +39,43 @@ export interface BatchEvaluationResult {
   max_execution_time_ms: number;
 }
 
-// Starter templates for each language
+// Starter templates for each language (clean and basic)
 export const STARTER_TEMPLATES: Record<SupportedLanguage, string> = {
   c: `#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 int main() {
-    // Read input from standard input
-    int n;
-    if (scanf("%d", &n) == 1) {
-        // Write your solution here
-        printf("%d\\n", n);
-    }
+    // Write your solution here
+    
     return 0;
 }
 `,
   cpp: `#include <iostream>
-#include <vector>
-#include <string>
-#include <algorithm>
-#include <unordered_map>
-
 using namespace std;
 
 int main() {
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
-    
-    // Read input from standard input
-    int n;
-    if (cin >> n) {
-        // Write your solution here
-        cout << n << "\\n";
-    }
+    // Write your solution here
     
     return 0;
 }
 `,
-  java: `import java.util.*;
+  java: `import java.util.Scanner;
 
 public class Solution {
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
+        Scanner sc = new Scanner(System.in);
         // Write your solution here
         
     }
 }
 `,
-  python: `import sys
+  python: `# Write your solution here
+import sys
 
-def solve():
-    lines = sys.stdin.read().split()
-    if not lines:
-        return
-    # Write your solution here
-    print(lines[0])
+def main():
+    pass
 
 if __name__ == '__main__':
-    solve()
+    main()
 `
 };
 
@@ -217,14 +195,207 @@ async function runProcess(
   });
 }
 
+const JUDGE0_LANGUAGE_IDS: Record<SupportedLanguage, number> = {
+  c: 50,      // C (GCC 9.2.0)
+  cpp: 54,    // C++ (GCC 9.2.0)
+  java: 62,   // Java (OpenJDK 13.0.1)
+  python: 71  // Python (3.8.1)
+};
+
 /**
- * Compiles and evaluates source code against a batch of test cases inside an isolated temporary sandbox
+ * Cloud evaluation via Judge0 CE API (works out-of-the-box on Vercel Serverless without local compilers)
  */
-export async function evaluateCodeSandbox(
+async function evaluateViaJudge0(
   language: SupportedLanguage,
   sourceCode: string,
-  testCases: TestCaseInput[],
-  isSampleRunOnly: boolean = false
+  testCases: TestCaseInput[]
+): Promise<BatchEvaluationResult | null> {
+  const langId = JUDGE0_LANGUAGE_IDS[language];
+  if (!langId) return null;
+
+  // Adapt class name for Java on Judge0 (which compiles Main.java)
+  let preparedCode = sourceCode;
+  if (language === 'java') {
+    if (/public\s+class\s+[A-Za-z0-9_]+/.test(preparedCode)) {
+      preparedCode = preparedCode.replace(/public\s+class\s+[A-Za-z0-9_]+/, 'public class Main');
+    } else if (/\bclass\s+Solution\b/.test(preparedCode)) {
+      preparedCode = preparedCode.replace(/\bclass\s+Solution\b/, 'public class Main');
+    } else if (!/\bclass\s+Main\b/.test(preparedCode)) {
+      preparedCode = preparedCode.replace(/\bclass\s+[A-Za-z0-9_]+/, 'public class Main');
+    }
+  }
+
+  const endpoint = process.env.JUDGE0_URL || 'https://ce.judge0.com/submissions?wait=true';
+
+  const runSingle = async (tc: TestCaseInput) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    try {
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_code: preparedCode,
+          language_id: langId,
+          stdin: tc.input_data || '',
+        }),
+        signal: controller.signal,
+      });
+      if (!resp.ok) {
+        throw new Error(`Judge0 responded with HTTP ${resp.status}`);
+      }
+      return await resp.json();
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  try {
+    // Run first test case to detect compilation errors immediately
+    const firstJudge = await runSingle(testCases[0]);
+    if (firstJudge.status?.id === 6) {
+      const cleanCompilerOutput = (firstJudge.compile_output || firstJudge.stderr || 'Compilation error occurred.')
+        .replace(/\bMain\.java\b/g, 'Solution.java')
+        .replace(/\bMain\b/g, 'Solution');
+      return {
+        status: 'COMPILATION_ERROR',
+        score_percentage: 0,
+        public_tests_passed: 0,
+        public_tests_total: testCases.filter(t => !t.is_hidden).length,
+        hidden_tests_passed: 0,
+        hidden_tests_total: testCases.filter(t => t.is_hidden).length,
+        total_passed: 0,
+        total_tests: testCases.length,
+        results: testCases.map(tc => ({
+          passed: false,
+          status: 'COMPILATION_ERROR',
+          error_message: cleanCompilerOutput,
+          execution_time_ms: 0,
+          memory_used_kb: 0,
+          is_hidden: tc.is_hidden,
+        })),
+        compiler_output: cleanCompilerOutput,
+        max_execution_time_ms: 0,
+      };
+    }
+
+    // Run remaining test cases in parallel
+    const remainingJudges = await Promise.all(testCases.slice(1).map(tc => runSingle(tc)));
+    const allJudges = [firstJudge, ...remainingJudges];
+
+    const results: ExecutionResult[] = [];
+    let publicPassed = 0;
+    let publicTotal = 0;
+    let hiddenPassed = 0;
+    let hiddenTotal = 0;
+    let maxTimeMs = 0;
+    let overallStatus: 'ACCEPTED' | 'WRONG_ANSWER' | 'RUNTIME_ERROR' | 'TIME_LIMIT_EXCEEDED' = 'ACCEPTED';
+
+    for (let i = 0; i < testCases.length; i++) {
+      const testCase = testCases[i];
+      const judgeRes = allJudges[i];
+      const isHidden = Boolean(testCase.is_hidden);
+      if (isHidden) hiddenTotal++;
+      else publicTotal++;
+
+      const statusId = judgeRes.status?.id;
+      const durationMs = Math.round(parseFloat(judgeRes.time || '0') * 1000);
+      const memoryKb = judgeRes.memory || 0;
+      maxTimeMs = Math.max(maxTimeMs, durationMs);
+
+      if (statusId === 5) {
+        if (overallStatus === 'ACCEPTED') overallStatus = 'TIME_LIMIT_EXCEEDED';
+        results.push({
+          passed: false,
+          status: 'TIME_LIMIT_EXCEEDED',
+          actual_output: isHidden ? undefined : 'Time Limit Exceeded (> 2500ms)',
+          expected_output: isHidden ? undefined : testCase.expected_output,
+          error_message: 'Time Limit Exceeded (> 2500ms)',
+          execution_time_ms: durationMs,
+          memory_used_kb: memoryKb,
+          is_hidden: isHidden,
+        });
+        continue;
+      }
+
+      if (statusId && statusId >= 7 && statusId <= 12) {
+        if (overallStatus === 'ACCEPTED') overallStatus = 'RUNTIME_ERROR';
+        const rawErr = (judgeRes.stderr || judgeRes.message || 'Runtime error during test execution')
+          .replace(/\bMain\.java\b/g, 'Solution.java');
+        results.push({
+          passed: false,
+          status: 'RUNTIME_ERROR',
+          actual_output: isHidden ? undefined : (judgeRes.stdout || ''),
+          expected_output: isHidden ? undefined : testCase.expected_output,
+          error_message: isHidden ? 'Runtime error' : rawErr,
+          execution_time_ms: durationMs,
+          memory_used_kb: memoryKb,
+          is_hidden: isHidden,
+        });
+        continue;
+      }
+
+      const normalizedActual = normalizeOutput(judgeRes.stdout || '');
+      const normalizedExpected = normalizeOutput(testCase.expected_output || '');
+      const isMatch = normalizedActual === normalizedExpected;
+
+      if (isMatch) {
+        if (isHidden) hiddenPassed++;
+        else publicPassed++;
+
+        results.push({
+          passed: true,
+          status: 'ACCEPTED',
+          actual_output: isHidden ? undefined : normalizedActual,
+          expected_output: isHidden ? undefined : normalizedExpected,
+          execution_time_ms: durationMs,
+          memory_used_kb: memoryKb,
+          is_hidden: isHidden,
+        });
+      } else {
+        if (overallStatus === 'ACCEPTED') overallStatus = 'WRONG_ANSWER';
+        results.push({
+          passed: false,
+          status: 'WRONG_ANSWER',
+          actual_output: isHidden ? undefined : normalizedActual,
+          expected_output: isHidden ? undefined : normalizedExpected,
+          error_message: isHidden ? undefined : 'Output did not match expected result.',
+          execution_time_ms: durationMs,
+          memory_used_kb: memoryKb,
+          is_hidden: isHidden,
+        });
+      }
+    }
+
+    const totalPassed = publicPassed + hiddenPassed;
+    const totalTests = testCases.length || 1;
+    const scorePercentage = parseFloat(((totalPassed / totalTests) * 100).toFixed(2));
+
+    return {
+      status: overallStatus,
+      score_percentage: scorePercentage,
+      public_tests_passed: publicPassed,
+      public_tests_total: publicTotal,
+      hidden_tests_passed: hiddenPassed,
+      hidden_tests_total: hiddenTotal,
+      total_passed: totalPassed,
+      total_tests: testCases.length,
+      results,
+      max_execution_time_ms: maxTimeMs,
+    };
+  } catch (err) {
+    console.warn('[Judge0 Sandbox] Cloud execution failed or timed out, falling back to local sandbox:', err);
+    return null;
+  }
+}
+
+/**
+ * Compiles and evaluates source code locally in a temporary directory
+ */
+async function evaluateLocallyInSandbox(
+  language: SupportedLanguage,
+  sourceCode: string,
+  testCases: TestCaseInput[]
 ): Promise<BatchEvaluationResult> {
   const sandboxId = `sandbox_${crypto.randomBytes(8).toString('hex')}`;
   const sandboxDir = path.join(os.tmpdir(), sandboxId);
@@ -238,7 +409,7 @@ export async function evaluateCodeSandbox(
     let runCommand = '';
     let getRunArgs: (inputTestFile?: string) => string[] = () => [];
 
-    // Language-specific timeout policies (Section 9: C/C++ ~4s, Java ~6s, Python ~4s)
+    // Language-specific timeout policies (C/C++ ~4s, Java ~6s, Python ~4s)
     const EXECUTION_TIMEOUT_MS = {
       c: 4000,
       cpp: 4000,
@@ -266,7 +437,6 @@ export async function evaluateCodeSandbox(
       runCommand = outPath;
       getRunArgs = () => [];
     } else if (language === 'java') {
-      // Predictable Java entry point: Main or Solution
       let className = 'Main';
       let adjustedCode = sourceCode;
       if (/public\s+class\s+Solution|\bclass\s+Solution\b/.test(sourceCode)) {
@@ -421,9 +591,29 @@ export async function evaluateCodeSandbox(
       max_execution_time_ms: maxTimeMs,
     };
   } finally {
-    // Step 3: Guaranteed Workspace Cleanup
     try {
       await fs.rm(sandboxDir, { recursive: true, force: true });
     } catch {}
   }
+}
+
+/**
+ * Main evaluation entry point.
+ * Uses Judge0 cloud API first (essential for Vercel/serverless where GCC/Java are not locally installed).
+ * Automatically falls back to local sandbox execution if offline.
+ */
+export async function evaluateCodeSandbox(
+  language: SupportedLanguage,
+  sourceCode: string,
+  testCases: TestCaseInput[],
+  isSampleRunOnly: boolean = false
+): Promise<BatchEvaluationResult> {
+  if (testCases && testCases.length > 0) {
+    const cloudResult = await evaluateViaJudge0(language, sourceCode, testCases);
+    if (cloudResult) {
+      return cloudResult;
+    }
+  }
+
+  return evaluateLocallyInSandbox(language, sourceCode, testCases);
 }

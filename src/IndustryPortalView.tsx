@@ -667,7 +667,7 @@ export default function IndustryPortalView({
               <input style={c.inp} value={profileForm.company_name||''} onChange={e => setProfileForm(p=>({...p,company_name:e.target.value}))} />
             </div>
             <div style={{ marginBottom:14 }}>
-              <label style={c.lbl}>Industry Sector (SIH26044 Multi-Domain)</label>
+              <label style={c.lbl}>Industry Sector (Multi-Domain)</label>
               <select style={c.inp} value={profileForm.industry_sector||'Enterprise IT Services & Product Engineering'} onChange={e => setProfileForm(p=>({...p,industry_sector:e.target.value}))}>
                 <option value="🌿 AYUSH & Digital Health-Tech">🌿 AYUSH & Digital Health-Tech (Ayurveda, Yoga, Unani, Siddha, Homoeopathy & Telemedicine)</option>
                 <option value="🤖 AI / Machine Learning & Data Science">🤖 AI / Machine Learning & Data Science</option>

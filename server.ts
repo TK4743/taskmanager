@@ -9378,7 +9378,7 @@ async function startServer() {
       req.user.id
     ]);
 
-    // Dispatch via email service load balancer (force_resend defaults to true for SIH demo update broadcast)
+    // Dispatch via email service load balancer (force_resend defaults to true for broadcast)
     const dispatchResult = await triggerAssessmentCampaignEmails({
       track_type,
       track_title: trackTitle,
@@ -9910,7 +9910,7 @@ async function startServer() {
   }));
 
   // ════════════════════════════════════════════════════════════════════════════
-  // 🏭 SIH26044: ACADEMIA–INDUSTRY COLLABORATION PLATFORM ENDPOINTS
+  // 🏭 ACADEMIA–INDUSTRY COLLABORATION PLATFORM ENDPOINTS
   // ════════════════════════════════════════════════════════════════════════════
 
   // ── Native AI Skill Intelligence & Career Match Engine (100% Self-Contained, Zero External API Dependency) ──
@@ -11440,7 +11440,7 @@ async function startServer() {
     });
   }));
 
-  // ── 📊 SIH26044: Institutional Skill Heatmap & Cohort Analytics ──────────────
+  // ── 📊 Institutional Skill Heatmap & Cohort Analytics ──────────────
   app.get('/api/analytics/institutional-skills-heatmap', authenticate, asyncHandler(async (req: Request, res: Response) => {
     const user = (req as any).user;
     const { department_id, class_id } = req.query as Record<string, string>;
@@ -11684,7 +11684,7 @@ async function startServer() {
   }));
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 💻 SIH26044: Short Industry Coding Assessment APIs
+  // 💻 Industry Coding Assessment APIs
   // ══════════════════════════════════════════════════════════════════════════
 
   // ── HR: List Company Coding Assessments ───────────────────────────────────

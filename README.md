@@ -19,7 +19,7 @@
 <p align="center">
   <b>Department of Information Technology</b> • <b>VSB Engineering College, Karur</b><br/>
   <i>An Autonomous Institution • Accredited by NAAC with 'A' Grade • Approved by AICTE</i><br/>
-  <b>SIH26044 Academia–Industry Innovation Platform</b>
+  <b>Academia–Industry Integrated Platform</b>
 </p>
 
 <p align="center">
@@ -72,7 +72,7 @@
 
 ## 1. Executive Overview & Institutional Vision
 
-The **Academia–Industry Integrated Platform & IT Task Manager** is an enterprise-grade institutional governance, technical competency tracking, and corporate recruitment ecosystem engineered specifically for the Department of Information Technology at VSB Engineering College as part of the **Smart India Hackathon (SIH26044)** initiative.
+The **Academia–Industry Integrated Platform & IT Task Manager** is an enterprise-grade institutional governance, technical competency tracking, and corporate recruitment ecosystem engineered specifically for the Department of Information Technology at VSB Engineering College.
 
 ### Core Institutional Pillars:
 1. **Academic Task Oversight & Peer Review Governance**: Replaces unstructured paper/form submissions with a rigorous 3-tier review pipeline (**Student Coordinator Peer Review** $\rightarrow$ **Class Advisor Validation** $\rightarrow$ **HOD Oversight**), backed by Cloudinary image proof compression and audit logging.
@@ -518,7 +518,7 @@ sequenceDiagram
     Candidate->>Server: POST /api/student/coding-assessments/:id/finish
     Server->>Sandbox: Evaluate All Hidden Test Cases
     Server->>DB: Record final score, pass/fail status & update student_skills
-    Server->>Email: Dispatch SIH Demo Coding Scorecard Email to Student
+    Server->>Email: Dispatch Coding Scorecard Email to Student
     Server->>HR: Assessment Complete (Instant HR Dashboard Update)
 ```
 
@@ -550,7 +550,7 @@ sequenceDiagram
     Student->>Server: POST /api/assessment/submit
     Server->>DB: Store Answers, Score %, Category Breakdown & Strengths/Gaps
     Server->>Telegram: Dispatch Instant Telegram Performance Alert
-    Server->>Email: Dispatch Rich SIH Demo Scorecard Email
+    Server->>Email: Dispatch Rich Scorecard Email
     Server->>Student: Display Scorecard & AI Remedial Learning Links
 ```
 
@@ -668,11 +668,11 @@ erDiagram
 
 ## 10. Automated Scorecard & Email Notification Templates
 
-Outbound email templates feature responsive, institutional branding with **Smart India Hackathon (SIH Demo)** headers:
+Outbound email templates feature responsive, institutional branding:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ 🏆 SIH DEMO: Smart India Hackathon Institutional Assessment Scorecard       │
+│ 🏆 OFFICIAL: Institutional Assessment Scorecard                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ VSB ENGINEERING COLLEGE • DEPARTMENT OF INFORMATION TECHNOLOGY              │
 │ Candidate: Tharunkumar K (Reg: 922524205171)                                │
@@ -760,7 +760,7 @@ Audit Complete: 13/13 PASSED (0 FAILED)
 
 ## 13. License & Intellectual Property
 
-This project is developed and maintained for the **Department of Information Technology, VSB Engineering College, Karur** as part of the **Smart India Hackathon (SIH26044)** innovation initiative.
+This project is developed and maintained for the **Department of Information Technology, VSB Engineering College, Karur**.
 
 Developed with ❤️ by **[Techsquad](https://techsquadsih.netlify.app/)** • **[Tharunkumar K](https://github.com/Tharun4743)**.
 

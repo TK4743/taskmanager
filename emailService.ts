@@ -1608,9 +1608,6 @@ export async function sendTaskPendingReminderEmail(
           DEPARTMENT OF INFORMATION TECHNOLOGY
         </p>
         <div style="margin-top: 8px;">
-          <span style="display: inline-block; background: #ea580c; border: 1px solid #fb923c; color: #ffffff; font-size: 10.5px; font-weight: 800; padding: 3px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 6px;">
-            🇮🇳 SIH DEMO
-          </span>
           <span style="display: inline-block; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; font-size: 10.5px; font-weight: 700; padding: 3px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em;">
             VSBEC IT TASK MANAGER
           </span>
@@ -2268,7 +2265,7 @@ export async function sendAssessmentInvitationEmail(
     ? studentName.trim()
     : (registerNumber ? `Student (${registerNumber})` : 'Student');
 
-  const subject = `[SIH Demo] ${trackTitle} — Online Skill Assessment (Prototype Evaluation)`;
+  const subject = `${trackTitle} — Online Skill Assessment Invitation`;
   const portalLink = 'https://it-taskmanager.vercel.app/';
 
   const publisher = senderRole === 'HOD'
@@ -2283,15 +2280,15 @@ export async function sendAssessmentInvitationEmail(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${trackTitle} - SIH Demo Assessment</title>
+  <title>${trackTitle} - Institutional Skill Assessment</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155;">
 
   <div style="max-width: 640px; margin: 30px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
 
-    <!-- Top SIH Announcement Banner -->
-    <div style="background: linear-gradient(90deg, #ea580c 0%, #d97706 50%, #ea580c 100%); padding: 10px 20px; text-align: center; color: #ffffff; font-size: 11.5px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;">
-      ⚡ SMART INDIA HACKATHON (SIH) DEMO • INNOVATION PROTOTYPE
+    <!-- Top Institutional Banner -->
+    <div style="background: linear-gradient(90deg, #4f46e5 0%, #2563eb 50%, #4f46e5 100%); padding: 10px 20px; text-align: center; color: #ffffff; font-size: 11.5px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;">
+      ⚡ INSTITUTIONAL PLACEMENT & SKILL ASSESSMENT
     </div>
 
     <!-- Institutional Header -->
@@ -2304,9 +2301,6 @@ export async function sendAssessmentInvitationEmail(
         Department of Information Technology
       </h1>
       <div style="margin-top: 8px;">
-        <span style="background: #ea580c; color: #ffffff; font-size: 11px; font-weight: 800; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; margin-right: 6px; display: inline-block;">
-          🇮🇳 SIH INNOVATION DEMO
-        </span>
         <span style="background: #e0f2fe; border: 1px solid #7dd3fc; color: #0369a1; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; display: inline-block;">
           VSBEC IT TASK MANAGER
         </span>
@@ -2315,16 +2309,16 @@ export async function sendAssessmentInvitationEmail(
 
     <div style="padding: 28px;">
       
-      <!-- SIH Prototype Clarification Box (Normalized) -->
+      <!-- Assessment Notice Box -->
       <div style="background-color: #f0fdf4; border: 1.5px solid #86efac; border-left: 5px solid #16a34a; border-radius: 10px; padding: 16px 20px; margin: 0 0 24px 0;">
         <p style="font-size: 12.5px; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">
-          💡 SMART INDIA HACKATHON (SIH) PROTOTYPE EVALUATION
+          💡 PLACEMENT & TECHNICAL ASSESSMENT
         </p>
         <p style="font-size: 13px; color: #14532d; line-height: 1.55; margin: 0 0 6px 0;">
-          You are invited to explore the interactive online assessment module developed for the <strong>Smart India Hackathon (SIH)</strong> on the <strong>VSBEC IT Task Manager</strong> platform.
+          You are invited to take the proctored online assessment module on the <strong>VSBEC IT Task Manager</strong> platform.
         </p>
         <p style="font-size: 12px; color: #166534; line-height: 1.5; margin: 0;">
-          ℹ️ <em>This is an academic innovation demo built by the Department of IT for prototype testing and practice. It is not an official examination from the college Placement & Training Cell.</em>
+          ℹ️ <em>Please ensure you attempt this assessment from a laptop/desktop with a working webcam enabled.</em>
         </p>
       </div>
 
@@ -2333,7 +2327,7 @@ export async function sendAssessmentInvitationEmail(
         Dear ${displayName},
       </p>
       <p style="font-size: 13.5px; color: #475569; line-height: 1.6; margin: 0 0 20px 0;">
-        You have been invited to participate in the benchmarking track: <strong style="color: #312e81;">"${trackTitle}"</strong>. Test your knowledge, experience real-time performance diagnostics, and explore the hackathon prototype features!
+        You have been invited to participate in the benchmarking track: <strong style="color: #312e81;">"${trackTitle}"</strong>. Test your knowledge and experience real-time performance diagnostics!
       </p>
 
       <!-- Candidate Meta Pill -->
@@ -2362,7 +2356,7 @@ export async function sendAssessmentInvitationEmail(
           </td>
           <td style="padding: 8px 12px; font-size: 13px; color: #475569;">
             <p style="margin: 0 0 2px 0; font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700;">Module Status</p>
-            <p style="margin: 0; font-size: 14px; font-weight: 800; color: #ea580c;">⚡ Active SIH Demo</p>
+            <p style="margin: 0; font-size: 14px; font-weight: 800; color: #16a34a;">⚡ Live Active</p>
           </td>
         </tr>
       </table>
@@ -2379,22 +2373,22 @@ export async function sendAssessmentInvitationEmail(
       </div>
       ` : ''}
 
-      <!-- SIH Prototype Highlights -->
+      <!-- Assessment Features -->
       <div style="background-color: #f1f5f9; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;">
         <p style="margin: 0 0 10px 0; font-size: 12px; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.05em;">
-          🛡️ Prototype Features Included:
+          🛡️ Assessment Features Included:
         </p>
         <ul style="margin: 0; padding-left: 18px; font-size: 12.5px; color: #475569; line-height: 1.6;">
-          <li><strong>Anti-Cheat Web Simulation:</strong> Optional webcam snapshot verification & focus tracking prototype.</li>
+          <li><strong>Anti-Cheat Verification:</strong> Web camera identity verification & full-screen proctoring.</li>
           <li><strong>Instant Automated Scorecard:</strong> Real-time question analysis and gap suggestions generated upon submission.</li>
-          <li><strong>Interactive Sandbox:</strong> Safe testing environment built for learning and hackathon demonstration.</li>
+          <li><strong>Remedial Learning Path:</strong> AI-powered remedial recommendations based on your identified skill gaps.</li>
         </ul>
       </div>
 
       <!-- Direct Portal Call to Action -->
       <div style="text-align: center; margin: 32px 0 16px 0;">
         <a href="https://it-taskmanager.vercel.app/" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 800; padding: 14px 34px; border-radius: 12px; display: inline-block; box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);">
-          🚀 Launch Assessment Room (SIH Demo) →
+          🚀 Launch Assessment Room →
         </a>
       </div>
       <p style="text-align: center; font-size: 12.5px; color: #64748b; margin: 0 0 24px 0;">
@@ -2406,13 +2400,13 @@ export async function sendAssessmentInvitationEmail(
       <!-- Institutional Footer -->
       <div style="text-align: center; font-size: 11.5px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 20px;">
         <p style="font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">
-          VSBEC IT Task Manager • Smart India Hackathon (SIH) Project Demo
+          VSBEC IT Task Manager • Placement & Technical Competency Platform
         </p>
         <p style="font-size: 11px; color: #64748b; margin: 0 0 4px 0;">
           Department of Information Technology, VSB Engineering College (Autonomous), Karur - 639111
         </p>
         <p style="font-size: 10.5px; color: #94a3b8; margin: 0;">
-          Developed and Maintained by Techsquad for SIH Innovation Demonstration.
+          Developed and Maintained by Techsquad.
         </p>
       </div>
 
@@ -2428,7 +2422,7 @@ export async function sendAssessmentInvitationEmail(
     displayName,
     subject,
     htmlContent,
-    'VSBEC IT Task Manager (SIH Demo)'
+    'VSBEC IT Task Manager'
   );
 }
 
@@ -2512,7 +2506,7 @@ export async function triggerAssessmentCampaignEmails(params: {
       return { totalTargeted: 0, totalDispatched: 0, failedCount: 0, errors: [] };
     }
 
-    // 3. Deduplication check: When force_resend is true (e.g. SIH Demo update), send to all students!
+    // 3. Deduplication check: When force_resend is true (e.g. broadcast update), send to all students!
     let pendingStudents = students;
     let alreadyNotifiedCount = 0;
     if (!force_resend) {
@@ -2526,7 +2520,7 @@ export async function triggerAssessmentCampaignEmails(params: {
       pendingStudents = students.filter((s: any) => !alreadySentSet.has(s.id));
     }
 
-    console.log(`[EmailService] 📢 Initiating SIH DEMO Assessment Campaign for "${track.track_title}": Total Cohort: ${students.length}, Dispatching to: ${pendingStudents.length}`);
+    console.log(`[EmailService] 📢 Initiating Assessment Campaign for "${track.track_title}": Total Cohort: ${students.length}, Dispatching to: ${pendingStudents.length}`);
 
     if (pendingStudents.length === 0) {
       console.log(`[EmailService] ℹ️ All ${students.length} students have already received invitations for "${track.track_title}". No duplicate emails sent.`);
@@ -2663,7 +2657,7 @@ export async function sendAptitudeAssessmentResultEmail(payload: AptitudeAssessm
   const mins = Math.floor(timeTakenSeconds / 60);
   const secs = timeTakenSeconds % 60;
   const timeTakenFormatted = `${mins}m ${secs}s`;
-  const refCode = `SIH-DEMO/APT/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
+  const refCode = `VSB/APT/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
 
   // Category breakdown rows HTML
   const categoryRows = Object.entries(categoryBreakdown).map(([cat, pct]) => {
@@ -2712,14 +2706,14 @@ export async function sendAptitudeAssessmentResultEmail(payload: AptitudeAssessm
       <td height="6" style="background: linear-gradient(90deg, #1e3a8a 0%, #4f46e5 50%, #d97706 100%);"></td>
     </tr>
 
-    <!-- SIH Demo Top Notice Banner -->
+    <!-- Assessment Scorecard Top Banner -->
     <tr>
       <td style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); padding: 10px 20px; text-align: center; border-bottom: 1px solid #4338ca;">
-        <span style="display: inline-block; background-color: #f59e0b; color: #000000; font-size: 10px; font-weight: 900; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 8px;">
-          SIH DEMO
+        <span style="display: inline-block; background-color: #6366f1; color: #ffffff; font-size: 10px; font-weight: 900; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 8px;">
+          OFFICIAL
         </span>
         <span style="color: #e0e7ff; font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em;">
-          Smart India Hackathon • Institutional Placement & Skill Assessment Sandbox
+          Institutional Placement & Skill Assessment Scorecard
         </span>
       </td>
     </tr>
@@ -2898,7 +2892,7 @@ export async function sendAptitudeAssessmentResultEmail(payload: AptitudeAssessm
           NH-67, Karur-Coimbatore Highway, Karudayampalayam, Karur, Tamil Nadu 639111
         </p>
         <p style="margin: 0; color: #94a3b8; font-size: 10px;">
-          This is an automated Smart India Hackathon (SIH 2024 / SIH Demo) institutional assessment notification. Please do not reply directly to this email.
+          This is an automated institutional assessment notification. Please do not reply directly to this email.
         </p>
       </td>
     </tr>
@@ -2966,7 +2960,7 @@ export async function sendCodingAssessmentResultEmail(payload: CodingAssessmentR
   const portalLink = getCanonicalPortalUrl(portalUrl);
   const subject = `${isPassed ? '🏆 QUALIFIED' : '📊 EVALUATION COMPLETED'}: ${companyName} Coding Qualifier (${finalScore}/100) — VSBEC IT`;
   const currentDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
-  const refCode = `SIH-DEMO/CODE/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
+  const refCode = `VSB/CODE/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
 
   // Question details rows HTML
   const questionRows = questionsAttempted.length > 0 ? questionsAttempted.map((q, idx) => {
@@ -3025,14 +3019,14 @@ export async function sendCodingAssessmentResultEmail(payload: CodingAssessmentR
       <td height="6" style="background: linear-gradient(90deg, #4f46e5 0%, #06b6d4 50%, #10b981 100%);"></td>
     </tr>
 
-    <!-- SIH Demo Top Notice Banner -->
+    <!-- Coding Qualifier Top Banner -->
     <tr>
       <td style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); padding: 10px 20px; text-align: center; border-bottom: 1px solid #3730a3;">
         <span style="display: inline-block; background-color: #10b981; color: #ffffff; font-size: 10px; font-weight: 900; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 8px;">
-          SIH DEMO
+          OFFICIAL
         </span>
         <span style="color: #e0e7ff; font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em;">
-          Smart India Hackathon • Corporate Coding Qualifier & Live Proctoring Benchmark
+          Corporate Coding Qualifier & Live Proctoring Benchmark
         </span>
       </td>
     </tr>
@@ -3196,7 +3190,7 @@ export async function sendCodingAssessmentResultEmail(payload: CodingAssessmentR
           NH-67, Karur-Coimbatore Highway, Karudayampalayam, Karur, Tamil Nadu 639111
         </p>
         <p style="margin: 0; color: #94a3b8; font-size: 10px;">
-          This is an automated Smart India Hackathon (SIH 2024 / SIH Demo) institutional coding assessment notification. Please do not reply directly to this email.
+          This is an automated institutional coding assessment notification. Please do not reply directly to this email.
         </p>
       </td>
     </tr>

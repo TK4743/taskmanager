@@ -2501,7 +2501,7 @@ function StudentProfileView({
                 <Input placeholder="Achievement / Event Title *" value={newAchTitle} onChange={e => setNewAchTitle(e.target.value)} required className="sm:col-span-2" />
                 <Select value={newAchCategory} onChange={e => setNewAchCategory(e.target.value)}>
                   <option value="Hackathons">Hackathons</option>
-                  <option value="SIH">Smart India Hackathon (SIH)</option>
+                  <option value="National Hackathons">National Hackathons</option>
                   <option value="Coding Competitions">Coding Competitions</option>
                   <option value="Paper Presentations">Paper Presentations</option>
                   <option value="Awards">Awards & Honors</option>
@@ -10553,7 +10553,7 @@ export default function App() {
               />
             )}
 
-            {/* SIH26044 Academia-Industry Innovation Navigation */}
+            {/* Academia-Industry Innovation Navigation */}
             {isStudent && (
               <>
                 {FEATURE_FLAGS.opportunities && (
@@ -11467,9 +11467,9 @@ export default function App() {
                     if (view === 'analyzer') return 'Student Progress Analyzer';
                     if (view === 'verification') return 'Task Verification';
                     if (view === 'users') return 'User Management';
-                    if (view === 'skill-assessment') return 'Placement Skill Assessment (SIH Demo)';
-                    if (view === 'placement-readiness') return 'Placement Readiness Rating (SIH Demo)';
-                    if (view === 'institutional-skill-heatmap') return 'Institutional Skill Heatmap & Cohort Analytics (SIH26044)';
+                    if (view === 'skill-assessment') return 'Placement Skill Assessment';
+                    if (view === 'placement-readiness') return 'Placement Readiness Rating';
+                    if (view === 'institutional-skill-heatmap') return 'Institutional Skill Heatmap & Cohort Analytics';
                     if (view === 'live-teaching-hub') return 'Live Teaching Hub (GOAT Code Editor)';
                     if (view === 'tasks') return 'Tasks';
                     return view.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());

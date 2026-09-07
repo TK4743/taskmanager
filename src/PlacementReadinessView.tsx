@@ -199,10 +199,6 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                   Placement Readiness Rating
                 </h1>
               </div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 text-amber-900 border border-amber-300 shadow-2xs shrink-0">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                SIH DEMO PURPOSE ONLY
-              </span>
             </div>
             <p className="text-xs text-zinc-500 font-semibold mt-1">
               Unified 0–100% Placement Eligibility Index (Aptitude 35% • LeetCode 25% • GitHub 20% • Tasks 20%)
@@ -230,36 +226,36 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
           )}
         </div>
 
-        {/* ── Notice: SIH Demo Purpose Only ── */}
-        <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-2 border-amber-300/90 rounded-2xl p-4 sm:p-5 shadow-xs">
+        {/* ── Placement Readiness Framework Banner ── */}
+        <div className="bg-gradient-to-r from-indigo-500/10 via-blue-500/10 to-indigo-500/10 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-xs">
           <div className="grid grid-cols-[40px_1fr] gap-3.5 items-start">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-sm mt-0.5">
-              <AlertTriangle size={20} className="text-amber-100" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-600 text-white flex items-center justify-center shadow-sm mt-0.5">
+              <Sparkles size={20} className="text-white" />
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest bg-amber-200/90 text-amber-950 px-2.5 py-0.5 rounded-full border border-amber-300 shadow-2xs">
-                  {isStudent ? 'Official Student Notice' : 'Institutional Demo Notice'}
+                <span className="text-[10px] font-extrabold uppercase tracking-widest bg-indigo-100 text-indigo-950 px-2.5 py-0.5 rounded-full border border-indigo-200 shadow-2xs">
+                  {isStudent ? 'Official Student Evaluation' : 'Institutional Framework'}
                 </span>
-                <span className="text-xs sm:text-sm font-extrabold text-amber-950">
-                  🎯 Placement Readiness Rating Configured for SIH Demo Purposes Only
+                <span className="text-xs sm:text-sm font-extrabold text-zinc-900">
+                  🎯 4-Pillar Placement Readiness Rating System
                 </span>
               </div>
-              <p className="text-xs text-amber-900 leading-relaxed font-medium">
-                This comprehensive 4-pillar placement readiness index, multi-source weighted scoring, and tier evaluation inside this project are deployed for <strong>Smart India Hackathon (SIH) demonstration and evaluation purposes only</strong>.
+              <p className="text-xs text-zinc-700 leading-relaxed font-medium">
+                Comprehensive 4-pillar placement readiness index, multi-source weighted scoring, and candidate tier classification for institutional recruitment preparedness.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-1">
-                <div className="bg-white/80 border border-amber-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 font-medium shadow-2xs">
-                  <span className="font-bold text-amber-700">1.</span> Aptitude & Tech (35%)
+                <div className="bg-white/90 border border-indigo-100 rounded-xl px-2.5 py-1.5 text-[11px] text-zinc-800 flex items-center gap-1.5 font-medium shadow-2xs">
+                  <span className="font-bold text-indigo-600">1.</span> Aptitude & Tech (35%)
                 </div>
-                <div className="bg-white/80 border border-amber-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 font-medium shadow-2xs">
-                  <span className="font-bold text-amber-700">2.</span> LeetCode Rating (25%)
+                <div className="bg-white/90 border border-indigo-100 rounded-xl px-2.5 py-1.5 text-[11px] text-zinc-800 flex items-center gap-1.5 font-medium shadow-2xs">
+                  <span className="font-bold text-indigo-600">2.</span> LeetCode Rating (25%)
                 </div>
-                <div className="bg-white/80 border border-amber-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 font-medium shadow-2xs">
-                  <span className="font-bold text-amber-700">3.</span> GitHub Velocity (20%)
+                <div className="bg-white/90 border border-indigo-100 rounded-xl px-2.5 py-1.5 text-[11px] text-zinc-800 flex items-center gap-1.5 font-medium shadow-2xs">
+                  <span className="font-bold text-indigo-600">3.</span> GitHub Velocity (20%)
                 </div>
-                <div className="bg-white/80 border border-amber-200/90 rounded-xl px-2.5 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 font-medium shadow-2xs">
-                  <span className="font-bold text-amber-700">4.</span> Verified Tasks (20%)
+                <div className="bg-white/90 border border-indigo-100 rounded-xl px-2.5 py-1.5 text-[11px] text-zinc-800 flex items-center gap-1.5 font-medium shadow-2xs">
+                  <span className="font-bold text-indigo-600">4.</span> Verified Tasks (20%)
                 </div>
               </div>
             </div>
@@ -359,7 +355,6 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Pillar 1 (35%)</span>
-                        <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">SIH Demo</span>
                       </div>
                       <Sparkles size={16} className="text-indigo-600" />
                     </div>

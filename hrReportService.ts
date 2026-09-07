@@ -330,7 +330,7 @@ export function generateHTMLPDFReport(reportType: string, companyName: string, d
       <div class="hdr">
         <div>
           <div class="title">${companyName} — ${reportType.toUpperCase().replace('-', ' ')} REPORT</div>
-          <div class="sub">SIH26044 Academia–Industry Intelligence Platform · Generated: ${dateStr}</div>
+          <div class="sub">Academia–Industry Intelligence Platform · Generated: ${dateStr}</div>
         </div>
       </div>
       <table>

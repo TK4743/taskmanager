@@ -42,10 +42,6 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
                   Live Teaching Hub
                 </h1>
               </div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 text-amber-900 border border-amber-300 shadow-2xs shrink-0">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                SIH DEMO PURPOSE ONLY
-              </span>
             </div>
             <p className="text-xs md:text-sm text-zinc-500 font-medium mt-1">
               Peer-to-peer real-time collaborative coding, live voice mentorship, and interactive learning.

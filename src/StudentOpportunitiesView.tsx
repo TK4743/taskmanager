@@ -248,7 +248,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
               </div>
             </div>
 
-            {/* SIH26044 Multi-Domain & Ayush Sector Filter Row */}
+            {/* Multi-Domain & Ayush Sector Filter Row */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-4 scrollbar-none">
               <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider shrink-0 mr-1">Sector:</span>
               {[

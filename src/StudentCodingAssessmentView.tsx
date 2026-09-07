@@ -76,6 +76,45 @@ interface Question {
   };
 }
 
+const DEFAULT_STARTER_TEMPLATES: Record<string, string> = {
+  c: `#include <stdio.h>
+
+int main() {
+    // Write your solution here
+    
+    return 0;
+}
+`,
+  cpp: `#include <iostream>
+using namespace std;
+
+int main() {
+    // Write your solution here
+    
+    return 0;
+}
+`,
+  java: `import java.util.Scanner;
+
+public class Solution {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        // Write your solution here
+        
+    }
+}
+`,
+  python: `# Write your solution here
+import sys
+
+def main():
+    pass
+
+if __name__ == '__main__':
+    main()
+`
+};
+
 export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewProps> = ({ user, token }) => {
   const [assessments, setAssessments] = useState<AssessmentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,7 +143,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
   const [currentQIdx, setCurrentQIdx] = useState(0);
   const [selectedLanguage, setSelectedLanguage] = useState<Record<number, string>>({ 0: 'cpp', 1: 'python' });
   const [codeBuffers, setCodeBuffers] = useState<Record<number, Record<string, string>>>({ 0: {}, 1: {} });
-  const [starterTemplates, setStarterTemplates] = useState<Record<string, string>>({});
+  const [starterTemplates, setStarterTemplates] = useState<Record<string, string>>(DEFAULT_STARTER_TEMPLATES);
   const [remainingSeconds, setRemainingSeconds] = useState<number>(3600);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -404,7 +443,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
         (data.questions || []).forEach((q: any, idx: number) => {
           const lang = q.draft?.language || q.latest_submission?.language || (idx === 0 ? 'cpp' : 'python');
-          const sourceCode = q.draft?.source_code ?? (q.latest_submission?.source_code || data.starter_templates?.[lang] || '');
+          const sourceCode = q.draft?.source_code ?? (q.latest_submission?.source_code || data.starter_templates?.[lang] || DEFAULT_STARTER_TEMPLATES[lang] || '');
           initialLangs[idx] = lang;
           initialBuffers[idx] = {
             [lang]: sourceCode
@@ -433,7 +472,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
           ...prev,
           [currentQIdx]: {
             ...qBuf,
-            [newLang]: starterTemplates[newLang] || ''
+            [newLang]: starterTemplates[newLang] || DEFAULT_STARTER_TEMPLATES[newLang] || ''
           }
         };
       }
@@ -667,21 +706,21 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
   // ── Render 2: Mobile / Small Viewport Blocker (Laptop & Desktop Only) ────
   if (attemptId && isMobileDevice) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0A0F1D] text-white flex items-center justify-center p-6 select-none font-sans">
-        <div className="max-w-md w-full bg-[#111827] border border-rose-500/50 rounded-3xl p-8 text-center space-y-5 shadow-2xl">
-          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto">
+      <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm text-zinc-900 flex items-center justify-center p-6 select-none font-sans">
+        <div className="max-w-md w-full bg-white border border-rose-200 rounded-3xl p-8 text-center space-y-5 shadow-2xl">
+          <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto">
             <Monitor size={32} />
           </div>
           <div className="space-y-2">
-            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40">
+            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-200">
               Desktop / Laptop Required
             </span>
-            <h2 className="text-xl font-black text-white">Mobile Device Prohibited</h2>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <h2 className="text-xl font-black text-zinc-900">Mobile Device Prohibited</h2>
+            <p className="text-xs text-zinc-600 leading-relaxed">
               Industry coding assessments cannot be attended on mobile phones or tablets. The multi-file coding IDE, code execution sandbox, and live proctoring require a standard <strong>Laptop or Desktop PC</strong> (minimum 1024px screen width).
             </p>
           </div>
-          <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 text-[11px] text-amber-300/90 font-medium">
+          <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-[11px] text-amber-900 font-medium">
             💡 Please switch to your Laptop or Desktop PC to continue your coding assessment.
           </div>
           <button
@@ -689,7 +728,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
               setAttemptId(null);
               fetchAssessments();
             }}
-            className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+            className="w-full py-3 bg-zinc-900 hover:bg-black text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
           >
             ← Exit to Assessment List
           </button>
@@ -900,7 +939,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
                 <button
                   onClick={() => {
-                    handleCodeChange(starterTemplates[activeLang] || '');
+                    handleCodeChange(starterTemplates[activeLang] || DEFAULT_STARTER_TEMPLATES[activeLang] || '');
                     showToast('Template reset.');
                   }}
                   className="p-1.5 text-zinc-400 hover:text-zinc-800 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
