@@ -104,7 +104,8 @@ import {
   Hourglass,
   TrendingUp,
   Terminal,
-  Radio
+  Radio,
+  Menu
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -3881,6 +3882,25 @@ export default function App() {
   }, []);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('desktop_sidebar_open');
+      if (saved !== null) return saved === 'true';
+    } catch (_) {}
+    return true;
+  });
+
+  const handleToggleSidebar = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsMobileSidebarOpen(prev => !prev);
+    } else {
+      setIsDesktopSidebarOpen(prev => {
+        const next = !prev;
+        try { localStorage.setItem('desktop_sidebar_open', String(next)); } catch (_) {}
+        return next;
+      });
+    }
+  };
   const [reportFilters, setReportFilters] = useState<{ classIds: string[]; taskId: string; year: string; status: string }>({ classIds: [], taskId: '', year: '', status: 'ALL' });
   const [screenshotDownloadProgress, setScreenshotDownloadProgress] = useState<{
     current: number;
@@ -10631,7 +10651,8 @@ export default function App() {
         </div>
         <button
           onClick={() => setIsMobileSidebarOpen(false)}
-          className="p-1 text-zinc-400 hover:text-zinc-900 md:hidden rounded-lg hover:bg-zinc-100"
+          className="p-1 text-zinc-400 hover:text-zinc-900 lg:hidden rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+          title="Close navigation menu"
         >
           <X size={20} />
         </button>
@@ -11605,27 +11626,34 @@ export default function App() {
         </AnimatePresence>
 
         {/* Sidebar - Desktop */}
-        <aside className="w-80 bg-white border-r border-zinc-200 shrink-0 hidden md:flex md:flex-col h-full">
-          {renderSidebarContent()}
+        <aside
+          className={cn(
+            "bg-white dark:bg-[#121217] border-r border-zinc-200 dark:border-zinc-800 shrink-0 hidden lg:flex lg:flex-col h-full transition-all duration-300 ease-in-out overflow-hidden",
+            isDesktopSidebarOpen ? "w-72 xl:w-80" : "w-0 border-r-0 opacity-0 pointer-events-none"
+          )}
+        >
+          <div className="w-72 xl:w-80 h-full flex flex-col shrink-0">
+            {renderSidebarContent()}
+          </div>
         </aside>
 
         {/* Sidebar - Mobile Drawer */}
         <AnimatePresence>
           {isMobileSidebarOpen && (
-            <div className="fixed inset-0 z-50 flex md:hidden">
+            <div className="fixed inset-0 z-50 flex lg:hidden">
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setIsMobileSidebarOpen(false)}
-                className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+                className="fixed inset-0 bg-black/50 backdrop-blur-xs"
               />
               <motion.aside
                 initial={{ x: '-100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '-100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="relative w-[85vw] max-w-xs bg-white h-full flex flex-col border-r border-zinc-200 shadow-2xl z-10"
+                transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                className="relative w-[85vw] max-w-xs bg-white dark:bg-[#121217] h-full flex flex-col border-r border-zinc-200 dark:border-zinc-800 shadow-2xl z-10"
               >
                 {renderSidebarContent()}
               </motion.aside>
@@ -11638,10 +11666,17 @@ export default function App() {
           <header className="h-14 md:h-20 bg-white border-b border-zinc-200 px-3 md:px-8 flex items-center justify-between shrink-0 gap-2">
             <div className="flex items-center gap-2 md:gap-4 min-w-0">
               <button
-                onClick={() => setIsMobileSidebarOpen(true)}
-                className="p-2 -ml-1 text-zinc-500 hover:text-zinc-900 md:hidden rounded-lg hover:bg-zinc-50 shrink-0"
+                type="button"
+                onClick={handleToggleSidebar}
+                className="p-2 -ml-1 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0 flex items-center justify-center cursor-pointer"
+                title={
+                  (typeof window !== 'undefined' && window.innerWidth < 1024)
+                    ? (isMobileSidebarOpen ? "Close navigation menu" : "Open navigation menu")
+                    : (isDesktopSidebarOpen ? "Collapse sidebar" : "Expand sidebar")
+                }
+                aria-label="Toggle navigation menu"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                <Menu size={22} className="stroke-[2.2]" />
               </button>
               <div className="min-w-0">
                 <h2 className="text-sm md:text-xl font-bold text-zinc-900 tracking-tight truncate">
