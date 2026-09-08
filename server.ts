@@ -5182,27 +5182,35 @@ async function startServer() {
     }
   }));
 
-  // ── Bulk Student Profiles Export Endpoint (HOD / Advisor / Supreme Admin) ─
-  app.post('/api/student/bulk-profiles', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR']), asyncHandler(async (req: any, res: Response) => {
+  // ── Bulk Student Profiles Export Endpoint (HOD / Advisor / Supreme Admin / Industry HR) ─
+  app.post('/api/student/bulk-profiles', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR', 'INDUSTRY']), asyncHandler(async (req: any, res: Response) => {
     const { student_ids, class_id } = req.body;
     const currentUser = req.user;
     const client = await pool.connect();
 
     try {
-      let targetUserIds: number[] = [];
+      let targetUserIds: string[] = [];
 
       if (Array.isArray(student_ids) && student_ids.length > 0) {
-        targetUserIds = student_ids.map((id: any) => Number(id)).filter((id: number) => !isNaN(id));
-      } else if (class_id) {
+        targetUserIds = student_ids.map((id: any) => String(id).trim()).filter(Boolean);
+      } else if (class_id && class_id !== 'ALL') {
         const classStudents = await client.query('SELECT id FROM users WHERE class_id = $1 AND role = \'STUDENT\'', [class_id]);
-        targetUserIds = classStudents.rows.map(r => r.id);
+        targetUserIds = classStudents.rows.map(r => String(r.id));
       } else if (currentUser.role === 'CLASS_ADVISOR' && currentUser.class_id) {
         const classStudents = await client.query('SELECT id FROM users WHERE class_id = $1 AND role = \'STUDENT\'', [currentUser.class_id]);
-        targetUserIds = classStudents.rows.map(r => r.id);
+        targetUserIds = classStudents.rows.map(r => String(r.id));
+      } else if (currentUser.role === 'HOD' && currentUser.department_id) {
+        const deptStudents = await client.query(`
+          SELECT u.id FROM users u
+          LEFT JOIN classes c ON c.id = u.class_id
+          WHERE u.role = 'STUDENT' AND (u.department_id = $1 OR c.department_id = $1)
+          ORDER BY u.register_number ASC LIMIT 250
+        `, [currentUser.department_id]);
+        targetUserIds = deptStudents.rows.map(r => String(r.id));
       } else {
-        // HOD / Admin with no specific filter: default to first 100 students
-        const allStudents = await client.query('SELECT id FROM users WHERE role = \'STUDENT\' ORDER BY register_number ASC LIMIT 100');
-        targetUserIds = allStudents.rows.map(r => r.id);
+        // Industry / Admin with no specific filter: return active students
+        const allStudents = await client.query('SELECT id FROM users WHERE role = \'STUDENT\' ORDER BY register_number ASC LIMIT 250');
+        targetUserIds = allStudents.rows.map(r => String(r.id));
       }
 
       if (targetUserIds.length === 0) {
@@ -5212,7 +5220,14 @@ async function startServer() {
       // Security check for class advisor: only allow students in their class
       if (currentUser.role === 'CLASS_ADVISOR' && currentUser.class_id) {
         const allowed = await client.query('SELECT id FROM users WHERE id = ANY($1::uuid[]) AND class_id = $2', [targetUserIds, currentUser.class_id]);
-        targetUserIds = allowed.rows.map(r => r.id);
+        targetUserIds = allowed.rows.map(r => String(r.id));
+      } else if (currentUser.role === 'HOD' && currentUser.department_id) {
+        const allowed = await client.query(`
+          SELECT u.id FROM users u
+          LEFT JOIN classes c ON c.id = u.class_id
+          WHERE u.id = ANY($1::uuid[]) AND (u.department_id = $2 OR c.department_id = $2)
+        `, [targetUserIds, currentUser.department_id]);
+        targetUserIds = allowed.rows.map(r => String(r.id));
       }
 
       if (targetUserIds.length === 0) {
@@ -5259,40 +5274,46 @@ async function startServer() {
       const resumeMap = new Map(resumeRes.rows.map(r => [r.user_id, r]));
       const careerMap = new Map(careerRes.rows.map(r => [r.user_id, r]));
 
-      const skillsMap = new Map<number, any[]>();
+      const skillsMap = new Map<string, any[]>();
       skillsRes.rows.forEach(r => {
-        if (!skillsMap.has(r.user_id)) skillsMap.set(r.user_id, []);
-        skillsMap.get(r.user_id)!.push(r);
+        const uid = String(r.user_id);
+        if (!skillsMap.has(uid)) skillsMap.set(uid, []);
+        skillsMap.get(uid)!.push(r);
       });
 
-      const projectsMap = new Map<number, any[]>();
+      const projectsMap = new Map<string, any[]>();
       projectsRes.rows.forEach(r => {
-        if (!projectsMap.has(r.user_id)) projectsMap.set(r.user_id, []);
-        projectsMap.get(r.user_id)!.push(r);
+        const uid = String(r.user_id);
+        if (!projectsMap.has(uid)) projectsMap.set(uid, []);
+        projectsMap.get(uid)!.push(r);
       });
 
-      const internshipsMap = new Map<number, any[]>();
+      const internshipsMap = new Map<string, any[]>();
       internshipsRes.rows.forEach(r => {
-        if (!internshipsMap.has(r.user_id)) internshipsMap.set(r.user_id, []);
-        internshipsMap.get(r.user_id)!.push(r);
+        const uid = String(r.user_id);
+        if (!internshipsMap.has(uid)) internshipsMap.set(uid, []);
+        internshipsMap.get(uid)!.push(r);
       });
 
-      const certsMap = new Map<number, any[]>();
+      const certsMap = new Map<string, any[]>();
       certsRes.rows.forEach(r => {
-        if (!certsMap.has(r.user_id)) certsMap.set(r.user_id, []);
-        certsMap.get(r.user_id)!.push(r);
+        const uid = String(r.user_id);
+        if (!certsMap.has(uid)) certsMap.set(uid, []);
+        certsMap.get(uid)!.push(r);
       });
 
-      const achieveMap = new Map<number, any[]>();
+      const achieveMap = new Map<string, any[]>();
       achieveRes.rows.forEach(r => {
-        if (!achieveMap.has(r.user_id)) achieveMap.set(r.user_id, []);
-        achieveMap.get(r.user_id)!.push(r);
+        const uid = String(r.user_id);
+        if (!achieveMap.has(uid)) achieveMap.set(uid, []);
+        achieveMap.get(uid)!.push(r);
       });
 
-      const langMap = new Map<number, any[]>();
+      const langMap = new Map<string, any[]>();
       langRes.rows.forEach(r => {
-        if (!langMap.has(r.user_id)) langMap.set(r.user_id, []);
-        langMap.get(r.user_id)!.push(r);
+        const uid = String(r.user_id);
+        if (!langMap.has(uid)) langMap.set(uid, []);
+        langMap.get(uid)!.push(r);
       });
 
       const fullProfiles = usersRes.rows.map(u => ({
