@@ -37,18 +37,20 @@ export default function IndustryPortalView({
   token: string;
   user: any;
   activeTab?: 'dashboard'|'postings'|'applications'|'coding-assessments'|'reports'|'profile';
-  onTabChange?: (tab: 'dashboard'|'postings'|'applications'|'coding-assessments'|'reports'|'profile') => void;
+  onTabChange?: (tab: 'dashboard'|'postings'|'coding-assessments'|'reports'|'profile') => void;
 }) {
-  const [tab, setTabState] = useState<'dashboard'|'postings'|'applications'|'coding-assessments'|'reports'|'profile'>(activeTab || 'dashboard');
+  const normalizedInitialTab = activeTab === 'applications' ? 'postings' : (activeTab || 'dashboard');
+  const [tab, setTabState] = useState<'dashboard'|'postings'|'coding-assessments'|'reports'|'profile'>(normalizedInitialTab as any);
 
   useEffect(() => {
     if (activeTab) {
-      setTabState(activeTab);
-      if (activeTab === 'reports') fetchReportPreview();
+      const nextTab = activeTab === 'applications' ? 'postings' : activeTab;
+      setTabState(nextTab as any);
+      if (nextTab === 'reports') fetchReportPreview();
     }
   }, [activeTab]);
 
-  const setTab = (t: 'dashboard'|'postings'|'applications'|'coding-assessments'|'reports'|'profile') => {
+  const setTab = (t: 'dashboard'|'postings'|'coding-assessments'|'reports'|'profile') => {
     setTabState(t);
     if (onTabChange) onTabChange(t);
     if (t === 'reports') fetchReportPreview();
@@ -282,110 +284,104 @@ export default function IndustryPortalView({
           </div>
         </>}
 
-        {/* POSTINGS */}
-        {tab==='postings' && <>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-            <h2 style={{ fontSize:22, fontWeight:800, color:'#0f172a', margin:0 }}>My Postings</h2>
-            <button style={c.btn('#4f46e5')} onClick={() => setShowPostingForm(true)}>+ Create Posting</button>
-          </div>
-          {postings.length===0 && <div style={{ ...c.card, textAlign:'center', color:'#64748b', padding:50 }}>No postings yet. Create your first job or internship posting!</div>}
-          {postings.map(p => (
-            <div key={p.id} style={c.card}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
-                <div style={{ flex:1 }}>
-                  <div style={{ display:'flex', gap:6, marginBottom:6, flexWrap:'wrap' }}>
-                    <span style={{ background:'#e0e7ff',color:'#4338ca',borderRadius:6,padding:'2px 8px',fontSize:11,fontWeight:700 }}>{p.posting_type}</span>
-                    <span style={{ background:p.status==='OPEN'?'#d1fae5':'#f1f5f9',color:p.status==='OPEN'?'#047857':'#64748b',borderRadius:6,padding:'2px 8px',fontSize:11,fontWeight:700 }}>{p.status}</span>
-                    <span style={{ background:'#f1f5f9',color:'#475569',borderRadius:6,padding:'2px 8px',fontSize:11,fontWeight:600 }}>{p.mode}</span>
-                  </div>
-                  <div style={{ fontWeight:800, color:'#0f172a', fontSize:16, marginBottom:3 }}>{p.title}</div>
-                  <div style={{ color:'#64748b',fontSize:13,marginBottom:8 }}>{p.location||'Remote'} {p.stipend_or_salary&&`· ${p.stipend_or_salary}`} {p.duration&&`· ${p.duration}`}</div>
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
-                    {(p.required_skills||[]).slice(0,6).map((sk:any,i:number) => (
-                      <span key={i} style={{ background:'#f1f5f9',color:'#334155',border:'1px solid #e2e8f0',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:600 }}>{sk.skill}</span>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-                  <div style={{ background:'#eef2ff',border:'1px solid #c7d2fe',borderRadius:12,padding:'8px 16px',textAlign:'center' }}>
-                    <div style={{ fontSize:22,fontWeight:900,color:'#4f46e5' }}>{p.application_count||0}</div>
-                    <div style={{ fontSize:11,color:'#4338ca',fontWeight:600 }}>applicants</div>
-                  </div>
-                  <button style={{ ...c.btn('#2563eb'), fontSize:12 }} onClick={() => { setSelectedPosting(p); setTab('applications'); }}>View Apps</button>
-                </div>
+        {/* POSTINGS & APPLICATIONS */}
+        {tab==='postings' && (
+          selectedPosting ? (
+            <>
+              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
+                <button style={{ ...c.btn('#475569'), marginRight:8 }} onClick={() => setSelectedPosting(null)}>← Back to Postings</button>
+                <h2 style={{ fontSize:22, fontWeight:800, color:'#0f172a', margin:0 }}>Applications · {selectedPosting.title}</h2>
               </div>
-            </div>
-          ))}
-        </>}
-
-        {/* APPLICATIONS */}
-        {tab==='applications' && <>
-          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
-            <h2 style={{ fontSize:22, fontWeight:800, color:'#0f172a', margin:0 }}>Applications</h2>
-            {selectedPosting && <span style={{ color:'#64748b', fontSize:14, fontWeight:600 }}>· {selectedPosting.title}</span>}
-          </div>
-          {!selectedPosting ? (
-            <div style={c.card}>
-              <p style={{ color:'#64748b',fontWeight:600,marginBottom:14 }}>Select a posting to review applicants:</p>
+              {loading ? (
+                <div style={{ textAlign:'center', padding:60, color:'#64748b' }}>Loading applications...</div>
+              ) : (
+                <>
+                  {applications.length===0 && <div style={{ ...c.card, textAlign:'center', color:'#64748b', padding:50 }}>No applications yet for this posting.</div>}
+                  {applications.map(app => (
+                    <div key={app.id} style={c.appCard(app.status)}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                            <span style={{ fontWeight:800, color:'#0f172a', fontSize:16 }}>{app.full_name}</span>
+                            <span style={{ background:`${STATUS_COLORS[app.status]||'#4f46e5'}18`, color:STATUS_COLORS[app.status]||'#4f46e5', border:`1px solid ${(STATUS_COLORS[app.status]||'#4f46e5')}40`, borderRadius:6, padding:'2px 8px', fontSize:11, fontWeight:700 }}>{app.status}</span>
+                          </div>
+                          <div style={{ color:'#64748b', fontSize:13, marginBottom:10 }}>
+                            {app.email} · {app.register_number} {app.cgpa ? `· CGPA ${app.cgpa}` : ''}
+                          </div>
+                          <div style={{ marginBottom:8 }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                              <span style={{ fontSize:12, color:'#64748b', fontWeight:600 }}>AI Match Score</span>
+                              <span style={{ fontSize:13, fontWeight:800, color: app.match_score>=75?'#059669':app.match_score>=50?'#d97706':'#dc2626' }}>{app.match_score}%</span>
+                            </div>
+                            <div style={{ background:'#f1f5f9', borderRadius:4, height:6, overflow:'hidden' }}>
+                              <div style={c.scoreWrap(app.match_score)} />
+                            </div>
+                          </div>
+                          <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+                            {(app.matched_skills||[]).map((sk:any,i:number) => <span key={i} style={{ background:'#ecfdf5',color:'#047857',border:'1px solid #a7f3d0',borderRadius:5,padding:'2px 6px',fontSize:11,fontWeight:600 }}>✓ {sk.skill}</span>)}
+                            {(app.gap_skills||[]).slice(0,3).map((sk:any,i:number) => <span key={i} style={{ background:'#fef2f2',color:'#b91c1c',border:'1px solid #fecaca',borderRadius:5,padding:'2px 6px',fontSize:11,fontWeight:600 }}>⚠ {sk.skill}</span>)}
+                          </div>
+                          {app.cover_note && <div style={{ marginTop:10, color:'#475569', fontSize:13, fontStyle:'italic', borderLeft:'3px solid #6366f1', paddingLeft:10 }}>"{app.cover_note}"</div>}
+                        </div>
+                        <div style={{ display:'flex', flexDirection:'column', gap:6, minWidth:130 }}>
+                          {app.status==='APPLIED' && <>
+                            <button style={c.btn('#d97706')} onClick={() => updateAppStatus(app.id,'SHORTLISTED')}>⭐ Shortlist</button>
+                            <button style={c.btn('#dc2626')} onClick={() => updateAppStatus(app.id,'REJECTED')}>✗ Reject</button>
+                          </>}
+                          {app.status==='SHORTLISTED' && <>
+                            <button style={c.btn('#2563eb')} onClick={() => updateAppStatus(app.id,'INTERVIEW')}>📅 Interview</button>
+                            <button style={c.btn('#dc2626')} onClick={() => updateAppStatus(app.id,'REJECTED')}>✗ Reject</button>
+                          </>}
+                          {app.status==='INTERVIEW' && <>
+                            <button style={c.btn('#059669')} onClick={() => updateAppStatus(app.id,'SELECTED')}>✓ Select</button>
+                            <button style={c.btn('#dc2626')} onClick={() => updateAppStatus(app.id,'REJECTED')}>✗ Reject</button>
+                          </>}
+                          {app.status==='SELECTED' && <span style={{ color:'#059669', fontSize:13, fontWeight:700 }}>🎉 Selected</span>}
+                          {app.status==='REJECTED' && <span style={{ color:'#dc2626', fontSize:13, fontWeight:700 }}>✗ Rejected</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+                <h2 style={{ fontSize:22, fontWeight:800, color:'#0f172a', margin:0 }}>My Postings</h2>
+                <button style={c.btn('#4f46e5')} onClick={() => setShowPostingForm(true)}>+ Create Posting</button>
+              </div>
+              {postings.length===0 && <div style={{ ...c.card, textAlign:'center', color:'#64748b', padding:50 }}>No postings yet. Create your first job or internship posting!</div>}
               {postings.map(p => (
-                <button key={p.id} style={{ ...c.btn('#ffffff'), color:'#0f172a', display:'block', width:'100%', textAlign:'left', marginBottom:8, border:'1px solid #e2e8f0', borderRadius:10, padding:'12px 16px' }} onClick={() => setSelectedPosting(p)}>
-                  <span style={{ fontWeight:700 }}>{p.title}</span> <span style={{ color:'#4f46e5', marginLeft:8, fontSize:13, fontWeight:700 }}>({p.application_count||0} applicants)</span>
-                </button>
-              ))}
-              {postings.length===0 && <div style={{ color:'#64748b', textAlign:'center', padding:30 }}>No postings available</div>}
-            </div>
-          ) : loading ? (
-            <div style={{ textAlign:'center', padding:60, color:'#64748b' }}>Loading applications...</div>
-          ) : <>
-            <button style={{ ...c.btn('#475569'), marginBottom:16 }} onClick={() => setSelectedPosting(null)}>← Back to Postings</button>
-            {applications.length===0 && <div style={{ ...c.card, textAlign:'center', color:'#64748b', padding:50 }}>No applications yet for this posting.</div>}
-            {applications.map(app => (
-              <div key={app.id} style={c.appCard(app.status)}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
-                      <span style={{ fontWeight:800, color:'#0f172a', fontSize:16 }}>{app.full_name}</span>
-                      <span style={{ background:`${STATUS_COLORS[app.status]||'#4f46e5'}18`, color:STATUS_COLORS[app.status]||'#4f46e5', border:`1px solid ${(STATUS_COLORS[app.status]||'#4f46e5')}40`, borderRadius:6, padding:'2px 8px', fontSize:11, fontWeight:700 }}>{app.status}</span>
-                    </div>
-                    <div style={{ color:'#64748b', fontSize:13, marginBottom:10 }}>
-                      {app.email} · {app.register_number} {app.cgpa ? `· CGPA ${app.cgpa}` : ''}
-                    </div>
-                    <div style={{ marginBottom:8 }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                        <span style={{ fontSize:12, color:'#64748b', fontWeight:600 }}>AI Match Score</span>
-                        <span style={{ fontSize:13, fontWeight:800, color: app.match_score>=75?'#059669':app.match_score>=50?'#d97706':'#dc2626' }}>{app.match_score}%</span>
+                <div key={p.id} style={c.card}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ display:'flex', gap:6, marginBottom:6, flexWrap:'wrap' }}>
+                        <span style={{ background:'#e0e7ff',color:'#4338ca',borderRadius:6,padding:'2px 8px',fontSize:11,fontWeight:700 }}>{p.posting_type}</span>
+                        <span style={{ background:p.status==='OPEN'?'#d1fae5':'#f1f5f9',color:p.status==='OPEN'?'#047857':'#64748b',borderRadius:6,padding:'2px 8px',fontSize:11,fontWeight:700 }}>{p.status}</span>
+                        <span style={{ background:'#f1f5f9',color:'#475569',borderRadius:6,padding:'2px 8px',fontSize:11,fontWeight:600 }}>{p.mode}</span>
                       </div>
-                      <div style={{ background:'#f1f5f9', borderRadius:4, height:6, overflow:'hidden' }}>
-                        <div style={c.scoreWrap(app.match_score)} />
+                      <div style={{ fontWeight:800, color:'#0f172a', fontSize:16, marginBottom:3 }}>{p.title}</div>
+                      <div style={{ color:'#64748b',fontSize:13,marginBottom:8 }}>{p.location||'Remote'} {p.stipend_or_salary&&`· ${p.stipend_or_salary}`} {p.duration&&`· ${p.duration}`}</div>
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+                        {(p.required_skills||[]).slice(0,6).map((sk:any,i:number) => (
+                          <span key={i} style={{ background:'#f1f5f9',color:'#334155',border:'1px solid #e2e8f0',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:600 }}>{sk.skill}</span>
+                        ))}
                       </div>
                     </div>
-                    <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
-                      {(app.matched_skills||[]).map((sk:any,i:number) => <span key={i} style={{ background:'#ecfdf5',color:'#047857',border:'1px solid #a7f3d0',borderRadius:5,padding:'2px 6px',fontSize:11,fontWeight:600 }}>✓ {sk.skill}</span>)}
-                      {(app.gap_skills||[]).slice(0,3).map((sk:any,i:number) => <span key={i} style={{ background:'#fef2f2',color:'#b91c1c',border:'1px solid #fecaca',borderRadius:5,padding:'2px 6px',fontSize:11,fontWeight:600 }}>⚠ {sk.skill}</span>)}
+                    <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+                      <div style={{ background:'#eef2ff',border:'1px solid #c7d2fe',borderRadius:12,padding:'8px 16px',textAlign:'center' }}>
+                        <div style={{ fontSize:22,fontWeight:900,color:'#4f46e5' }}>{p.application_count||0}</div>
+                        <div style={{ fontSize:11,color:'#4338ca',fontWeight:600 }}>applicants</div>
+                      </div>
+                      <button style={{ ...c.btn('#2563eb'), fontSize:12 }} onClick={() => setSelectedPosting(p)}>View Applications</button>
                     </div>
-                    {app.cover_note && <div style={{ marginTop:10, color:'#475569', fontSize:13, fontStyle:'italic', borderLeft:'3px solid #6366f1', paddingLeft:10 }}>"{app.cover_note}"</div>}
-                  </div>
-                  <div style={{ display:'flex', flexDirection:'column', gap:6, minWidth:130 }}>
-                    {app.status==='APPLIED' && <>
-                      <button style={c.btn('#d97706')} onClick={() => updateAppStatus(app.id,'SHORTLISTED')}>⭐ Shortlist</button>
-                      <button style={c.btn('#dc2626')} onClick={() => updateAppStatus(app.id,'REJECTED')}>✗ Reject</button>
-                    </>}
-                    {app.status==='SHORTLISTED' && <>
-                      <button style={c.btn('#2563eb')} onClick={() => updateAppStatus(app.id,'INTERVIEW')}>📅 Interview</button>
-                      <button style={c.btn('#dc2626')} onClick={() => updateAppStatus(app.id,'REJECTED')}>✗ Reject</button>
-                    </>}
-                    {app.status==='INTERVIEW' && <>
-                      <button style={c.btn('#059669')} onClick={() => updateAppStatus(app.id,'SELECTED')}>✓ Select</button>
-                      <button style={c.btn('#dc2626')} onClick={() => updateAppStatus(app.id,'REJECTED')}>✗ Reject</button>
-                    </>}
-                    {app.status==='SELECTED' && <span style={{ color:'#059669', fontSize:13, fontWeight:700 }}>🎉 Selected</span>}
-                    {app.status==='REJECTED' && <span style={{ color:'#dc2626', fontSize:13, fontWeight:700 }}>✗ Rejected</span>}
                   </div>
                 </div>
-              </div>
-            ))}
-          </>}
-        </>}
+              ))}
+            </>
+          )
+        )}
 
         {/* CODING ASSESSMENTS */}
         {tab==='coding-assessments' && (

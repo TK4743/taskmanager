@@ -8,15 +8,42 @@ import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { API_URL, FEATURE_FLAGS } from './config';
 
+// Robust lazy loading with automatic reload on deployment chunk hash mismatches
+function lazyWithRetry<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+) {
+  return lazy(async () => {
+    const reloadKey = 'app-chunk-reload-timestamp';
+    try {
+      const component = await factory();
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem(reloadKey);
+      }
+      return component;
+    } catch (error: any) {
+      if (typeof window !== 'undefined') {
+        const lastReload = parseInt(window.sessionStorage.getItem(reloadKey) || '0', 10);
+        const now = Date.now();
+        // If chunk failed to load (e.g. 404 on new deployment), reload page once to fetch latest bundles
+        if (now - lastReload > 12000) {
+          window.sessionStorage.setItem(reloadKey, String(now));
+          window.location.reload();
+        }
+      }
+      throw error;
+    }
+  });
+}
+
 // Lazy-loaded feature views for code-splitting and faster initial page load
-const SkillAssessmentView = lazy(() => import('./SkillAssessmentView'));
-const PlacementReadinessView = lazy(() => import('./PlacementReadinessView'));
-const LiveTeachingHubView = lazy(() => import('./LiveTeachingHubView'));
-const IndustryPortalView = lazy(() => import('./IndustryPortalView'));
-const StudentOpportunitiesView = lazy(() => import('./StudentOpportunitiesView'));
-const SkillGapAnalyzerView = lazy(() => import('./SkillGapAnalyzerView'));
-const StudentCodingAssessmentView = lazy(() => import('./StudentCodingAssessmentView'));
-const InstitutionalSkillHeatmapView = lazy(() => import('./InstitutionalSkillHeatmapView'));
+const SkillAssessmentView = lazyWithRetry(() => import('./SkillAssessmentView'));
+const PlacementReadinessView = lazyWithRetry(() => import('./PlacementReadinessView'));
+const LiveTeachingHubView = lazyWithRetry(() => import('./LiveTeachingHubView'));
+const IndustryPortalView = lazyWithRetry(() => import('./IndustryPortalView'));
+const StudentOpportunitiesView = lazyWithRetry(() => import('./StudentOpportunitiesView'));
+const SkillGapAnalyzerView = lazyWithRetry(() => import('./SkillGapAnalyzerView'));
+const StudentCodingAssessmentView = lazyWithRetry(() => import('./StudentCodingAssessmentView'));
+const InstitutionalSkillHeatmapView = lazyWithRetry(() => import('./InstitutionalSkillHeatmapView'));
 
 
 import { generateStudentResumePdf, downloadStudentResumePdf } from './studentProfilePdfGenerator';
@@ -10667,15 +10694,9 @@ export default function App() {
               onClick={() => { setView('industry-dashboard'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
-              icon={<UserCheck size={20} className="text-indigo-500" />}
-              label="Applications"
-              active={view === 'industry-applications'}
-              onClick={() => { setView('industry-applications'); setIsMobileSidebarOpen(false); }}
-            />
-            <SidebarItem
               icon={<Briefcase size={20} className="text-amber-500" />}
               label="Postings"
-              active={view === 'industry-postings'}
+              active={view === 'industry-postings' || view === 'industry-applications'}
               onClick={() => { setView('industry-postings'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem

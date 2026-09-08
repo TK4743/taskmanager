@@ -7,6 +7,12 @@ import { registerServiceWorker } from './pushNotificationClient.ts';
 // Automatically register Service Worker for PWA installation & Web Push
 if (typeof window !== 'undefined') {
   registerServiceWorker();
+
+  // Automatically reload to get latest Vercel deployment bundles if an old cached chunk 404s
+  window.addEventListener('vite:preloadError', (event) => {
+    console.warn('[Vite] Dynamic chunk preload failed due to new deployment, reloading page...', event);
+    window.location.reload();
+  });
 }
 
 const mountApp = () => {
