@@ -1118,39 +1118,10 @@ export async function initDB() {
       );
     `);
 
-    // Table 4: Faculty–Industry Opportunities (FDP, Consultancy, Research, Guest Lectures, etc.)
+    // Ensure deprecated Faculty Hub tables are dropped
     await client.query(`
-      CREATE TABLE IF NOT EXISTS faculty_industry_opportunities (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id UUID REFERENCES company_profiles(id) ON DELETE CASCADE,
-        opportunity_type VARCHAR(100) NOT NULL DEFAULT 'FDP',
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        compensation VARCHAR(255),
-        duration VARCHAR(100),
-        location VARCHAR(255),
-        mode VARCHAR(50) DEFAULT 'Hybrid',
-        application_deadline TIMESTAMP,
-        status VARCHAR(50) DEFAULT 'OPEN',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    // Table 5: Faculty Applications to Industry Opportunities
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS faculty_opportunity_applications (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        opportunity_id UUID REFERENCES faculty_industry_opportunities(id) ON DELETE CASCADE,
-        faculty_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        proposal TEXT,
-        status VARCHAR(50) DEFAULT 'APPLIED',
-        decision_note TEXT,
-        decision_at TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE (opportunity_id, faculty_id)
-      );
+      DROP TABLE IF EXISTS faculty_opportunity_applications CASCADE;
+      DROP TABLE IF EXISTS faculty_industry_opportunities CASCADE;
     `);
 
     // Table 6: Industry Collaboration Projects (powers Live Teaching Hub rebranding)
@@ -1208,10 +1179,6 @@ export async function initDB() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_posting_applications_student ON posting_applications(student_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_posting_applications_status ON posting_applications(status);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_posting_applications_score ON posting_applications(posting_id, match_score DESC);`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_faculty_opptys_company ON faculty_industry_opportunities(company_id);`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_faculty_opptys_type_status ON faculty_industry_opportunities(opportunity_type, status);`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_faculty_oppty_apps_opp ON faculty_opportunity_applications(opportunity_id);`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_faculty_oppty_apps_faculty ON faculty_opportunity_applications(faculty_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_industry_projects_company ON industry_projects(company_id, status);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_industry_project_members ON industry_project_members(project_id, student_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_skill_gap_recs ON skill_gap_recommendations(student_id, posting_id);`);

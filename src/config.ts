@@ -20,6 +20,5 @@ export const FEATURE_FLAGS = {
   skillGapAi: true,
   liveTeachingHub: true,
   skillAssessment: true,
-  facultyHub: true,
   skillHeatmap: true,
 };
