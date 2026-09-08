@@ -37,6 +37,12 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
   const isHOD = user?.role === 'HOD' || user?.role === 'SUPREME_ADMIN';
   const isAdvisor = user?.role === 'CLASS_ADVISOR';
   const isStudent = user?.role === 'STUDENT';
+  const isCoordinator = Boolean(user?.role === 'STUDENT' && user?.is_coordinator);
+  const isClassScoped = isAdvisor || isCoordinator;
+  const canViewClassDashboard = isHOD || isAdvisor || isCoordinator;
+
+  // Coordinator View Switcher ('class_dashboard' | 'my_profile')
+  const [coordinatorTab, setCoordinatorTab] = useState<'class_dashboard' | 'my_profile'>('class_dashboard');
 
   // HOD / Advisor Dashboard State
   const [metrics, setMetrics] = useState<any>(null);
@@ -46,7 +52,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
 
   // Filters
   const [selectedTier, setSelectedTier] = useState<string>('ALL');
-  const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [selectedClassId, setSelectedClassId] = useState<string>(() => isClassScoped && user?.class_id ? user.class_id : '');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Student Profile State
@@ -54,7 +60,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
   const [isProfileLoading, setIsProfileLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (isHOD || isAdvisor) {
+    if (canViewClassDashboard) {
       fetchDashboardData();
     }
     if (isStudent) {
@@ -196,21 +202,49 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                   <Target size={22} />
                 </div>
                 <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
-                  Placement Readiness Rating
+                  {isClassScoped ? 'Class Placement Readiness Rating' : 'Placement Readiness Rating'}
                 </h1>
               </div>
             </div>
             <p className="text-xs text-zinc-500 font-semibold mt-1">
-              Unified 0–100% Placement Eligibility Index (Aptitude 35% • LeetCode 25% • GitHub 20% • Tasks 20%)
+              {isClassScoped
+                ? `Exclusively evaluating placement eligibility for ${classes[0]?.name || user?.class_name || 'your assigned class'} (Aptitude 35% • LeetCode 25% • GitHub 20% • Tasks 20%)`
+                : 'Unified 0–100% Placement Eligibility Index (Aptitude 35% • LeetCode 25% • GitHub 20% • Tasks 20%)'}
             </p>
           </div>
 
-          {(isHOD || isAdvisor) && (
-            <div className="flex items-center gap-3">
+          {canViewClassDashboard && (
+            <div className="flex items-center gap-3 flex-wrap">
+              {isCoordinator && (
+                <div className="flex bg-zinc-100 p-1 rounded-xl border border-zinc-200">
+                  <button
+                    type="button"
+                    onClick={() => setCoordinatorTab('class_dashboard')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      coordinatorTab === 'class_dashboard'
+                        ? 'bg-white text-zinc-900 shadow-xs'
+                        : 'text-zinc-500 hover:text-zinc-900'
+                    }`}
+                  >
+                    Class Dashboard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCoordinatorTab('my_profile')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      coordinatorTab === 'my_profile'
+                        ? 'bg-white text-zinc-900 shadow-xs'
+                        : 'text-zinc-500 hover:text-zinc-900'
+                    }`}
+                  >
+                    My Profile
+                  </button>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={fetchDashboardData}
-                className="p-2 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-xl transition"
+                className="p-2 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-xl transition cursor-pointer"
                 title="Refresh Metrics"
               >
                 <RefreshCw size={15} />
@@ -231,7 +265,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
         {/* ═════════════════════════════════════════════════════════════════════
             STUDENT VIEW: INDIVIDUAL READINESS PROFILE & 4-PILLAR BREAKDOWN
             ═════════════════════════════════════════════════════════════════════ */}
-        {isStudent && (
+        {isStudent && (!isCoordinator || coordinatorTab === 'my_profile') && (
           <div className="space-y-6">
             {isProfileLoading ? (
               <div className="bg-white border border-zinc-200 rounded-3xl p-12 text-center text-zinc-500 text-xs font-semibold">
@@ -482,9 +516,9 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
         )}
 
         {/* ═════════════════════════════════════════════════════════════════════
-            HOD / ADVISOR DASHBOARD: AGGREGATE STATS, COMPANY FILTERS & TABLE
+            HOD / ADVISOR / COORDINATOR DASHBOARD: AGGREGATE STATS, COMPANY FILTERS & TABLE
             ═════════════════════════════════════════════════════════════════════ */}
-        {(isHOD || isAdvisor) && (
+        {(isHOD || isAdvisor || (isCoordinator && coordinatorTab === 'class_dashboard')) && (
           <div className="space-y-6">
 
             {/* Metric Cards */}
@@ -500,7 +534,9 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
               <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
                 <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Average Readiness</span>
                 <p className="text-2xl font-extrabold text-zinc-900 mt-1">{metrics?.average_readiness || 0}%</p>
-                <span className="text-[11px] font-medium text-zinc-500 mt-0.5 block">Cohort weighted rating</span>
+                <span className="text-[11px] font-medium text-zinc-500 mt-0.5 block">
+                  {isClassScoped ? 'Class weighted rating' : 'Cohort weighted rating'}
+                </span>
               </div>
 
               <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
@@ -589,18 +625,25 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
 
                 {/* Class Dropdown & Search Input */}
                 <div className="flex items-center gap-2.5 w-full md:w-auto">
-                  <select
-                    value={selectedClassId}
-                    onChange={e => setSelectedClassId(e.target.value)}
-                    className="py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-black"
-                  >
-                    <option value="">All Classes & Sections</option>
-                    {classes.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} (Year {c.year})
-                      </option>
-                    ))}
-                  </select>
+                  {isClassScoped ? (
+                    <div className="py-1.5 px-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs font-bold text-zinc-800 flex items-center gap-1.5">
+                      <Building2 size={13} className="text-zinc-500" />
+                      <span>{classes[0]?.name ? `${classes[0].name} (Year ${classes[0].year})` : (user?.class_name || 'My Assigned Class')}</span>
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedClassId}
+                      onChange={e => setSelectedClassId(e.target.value)}
+                      className="py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-black"
+                    >
+                      <option value="">All Classes & Sections</option>
+                      {classes.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} (Year {c.year})
+                        </option>
+                      ))}
+                    </select>
+                  )}
 
                   <div className="relative flex-1 md:w-60">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
@@ -621,7 +664,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
             <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
                 <h3 className="text-sm font-bold text-zinc-900">
-                  Candidate Readiness Ranking ({filteredStudents.length} Students)
+                  {isClassScoped ? 'Class Candidate Readiness Ranking' : 'Candidate Readiness Ranking'} ({filteredStudents.length} Students)
                 </h3>
                 <span className="text-xs text-zinc-400">
                   Sorted by Register Number

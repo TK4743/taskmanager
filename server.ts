@@ -9706,8 +9706,50 @@ async function startServer() {
   }));
 
   // ─── Module 8: Unified Placement Readiness Rating Engine ───────────────────────
-  app.get('/api/placement/readiness-dashboard', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR']), asyncHandler(async (req: any, res: any) => {
-    const { class_id, tier, search } = req.query;
+  app.get('/api/placement/readiness-dashboard', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR', 'STUDENT']), asyncHandler(async (req: any, res: any) => {
+    // If student, only student coordinators are permitted
+    if (req.user.role === 'STUDENT' && !req.user.is_coordinator) {
+      return res.status(403).json({ error: 'Access denied. Only class advisors and student coordinators can view class placement ratings.' });
+    }
+
+    const isClassScoped = req.user.role === 'CLASS_ADVISOR' || (req.user.role === 'STUDENT' && req.user.is_coordinator);
+    let { class_id, tier, search } = req.query;
+
+    if (isClassScoped) {
+      class_id = req.user.class_id;
+    }
+
+    const studentQueryParams: any[] = [];
+    let studentQuery = `
+      SELECT u.id, u.full_name, u.register_number, u.email, u.phone, u.class_id,
+             c.name as class_name, c.year as class_year, c.batch
+      FROM users u
+      LEFT JOIN classes c ON c.id = u.class_id
+      WHERE u.role = 'STUDENT'
+    `;
+
+    if (isClassScoped) {
+      if (!req.user.class_id) {
+        return res.json({
+          success: true,
+          metrics: { total_students: 0, eligible_count: 0, tier1_count: 0, tier2_count: 0, needs_attention_count: 0, average_readiness: 0, pass_rate: 0 },
+          students: [],
+          classes: []
+        });
+      }
+      studentQuery += ` AND u.class_id = $1`;
+      studentQueryParams.push(req.user.class_id);
+    }
+
+    studentQuery += ` ORDER BY u.register_number ASC`;
+
+    const classesQueryParams: any[] = [];
+    let classesQuery = `SELECT id, name, year, batch FROM classes`;
+    if (isClassScoped) {
+      classesQuery += ` WHERE id = $1`;
+      classesQueryParams.push(req.user.class_id);
+    }
+    classesQuery += ` ORDER BY year ASC, name ASC`;
 
     const [
       studentsRes,
@@ -9719,14 +9761,7 @@ async function startServer() {
       taskClassRes,
       classesRes
     ] = await Promise.all([
-      pool.query(`
-        SELECT u.id, u.full_name, u.register_number, u.email, u.phone, u.class_id,
-               c.name as class_name, c.year as class_year, c.batch
-        FROM users u
-        LEFT JOIN classes c ON c.id = u.class_id
-        WHERE u.role = 'STUDENT'
-        ORDER BY u.register_number ASC
-      `),
+      pool.query(studentQuery, studentQueryParams),
       pool.query(`
         SELECT DISTINCT ON (user_id) 
           user_id, score_percentage, correct_count, total_questions, proctor_photo_url, track_type, track_title
@@ -9764,7 +9799,7 @@ async function startServer() {
         FROM task_classes tc
         GROUP BY tc.class_id
       `),
-      pool.query(`SELECT id, name, year, batch FROM classes ORDER BY year ASC, name ASC`)
+      pool.query(classesQuery, classesQueryParams)
     ]);
 
     const assessmentMap = new Map();
