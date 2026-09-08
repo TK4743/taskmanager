@@ -4810,6 +4810,34 @@ export default function App() {
     }
   };
 
+  const [syncingMyLeetcode, setSyncingMyLeetcode] = useState(false);
+
+  const handleSyncMyLeetcode = async () => {
+    setSyncingMyLeetcode(true);
+    try {
+      const res = await fetch(`${API_URL}/api/leetcode/sync/my`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({})
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        addToast(data.message || 'LeetCode daily progress synced successfully', 'success');
+        await fetchMyLeetcodeProgress();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        addToast(data.error || 'Failed to sync LeetCode progress', 'error');
+      }
+    } catch (err) {
+      addToast('Network error syncing LeetCode progress', 'error');
+    } finally {
+      setSyncingMyLeetcode(false);
+    }
+  };
+
   const [syncingMyGithub, setSyncingMyGithub] = useState(false);
 
   const fetchMyGithubProgress = async () => {
@@ -8877,19 +8905,17 @@ export default function App() {
         body: JSON.stringify({})
       });
       if (res.ok) {
-        addToast('Sync started! Data will update automatically in ~30s.', 'success');
-        // Auto-refresh after sync completes in background
-        setTimeout(() => {
-          fetchLeetcodeProgress();
-          fetchLeetcodeStats();
-          setSyncingLeetcode(false);
-        }, 35000);
+        const data = await res.json().catch(() => ({}));
+        addToast(data.message || 'LeetCode progress synchronized successfully', 'success');
+        await fetchLeetcodeProgress();
+        await fetchLeetcodeStats();
       } else {
-        addToast('Failed to start LeetCode sync', 'error');
-        setSyncingLeetcode(false);
+        const data = await res.json().catch(() => ({}));
+        addToast(data.error || 'Failed to start LeetCode sync', 'error');
       }
     } catch (err) {
       addToast('Network error starting LeetCode sync', 'error');
+    } finally {
       setSyncingLeetcode(false);
     }
   };
@@ -8989,13 +9015,25 @@ export default function App() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5"><Code size={16} className="text-orange-500" /> LeetCode Daily</span>
-                  {myLeetcodeProgress?.dailyStatus === 'COMPLETED' ? (
-                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">MET</span>
-                  ) : myLeetcodeProgress?.dailyStatus === 'DATA_UNAVAILABLE' ? (
-                    <span className="bg-zinc-100 text-zinc-800 text-[10px] font-bold px-2 py-0.5 rounded-full">NO SYNC</span>
-                  ) : (
-                    <span className="bg-orange-100 text-orange-800 text-[10px] font-bold px-2 py-0.5 rounded-full">PENDING</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSyncMyLeetcode}
+                      disabled={syncingMyLeetcode}
+                      className="text-xs flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                      title="Sync today's LeetCode problems"
+                    >
+                      <RotateCw size={12} className={syncingMyLeetcode ? "animate-spin text-orange-600" : "text-orange-600"} />
+                      <span>{syncingMyLeetcode ? 'Syncing...' : 'Sync'}</span>
+                    </button>
+                    {myLeetcodeProgress?.dailyStatus === 'COMPLETED' ? (
+                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">MET</span>
+                    ) : myLeetcodeProgress?.dailyStatus === 'DATA_UNAVAILABLE' ? (
+                      <span className="bg-zinc-100 text-zinc-800 text-[10px] font-bold px-2 py-0.5 rounded-full">NO SYNC</span>
+                    ) : (
+                      <span className="bg-orange-100 text-orange-800 text-[10px] font-bold px-2 py-0.5 rounded-full">PENDING</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-baseline gap-2 mb-4">
                   <span className="text-5xl font-black text-zinc-900">{myLeetcodeProgress?.solvedToday ?? 0}</span>

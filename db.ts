@@ -7,6 +7,8 @@ import bcrypt from 'bcryptjs';
 const { Pool } = pg;
 // Parse Postgres INT8 / COUNT(*) directly as Number for 2x faster JSON serialization and aggregation speed
 pg.types.setTypeParser(20, (val: string) => parseInt(val, 10));
+// Keep Postgres DATE (type ID 1082) as exact 'YYYY-MM-DD' string to prevent local timezone distortion (e.g. IST +5:30 shifting dates backwards)
+pg.types.setTypeParser(1082, (val: string) => val);
 
 const rawDatabaseUrl = process.env.DATABASE_URL;
 if (!rawDatabaseUrl) {

@@ -6121,7 +6121,7 @@ async function startServer() {
     const match = clean.match(/leetcode\.(?:com|cn)\/(?:u\/)?([^/]+)/i);
     if (match && match[1]) {
       const extracted = match[1].trim();
-      if (['u', 'problems', 'contest', 'explore'].includes(extracted.toLowerCase())) return '';
+      if (['u', 'problems', 'contest', 'explore', 'accounts', 'login', 'profile'].includes(extracted.toLowerCase())) return '';
       return extracted;
     }
     if (clean.startsWith('http://') || clean.startsWith('https://')) {
@@ -6267,11 +6267,13 @@ async function startServer() {
           `,
           variables: { username }
         }),
-        signal: AbortSignal.timeout(5000)
+        signal: AbortSignal.timeout(6000)
       });
       if (!response.ok) return null;
       const result: any = await response.json();
-      const stats = result.data?.matchedUser?.submitStats?.acSubmissionNum;
+      if (!result.data || !result.data.matchedUser) return null;
+
+      const stats = result.data.matchedUser.submitStats?.acSubmissionNum;
       const allStats = stats?.find((s: any) => s.difficulty === 'All');
       const easyStats = stats?.find((s: any) => s.difficulty === 'Easy');
       const mediumStats = stats?.find((s: any) => s.difficulty === 'Medium');
@@ -6282,7 +6284,7 @@ async function startServer() {
       const mediumSolved = mediumStats ? Number(mediumStats.count) : 0;
       const hardSolved = hardStats ? Number(hardStats.count) : 0;
 
-      const rawSubmissions = result.data?.recentAcSubmissionList || [];
+      const rawSubmissions = result.data.recentAcSubmissionList || [];
       const recentSubmissions = rawSubmissions.map((s: any) => ({
         titleSlug: s.titleSlug,
         timestamp: Number(s.timestamp)
@@ -6295,18 +6297,24 @@ async function startServer() {
   }
 
   // Core Sync Function
-  async function syncLeetcodeProgressForScope(scopeFilter?: { departmentId?: string; classId?: string; year?: number; userId?: string; date?: string }) {
+  async function syncLeetcodeProgressForScope(scopeFilter?: { departmentId?: string; classId?: string; year?: number; userId?: string; studentId?: string; date?: string }) {
     try {
       let query = `
-        SELECT u.id, u.register_number, u.full_name, u.class_id, u.department_id, u.leetcode_url, u.github_url, c.year, c.batch 
+        SELECT u.id, u.register_number, u.full_name, u.class_id, u.department_id,
+               COALESCE(NULLIF(scp.leetcode, ''), NULLIF(u.leetcode_url, ''), '') AS leetcode_url,
+               COALESCE(NULLIF(scp.github, ''), NULLIF(u.github_url, ''), '') AS github_url,
+               c.year, c.batch 
         FROM users u
         LEFT JOIN classes c ON u.class_id = c.id
+        LEFT JOIN student_coding_profiles scp ON u.id = scp.user_id
         WHERE u.role = 'STUDENT'
       `;
       const params: any[] = [];
+      const targetUserId = scopeFilter?.userId || scopeFilter?.studentId;
+
       if (scopeFilter) {
-        if (scopeFilter.userId) {
-          params.push(scopeFilter.userId);
+        if (targetUserId) {
+          params.push(targetUserId);
           query += ` AND u.id = $${params.length}`;
         } else if (scopeFilter.classId) {
           params.push(scopeFilter.classId);
@@ -6331,10 +6339,26 @@ async function startServer() {
       const todayStartSec = Math.floor(new Date(`${todayStr}T00:00:00+05:30`).getTime() / 1000);
       const todayEndSec = Math.floor(new Date(`${todayStr}T23:59:59+05:30`).getTime() / 1000);
 
+      // Pre-fetch active targets once for this date to eliminate N+1 DB queries in the loop
+      const targetsRes = await pool.query(`
+        SELECT * FROM leetcode_targets 
+        WHERE start_date <= $1 AND end_date >= $1
+        ORDER BY 
+          CASE 
+            WHEN user_id IS NOT NULL THEN 1
+            WHEN class_id IS NOT NULL THEN 2
+            WHEN year IS NOT NULL THEN 3
+            WHEN department_id IS NOT NULL THEN 4
+            ELSE 5
+          END ASC,
+          created_at DESC
+      `, [todayStr]);
+      const activeTargets = targetsRes.rows;
+
       let synced = 0;
       let failed = 0;
 
-      const chunkSize = 10;
+      const chunkSize = 15;
       for (let i = 0; i < students.rows.length; i += chunkSize) {
         const chunk = students.rows.slice(i, i + chunkSize);
         await Promise.all(chunk.map(async (student) => {
@@ -6343,9 +6367,9 @@ async function startServer() {
           const year = student.year ? Number(student.year) : null;
           const departmentId = student.department_id;
           
-          const leetcodeProfile = (student.leetcode_url || student.leetcode || '').trim();
+          const leetcodeProfile = (student.leetcode_url || '').trim();
 
-          const activeTarget = await getActiveTargetForStudent(pool, userId, classId, year, departmentId, todayStr);
+          const activeTarget = resolveTargetInMemory({ id: userId, class_id: classId, year, department_id: departmentId }, activeTargets);
 
           let details: LeetCodeDetails | null = null;
           if (leetcodeProfile) {
@@ -6492,6 +6516,22 @@ async function startServer() {
       // If no progress logs exist at all for the dates, there is nothing to update!
       if (progressRes.rows.length === 0) return;
 
+      // Pre-fetch all relevant targets in one query
+      const targetsRes = await pool.query(`
+        SELECT * FROM leetcode_targets 
+        WHERE start_date <= $2 AND end_date >= $1
+        ORDER BY 
+          CASE 
+            WHEN user_id IS NOT NULL THEN 1
+            WHEN class_id IS NOT NULL THEN 2
+            WHEN year IS NOT NULL THEN 3
+            WHEN department_id IS NOT NULL THEN 4
+            ELSE 5
+          END ASC,
+          created_at DESC
+      `, [startDateStr, endDateStr]);
+      const activeTargets = targetsRes.rows;
+
       const progressMap = new Map();
       for (const row of progressRes.rows) {
         const dateKey = typeof row.date === 'string'
@@ -6511,7 +6551,7 @@ async function startServer() {
           const key = `${student.id}_${dateStr}`;
           const progressRow = progressMap.get(key);
           if (progressRow) {
-            const activeTarget = await getActiveTargetForStudent(pool, student.id, student.class_id, student.year, student.department_id, dateStr);
+            const activeTarget = resolveTargetInMemory({ id: student.id, class_id: student.class_id, year: student.year, department_id: student.department_id }, activeTargets);
             const solvedToday = Number(progressRow.solved_today);
             let status = 'COMPLETED';
             if (progressRow.total_solved === null) {
@@ -6730,18 +6770,45 @@ async function startServer() {
     });
   }));
 
-  // 4. Trigger Progress Sync (fire-and-forget to prevent 504 gateway timeout)
-  // Sync runs in background; client receives immediate 202 Accepted so serverless
-  // timeout is never hit even with 100+ students taking 60s+ to sync externally.
-  app.post('/api/leetcode/sync', authenticate, authorizeTargetManagement, (req: any, res: Response) => {
+  // 4. Trigger Progress Sync for scope (Admin / Faculty / Coordinator)
+  app.post('/api/leetcode/sync', authenticate, authorizeTargetManagement, asyncHandler(async (req: any, res: Response) => {
     const scope = enforceUserScopeFilter(req.user, req.body);
-    // Respond immediately so proxy/serverless gateway doesn't timeout
-    res.status(202).json({ success: true, message: 'LeetCode sync started in background. Refresh in ~30s to see updated data.' });
-    // Run the actual sync without blocking the response
-    syncLeetcodeProgressForScope(scope).catch(err =>
-      console.error('[LeetCode Sync] Background sync error:', err)
-    );
-  });
+    const summary = await syncLeetcodeProgressForScope(scope);
+    res.json({
+      success: true,
+      message: `LeetCode sync completed. ${summary.synced} synced, ${summary.failed} unavailable.`,
+      summary
+    });
+  }));
+
+  // Student Self-Service LeetCode Sync (Student syncs their own profile)
+  app.post(['/api/leetcode/sync/my', '/api/leetcode/sync/self'], authenticate, asyncHandler(async (req: any, res: Response) => {
+    const studentId = req.user.id;
+    const { date } = req.body || {};
+    const summary = await syncLeetcodeProgressForScope({ userId: studentId, date });
+    res.json({
+      success: true,
+      message: 'Your LeetCode daily progress has been synchronized.',
+      summary
+    });
+  }));
+
+  // Trigger LeetCode Sync for a Specific Student (Staff or Student themselves)
+  app.post('/api/leetcode/sync/student/:studentId', authenticate, asyncHandler(async (req: any, res: Response) => {
+    const { studentId } = req.params;
+    const isSelf = String(req.user.id) === String(studentId);
+    const isAuthorized = req.user.role === 'SUPREME_ADMIN' || req.user.role === 'HOD' || req.user.role === 'CLASS_ADVISOR' || req.user.is_coordinator;
+    if (!isSelf && !isAuthorized) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permissions to sync other students' });
+    }
+    const { date } = req.body || {};
+    const summary = await syncLeetcodeProgressForScope({ userId: studentId, date });
+    res.json({
+      success: true,
+      message: 'Student LeetCode progress sync completed.',
+      summary
+    });
+  }));
 
   // Helper to enrich student progress in batch (3 DB queries total for N students!)
   async function enrichStudentProgressBatch(students: any[], dateStr: string) {
@@ -7028,7 +7095,31 @@ async function startServer() {
       return res.status(404).json({ error: 'Student profile not found' });
     }
 
-    const enriched = (await enrichStudentProgressBatch([stdRes.rows[0]], dateStr))[0];
+    const student = stdRes.rows[0];
+    const rawLeetcode = student.leetcode_url || '';
+    const leetcodeUsername = extractLeetCodeUsername(rawLeetcode);
+
+    // If student has a LeetCode handle and today's record is missing or older than 15 mins, run on-the-fly single-student sync
+    if (leetcodeUsername) {
+      const checkDaily = await pool.query(`
+        SELECT user_id, updated_at, total_solved FROM leetcode_daily_progress 
+        WHERE user_id = $1 AND date = $2 LIMIT 1
+      `, [studentId, dateStr]);
+
+      const isMissingOrStale = checkDaily.rowCount === 0 ||
+        checkDaily.rows[0].total_solved === null ||
+        (checkDaily.rows[0].updated_at && (Date.now() - new Date(checkDaily.rows[0].updated_at).getTime() > 15 * 60 * 1000));
+
+      if (isMissingOrStale) {
+        try {
+          await syncLeetcodeProgressForScope({ userId: studentId, date: dateStr });
+        } catch (e) {
+          console.warn(`[LeetCode Progress My] On-demand sync note for student ${student.register_number}:`, e);
+        }
+      }
+    }
+
+    const enriched = (await enrichStudentProgressBatch([student], dateStr))[0];
     res.json(enriched);
   }));
 
@@ -7052,7 +7143,7 @@ async function startServer() {
     `, [studentId]);
 
     const dailyPoints = dailyHistory.rows.map(r => ({
-      date: new Date(r.date).toISOString().split('T')[0],
+      date: typeof r.date === 'string' ? r.date.split('T')[0] : new Date(r.date).toISOString().split('T')[0],
       actual: Number(r.solved_today),
       target: Number(r.daily_target)
     })).reverse();
