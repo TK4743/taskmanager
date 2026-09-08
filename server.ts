@@ -9754,20 +9754,20 @@ async function startServer() {
           classes: []
         });
       }
-      studentQuery += ` AND (u.department_id = $${studentQueryParams.length + 1} OR c.department_id = $${studentQueryParams.length + 1})`;
-      studentQueryParams.push(req.user.department_id);
+      studentQuery += ` AND (u.department_id = $${studentQueryParams.length + 1} OR c.department_id = $${studentQueryParams.length + 2})`;
+      studentQueryParams.push(req.user.department_id, req.user.department_id);
 
       classesQuery += ` WHERE department_id = $${classesQueryParams.length + 1}`;
       classesQueryParams.push(req.user.department_id);
 
       // If HOD optionally filters by a specific class within their department
-      if (class_id) {
+      if (class_id && class_id !== 'ALL') {
         studentQuery += ` AND u.class_id = $${studentQueryParams.length + 1}`;
         studentQueryParams.push(class_id);
       }
     } else {
       // SUPREME_ADMIN or INDUSTRY (HR): Institutional / candidate scope
-      if (class_id) {
+      if (class_id && class_id !== 'ALL') {
         studentQuery += ` AND u.class_id = $${studentQueryParams.length + 1}`;
         studentQueryParams.push(class_id);
       }
@@ -9955,8 +9955,8 @@ async function startServer() {
 
     // Filter students if query params provided
     let filtered = allStudents;
-    if (class_id) {
-      filtered = filtered.filter(s => s.class_id === class_id);
+    if (class_id && class_id !== 'ALL') {
+      filtered = filtered.filter(s => String(s.class_id) === String(class_id));
     }
     if (tier) {
       if (tier === 'ZOHO' || tier === 'TIER_1') {
@@ -9972,9 +9972,9 @@ async function startServer() {
     if (search) {
       const q = String(search).toLowerCase();
       filtered = filtered.filter(s =>
-        s.full_name.toLowerCase().includes(q) ||
-        s.register_number.toLowerCase().includes(q) ||
-        s.class_name.toLowerCase().includes(q)
+        (s.full_name && s.full_name.toLowerCase().includes(q)) ||
+        (s.register_number && s.register_number.toLowerCase().includes(q)) ||
+        (s.class_name && s.class_name.toLowerCase().includes(q))
       );
     }
 

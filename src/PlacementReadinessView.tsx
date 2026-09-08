@@ -53,12 +53,19 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
 
   // Filters
   const [selectedTier, setSelectedTier] = useState<string>('ALL');
-  const [selectedClassId, setSelectedClassId] = useState<string>(() => isClassScoped && user?.class_id ? user.class_id : '');
+  const [selectedClassId, setSelectedClassId] = useState<string>(() => isClassScoped && user?.class_id ? String(user.class_id) : '');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Student Profile State
   const [myProfile, setMyProfile] = useState<any>(null);
   const [isProfileLoading, setIsProfileLoading] = useState<boolean>(true);
+
+  // Sync advisor class_id if user arrives asynchronously
+  useEffect(() => {
+    if (isClassScoped && user?.class_id && selectedClassId !== String(user.class_id)) {
+      setSelectedClassId(String(user.class_id));
+    }
+  }, [user?.class_id, isClassScoped]);
 
   useEffect(() => {
     if (canViewClassDashboard) {
@@ -67,7 +74,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
     if (isStudent) {
       fetchMyReadinessProfile();
     }
-  }, [selectedTier, selectedClassId]);
+  }, [selectedTier, selectedClassId, user?.id, user?.class_id, canViewClassDashboard]);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -552,7 +559,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                         : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
                     }`}
                   >
-                    All Students ({students.length})
+                    All Students ({metrics?.total_students ?? students.length})
                   </button>
 
                   <button
