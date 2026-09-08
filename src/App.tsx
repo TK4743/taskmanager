@@ -10691,6 +10691,12 @@ export default function App() {
               onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
+              icon={<Target size={20} className="text-cyan-500" />}
+              label="Placement Rating"
+              active={view === 'placement-readiness'}
+              onClick={() => { setView('placement-readiness'); setIsMobileSidebarOpen(false); }}
+            />
+            <SidebarItem
               icon={<TrendingUp size={20} className="text-rose-500" />}
               label="HR Reports"
               active={view === 'industry-reports'}

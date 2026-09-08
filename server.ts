@@ -9706,18 +9706,15 @@ async function startServer() {
   }));
 
   // ─── Module 8: Unified Placement Readiness Rating Engine ───────────────────────
-  app.get('/api/placement/readiness-dashboard', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR', 'STUDENT']), asyncHandler(async (req: any, res: any) => {
-    // If student, only student coordinators are permitted
-    if (req.user.role === 'STUDENT' && !req.user.is_coordinator) {
-      return res.status(403).json({ error: 'Access denied. Only class advisors and student coordinators can view class placement ratings.' });
+  app.get('/api/placement/readiness-dashboard', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR', 'INDUSTRY']), asyncHandler(async (req: any, res: any) => {
+    // Coordinators and regular students are strictly prohibited from accessing the class aggregate dashboard
+    if (req.user.role === 'STUDENT') {
+      return res.status(403).json({ error: 'Access denied. Placement readiness class dashboard is restricted to Class Advisors, HODs, Supreme Admins, and Industry HR.' });
     }
 
-    const isClassScoped = req.user.role === 'CLASS_ADVISOR' || (req.user.role === 'STUDENT' && req.user.is_coordinator);
+    const isAdvisor = req.user.role === 'CLASS_ADVISOR';
+    const isHOD = req.user.role === 'HOD';
     let { class_id, tier, search } = req.query;
-
-    if (isClassScoped) {
-      class_id = req.user.class_id;
-    }
 
     const studentQueryParams: any[] = [];
     let studentQuery = `
@@ -9728,7 +9725,11 @@ async function startServer() {
       WHERE u.role = 'STUDENT'
     `;
 
-    if (isClassScoped) {
+    const classesQueryParams: any[] = [];
+    let classesQuery = `SELECT id, name, year, batch FROM classes`;
+
+    if (isAdvisor) {
+      // Class Advisor: STRICTLY isolated to their own assigned class
       if (!req.user.class_id) {
         return res.json({
           success: true,
@@ -9737,18 +9738,42 @@ async function startServer() {
           classes: []
         });
       }
-      studentQuery += ` AND u.class_id = $1`;
+      class_id = req.user.class_id;
+      studentQuery += ` AND u.class_id = $${studentQueryParams.length + 1}`;
       studentQueryParams.push(req.user.class_id);
+
+      classesQuery += ` WHERE id = $${classesQueryParams.length + 1}`;
+      classesQueryParams.push(req.user.class_id);
+    } else if (isHOD) {
+      // HOD: STRICTLY isolated to their own department
+      if (!req.user.department_id) {
+        return res.json({
+          success: true,
+          metrics: { total_students: 0, eligible_count: 0, tier1_count: 0, tier2_count: 0, needs_attention_count: 0, average_readiness: 0, pass_rate: 0 },
+          students: [],
+          classes: []
+        });
+      }
+      studentQuery += ` AND (u.department_id = $${studentQueryParams.length + 1} OR c.department_id = $${studentQueryParams.length + 1})`;
+      studentQueryParams.push(req.user.department_id);
+
+      classesQuery += ` WHERE department_id = $${classesQueryParams.length + 1}`;
+      classesQueryParams.push(req.user.department_id);
+
+      // If HOD optionally filters by a specific class within their department
+      if (class_id) {
+        studentQuery += ` AND u.class_id = $${studentQueryParams.length + 1}`;
+        studentQueryParams.push(class_id);
+      }
+    } else {
+      // SUPREME_ADMIN or INDUSTRY (HR): Institutional / candidate scope
+      if (class_id) {
+        studentQuery += ` AND u.class_id = $${studentQueryParams.length + 1}`;
+        studentQueryParams.push(class_id);
+      }
     }
 
     studentQuery += ` ORDER BY u.register_number ASC`;
-
-    const classesQueryParams: any[] = [];
-    let classesQuery = `SELECT id, name, year, batch FROM classes`;
-    if (isClassScoped) {
-      classesQuery += ` WHERE id = $1`;
-      classesQueryParams.push(req.user.class_id);
-    }
     classesQuery += ` ORDER BY year ASC, name ASC`;
 
     const [

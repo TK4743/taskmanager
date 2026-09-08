@@ -34,17 +34,18 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
   addToast,
   onNavigateToAssessment
 }) => {
-  const isHOD = user?.role === 'HOD' || user?.role === 'SUPREME_ADMIN';
+  const isSupreme = user?.role === 'SUPREME_ADMIN';
+  const isHOD = user?.role === 'HOD';
   const isAdvisor = user?.role === 'CLASS_ADVISOR';
+  const isIndustry = user?.role === 'INDUSTRY';
   const isStudent = user?.role === 'STUDENT';
-  const isCoordinator = Boolean(user?.role === 'STUDENT' && user?.is_coordinator);
-  const isClassScoped = isAdvisor || isCoordinator;
-  const canViewClassDashboard = isHOD || isAdvisor || isCoordinator;
+  const isClassScoped = isAdvisor;
 
-  // Coordinator View Switcher ('class_dashboard' | 'my_profile')
-  const [coordinatorTab, setCoordinatorTab] = useState<'class_dashboard' | 'my_profile'>('class_dashboard');
+  // Class/Department Dashboard can ONLY be viewed by Advisor (own class), HOD (own department), Supreme Admin, and Industry HR.
+  // Student Coordinators are strictly restricted to their personal student readiness profile.
+  const canViewClassDashboard = isAdvisor || isHOD || isSupreme || isIndustry;
 
-  // HOD / Advisor Dashboard State
+  // HOD / Advisor / HR Dashboard State
   const [metrics, setMetrics] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -202,45 +203,27 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                   <Target size={22} />
                 </div>
                 <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
-                  {isClassScoped ? 'Class Placement Readiness Rating' : 'Placement Readiness Rating'}
+                  {isAdvisor
+                    ? 'Class Placement Readiness Rating'
+                    : isHOD
+                    ? 'Department Placement Readiness Rating'
+                    : 'Placement Readiness Rating'}
                 </h1>
               </div>
             </div>
             <p className="text-xs text-zinc-500 font-semibold mt-1">
-              {isClassScoped
+              {isAdvisor
                 ? `Exclusively evaluating placement eligibility for ${classes[0]?.name || user?.class_name || 'your assigned class'} (Aptitude 35% • LeetCode 25% • GitHub 20% • Tasks 20%)`
+                : isHOD
+                ? `Evaluating departmental placement eligibility for ${user?.department_name || 'your department'} (Aptitude 35% • LeetCode 25% • GitHub 20% • Tasks 20%)`
+                : isStudent
+                ? 'Your personalized 0–100% Placement Eligibility Index (Aptitude 35% • LeetCode 25% • GitHub 20% • Tasks 20%)'
                 : 'Unified 0–100% Placement Eligibility Index (Aptitude 35% • LeetCode 25% • GitHub 20% • Tasks 20%)'}
             </p>
           </div>
 
           {canViewClassDashboard && (
             <div className="flex items-center gap-3 flex-wrap">
-              {isCoordinator && (
-                <div className="flex bg-zinc-100 p-1 rounded-xl border border-zinc-200">
-                  <button
-                    type="button"
-                    onClick={() => setCoordinatorTab('class_dashboard')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      coordinatorTab === 'class_dashboard'
-                        ? 'bg-white text-zinc-900 shadow-xs'
-                        : 'text-zinc-500 hover:text-zinc-900'
-                    }`}
-                  >
-                    Class Dashboard
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCoordinatorTab('my_profile')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      coordinatorTab === 'my_profile'
-                        ? 'bg-white text-zinc-900 shadow-xs'
-                        : 'text-zinc-500 hover:text-zinc-900'
-                    }`}
-                  >
-                    My Profile
-                  </button>
-                </div>
-              )}
               <button
                 type="button"
                 onClick={fetchDashboardData}
@@ -261,11 +244,9 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
         </div>
 
         {/* ═════════════════════════════════════════════════════════════════════
-
-        {/* ═════════════════════════════════════════════════════════════════════
             STUDENT VIEW: INDIVIDUAL READINESS PROFILE & 4-PILLAR BREAKDOWN
             ═════════════════════════════════════════════════════════════════════ */}
-        {isStudent && (!isCoordinator || coordinatorTab === 'my_profile') && (
+        {isStudent && (
           <div className="space-y-6">
             {isProfileLoading ? (
               <div className="bg-white border border-zinc-200 rounded-3xl p-12 text-center text-zinc-500 text-xs font-semibold">
@@ -516,9 +497,9 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
         )}
 
         {/* ═════════════════════════════════════════════════════════════════════
-            HOD / ADVISOR / COORDINATOR DASHBOARD: AGGREGATE STATS, COMPANY FILTERS & TABLE
+            ADVISOR / HOD / SUPREME ADMIN / HR DASHBOARD: AGGREGATE STATS, COMPANY FILTERS & TABLE
             ═════════════════════════════════════════════════════════════════════ */}
-        {(isHOD || isAdvisor || (isCoordinator && coordinatorTab === 'class_dashboard')) && (
+        {canViewClassDashboard && (
           <div className="space-y-6">
 
             {/* Metric Cards */}
@@ -568,10 +549,10 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
                       selectedTier === 'ALL'
                         ? 'bg-black text-white shadow-xs'
-                        : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                        : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
                     }`}
                   >
-                    All Students ({metrics?.total_students || 0})
+                    All Students ({students.length})
                   </button>
 
                   <button
@@ -630,6 +611,19 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                       <Building2 size={13} className="text-zinc-500" />
                       <span>{classes[0]?.name ? `${classes[0].name} (Year ${classes[0].year})` : (user?.class_name || 'My Assigned Class')}</span>
                     </div>
+                  ) : isHOD ? (
+                    <select
+                      value={selectedClassId}
+                      onChange={e => setSelectedClassId(e.target.value)}
+                      className="py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-black"
+                    >
+                      <option value="">All Department Classes ({user?.department_name || 'Department'})</option>
+                      {classes.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} (Year {c.year})
+                        </option>
+                      ))}
+                    </select>
                   ) : (
                     <select
                       value={selectedClassId}
@@ -664,7 +658,12 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
             <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
                 <h3 className="text-sm font-bold text-zinc-900">
-                  {isClassScoped ? 'Class Candidate Readiness Ranking' : 'Candidate Readiness Ranking'} ({filteredStudents.length} Students)
+                  {isAdvisor
+                    ? 'Class Candidate Readiness Ranking'
+                    : isHOD
+                    ? 'Department Candidate Readiness Ranking'
+                    : 'Candidate Readiness Ranking'}{' '}
+                  ({filteredStudents.length} Students)
                 </h3>
                 <span className="text-xs text-zinc-400">
                   Sorted by Register Number
