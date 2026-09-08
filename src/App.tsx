@@ -3934,8 +3934,45 @@ export default function App() {
   const [combinedProgressList, setCombinedProgressList] = useState<any[]>([]);
   const [syncingGithub, setSyncingGithub] = useState(false);
 
+  // ── Client-side filtering (instant, no network) ─────────────────────────────
+  const filteredLeetcodeProgressList = useMemo(() => {
+    return leetcodeProgressList.filter(row => {
+      // Year filter
+      if (selectedLeetcodeYear !== 'ALL') {
+        if (row.year == null || String(row.year) !== selectedLeetcodeYear) return false;
+      }
+      // Class / Section filter
+      if (selectedLeetcodeClassId !== 'ALL') {
+        if (String(row.classId) !== String(selectedLeetcodeClassId)) return false;
+      }
+      // Status filter: INCOMPLETE covers both INCOMPLETE and NO_TARGET
+      if (leetcodeStatusFilter !== 'ALL') {
+        const rowStatus = leetcodeViewType === 'DAILY' ? row.dailyStatus : row.weeklyStatus;
+        if (leetcodeStatusFilter === 'COMPLETED') {
+          if (rowStatus !== 'COMPLETED') return false;
+        } else if (leetcodeStatusFilter === 'INCOMPLETE') {
+          if (rowStatus !== 'INCOMPLETE' && rowStatus !== 'NO_TARGET') return false;
+        } else if (leetcodeStatusFilter === 'DATA_UNAVAILABLE') {
+          if (rowStatus !== 'DATA_UNAVAILABLE') return false;
+        }
+      }
+      // Text search across all identifiers
+      if (leetcodeSearch) {
+        const s = leetcodeSearch.toLowerCase();
+        return (
+          (row.fullName || '').toLowerCase().includes(s) ||
+          (row.registerNumber || '').toLowerCase().includes(s) ||
+          (row.leetcodeUsername || '').toLowerCase().includes(s) ||
+          (row.leetcodeUrl || '').toLowerCase().includes(s) ||
+          (row.className || '').toLowerCase().includes(s)
+        );
+      }
+      return true;
+    });
+  }, [leetcodeProgressList, selectedLeetcodeYear, selectedLeetcodeClassId, leetcodeStatusFilter, leetcodeSearch, leetcodeViewType]);
+
   const sortedLeetcodeProgressList = useMemo(() => {
-    return [...leetcodeProgressList].sort((a, b) => {
+    return [...filteredLeetcodeProgressList].sort((a, b) => {
       let valA: any = '';
       let valB: any = '';
 
@@ -3984,10 +4021,51 @@ export default function App() {
       const comp = valA > valB ? 1 : valA < valB ? -1 : 0;
       return leetcodeSortOrder === 'asc' ? comp : -comp;
     });
-  }, [leetcodeProgressList, leetcodeSortColumn, leetcodeSortOrder, leetcodeViewType]);
+  }, [filteredLeetcodeProgressList, leetcodeSortColumn, leetcodeSortOrder, leetcodeViewType]);
+
+  // ── Client-side filtering for GitHub (instant, no network) ──────────────────
+  const filteredGithubProgressList = useMemo(() => {
+    return githubProgressList.filter(row => {
+      // Year filter
+      if (selectedLeetcodeYear !== 'ALL') {
+        if (row.year == null || String(row.year) !== selectedLeetcodeYear) return false;
+      }
+      // Class / Section filter
+      if (selectedLeetcodeClassId !== 'ALL') {
+        if (String(row.classId) !== String(selectedLeetcodeClassId)) return false;
+      }
+      // Status filter: translate UI labels to GitHub commit semantics
+      if (leetcodeStatusFilter !== 'ALL') {
+        const isDaily = leetcodeViewType === 'DAILY';
+        const commits = isDaily ? (row.commitsToday ?? 0) : (row.commitsThisWeek ?? 0);
+        const hasProfile = !!(row.githubUsername || row.githubUrl);
+        if (leetcodeStatusFilter === 'COMPLETED') {
+          if (commits <= 0) return false;
+        } else if (leetcodeStatusFilter === 'INCOMPLETE') {
+          // Has a profile but zero commits
+          if (!hasProfile || commits > 0) return false;
+        } else if (leetcodeStatusFilter === 'DATA_UNAVAILABLE') {
+          // No GitHub profile at all
+          if (hasProfile) return false;
+        }
+      }
+      // Text search
+      if (leetcodeSearch) {
+        const s = leetcodeSearch.toLowerCase();
+        return (
+          (row.fullName || '').toLowerCase().includes(s) ||
+          (row.registerNumber || '').toLowerCase().includes(s) ||
+          (row.githubUsername || '').toLowerCase().includes(s) ||
+          (row.githubUrl || '').toLowerCase().includes(s) ||
+          (row.className || '').toLowerCase().includes(s)
+        );
+      }
+      return true;
+    });
+  }, [githubProgressList, selectedLeetcodeYear, selectedLeetcodeClassId, leetcodeStatusFilter, leetcodeSearch, leetcodeViewType]);
 
   const sortedGithubProgressList = useMemo(() => {
-    return [...githubProgressList].sort((a, b) => {
+    return [...filteredGithubProgressList].sort((a, b) => {
       let valA: any = '';
       let valB: any = '';
 
@@ -4032,11 +4110,43 @@ export default function App() {
       const comp = valA > valB ? 1 : valA < valB ? -1 : 0;
       return leetcodeSortOrder === 'asc' ? comp : -comp;
     });
-  }, [githubProgressList, leetcodeSortColumn, leetcodeSortOrder, leetcodeViewType]);
+  }, [filteredGithubProgressList, leetcodeSortColumn, leetcodeSortOrder, leetcodeViewType]);
+
+  const leetcodeDynamicStats = useMemo(() => {
+    const total = filteredLeetcodeProgressList.length;
+    let met = 0;
+    let inProgress = 0;
+    for (const r of filteredLeetcodeProgressList) {
+      const status = leetcodeViewType === 'DAILY' ? r.dailyStatus : r.weeklyStatus;
+      if (status === 'COMPLETED') met++;
+      else if (status === 'INCOMPLETE') inProgress++;
+    }
+    const rate = total > 0 ? Math.round((met / total) * 100) : 0;
+    return {
+      totalStudents: total,
+      met,
+      inProgress,
+      rate
+    };
+  }, [filteredLeetcodeProgressList, leetcodeViewType]);
+
+  const githubDynamicStats = useMemo(() => {
+    const total = filteredGithubProgressList.length;
+    const isDaily = leetcodeViewType === 'DAILY';
+    let active = 0;
+    for (const r of filteredGithubProgressList) {
+      const count = isDaily ? (r.commitsToday ?? 0) : (r.commitsThisWeek ?? 0);
+      if (count > 0) active++;
+    }
+    return {
+      totalStudents: total,
+      activeCommitters: active
+    };
+  }, [filteredGithubProgressList, leetcodeViewType]);
 
   const githubTop3 = useMemo(() => {
     const isDaily = leetcodeViewType === 'DAILY';
-    return [...githubProgressList]
+    return [...filteredGithubProgressList]
       .filter(s => {
         const count = isDaily ? (s.commitsToday ?? 0) : (s.commitsThisWeek ?? 0);
         return count > 0;
@@ -4048,7 +4158,7 @@ export default function App() {
         return (a.fullName || '').localeCompare(b.fullName || '');
       })
       .slice(0, 3);
-  }, [githubProgressList, leetcodeViewType]);
+  }, [filteredGithubProgressList, leetcodeViewType]);
 
   const handleSortHeader = (col: string) => {
     if (leetcodeSortColumn === col) {
@@ -4763,9 +4873,7 @@ export default function App() {
   const fetchLeetcodeStats = async () => {
     try {
       const deptParam = selectedLeetcodeDeptId !== 'ALL' ? `&departmentId=${selectedLeetcodeDeptId}` : '';
-      const yearParam = selectedLeetcodeYear !== 'ALL' ? `&year=${selectedLeetcodeYear}` : '';
-      const classParam = selectedLeetcodeClassId !== 'ALL' ? `&classId=${selectedLeetcodeClassId}` : '';
-      const res = await fetch(`${API_URL}/api/leetcode/stats?date=${leetcodeDate}${deptParam}${yearParam}${classParam}`, {
+      const res = await fetch(`${API_URL}/api/leetcode/stats?date=${leetcodeDate}${deptParam}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -4777,22 +4885,39 @@ export default function App() {
     }
   };
 
+  // Track the latest LeetCode progress request and AbortController to discard stale or cancelled responses
+  const leetcodeProgressRequestId = React.useRef(0);
+  const leetcodeAbortControllerRef = React.useRef<AbortController | null>(null);
+
   const fetchLeetcodeProgress = async () => {
+    const requestId = ++leetcodeProgressRequestId.current;
+    if (leetcodeAbortControllerRef.current) {
+      leetcodeAbortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    leetcodeAbortControllerRef.current = controller;
+
     try {
       const endpoint = leetcodeViewType === 'DAILY' ? 'daily' : 'weekly';
       const deptParam = selectedLeetcodeDeptId !== 'ALL' ? `&departmentId=${selectedLeetcodeDeptId}` : '';
-      const yearParam = selectedLeetcodeYear !== 'ALL' ? `&year=${selectedLeetcodeYear}` : '';
-      const classParam = selectedLeetcodeClassId !== 'ALL' ? `&classId=${selectedLeetcodeClassId}` : '';
-      const searchParam = leetcodeSearch ? `&search=${encodeURIComponent(leetcodeSearch)}` : '';
-      const res = await fetch(`${API_URL}/api/leetcode/progress/${endpoint}?date=${leetcodeDate}&status=${leetcodeStatusFilter}${searchParam}${deptParam}${yearParam}${classParam}`, {
+      // NOTE: search, status, year, and classId are filtered client-side for instantaneous responsiveness
+      const res = await fetch(`${API_URL}/api/leetcode/progress/${endpoint}?date=${leetcodeDate}${deptParam}`, {
+        signal: controller.signal,
         headers: { Authorization: `Bearer ${token}` }
       });
+      // Discard stale responses from earlier requests or cancelled requests
+      if (requestId !== leetcodeProgressRequestId.current || controller.signal.aborted) return;
       if (res.ok) {
         const data = await res.json();
-        setLeetcodeProgressList(data);
+        if (requestId === leetcodeProgressRequestId.current && !controller.signal.aborted) {
+          setLeetcodeProgressList(data);
+        }
       }
-    } catch (err) {
-      console.error('Error fetching LeetCode progress:', err);
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+      if (requestId === leetcodeProgressRequestId.current) {
+        console.error('Error fetching LeetCode progress:', err);
+      }
     }
   };
 
@@ -4880,9 +5005,7 @@ export default function App() {
   const fetchGithubStats = async () => {
     try {
       const deptParam = selectedLeetcodeDeptId !== 'ALL' ? `&departmentId=${selectedLeetcodeDeptId}` : '';
-      const yearParam = selectedLeetcodeYear !== 'ALL' ? `&year=${selectedLeetcodeYear}` : '';
-      const classParam = selectedLeetcodeClassId !== 'ALL' ? `&classId=${selectedLeetcodeClassId}` : '';
-      const res = await fetch(`${API_URL}/api/github/stats?date=${leetcodeDate}${deptParam}${yearParam}${classParam}`, {
+      const res = await fetch(`${API_URL}/api/github/stats?date=${leetcodeDate}${deptParam}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) setGithubStats(await res.json());
@@ -4891,18 +5014,37 @@ export default function App() {
     }
   };
 
+  // Track the latest GitHub progress request and AbortController to discard stale or cancelled responses
+  const githubProgressRequestId = React.useRef(0);
+  const githubAbortControllerRef = React.useRef<AbortController | null>(null);
+
   const fetchGithubProgress = async () => {
+    const requestId = ++githubProgressRequestId.current;
+    if (githubAbortControllerRef.current) {
+      githubAbortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    githubAbortControllerRef.current = controller;
+
     try {
       const deptParam = selectedLeetcodeDeptId !== 'ALL' ? `&departmentId=${selectedLeetcodeDeptId}` : '';
-      const yearParam = selectedLeetcodeYear !== 'ALL' ? `&year=${selectedLeetcodeYear}` : '';
-      const classParam = selectedLeetcodeClassId !== 'ALL' ? `&classId=${selectedLeetcodeClassId}` : '';
-      const searchParam = leetcodeSearch ? `&search=${encodeURIComponent(leetcodeSearch)}` : '';
-      const res = await fetch(`${API_URL}/api/github/daily-commits?date=${leetcodeDate}&status=${leetcodeStatusFilter}${searchParam}${deptParam}${yearParam}${classParam}`, {
+      // NOTE: search, status, year, and classId are filtered client-side for instantaneous responsiveness
+      const res = await fetch(`${API_URL}/api/github/daily-commits?date=${leetcodeDate}${deptParam}`, {
+        signal: controller.signal,
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.ok) setGithubProgressList(await res.json());
-    } catch (err) {
-      console.error('Error fetching GitHub progress:', err);
+      if (requestId !== githubProgressRequestId.current || controller.signal.aborted) return;
+      if (res.ok) {
+        const data = await res.json();
+        if (requestId === githubProgressRequestId.current && !controller.signal.aborted) {
+          setGithubProgressList(data);
+        }
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+      if (requestId === githubProgressRequestId.current) {
+        console.error('Error fetching GitHub progress:', err);
+      }
     }
   };
 
@@ -5018,7 +5160,11 @@ export default function App() {
         ]);
       }
     }
-  }, [view, codingPlatformTab, leetcodeViewType, leetcodeDate, leetcodeStatusFilter, leetcodeSearch, selectedLeetcodeDeptId, selectedLeetcodeYear, selectedLeetcodeClassId, token, user?.role]);
+    return () => {
+      leetcodeAbortControllerRef.current?.abort();
+      githubAbortControllerRef.current?.abort();
+    };
+  }, [view, codingPlatformTab, leetcodeViewType, leetcodeDate, selectedLeetcodeDeptId, token, user?.role]);
 
   const fetchInitialData = async (passedToken?: string) => {
     try {
@@ -7657,12 +7803,12 @@ export default function App() {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-4xl"
         >
-          <div className="flex flex-col items-center mb-12">
-            <div className="w-24 h-24 rounded-full bg-white p-3 mb-6 shadow-2xl border-2 border-zinc-200 ring-4 ring-indigo-50 flex items-center justify-center">
+          <div className="flex flex-col items-center mb-6 md:mb-12">
+            <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-white p-3 mb-4 md:mb-6 shadow-2xl border-2 border-zinc-200 ring-4 ring-indigo-50 flex items-center justify-center">
               <img src="/logo.png" alt="VSBEC Logo" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Academic Portal</h1>
-            <p className="text-zinc-500 mt-2 text-lg">VSBEC IT Task Management System</p>
+            <h1 className="text-2xl md:text-4xl font-black text-zinc-900 tracking-tight">Academic Portal</h1>
+            <p className="text-zinc-500 mt-2 text-base md:text-lg">VSBEC IT Task Management System</p>
           </div>
 
           <AnimatePresence mode="wait">
@@ -7673,7 +7819,7 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               className="max-w-md mx-auto w-full"
             >
-              <Card className="p-8">
+              <Card className="p-6 md:p-8">
                 <div className="mb-8 text-center">
                   <h2 className="text-2xl font-bold text-zinc-900">Portal Login</h2>
                   <p className="text-zinc-500 text-sm mt-1">Please enter your credentials</p>
@@ -9159,7 +9305,7 @@ export default function App() {
               <Code size={18} className="text-orange-500" />
               <span>LeetCode Tracker</span>
               <span className="ml-1 bg-orange-100 text-orange-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                {leetcodeProgressList.length} Students
+                {filteredLeetcodeProgressList.length} Students
               </span>
             </button>
 
@@ -9176,7 +9322,7 @@ export default function App() {
               <Github size={18} className="text-indigo-600" />
               <span>GitHub Tracker</span>
               <span className="ml-1 bg-indigo-100 text-indigo-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                {githubProgressList.length} Students
+                {filteredGithubProgressList.length} Students
               </span>
             </button>
           </div>
@@ -9228,10 +9374,10 @@ export default function App() {
           <div>
             {/* LeetCode Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <StatCard title="Total Students" value={leetcodeStats?.totalStudents || leetcodeProgressList.length || 0} color="orange" icon={<Zap />} />
-              <StatCard title="Target Met Today" value={leetcodeStats?.metDaily || 0} color="emerald" icon={<Target />} />
-              <StatCard title="In Progress Today" value={leetcodeStats?.inProgressDaily || 0} color="amber" icon={<Hourglass />} />
-              <StatCard title="Completion Rate" value={`${leetcodeStats?.completionDailyRate || 0}%`} color="indigo" icon={<TrendingUp />} />
+              <StatCard title="Total Students" value={filteredLeetcodeProgressList.length} color="orange" icon={<Zap />} />
+              <StatCard title={leetcodeViewType === 'DAILY' ? "Target Met Today" : "Target Met This Week"} value={leetcodeDynamicStats.met} color="emerald" icon={<Target />} />
+              <StatCard title={leetcodeViewType === 'DAILY' ? "In Progress Today" : "In Progress This Week"} value={leetcodeDynamicStats.inProgress} color="amber" icon={<Hourglass />} />
+              <StatCard title="Completion Rate" value={`${leetcodeDynamicStats.rate}%`} color="indigo" icon={<TrendingUp />} />
             </div>
 
             {/* Row 1: Sub-navigation Tabs & View Controls */}
@@ -9568,8 +9714,8 @@ export default function App() {
           <div>
             {/* GitHub Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <StatCard title="Total Students" value={githubStats?.totalStudents || githubProgressList.length || 0} color="purple" icon={<Zap />} />
-              <StatCard title="Active Committers Today" value={githubStats?.activeCommitters || 0} color="emerald" icon={<Terminal />} />
+              <StatCard title="Total Students" value={filteredGithubProgressList.length} color="purple" icon={<Zap />} />
+              <StatCard title={leetcodeViewType === 'DAILY' ? "Active Committers Today" : "Active Committers This Week"} value={githubDynamicStats.activeCommitters} color="emerald" icon={<Terminal />} />
 
               {/* Top 3 Leaderboard Card */}
               <Card className="p-4 border border-zinc-200 bg-white shadow-xs sm:col-span-2 lg:col-span-2 flex flex-col justify-between">
@@ -11479,7 +11625,7 @@ export default function App() {
                 animate={{ x: 0 }}
                 exit={{ x: '-100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="relative w-80 max-w-xs bg-white h-full flex flex-col border-r border-zinc-200 shadow-2xl z-10"
+                className="relative w-[85vw] max-w-xs bg-white h-full flex flex-col border-r border-zinc-200 shadow-2xl z-10"
               >
                 {renderSidebarContent()}
               </motion.aside>
@@ -11489,62 +11635,76 @@ export default function App() {
 
         {/* Main Content */}
         <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-          <header className="h-20 bg-white border-b border-zinc-200 px-4 md:px-8 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-4 min-w-0">
+          <header className="h-14 md:h-20 bg-white border-b border-zinc-200 px-3 md:px-8 flex items-center justify-between shrink-0 gap-2">
+            <div className="flex items-center gap-2 md:gap-4 min-w-0">
               <button
                 onClick={() => setIsMobileSidebarOpen(true)}
-                className="p-2 -ml-2 text-zinc-500 hover:text-zinc-900 md:hidden rounded-lg hover:bg-zinc-50"
+                className="p-2 -ml-1 text-zinc-500 hover:text-zinc-900 md:hidden rounded-lg hover:bg-zinc-50 shrink-0"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
               </button>
               <div className="min-w-0">
-                <h2 className="text-xl font-bold text-zinc-900 tracking-tight truncate">
+                <h2 className="text-sm md:text-xl font-bold text-zinc-900 tracking-tight truncate">
                   {(() => {
                     if (isIndustry) {
-                      if (view === 'industry-portal' || view === 'dashboard') return 'Corporate Hiring & Assessments Portal';
+                      if (view === 'industry-portal' || view === 'dashboard') return 'Corporate Hiring & Assessments';
                       if (view === 'users') return 'Candidate Talent Pool';
-                      if (view === 'faculty-industry-hub') return 'Faculty R&D Hub & Joint Initiatives';
-                      if (view === 'settings') return 'Corporate Account Settings';
+                      if (view === 'faculty-industry-hub') return 'Faculty R&D Hub';
+                      if (view === 'settings') return 'Account Settings';
                     }
                     if (view === 'leetcode-targets' || view === 'coding-progress') {
                       if (codingPlatformTab === 'LEETCODE') return 'LeetCode';
                       if (codingPlatformTab === 'GITHUB') return 'GitHub';
-                      return 'Combined Coding Progress';
+                      return 'Coding Progress';
                     }
                     if (view === 'departments') return 'Departments';
-                    if (view === 'industry-approvals') return 'Corporate & Industry Partner Approvals';
+                    if (view === 'industry-approvals') return 'Industry Partners';
                     if (view === 'my-class') return 'My Class';
                     if (view === 'notice-board') return 'Notice Board';
-                    if (view === 'analyzer') return 'Student Progress Analyzer';
-                    if (view === 'verification') return 'Task Verification';
+                    if (view === 'analyzer') return 'Progress Analyzer';
+                    if (view === 'verification') return 'Verification';
                     if (view === 'users') return 'User Management';
-                    if (view === 'skill-assessment') return 'Placement Skill Assessment';
-                    if (view === 'placement-readiness') return 'Placement Readiness Rating';
-                    if (view === 'institutional-skill-heatmap') return 'Institutional Skill Heatmap & Cohort Analytics';
-                    if (view === 'live-teaching-hub') return 'Live Teaching Hub (GOAT Code Editor)';
+                    if (view === 'skill-assessment') return 'Skill Assessment';
+                    if (view === 'placement-readiness') return 'Placement Rating';
+                    if (view === 'institutional-skill-heatmap') return 'Skill Heatmap';
+                    if (view === 'live-teaching-hub') return 'Live Teaching Hub';
                     if (view === 'tasks') return 'Tasks';
                     return view.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                   })()}
                 </h2>
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider truncate">
+                <p className="hidden sm:block text-xs font-semibold text-zinc-400 uppercase tracking-wider truncate">
                   {isIndustry ? 'Corporate Partner Portal' : 'Academic Management System'}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-4 shrink-0">
+            <div className="flex items-center gap-2 md:gap-3 shrink-0">
               {(isAdmin || isHOD || isAdvisor || isCoordinator) && (
-                <Button variant="success" className="flex items-center gap-2" onClick={() => (view === 'leetcode-targets' || view === 'coding-progress') ? handleDownloadCombinedExcel() : setShowExportModal(true)}>
-                  <FileDown size={18} /> {isAdmin || isHOD ? 'Export Custom Report' : 'Export Class Report'}
-                </Button>
+                <>
+                  {/* Desktop: show full button text; Mobile: icon only */}
+                  <Button variant="success" className="hidden sm:flex items-center gap-2" onClick={() => (view === 'leetcode-targets' || view === 'coding-progress') ? handleDownloadCombinedExcel() : setShowExportModal(true)}>
+                    <FileDown size={18} /> {isAdmin || isHOD ? 'Export Custom Report' : 'Export Class Report'}
+                  </Button>
+                  <Button variant="success" className="sm:hidden flex items-center justify-center p-2 aspect-square" title={isAdmin || isHOD ? 'Export Custom Report' : 'Export Class Report'} onClick={() => (view === 'leetcode-targets' || view === 'coding-progress') ? handleDownloadCombinedExcel() : setShowExportModal(true)}>
+                    <FileDown size={16} />
+                  </Button>
+                </>
               )}
-              <div className="flex-1" />
               {isStudent && !user?.telegram_chat_id && (
-                <button
-                  onClick={() => setShowTelegramLinkModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-sky-500 via-indigo-600 to-violet-600 text-white shadow-md hover:shadow-lg hover:scale-105 transition-all animate-pulse shrink-0"
-                >
-                  <Send size={13} className="-rotate-12" /> Connect Telegram
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowTelegramLinkModal(true)}
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-sky-500 via-indigo-600 to-violet-600 text-white shadow-md hover:shadow-lg hover:scale-105 transition-all animate-pulse shrink-0"
+                  >
+                    <Send size={13} className="-rotate-12" /> Connect Telegram
+                  </button>
+                  <button
+                    onClick={() => setShowTelegramLinkModal(true)}
+                    className="sm:hidden p-2 rounded-full text-xs font-bold bg-gradient-to-r from-sky-500 via-indigo-600 to-violet-600 text-white shadow-md hover:shadow-lg hover:scale-105 transition-all animate-pulse shrink-0"
+                    title="Connect Telegram"
+                  >
+                    <Send size={14} className="-rotate-12" />
+                  </button>
+                </>
               )}
               {isStudent && user?.telegram_chat_id && (
                 <span className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
@@ -11576,7 +11736,7 @@ export default function App() {
                 </button>
 
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-84 sm:w-96 bg-white border border-zinc-200 rounded-2xl shadow-2xl z-50 p-4 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="fixed sm:absolute left-2 right-2 sm:left-auto sm:right-0 top-16 sm:top-auto sm:mt-2 w-auto sm:w-96 bg-white border border-zinc-200 rounded-2xl shadow-2xl z-50 p-4 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[80vh] overflow-y-auto md:max-h-none md:overflow-visible">
                     <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-zinc-100">
                       <div className="flex items-center gap-2">
                         <img src="/logo.png" alt="VSBEC Logo" className="w-5 h-5 object-contain" />
@@ -11691,7 +11851,7 @@ export default function App() {
 
 
 
-          <div className="flex-1 min-h-0 bg-[#F5F5F4] dark:bg-[#0f0f12] relative">
+          <div className="flex-1 min-h-0 bg-[#F5F5F4] dark:bg-[#0f0f12] relative overflow-x-hidden">
             <Suspense fallback={<ViewLoadingFallback />}>
               <AnimatePresence mode="wait">
               {view === 'dashboard' && isIndustry && (

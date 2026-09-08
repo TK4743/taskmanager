@@ -63,11 +63,22 @@ html.dark {
     min-height: -webkit-fill-available;
     overscroll-behavior-y: none;
     transition: background-color 0.2s ease, color 0.2s ease;
+    /* Prevent horizontal scroll at root level */
+    overflow-x: hidden;
+    /* Safe area support for notch & bottom bar */
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  body {
+    /* Extra bottom padding for bottom nav bar on iOS/Android */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   input, select, textarea {
     color: var(--text-primary);
     background-color: var(--input-bg);
     border-color: var(--input-border);
+    /* Prevent zoom on input focus on iOS */
+    font-size: max(16px, 1rem);
   }
   select, select option {
     color: var(--text-primary) !important;
@@ -75,6 +86,11 @@ html.dark {
   }
   label {
     color: var(--text-secondary);
+  }
+  /* Better touch targets on mobile */
+  button, [role="button"] {
+    min-height: 36px;
+    touch-action: manipulation;
   }
 }
 
@@ -324,4 +340,25 @@ html.dark {
   overflow-wrap: anywhere;
   word-break: break-word;
   min-width: 0;
+}
+
+/* Mobile-safe table wrapper — horizontal scroll without body overflow */
+.table-mobile-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Safe area padding utilities */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
 }

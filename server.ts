@@ -6911,6 +6911,9 @@ async function startServer() {
 
       return {
         studentId: student.id,
+        classId: student.class_id,
+        year: student.year,
+        departmentId: student.department_id,
         registerNumber: student.register_number,
         fullName: student.full_name,
         className: student.class_name || 'Unassigned',
@@ -7037,14 +7040,20 @@ async function startServer() {
     const studentRows = await fetchStudentsForScope(scope);
     const enrichedList = await enrichStudentProgressBatch(studentRows, dateStr);
 
-    let filtered = enrichedList.filter(row => {
-      const matchSearch = row.fullName.toLowerCase().includes(search) || row.registerNumber.toLowerCase().includes(search);
-      if (!matchSearch) return false;
+    const filtered = enrichedList.filter(row => {
+      if (search) {
+        const s = search.toLowerCase();
+        const matchSearch =
+          (row.fullName || '').toLowerCase().includes(s) ||
+          (row.registerNumber || '').toLowerCase().includes(s) ||
+          (row.leetcodeUsername || '').toLowerCase().includes(s) ||
+          (row.leetcodeUrl || '').toLowerCase().includes(s) ||
+          (row.className || '').toLowerCase().includes(s);
+        if (!matchSearch) return false;
+      }
 
       if (statusFilter !== 'ALL') {
-        const rowStatus = row.dailyStatus.replace('_', ' ').toUpperCase();
-        const filterUpper = statusFilter.replace('_', ' ').toUpperCase();
-        return rowStatus === filterUpper;
+        return row.dailyStatus === statusFilter;
       }
       return true;
     });
@@ -7062,14 +7071,20 @@ async function startServer() {
     const studentRows = await fetchStudentsForScope(scope);
     const enrichedList = await enrichStudentProgressBatch(studentRows, dateStr);
 
-    let filtered = enrichedList.filter(row => {
-      const matchSearch = row.fullName.toLowerCase().includes(search) || row.registerNumber.toLowerCase().includes(search);
-      if (!matchSearch) return false;
+    const filtered = enrichedList.filter(row => {
+      if (search) {
+        const s = search.toLowerCase();
+        const matchSearch =
+          (row.fullName || '').toLowerCase().includes(s) ||
+          (row.registerNumber || '').toLowerCase().includes(s) ||
+          (row.leetcodeUsername || '').toLowerCase().includes(s) ||
+          (row.leetcodeUrl || '').toLowerCase().includes(s) ||
+          (row.className || '').toLowerCase().includes(s);
+        if (!matchSearch) return false;
+      }
 
       if (statusFilter !== 'ALL') {
-        const rowStatus = row.weeklyStatus.replace('_', ' ').toUpperCase();
-        const filterUpper = statusFilter.replace('_', ' ').toUpperCase();
-        return rowStatus === filterUpper;
+        return row.weeklyStatus === statusFilter;
       }
       return true;
     });
@@ -7704,6 +7719,9 @@ async function startServer() {
 
       return {
         studentId: student.id,
+        classId: student.class_id,
+        year: student.year,
+        departmentId: student.department_id,
         registerNumber: student.register_number,
         fullName: student.full_name,
         className: student.class_name || student.class_id || 'Unassigned',
@@ -7736,15 +7754,37 @@ async function startServer() {
     const scope = enforceUserScopeFilter(req.user, req.query);
     const dateStr = req.query.date ? req.query.date.toString() : getISTDateStr();
     const search = req.query.search ? req.query.search.toString().toLowerCase() : '';
+    const statusFilter = (req.query.statusFilter || req.query.status || 'ALL').toString();
 
     const studentRows = await fetchStudentsForScope(scope);
     const enrichedList = await enrichStudentGitHubDailyCommitsBatch(studentRows, dateStr);
 
     const filtered = enrichedList.filter(row => {
-      if (!search) return true;
-      return row.fullName.toLowerCase().includes(search) ||
-             row.registerNumber.toLowerCase().includes(search) ||
-             row.githubUsername.toLowerCase().includes(search);
+      if (search) {
+        const s = search.toLowerCase();
+        const matchSearch =
+          (row.fullName ? String(row.fullName).toLowerCase().includes(s) : false) ||
+          (row.registerNumber ? String(row.registerNumber).toLowerCase().includes(s) : false) ||
+          (row.githubUsername ? String(row.githubUsername).toLowerCase().includes(s) : false) ||
+          (row.githubUrl ? String(row.githubUrl).toLowerCase().includes(s) : false) ||
+          (row.className ? String(row.className).toLowerCase().includes(s) : false);
+        if (!matchSearch) return false;
+      }
+
+      if (statusFilter !== 'ALL') {
+        const hasProfile = !!(row.githubUsername || row.githubUrl);
+        const commits = Number(row.commitsToday ?? row.dailyCommitCount ?? 0);
+        if (statusFilter === 'COMPLETED') {
+          if (commits <= 0 && row.commitStatus !== 'ACTIVE') return false;
+        } else if (statusFilter === 'INCOMPLETE') {
+          if (!hasProfile || commits > 0) return false;
+        } else if (statusFilter === 'DATA_UNAVAILABLE') {
+          if (hasProfile && row.syncStatus !== 'NO_PROFILE') return false;
+        } else if (row.syncStatus !== statusFilter && row.commitStatus !== statusFilter) {
+          return false;
+        }
+      }
+      return true;
     });
 
     res.json(filtered);
@@ -7755,15 +7795,37 @@ async function startServer() {
     const dateStr = req.params.date;
     const scope = enforceUserScopeFilter(req.user, req.query);
     const search = req.query.search ? req.query.search.toString().toLowerCase() : '';
+    const statusFilter = (req.query.statusFilter || req.query.status || 'ALL').toString();
 
     const studentRows = await fetchStudentsForScope(scope);
     const enrichedList = await enrichStudentGitHubDailyCommitsBatch(studentRows, dateStr);
 
     const filtered = enrichedList.filter(row => {
-      if (!search) return true;
-      return row.fullName.toLowerCase().includes(search) ||
-             row.registerNumber.toLowerCase().includes(search) ||
-             row.githubUsername.toLowerCase().includes(search);
+      if (search) {
+        const s = search.toLowerCase();
+        const matchSearch =
+          (row.fullName ? String(row.fullName).toLowerCase().includes(s) : false) ||
+          (row.registerNumber ? String(row.registerNumber).toLowerCase().includes(s) : false) ||
+          (row.githubUsername ? String(row.githubUsername).toLowerCase().includes(s) : false) ||
+          (row.githubUrl ? String(row.githubUrl).toLowerCase().includes(s) : false) ||
+          (row.className ? String(row.className).toLowerCase().includes(s) : false);
+        if (!matchSearch) return false;
+      }
+
+      if (statusFilter !== 'ALL') {
+        const hasProfile = !!(row.githubUsername || row.githubUrl);
+        const commits = Number(row.commitsToday ?? row.dailyCommitCount ?? 0);
+        if (statusFilter === 'COMPLETED') {
+          if (commits <= 0 && row.commitStatus !== 'ACTIVE') return false;
+        } else if (statusFilter === 'INCOMPLETE') {
+          if (!hasProfile || commits > 0) return false;
+        } else if (statusFilter === 'DATA_UNAVAILABLE') {
+          if (hasProfile && row.syncStatus !== 'NO_PROFILE') return false;
+        } else if (row.syncStatus !== statusFilter && row.commitStatus !== statusFilter) {
+          return false;
+        }
+      }
+      return true;
     });
 
     res.json(filtered);
@@ -12918,3 +12980,4 @@ export default async function handler(req: any, res: any) {
   const app = await appPromise;
   return app(req, res);
 }
+
