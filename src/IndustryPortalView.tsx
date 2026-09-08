@@ -398,7 +398,7 @@ export default function IndustryPortalView({
             <div>
               <h2 style={{ fontSize:22, fontWeight:800, color:'#0f172a', margin:0 }}>📈 HR Recruitment & Intelligence Reports</h2>
               <p style={{ fontSize:12, color:'#64748b', marginTop:4, fontWeight:500 }}>
-                Generate institutional candidate placement records, AI compatibility analyses, and export professionally formatted CSV, XLSX, and PDF documents.
+                Generate institutional candidate placement records, AI compatibility analyses, and export professionally formatted Excel (.xlsx) and PDF documents.
               </p>
             </div>
             <div style={{ display:'flex', gap:8 }}>
@@ -415,13 +415,6 @@ export default function IndustryPortalView({
                 onClick={() => handleDownloadReport('pdf')}
               >
                 📄 Official PDF
-              </button>
-              <button
-                disabled={downloading}
-                style={{ ...c.btn('#475569'), display:'flex', alignItems:'center', gap:6, opacity: downloading ? 0.7 : 1 }}
-                onClick={() => handleDownloadReport('csv')}
-              >
-                📊 CSV
               </button>
             </div>
           </div>
