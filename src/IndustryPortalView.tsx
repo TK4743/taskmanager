@@ -36,10 +36,10 @@ export default function IndustryPortalView({
 }: {
   token: string;
   user: any;
-  activeTab?: 'dashboard'|'postings'|'applications'|'coding-assessments'|'faculty'|'reports'|'profile';
-  onTabChange?: (tab: 'dashboard'|'postings'|'applications'|'coding-assessments'|'faculty'|'reports'|'profile') => void;
+  activeTab?: 'dashboard'|'postings'|'applications'|'coding-assessments'|'reports'|'profile';
+  onTabChange?: (tab: 'dashboard'|'postings'|'applications'|'coding-assessments'|'reports'|'profile') => void;
 }) {
-  const [tab, setTabState] = useState<'dashboard'|'postings'|'applications'|'coding-assessments'|'faculty'|'reports'|'profile'>(activeTab || 'dashboard');
+  const [tab, setTabState] = useState<'dashboard'|'postings'|'applications'|'coding-assessments'|'reports'|'profile'>(activeTab || 'dashboard');
 
   useEffect(() => {
     if (activeTab) {
@@ -48,7 +48,7 @@ export default function IndustryPortalView({
     }
   }, [activeTab]);
 
-  const setTab = (t: 'dashboard'|'postings'|'applications'|'coding-assessments'|'faculty'|'reports'|'profile') => {
+  const setTab = (t: 'dashboard'|'postings'|'applications'|'coding-assessments'|'reports'|'profile') => {
     setTabState(t);
     if (onTabChange) onTabChange(t);
     if (t === 'reports') fetchReportPreview();
@@ -57,7 +57,6 @@ export default function IndustryPortalView({
   const [postings, setPostings] = useState<Posting[]>([]);
   const [selectedPosting, setSelectedPosting] = useState<Posting | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
-  const [facultyApps, setFacultyApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showPostingForm, setShowPostingForm] = useState(false);
   const [postingForm, setPostingForm] = useState({
@@ -98,11 +97,6 @@ export default function IndustryPortalView({
     setLoading(true);
     const r = await fetch(`${API}/api/industry/postings/${id}/applications`, { headers: h });
     if (r.ok) setApplications(await r.json()); setLoading(false);
-  }, [token]);
-
-  const fetchFacultyApps = useCallback(async () => {
-    const r = await fetch(`${API}/api/industry/faculty-applications`, { headers: h });
-    if (r.ok) setFacultyApps(await r.json());
   }, [token]);
 
   const fetchReportPreview = useCallback(async (selectedType?: string) => {
@@ -173,7 +167,7 @@ export default function IndustryPortalView({
     }
   };
 
-  useEffect(() => { fetchProfile(); fetchPostings(); fetchFacultyApps(); fetchDownloadLogs(); }, []);
+  useEffect(() => { fetchProfile(); fetchPostings(); fetchDownloadLogs(); }, []);
   useEffect(() => { if (selectedPosting) fetchApplications(selectedPosting.id); }, [selectedPosting]);
   useEffect(() => { if (tab === 'reports') fetchReportPreview(); }, [tab, reportType]);
 
@@ -245,10 +239,6 @@ export default function IndustryPortalView({
             <div style={c.stat}>
               <div style={{ fontSize:34,fontWeight:900,color:'#d97706' }}>{postings.reduce((a,p)=>a+(parseInt(String(p.application_count))||0),0)}</div>
               <div style={{ color:'#64748b',fontSize:12,fontWeight:600,marginTop:4 }}>Total Applications</div>
-            </div>
-            <div style={c.stat}>
-              <div style={{ fontSize:34,fontWeight:900,color:'#7c3aed' }}>{facultyApps.length}</div>
-              <div style={{ color:'#64748b',fontSize:12,fontWeight:600,marginTop:4 }}>Faculty Applications</div>
             </div>
           </div>
 
@@ -405,24 +395,6 @@ export default function IndustryPortalView({
             showToast={(msg: string) => alert(msg)}
           />
         )}
-
-        {/* FACULTY HUB */}
-        {tab==='faculty' && <>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-            <h2 style={{ fontSize:22, fontWeight:800, color:'#0f172a', margin:0 }}>Faculty Hub</h2>
-          </div>
-          <h3 style={{ fontSize:15, color:'#475569', fontWeight:700, marginBottom:14 }}>Faculty Applications Received</h3>
-          {facultyApps.length===0 && <div style={{ ...c.card, textAlign:'center', color:'#64748b', padding:50 }}>No faculty applications yet. Post opportunities on the Faculty Hub to receive applications.</div>}
-          {facultyApps.map((fa:any) => (
-            <div key={fa.id} style={c.card}>
-              <div style={{ fontWeight:800, color:'#0f172a', fontSize:15, marginBottom:4 }}>{fa.full_name} <span style={{ color:'#64748b', fontWeight:400, fontSize:13 }}>({fa.role?.replace('_',' ')})</span></div>
-              <div style={{ color:'#64748b', fontSize:13, marginBottom:6 }}>{fa.email}</div>
-              <div style={{ color:'#334155', fontSize:13, marginBottom:8 }}>Applied for: <strong>{fa.title}</strong> ({fa.opportunity_type})</div>
-              {fa.proposal && <div style={{ background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:8, padding:12, color:'#334155', fontSize:13, fontStyle:'italic', marginBottom:8 }}>"{fa.proposal}"</div>}
-              <span style={{ background:'#e0e7ff',color:'#4338ca',borderRadius:6,padding:'3px 10px',fontSize:12,fontWeight:700 }}>{fa.status}</span>
-            </div>
-          ))}
-        </>}
 
         {/* HR REPORTS CENTER */}
         {tab==='reports' && <>

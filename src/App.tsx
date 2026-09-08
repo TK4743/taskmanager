@@ -15,7 +15,6 @@ const LiveTeachingHubView = lazy(() => import('./LiveTeachingHubView'));
 const IndustryPortalView = lazy(() => import('./IndustryPortalView'));
 const StudentOpportunitiesView = lazy(() => import('./StudentOpportunitiesView'));
 const SkillGapAnalyzerView = lazy(() => import('./SkillGapAnalyzerView'));
-const FacultyIndustryHubView = lazy(() => import('./FacultyIndustryHubView'));
 const StudentCodingAssessmentView = lazy(() => import('./StudentCodingAssessmentView'));
 const InstitutionalSkillHeatmapView = lazy(() => import('./InstitutionalSkillHeatmapView'));
 
@@ -10692,12 +10691,6 @@ export default function App() {
               onClick={() => { setView('users'); setIsMobileSidebarOpen(false); }}
             />
             <SidebarItem
-              icon={<GraduationCap size={20} className="text-purple-500" />}
-              label="Faculty Hub"
-              active={view === 'faculty-industry-hub'}
-              onClick={() => { setView('faculty-industry-hub'); setIsMobileSidebarOpen(false); }}
-            />
-            <SidebarItem
               icon={<TrendingUp size={20} className="text-rose-500" />}
               label="HR Reports"
               active={view === 'industry-reports'}
@@ -10799,15 +10792,6 @@ export default function App() {
                   />
                 )}
               </>
-            )}
-
-            {(isAdvisor || isHOD) && (
-              <SidebarItem
-                icon={<GraduationCap size={20} className="text-blue-400" />}
-                label="Faculty Hub"
-                active={view === 'faculty-industry-hub'}
-                onClick={() => { setView('faculty-industry-hub'); setIsMobileSidebarOpen(false); }}
-              />
             )}
 
             {(isAdvisor || isHOD || isAdmin) && (
@@ -11684,7 +11668,6 @@ export default function App() {
                     if (isIndustry) {
                       if (view === 'industry-portal' || view === 'dashboard') return 'Corporate Hiring & Assessments';
                       if (view === 'users') return 'Candidate Talent Pool';
-                      if (view === 'faculty-industry-hub') return 'Faculty R&D Hub';
                       if (view === 'settings') return 'Account Settings';
                     }
                     if (view === 'leetcode-targets' || view === 'coding-progress') {
@@ -15349,23 +15332,6 @@ export default function App() {
               }
 
               {
-                view === 'faculty-industry-hub' && (
-                  <motion.div
-                    key="faculty-industry-hub"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="relative w-full h-full min-h-0 overflow-y-auto custom-scrollbar"
-                  >
-                    <FacultyIndustryHubView
-                      user={user}
-                      token={token}
-                    />
-                  </motion.div>
-                )
-              }
-
-              {
                 view === 'institutional-skill-heatmap' && (
                   <motion.div
                     key="institutional-skill-heatmap"
@@ -15410,11 +15376,7 @@ export default function App() {
                         return 'dashboard';
                       })()}
                       onTabChange={(t) => {
-                        if (t === 'faculty') {
-                          setView('faculty-industry-hub');
-                        } else {
-                          setView(`industry-${t}` as any);
-                        }
+                        setView(`industry-${t}` as any);
                       }}
                     />
                   </motion.div>
