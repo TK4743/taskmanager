@@ -92,9 +92,12 @@ const shuffleArray = <T,>(arr: T[]): T[] => {
 export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, token, addToast }) => {
   const isHOD = user?.role === 'HOD' || user?.role === 'SUPREME_ADMIN';
   const isAdvisor = user?.role === 'CLASS_ADVISOR';
+  const isCoordinator = Boolean(user?.role === 'STUDENT' && user?.is_coordinator);
+  const isClassScope = isAdvisor || isCoordinator;
+  const canViewClassAnalytics = isHOD || isAdvisor || isCoordinator;
 
   // Navigation tabs: 'tracks' | 'test' | 'remedial' | 'upload' | 'analytics' | 'my_marks'
-  // Default to Cohort Analytics for HOD/Advisors, and Mock Tracks for Students
+  // Default to Analytics for HOD/Advisors, and My Marks / Mock Tracks for Students
   const [activeTab, setActiveTab] = useState<'tracks' | 'test' | 'remedial' | 'upload' | 'analytics' | 'my_marks'>(
     isHOD || isAdvisor ? 'analytics' : 'tracks'
   );
@@ -172,7 +175,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
   const [showTriggerModal, setShowTriggerModal] = useState<boolean>(false);
   const [triggerTrackType, setTriggerTrackType] = useState<string>('ZOHO_MOCK');
   const [triggerYear, setTriggerYear] = useState<string>('ALL');
-  const [triggerClassId, setTriggerClassId] = useState<string>('ALL');
+  const [triggerClassId, setTriggerClassId] = useState<string>(() => (isAdvisor || isCoordinator) && user?.class_id ? user.class_id : 'ALL');
   const [triggerInstructions, setTriggerInstructions] = useState<string>('');
   const [triggerDeadline, setTriggerDeadline] = useState<string>('');
   const [isTriggering, setIsTriggering] = useState<boolean>(false);
@@ -231,7 +234,11 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
       });
       const data = await res.json();
       if (Array.isArray(data)) {
-        setAvailableClasses(data);
+        if (isClassScope && user?.class_id) {
+          setAvailableClasses(data.filter((c: any) => c.id === user.class_id));
+        } else {
+          setAvailableClasses(data);
+        }
       }
     } catch (_) {}
   };
@@ -310,11 +317,11 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
     fetchLatestResult();
     fetchMyAssessments();
     fetchRemedialPlan();
-    if (isHOD || isAdvisor) {
+    if (isHOD || isAdvisor || isCoordinator) {
       fetchHodResults();
       fetchClasses();
       fetchAssignments();
-      fetchTargetPreview('ALL', 'ALL');
+      fetchTargetPreview(isClassScope ? 'ALL' : 'ALL', isClassScope ? (user?.class_id || 'ALL') : 'ALL');
       fetchEmailNodesStatus();
     }
   }, []);
@@ -1114,18 +1121,18 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
-            {(isHOD || isAdvisor) && !isLockdownActive && (
+            {canViewClassAnalytics && !isLockdownActive && (
               <button
                 type="button"
                 onClick={() => {
                   setShowTriggerModal(true);
-                  fetchTargetPreview(triggerYear, triggerClassId);
+                  fetchTargetPreview(isClassScope ? 'ALL' : triggerYear, isClassScope ? (user?.class_id || 'ALL') : triggerClassId);
                   fetchEmailNodesStatus();
                 }}
                 className="px-3.5 py-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-700 hover:from-blue-700 hover:to-violet-800 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 cursor-pointer shrink-0"
               >
                 <Mail size={14} className="text-white" />
-                <span>Trigger Assessment & Emails</span>
+                <span>{isClassScope ? 'Trigger Class Assessment' : 'Trigger Assessment & Emails'}</span>
                 {emailNodesStatus && (
                   <span className="px-2 py-0.5 bg-white/20 text-white text-[10px] rounded-full font-mono font-bold">
                     {emailNodesStatus.totalAvailableCredits ?? 600} credits
@@ -1149,7 +1156,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                       }`}
                     >
                       <BarChart2 size={14} />
-                      <span>Cohort Results & Submissions ({studentResults.length})</span>
+                      <span>{isAdvisor ? 'Class Results & Submissions' : 'Cohort Results & Submissions'} ({studentResults.length})</span>
                     </button>
 
                     <button
@@ -1180,6 +1187,21 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                 </>
               ) : (
                 <>
+                  {isCoordinator && (
+                    <button
+                      type="button"
+                      onClick={() => { setActiveTab('analytics'); fetchHodResults(); }}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                        activeTab === 'analytics'
+                          ? 'bg-black text-white shadow-md'
+                          : 'bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200 font-extrabold'
+                      }`}
+                    >
+                      <BarChart2 size={14} />
+                      <span>Class Results ({studentResults.length})</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => { setActiveTab('my_marks'); fetchMyAssessments(); }}
@@ -2390,20 +2412,20 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
         )}
 
         {/* ═════════════════════════════════════════════════════════════════════
-            VIEW 5: HOD STUDENT RESULTS & ANALYTICS
+            VIEW 5: HOD & CLASS ADVISOR STUDENT RESULTS & ANALYTICS
             ═════════════════════════════════════════════════════════════════════ */}
-        {!isLockdownActive && activeTab === 'analytics' && (isHOD || isAdvisor) && (
+        {!isLockdownActive && activeTab === 'analytics' && canViewClassAnalytics && (
           <div className="space-y-6">
             <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 bg-zinc-100 px-2.5 py-0.5 rounded-full border border-zinc-200">
-                  Institutional Performance
+                  {isClassScope ? 'Class Performance' : 'Institutional Performance'}
                 </span>
                 <h3 className="text-xl font-bold text-zinc-900 mt-2">
-                  Student Assessment Submissions & Results
+                  {isClassScope ? 'Class Assessment Submissions & Results' : 'Student Assessment Submissions & Results'}
                 </h3>
                 <p className="text-xs text-zinc-500 mt-1">
-                  Track student participation, scores, proctoring face photos, and export complete reports to Excel.
+                  {isClassScope ? 'Viewing candidate scores, proctoring face photos, and performance exclusively for your assigned class.' : 'Track student participation, scores, proctoring face photos, and export complete reports to Excel.'}
                 </p>
               </div>
 
@@ -3101,51 +3123,65 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                 </div>
 
                 {/* 2. Target Year & Target Class Filters */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-extrabold text-zinc-700 uppercase tracking-wider mb-1.5">
-                      2. Target Academic Year
-                    </label>
-                    <select
-                      value={triggerYear}
-                      onChange={e => {
-                        const yr = e.target.value;
-                        setTriggerYear(yr);
-                        setTriggerClassId('ALL');
-                        fetchTargetPreview(yr, 'ALL');
-                      }}
-                      className="w-full p-3 bg-zinc-50 border border-zinc-300 rounded-xl text-xs font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
-                    >
-                      <option value="ALL">All Years (II & III IT — 369 Students)</option>
-                      <option value="2">II Year (2025-2029 Batch — 188 Students)</option>
-                      <option value="3">III Year (2024-2028 Batch — 181 Students)</option>
-                    </select>
+                {isClassScope ? (
+                  <div className="p-4 bg-amber-50/80 border border-amber-200/80 rounded-2xl">
+                    <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wider mb-1">
+                      Target Audience: Your Assigned Class
+                    </p>
+                    <p className="text-xs font-extrabold text-amber-950">
+                      {availableClasses[0]?.name ? `${availableClasses[0].name} (Year ${availableClasses[0].year})` : 'Your Assigned Class'}
+                    </p>
+                    <p className="text-[11px] text-amber-700 mt-0.5">
+                      Class Advisors and Coordinators can only trigger assessments for their own class.
+                    </p>
                   </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-extrabold text-zinc-700 uppercase tracking-wider mb-1.5">
+                        2. Target Academic Year
+                      </label>
+                      <select
+                        value={triggerYear}
+                        onChange={e => {
+                          const yr = e.target.value;
+                          setTriggerYear(yr);
+                          setTriggerClassId('ALL');
+                          fetchTargetPreview(yr, 'ALL');
+                        }}
+                        className="w-full p-3 bg-zinc-50 border border-zinc-300 rounded-xl text-xs font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+                      >
+                        <option value="ALL">All Years (II & III IT — 369 Students)</option>
+                        <option value="2">II Year (2025-2029 Batch — 188 Students)</option>
+                        <option value="3">III Year (2024-2028 Batch — 181 Students)</option>
+                      </select>
+                    </div>
 
-                  <div>
-                    <label className="block text-xs font-extrabold text-zinc-700 uppercase tracking-wider mb-1.5">
-                      3. Target Class / Section
-                    </label>
-                    <select
-                      value={triggerClassId}
-                      onChange={e => {
-                        const cid = e.target.value;
-                        setTriggerClassId(cid);
-                        fetchTargetPreview(triggerYear, cid);
-                      }}
-                      className="w-full p-3 bg-zinc-50 border border-zinc-300 rounded-xl text-xs font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
-                    >
-                      <option value="ALL">All Sections in Selected Year</option>
-                      {availableClasses
-                        .filter(c => triggerYear === 'ALL' || String(c.year) === String(triggerYear))
-                        .map(c => (
-                          <option key={c.id} value={c.id}>
-                            {c.name} (Year {c.year} • Batch {c.batch})
-                          </option>
-                        ))}
-                    </select>
+                    <div>
+                      <label className="block text-xs font-extrabold text-zinc-700 uppercase tracking-wider mb-1.5">
+                        3. Target Class / Section
+                      </label>
+                      <select
+                        value={triggerClassId}
+                        onChange={e => {
+                          const cid = e.target.value;
+                          setTriggerClassId(cid);
+                          fetchTargetPreview(triggerYear, cid);
+                        }}
+                        className="w-full p-3 bg-zinc-50 border border-zinc-300 rounded-xl text-xs font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+                      >
+                        <option value="ALL">All Sections in Selected Year</option>
+                        {availableClasses
+                          .filter(c => triggerYear === 'ALL' || String(c.year) === String(triggerYear))
+                          .map(c => (
+                            <option key={c.id} value={c.id}>
+                              {c.name} (Year {c.year} • Batch {c.batch})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Target Audience Live Counter */}
                 <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-2xl p-4 flex items-center justify-between">

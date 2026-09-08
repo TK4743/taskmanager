@@ -9464,22 +9464,43 @@ async function startServer() {
     });
   }));
 
-  // 5. HOD Performance Analytics & Results Table
-  app.get('/api/assessment/hod-results', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR']), asyncHandler(async (_req: any, res: any) => {
-    const attemptsRes = await pool.query(`
+  // 5. HOD & Class Advisor Performance Analytics & Results Table
+  app.get('/api/assessment/hod-results', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR', 'STUDENT']), asyncHandler(async (req: any, res: any) => {
+    // If student, only student coordinators are permitted
+    if (req.user.role === 'STUDENT' && !req.user.is_coordinator) {
+      return res.status(403).json({ error: 'Access denied. Only class advisors and student coordinators can view class analytics.' });
+    }
+
+    const isClassScoped = req.user.role === 'CLASS_ADVISOR' || (req.user.role === 'STUDENT' && req.user.is_coordinator);
+
+    let query = `
       SELECT 
         sa.id, sa.user_id, sa.student_name, sa.register_number, sa.total_questions,
         sa.correct_count, sa.score_percentage, sa.category_breakdown, sa.strengths,
         sa.gaps, sa.time_taken_seconds, sa.proctor_photo_url, sa.created_at,
         sa.track_type, sa.track_title, sa.cutoff_percentage, sa.is_passed,
-        c.name AS class_name, c.year AS class_year
+        c.name AS class_name, c.year AS class_year, u.class_id
       FROM student_assessments sa
       LEFT JOIN users u ON u.id = sa.user_id
       LEFT JOIN classes c ON c.id = u.class_id
-      ORDER BY sa.created_at DESC
-      LIMIT 500;
-    `);
+    `;
+    const params: any[] = [];
 
+    if (isClassScoped) {
+      if (!req.user.class_id) {
+        return res.json({
+          success: true,
+          metrics: { total_attempts: 0, average_score: 0, pass_rate: 0, high_score: 0 },
+          results: []
+        });
+      }
+      query += ` WHERE u.class_id = $1`;
+      params.push(req.user.class_id);
+    }
+
+    query += ` ORDER BY sa.created_at DESC LIMIT 500;`;
+
+    const attemptsRes = await pool.query(query, params);
     const attempts = attemptsRes.rows;
     const totalAttempts = attempts.length;
     const avgScore = totalAttempts > 0 
@@ -9500,8 +9521,17 @@ async function startServer() {
   }));
 
   // 6. Preview Target Students for Assessment Trigger (Year & Class Filtering)
-  app.get('/api/assessment/target-preview', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR']), asyncHandler(async (req: any, res: any) => {
-    const { target_year = 'ALL', target_class_id = 'ALL' } = req.query;
+  app.get('/api/assessment/target-preview', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR', 'STUDENT']), asyncHandler(async (req: any, res: any) => {
+    if (req.user.role === 'STUDENT' && !req.user.is_coordinator) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+
+    const isClassScoped = req.user.role === 'CLASS_ADVISOR' || (req.user.role === 'STUDENT' && req.user.is_coordinator);
+    let { target_year = 'ALL', target_class_id = 'ALL' } = req.query;
+
+    if (isClassScoped) {
+      target_class_id = req.user.class_id;
+    }
 
     let query = `
       SELECT u.id, u.full_name, u.register_number, u.email, c.name as class_name, c.year as class_year
@@ -9513,7 +9543,7 @@ async function startServer() {
     const values: any[] = [];
     let idx = 1;
 
-    if (target_year && target_year !== 'ALL') {
+    if (target_year && target_year !== 'ALL' && !isClassScoped) {
       query += ` AND c.year = $${idx++}`;
       values.push(parseInt(target_year, 10));
     }
@@ -9535,8 +9565,17 @@ async function startServer() {
   }));
 
   // 7. Manual Assessment Announcement & Email Load Balancer Trigger
-  app.post('/api/assessment/trigger-announcement', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR']), asyncHandler(async (req: any, res: any) => {
-    const { track_type, target_year = 'ALL', target_class_id = 'ALL', custom_instructions, deadline, force_resend } = req.body;
+  app.post('/api/assessment/trigger-announcement', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'CLASS_ADVISOR', 'STUDENT']), asyncHandler(async (req: any, res: any) => {
+    if (req.user.role === 'STUDENT' && !req.user.is_coordinator) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+
+    const isClassScoped = req.user.role === 'CLASS_ADVISOR' || (req.user.role === 'STUDENT' && req.user.is_coordinator);
+    let { track_type, target_year = 'ALL', target_class_id = 'ALL', custom_instructions, deadline, force_resend } = req.body;
+
+    if (isClassScoped) {
+      target_class_id = req.user.class_id;
+    }
 
     if (!track_type) {
       return res.status(400).json({ error: 'Assessment track_type is required' });
@@ -9638,8 +9677,9 @@ async function startServer() {
   }));
 
   // 8. Fetch Active & Historical Assessment Assignments
-  app.get('/api/assessment/assignments', authenticate, asyncHandler(async (_req: any, res: any) => {
-    const assignmentsRes = await pool.query(`
+  app.get('/api/assessment/assignments', authenticate, asyncHandler(async (req: any, res: any) => {
+    const isClassScoped = req.user.role === 'CLASS_ADVISOR' || (req.user.role === 'STUDENT' && req.user.is_coordinator);
+    let query = `
       SELECT 
         aa.id, aa.track_type, aa.track_title, aa.target_year, aa.target_class_id,
         aa.custom_instructions, aa.deadline, aa.created_at,
@@ -9649,9 +9689,15 @@ async function startServer() {
       FROM assessment_assignments aa
       LEFT JOIN classes c ON c.id = aa.target_class_id
       LEFT JOIN users u ON u.id = aa.created_by
-      ORDER BY aa.created_at DESC
-      LIMIT 25;
-    `);
+    `;
+    const params: any[] = [];
+    if (isClassScoped && req.user.class_id) {
+      query += ` WHERE aa.target_class_id = $1 OR aa.target_class_id IS NULL`;
+      params.push(req.user.class_id);
+    }
+    query += ` ORDER BY aa.created_at DESC LIMIT 25;`;
+
+    const assignmentsRes = await pool.query(query, params);
 
     res.json({
       success: true,
