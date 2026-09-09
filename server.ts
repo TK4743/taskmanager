@@ -155,7 +155,7 @@ export async function buildExcelReportBuffer(
   academicYear: string = '2024-2028'
 ): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'IT Task Manager';
+  workbook.creator = 'IT Vault';
   workbook.created = new Date();
 
   let logoId: number | undefined;
@@ -435,38 +435,42 @@ async function startServer() {
   // Initialize Web Push VAPID Notification Service in non-blocking fashion
   initPushNotifications().catch(err => console.error('[WebPush] Startup init warning:', err));
 
-  // Trigger initial 30-day screenshot cleanup and schedule daily background execution (every 24 hours)
-  cleanupOnlyTaskScreenshots().catch(err => console.error('[ImageCleanup] Startup cleanup warning:', err));
-  setInterval(() => {
-    cleanupOnlyTaskScreenshots().catch(err => console.error('[ImageCleanup] Scheduled cleanup warning:', err));
-  }, 24 * 60 * 60 * 1000);
+  // Only run background schedulers, cleanup workers, and pollers in persistent server environments (e.g. Render/VPS/local).
+  // In Vercel serverless functions, background timers and long-polling keep the lambda active and rapidly consume Fluid Active CPU limits.
+  if (!isVercel) {
+    // Trigger initial 30-day screenshot cleanup and schedule daily background execution (every 24 hours)
+    cleanupOnlyTaskScreenshots().catch(err => console.error('[ImageCleanup] Startup cleanup warning:', err));
+    setInterval(() => {
+      cleanupOnlyTaskScreenshots().catch(err => console.error('[ImageCleanup] Scheduled cleanup warning:', err));
+    }, 24 * 60 * 60 * 1000);
 
-  // Initialize Telegram Bot update poller for automated interactive commands & 1-click student account linking
-  try {
-    startTelegramPoller();
-  } catch (tgErr) {
-    console.error('[Telegram] Failed to start poller:', tgErr);
+    // Initialize Telegram Bot update poller for automated interactive commands & 1-click student account linking
+    try {
+      startTelegramPoller();
+    } catch (tgErr) {
+      console.error('[Telegram] Failed to start poller:', tgErr);
+    }
+
+    // ── Continuous In-Server Automation Scheduler ──────────────────────────────
+    // Ticks every 30 seconds to evaluate exact IST schedules backed by atomic DB locks:
+    // 1. 7:50 AM IST  -> Pre-Sync Previous Day LeetCode & GitHub Progress
+    // 2. 8:00 AM IST  -> Morning Department Summary & 24h Deadline Alerts (for previous day)
+    // 3. 8:00 PM IST  -> 1-to-1 Private Reminders to students with pending deadlines
+    // 4. 8:50 PM IST  -> Pre-Sync Today's LeetCode & GitHub Progress
+    // 5. 9:00 PM IST  -> Evening Department Group Summary
+    // 6. 11:55 PM IST -> Daily LeetCode & GitHub Progress Sync & CSV/JSON GitHub Auto-Push
+    setInterval(() => {
+      checkAndTriggerScheduledAutomations().catch(err => console.error('[In-Server Scheduler] Tick error:', err));
+    }, 30 * 1000);
+
+    // Initial trigger 5 seconds after server start
+    setTimeout(() => {
+      checkAndTriggerScheduledAutomations().catch(err => console.error('[In-Server Scheduler] Startup tick error:', err));
+    }, 5000);
+
+    // Auto-ensure Telegram Webhook is active if configured
+    setTelegramWebhook().catch(err => console.error('[Telegram Webhook Init Warning]:', err));
   }
-
-  // ── Continuous In-Server Automation Scheduler ──────────────────────────────
-  // Ticks every 30 seconds to evaluate exact IST schedules backed by atomic DB locks:
-  // 1. 7:50 AM IST  -> Pre-Sync Previous Day LeetCode & GitHub Progress
-  // 2. 8:00 AM IST  -> Morning Department Summary & 24h Deadline Alerts (for previous day)
-  // 3. 8:00 PM IST  -> 1-to-1 Private Reminders to students with pending deadlines
-  // 4. 8:50 PM IST  -> Pre-Sync Today's LeetCode & GitHub Progress
-  // 5. 9:00 PM IST  -> Evening Department Group Summary
-  // 6. 11:55 PM IST -> Daily LeetCode & GitHub Progress Sync & CSV/JSON GitHub Auto-Push
-  setInterval(() => {
-    checkAndTriggerScheduledAutomations().catch(err => console.error('[In-Server Scheduler] Tick error:', err));
-  }, 30 * 1000);
-
-  // Initial trigger 5 seconds after server start
-  setTimeout(() => {
-    checkAndTriggerScheduledAutomations().catch(err => console.error('[In-Server Scheduler] Startup tick error:', err));
-  }, 5000);
-
-  // Auto-ensure Telegram Webhook is active if configured
-  setTelegramWebhook().catch(err => console.error('[Telegram Webhook Init Warning]:', err));
 
   const app = express();
   app.disable('x-powered-by');
@@ -2305,7 +2309,7 @@ async function startServer() {
     if (cached) return res.json(cached);
 
     const responseData = await getTasksDataForUser(dbUser);
-    setApiCache(cacheKey, responseData, 5);
+    setApiCache(cacheKey, responseData, 60);
     res.json(responseData);
   });
 
@@ -4021,40 +4025,61 @@ async function startServer() {
   async function getSubmissionsDataForUser(dbUser: any) {
     let subsRes;
     const baseQuery = `
-      SELECT ts.*, t.title as task_title, u.full_name as student_name, u.register_number, u.class_id, c.name as class_name, c.year as class_year
+      SELECT ts.*, 
+             t.title as task_title, t.custom_field_label, t.custom_field_type, t.deadline as task_deadline, t.submission_type,
+             u.full_name as student_name, u.register_number, u.email as student_email, u.profile_picture as student_avatar,
+             u.class_id, u.department_id,
+             c.name as class_name, c.year as class_year,
+             d.name as department_name
       FROM task_submissions ts
       JOIN tasks t ON ts.task_id = t.id
       JOIN users u ON ts.user_id = u.id
       LEFT JOIN classes c ON u.class_id = c.id
+      LEFT JOIN departments d ON u.department_id = d.id
     `;
 
-    if (dbUser.role === 'STUDENT') {
-      if (dbUser.is_coordinator) {
-        const studentsRes = await pool.query('SELECT id FROM users WHERE class_id = $1', [dbUser.class_id]);
-        const studentIds = studentsRes.rows.map((s: any) => s.id);
-        subsRes = await pool.query(`${baseQuery} WHERE ts.user_id = ANY($1)`, [studentIds]);
+    try {
+      if (dbUser.role === 'STUDENT') {
+        if (dbUser.is_coordinator && dbUser.class_id) {
+          subsRes = await pool.query(`${baseQuery} WHERE u.class_id = $1 ORDER BY ts.submitted_at DESC NULLS LAST`, [dbUser.class_id]);
+        } else {
+          subsRes = await pool.query(`${baseQuery} WHERE ts.user_id = $1 ORDER BY ts.submitted_at DESC NULLS LAST`, [dbUser.id]);
+        }
+      } else if (dbUser.role === 'CLASS_ADVISOR') {
+        if (dbUser.class_id) {
+          subsRes = await pool.query(`${baseQuery} WHERE u.class_id = $1 ORDER BY ts.submitted_at DESC NULLS LAST`, [dbUser.class_id]);
+        } else {
+          subsRes = { rows: [] };
+        }
+      } else if (dbUser.role === 'HOD') {
+        if (dbUser.department_id) {
+          subsRes = await pool.query(`${baseQuery} WHERE u.department_id = $1 AND u.role = 'STUDENT' ORDER BY ts.submitted_at DESC NULLS LAST`, [dbUser.department_id]);
+        } else {
+          subsRes = { rows: [] };
+        }
       } else {
-        subsRes = await pool.query(`${baseQuery} WHERE ts.user_id = $1`, [dbUser.id]);
+        subsRes = await pool.query(`${baseQuery} ORDER BY ts.submitted_at DESC NULLS LAST`);
       }
-    } else if (dbUser.role === 'CLASS_ADVISOR') {
-      const studentsRes = await pool.query('SELECT id FROM users WHERE class_id = $1', [dbUser.class_id]);
-      const studentIds = studentsRes.rows.map((s: any) => s.id);
-      subsRes = await pool.query(`${baseQuery} WHERE ts.user_id = ANY($1)`, [studentIds]);
-    } else if (dbUser.role === 'HOD') {
-      const studentsRes = await pool.query('SELECT id FROM users WHERE department_id = $1 AND role = \'STUDENT\'', [dbUser.department_id]);
-      const studentIds = studentsRes.rows.map((s: any) => s.id);
-      subsRes = await pool.query(`${baseQuery} WHERE ts.user_id = ANY($1)`, [studentIds]);
-    } else {
-      subsRes = await pool.query(baseQuery);
+    } catch (queryErr: any) {
+      console.error('[getSubmissionsDataForUser Error]:', queryErr.message);
+      subsRes = { rows: [] };
     }
 
     return subsRes.rows.map((s: any) => ({
       id: s.id,
       task_id: s.task_id,
       task_title: s.task_title,
+      task_deadline: s.task_deadline,
+      submission_type: s.submission_type,
+      custom_field_label: s.custom_field_label,
+      custom_field_type: s.custom_field_type,
       user_id: s.user_id,
       student_name: s.student_name,
+      student_email: s.student_email,
+      student_avatar: s.student_avatar,
       register_number: s.register_number,
+      department_id: s.department_id,
+      department_name: s.department_name,
       class_id: s.class_id,
       class_name: s.class_name,
       class_year: s.class_year,
@@ -4078,7 +4103,7 @@ async function startServer() {
     if (cached) return res.json(cached);
 
     const data = await getSubmissionsDataForUser(req.user);
-    setApiCache(cacheKey, data, 10);
+    setApiCache(cacheKey, data, 45);
     res.json(data);
   });
 
@@ -8563,7 +8588,7 @@ async function startServer() {
   }
 
   // ── Telegram Bot Startup Poller ───────────────────────────────────────────
-  if (process.env.TELEGRAM_BOT_TOKEN) {
+  if (!isVercel && process.env.TELEGRAM_BOT_TOKEN) {
     try {
       startTelegramPoller();
       console.log('[Telegram Bot] Background poller started successfully.');

@@ -453,7 +453,7 @@ export async function buildIncompleteExcelBuffer(
   allStudentsProgress: any[]
 ): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'IT Task Manager';
+  workbook.creator = 'IT Vault';
   workbook.created = new Date();
 
   // Find all distinct years in the student progress
@@ -4175,6 +4175,12 @@ let isPolling = false;
 let lastUpdateId = 0;
 
 export function startTelegramPoller(): void {
+  // Prevent poller from running inside serverless environments (Vercel, AWS Lambda).
+  // In serverless, Telegram updates are handled via inbound webhooks (/api/telegram/webhook).
+  if (process.env.VERCEL || process.env.VERCEL_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return;
+  }
+
   const token = getBotToken();
   if (!token || isPolling) return;
 

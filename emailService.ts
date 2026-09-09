@@ -178,7 +178,7 @@ function getBrevoNodes(): BrevoAccountNode[] {
   const nodeConfigs = [
     { key: process.env.BREVO_API_KEY, email: process.env.BREVO_SENDER_EMAIL, name: process.env.BREVO_SENDER_NAME, id: 'Brevo-Node-1' },
     { key: process.env.BREVO_API_KEY_2, email: process.env.BREVO_SENDER_EMAIL_2, name: process.env.BREVO_SENDER_NAME_2, id: 'Brevo-Node-2' },
-    { key: process.env.BREVO_API_KEY_3, email: process.env.BREVO_SENDER_EMAIL_3 || 'campusconnectvsb@gmail.com', name: process.env.BREVO_SENDER_NAME_3 || 'VSBEC IT Task Manager (Demo Purpose Only)', id: 'Brevo-Node-3' },
+    { key: process.env.BREVO_API_KEY_3, email: process.env.BREVO_SENDER_EMAIL_3 || 'campusconnectvsb@gmail.com', name: process.env.BREVO_SENDER_NAME_3 || 'VSBEC IT Vault (Demo Purpose Only)', id: 'Brevo-Node-3' },
     { key: (process.env as any).BREVO_API_KEY_4, email: (process.env as any).BREVO_SENDER_EMAIL_4, name: (process.env as any).BREVO_SENDER_NAME_4, id: 'Brevo-Node-4' },
     { key: (process.env as any).BREVO_API_KEY_5, email: (process.env as any).BREVO_SENDER_EMAIL_5, name: (process.env as any).BREVO_SENDER_NAME_5, id: 'Brevo-Node-5' }
   ];
@@ -192,7 +192,7 @@ function getBrevoNodes(): BrevoAccountNode[] {
         : 'vsbecitc2428@gmail.com';
 
       const defaultSenderName = cfg.id === 'Brevo-Node-3'
-        ? 'VSBEC IT Task Manager (Demo Purpose Only)'
+        ? 'VSBEC IT Vault (Demo Purpose Only)'
         : 'VSBEC IT Department';
 
       nodes.push({
@@ -739,7 +739,7 @@ export async function sendTaskReopenedEmail(payload: TaskReopenedEmailPayload): 
     : 'Open / Extended (No Strict Cutoff)';
 
   const refCode = `VSB-REOPEN-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-  const subject = `🔄 Assignment Reopened & Extended: "${taskTitle}" — VSBEC IT TaskManager`;
+  const subject = `🔄 Assignment Reopened & Extended: "${taskTitle}" — VSBEC IT Vault`;
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -996,7 +996,7 @@ export async function sendTaskStatusEmail(payload: EmailNotificationPayload): Pr
                 Department of Information Technology
               </h2>
               <span style="display: inline-block; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 3px 10px; font-size: 11px; font-weight: 600; color: #475569; letter-spacing: 0.05em;">
-                OFFICIAL ACADEMIC TASK MANAGEMENT PORTAL
+                OFFICIAL ACADEMIC IT VAULT PORTAL
               </span>
             </td>
           </tr>
@@ -1609,7 +1609,7 @@ export async function sendTaskPendingReminderEmail(
         </p>
         <div style="margin-top: 8px;">
           <span style="display: inline-block; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; font-size: 10.5px; font-weight: 700; padding: 3px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em;">
-            VSBEC IT TASK MANAGER
+            VSBEC IT VAULT
           </span>
         </div>
       </td>
@@ -1678,14 +1678,14 @@ export async function sendTaskPendingReminderEmail(
         <!-- Warning Callout -->
         <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; padding: 12px 16px; margin-bottom: 24px;">
           <p style="margin: 0; font-size: 12.5px; color: #92400e; line-height: 1.45;">
-            ⏳ <b>Urgent:</b> Please log in to the Task Management Portal immediately to upload your screenshot / completion proof prior to deadline closing to avoid academic non-compliance.
+            ⏳ <b>Urgent:</b> Please log in to the IT Vault Portal immediately to upload your screenshot / completion proof prior to deadline closing to avoid academic non-compliance.
           </p>
         </div>
 
         <!-- CTA Button -->
         <div style="text-align: center; margin: 28px 0 12px 0;">
           <a href="https://it-taskmanager.vercel.app/" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; font-size: 13.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 14px 34px; border-radius: 6px; border: 1px solid #b91c1c; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);">
-            🚀 Submit Task Proof on VSBEC IT Task Manager
+            🚀 Submit Task Proof on VSBEC IT Vault
           </a>
         </div>
         <p style="text-align: center; font-size: 12.5px; color: #64748b; margin: 0 0 20px 0;">
@@ -2272,7 +2272,7 @@ export async function sendAssessmentInvitationEmail(
     ? 'Head of the Department (HOD)'
     : senderRole === 'SUPREME_ADMIN'
     ? 'Supreme Administrator / Head of Department'
-    : (senderName ? `${senderName} (${senderRole === 'CLASS_ADVISOR' ? 'Class Advisor' : (senderRole || 'Coordinator')})` : 'VSBEC IT Task Manager');
+    : (senderName ? `${senderName} (${senderRole === 'CLASS_ADVISOR' ? 'Class Advisor' : (senderRole || 'Coordinator')})` : 'VSBEC IT Vault');
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -2293,7 +2293,7 @@ export async function sendAssessmentInvitationEmail(
 
     <!-- Institutional Header -->
     <div style="background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 50%, #e0f2fe 100%); padding: 32px 28px; text-align: center; border-bottom: 3px solid #0284c7;">
-      <img src="https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png" width="68" height="68" style="display: block; margin: 0 auto 12px auto; background: #ffffff; border-radius: 50%; border: 2px solid #0284c7; padding: 4px;" alt="VSBEC IT Task Manager Logo" />
+      <img src="https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png" width="68" height="68" style="display: block; margin: 0 auto 12px auto; background: #ffffff; border-radius: 50%; border: 2px solid #0284c7; padding: 4px;" alt="VSBEC IT Vault Logo" />
       <p style="color: #0369a1; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; margin: 0 0 4px 0;">
         VSB Engineering College (Autonomous)
       </p>
@@ -2302,7 +2302,7 @@ export async function sendAssessmentInvitationEmail(
       </h1>
       <div style="margin-top: 8px;">
         <span style="background: #e0f2fe; border: 1px solid #7dd3fc; color: #0369a1; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 999px; text-transform: uppercase; display: inline-block;">
-          VSBEC IT TASK MANAGER
+          VSBEC IT VAULT
         </span>
       </div>
     </div>
@@ -2315,7 +2315,7 @@ export async function sendAssessmentInvitationEmail(
           💡 PLACEMENT & TECHNICAL ASSESSMENT
         </p>
         <p style="font-size: 13px; color: #14532d; line-height: 1.55; margin: 0 0 6px 0;">
-          You are invited to take the proctored online assessment module on the <strong>VSBEC IT Task Manager</strong> platform.
+          You are invited to take the proctored online assessment module on the <strong>VSBEC IT Vault</strong> platform.
         </p>
         <p style="font-size: 12px; color: #166534; line-height: 1.5; margin: 0;">
           ℹ️ <em>Please ensure you attempt this assessment from a laptop/desktop with a working webcam enabled.</em>
@@ -2400,7 +2400,7 @@ export async function sendAssessmentInvitationEmail(
       <!-- Institutional Footer -->
       <div style="text-align: center; font-size: 11.5px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 20px;">
         <p style="font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">
-          VSBEC IT Task Manager • Placement & Technical Competency Platform
+          VSBEC IT Vault • Placement & Technical Competency Platform
         </p>
         <p style="font-size: 11px; color: #64748b; margin: 0 0 4px 0;">
           Department of Information Technology, VSB Engineering College (Autonomous), Karur - 639111
@@ -2422,7 +2422,7 @@ export async function sendAssessmentInvitationEmail(
     displayName,
     subject,
     htmlContent,
-    'VSBEC IT Task Manager'
+    'VSBEC IT Vault'
   );
 }
 

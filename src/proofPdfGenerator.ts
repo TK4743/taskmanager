@@ -281,8 +281,8 @@ export async function generateMergedProofsPdf(
 
     // Portal link (Clickable)
     doc.setTextColor(37, 99, 235); // Blue #2563eb
-    doc.textWithLink('IT TaskManager Portal', margin, footerY, { url: 'https://it-taskmanager.vercel.app/' });
-    const portalWidth = doc.getTextWidth('IT TaskManager Portal');
+    doc.textWithLink('IT Vault Portal', margin, footerY, { url: 'https://it-taskmanager.vercel.app/' });
+    const portalWidth = doc.getTextWidth('IT Vault Portal');
 
     // Separator text
     doc.setTextColor(148, 163, 184); // slate-400

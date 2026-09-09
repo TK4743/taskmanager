@@ -35,8 +35,8 @@ self.addEventListener('push', (event) => {
   const defaultBadge = origin ? `${origin}/badge.png` : '/badge.png';
 
   let notificationData = {
-    title: 'VSBEC IT TaskManager',
-    body: 'You have a new update in IT TaskManager!',
+    title: 'VSBEC IT Vault',
+    body: 'You have a new update in IT Vault!',
     icon: defaultIcon,
     badge: defaultBadge,
     url: '/',

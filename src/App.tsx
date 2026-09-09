@@ -68,6 +68,9 @@ import {
   Trash2,
   ShieldCheck,
   ChevronRight,
+  ChevronLeft,
+  ZoomIn,
+  ZoomOut,
   Search,
   Bell,
   BellOff,
@@ -299,11 +302,22 @@ interface Submission {
   id: string | number;
   task_id: string | number;
   task_title: string;
+  task_deadline?: string;
+  submission_type?: string;
+  custom_field_label?: string;
+  custom_field_type?: string;
   user_id: string | number;
   student_name?: string;
+  student_email?: string;
+  student_avatar?: string;
   register_number?: string;
+  department_id?: string | number;
+  department_name?: string;
+  class_id?: string | number;
+  class_name?: string;
+  class_year?: number;
   custom_field_value?: string;
-  status: 'PENDING' | 'SUBMITTED' | 'VERIFIED' | 'REJECTED';
+  status: 'PENDING' | 'SUBMITTED' | 'VERIFIED' | 'REJECTED' | 'NOT_PARTICIPATING';
   screenshot_url: string;
   verification_note?: string;
   rejection_reason?: string;
@@ -312,8 +326,6 @@ interface Submission {
   resubmission_count?: number;
   not_participating?: boolean;
   not_participating_reason?: string;
-  class_name?: string;
-  class_year?: number;
   class_ids?: (string | number)[];
   task_category?: string;
 }
@@ -1029,7 +1041,7 @@ const FeatureComparisonView = () => {
             </div>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Platform Evolution & Features</h2>
             <p className="text-zinc-400 text-xs md:text-sm max-w-xl leading-relaxed">
-              Technical overview of the progression from the foundational task manager (<code className="bg-zinc-800 text-zinc-200 px-1.5 py-0.5 rounded font-mono text-[11px]">PratapSakthivel</code>) to the production analytics system (<code className="bg-zinc-800 text-zinc-200 px-1.5 py-0.5 rounded font-mono text-[11px]">Tharun4743</code>).
+              Technical overview of the progression from the foundational task manager (<code className="bg-zinc-800 text-zinc-200 px-1.5 py-0.5 rounded font-mono text-[11px]">PratapSakthivel</code>) to the production IT Vault analytics platform (<code className="bg-zinc-800 text-zinc-200 px-1.5 py-0.5 rounded font-mono text-[11px]">Tharun4743</code>).
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
@@ -1229,7 +1241,7 @@ const Footer = ({ onShowModal }: { onShowModal: (type: 'PRIVACY' | 'TERMS' | 'SU
         <div className="w-8 h-8 rounded-full bg-white p-0.5 overflow-hidden shrink-0 border border-zinc-200 shadow-2xs flex items-center justify-center">
           <img src="/logo.png" alt="VSBEC Logo" className="w-full h-full object-contain" />
         </div>
-        <span className="font-extrabold text-zinc-900 text-xs tracking-tight whitespace-nowrap">VSBEC IT Task Manager</span>
+        <span className="font-extrabold text-zinc-900 text-xs tracking-tight whitespace-nowrap">VSBEC IT Vault</span>
       </div>
 
       {/* Center: Legal & Information Links */}
@@ -2713,7 +2725,7 @@ function SettingsView({
         try {
           const reg = await navigator.serviceWorker.ready;
           if (reg && reg.showNotification) {
-            reg.showNotification('🔔 VSBEC IT TaskManager', {
+            reg.showNotification('🔔 VSBEC IT Vault', {
               body: '✅ Desktop notification test succeeded on this laptop!',
               icon: `${window.location.origin}/logo.png`,
               badge: `${window.location.origin}/badge.png`,
@@ -2848,7 +2860,7 @@ function SettingsView({
   };
 
   const handleUnlinkTelegram = async () => {
-    if (!confirm('Are you sure you want to disconnect your Telegram account from IT TaskManager?')) return;
+    if (!confirm('Are you sure you want to disconnect your Telegram account from IT Vault?')) return;
     try {
       const res = await fetch(`${API_URL}/api/student/unlink-telegram`, {
         method: 'DELETE',
@@ -3879,12 +3891,32 @@ export default function App() {
   const [indRegMsg, setIndRegMsg] = useState('');
   const [indRegError, setIndRegError] = useState('');
 
-  // Data State
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [classes, setClasses] = useState<Class[]>([]);
+  // Data State with Instant Cache Hydration
+  const [departments, setDepartments] = useState<Department[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('app_cache_depts');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [classes, setClasses] = useState<Class[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('app_cache_classes');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
   const [users, setUsers] = useState<User[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('app_cache_tasks');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [submissions, setSubmissions] = useState<Submission[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('app_cache_submissions');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
   const [hodStats, setHodStats] = useState<HODStats | null>(null);
   const [advisorStats, setAdvisorStats] = useState<AdvisorStats | null>(null);
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
@@ -4388,10 +4420,16 @@ export default function App() {
     if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
     return [1, '...', current - 1, current, current + 1, '...', total];
   };
-  const [selectedSubmissions, setSelectedSubmissions] = useState<number[]>([]);
+  const [selectedSubmissions, setSelectedSubmissions] = useState<(string | number)[]>([]);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [showRejectionModal, setShowRejectionModal] = useState<number | null>(null);
+  const [showRejectionModal, setShowRejectionModal] = useState<string | number | null>(null);
   const [verificationNote, setVerificationNote] = useState('');
+  // Inspector Modal for detailed proof and student review
+  const [inspectingSubmission, setInspectingSubmission] = useState<Submission | null>(null);
+  const [inspectingProofZoom, setInspectingProofZoom] = useState(1);
+  const [inspectingProofRotation, setInspectingProofRotation] = useState(0);
+  const [inspectingCopied, setInspectingCopied] = useState<string | null>(null);
+  const [teamReviewModal, setTeamReviewModal] = useState<{ id: string; name: string; status: 'APPROVED' | 'REJECTED' } | null>(null);
   const [analyzerClassFilter, setAnalyzerClassFilter] = useState('');
   const [analyzerYearFilter, setAnalyzerYearFilter] = useState('');
   const [analyzerTaskFilter, setAnalyzerTaskFilter] = useState('');
@@ -4582,7 +4620,7 @@ export default function App() {
   };
 
   const handleUnlinkTelegram = async () => {
-    if (!confirm('Are you sure you want to disconnect your Telegram account from IT TaskManager?')) return;
+    if (!confirm('Are you sure you want to disconnect your Telegram account from IT Vault?')) return;
     try {
       const res = await fetch(`${API_URL}/api/student/unlink-telegram`, {
         method: 'DELETE',
@@ -4822,6 +4860,20 @@ export default function App() {
   const [isUploadingPoster, setIsUploadingPoster] = useState(false);
   const [selectedPosterModal, setSelectedPosterModal] = useState<string | null>(null);
   const [studentTaskFilter, setStudentTaskFilter] = useState<'ALL' | 'PENDING_ACTION' | 'UNDER_REVIEW' | 'VERIFIED' | 'OVERDUE'>('ALL');
+  
+  // Fast O(1) Student Submissions Lookup Map for Instant Task Card Rendering
+  const studentSubmissionsMap = useMemo(() => {
+    const map = new Map<string, Submission>();
+    if (!user?.id) return map;
+    const uidStr = String(user.id);
+    for (let i = 0; i < submissions.length; i++) {
+      const s = submissions[i];
+      if (String(s.user_id) === uidStr) {
+        map.set(String(s.task_id), s);
+      }
+    }
+    return map;
+  }, [submissions, user?.id]);
   const [sharedTaskModal, setSharedTaskModal] = useState<Task | null>(null);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const [highlightedNoticeId, setHighlightedNoticeId] = useState<string | null>(null);
@@ -5393,7 +5445,7 @@ export default function App() {
                   try {
                     navigator.serviceWorker?.ready?.then(reg => {
                       if (reg && reg.showNotification) {
-                        reg.showNotification('🔔 IT TaskManager', {
+                        reg.showNotification('🔔 IT Vault', {
                           body: n.message,
                           icon: '/logo.png',
                           badge: '/badge.png',
@@ -5401,10 +5453,10 @@ export default function App() {
                           data: { url: '/' }
                         });
                       } else {
-                        new Notification('🔔 IT TaskManager', { body: n.message, icon: '/logo.png' });
+                        new Notification('🔔 IT Vault', { body: n.message, icon: '/logo.png' });
                       }
                     }).catch(() => {
-                      new Notification('🔔 IT TaskManager', { body: n.message, icon: '/logo.png' });
+                      new Notification('🔔 IT Vault', { body: n.message, icon: '/logo.png' });
                     });
                   } catch { }
                 }
@@ -5529,7 +5581,7 @@ export default function App() {
                 try {
                   navigator.serviceWorker?.ready?.then(reg => {
                     if (reg && reg.showNotification) {
-                      reg.showNotification('🔔 IT TaskManager', {
+                      reg.showNotification('🔔 IT Vault', {
                         body: n.message,
                         icon: '/logo.png',
                         badge: '/badge.png',
@@ -5537,10 +5589,10 @@ export default function App() {
                         data: { url: '/' }
                       });
                     } else {
-                      new Notification('🔔 IT TaskManager', { body: n.message, icon: '/logo.png' });
+                      new Notification('🔔 IT Vault', { body: n.message, icon: '/logo.png' });
                     }
                   }).catch(() => {
-                    new Notification('🔔 IT TaskManager', { body: n.message, icon: '/logo.png' });
+                    new Notification('🔔 IT Vault', { body: n.message, icon: '/logo.png' });
                   });
                 } catch { }
               }
@@ -6344,21 +6396,160 @@ export default function App() {
     setUploading(null);
   };
 
-  const verifySubmission = async (id: number, status: string) => {
-    await fetch(`${API_URL}/api/submissions/${id}/verify`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        status,
-        verification_note: status === 'VERIFIED' ? verificationNote : null,
-        rejection_reason: status === 'REJECTED' ? rejectionReason : null
-      })
+  const verifySubmission = async (
+    id: string | number,
+    status: 'VERIFIED' | 'REJECTED',
+    customNote?: string,
+    customReason?: string
+  ) => {
+    const finalNote = customNote !== undefined ? customNote : (status === 'VERIFIED' ? verificationNote : null);
+    const finalReason = customReason !== undefined ? customReason : (status === 'REJECTED' ? rejectionReason : null);
+
+    if (status === 'REJECTED' && (!finalReason || !finalReason.trim())) {
+      addToast('Please provide a reason for rejecting the submission.', 'error');
+      return false;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/submissions/${id}/verify`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          status,
+          verification_note: status === 'VERIFIED' ? finalNote : null,
+          rejection_reason: status === 'REJECTED' ? finalReason : null
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        addToast(status === 'VERIFIED' ? 'Submission successfully verified!' : 'Submission rejected.', 'success');
+        setVerificationNote('');
+        setRejectionReason('');
+        setShowRejectionModal(null);
+
+        // Optimistically update local submissions state
+        setSubmissions(prev => prev.map(s => String(s.id) === String(id) ? {
+          ...s,
+          status,
+          verification_note: status === 'VERIFIED' ? (finalNote || s.verification_note) : s.verification_note,
+          rejection_reason: status === 'REJECTED' ? (finalReason || s.rejection_reason) : s.rejection_reason,
+          verified_at: new Date().toISOString()
+        } : s));
+
+        // Optimistically update inspectingSubmission if open
+        setInspectingSubmission(prev => (prev && String(prev.id) === String(id)) ? {
+          ...prev,
+          status,
+          verification_note: status === 'VERIFIED' ? (finalNote || prev.verification_note) : prev.verification_note,
+          rejection_reason: status === 'REJECTED' ? (finalReason || prev.rejection_reason) : prev.rejection_reason,
+          verified_at: new Date().toISOString()
+        } : prev);
+
+        fetchSubmissions();
+        return true;
+      } else {
+        addToast(data.error || 'Failed to update submission status', 'error');
+        return false;
+      }
+    } catch (err) {
+      addToast('Network error during verification. Please check connection.', 'error');
+      return false;
+    }
+  };
+
+  const handleBatchVerify = async () => {
+    if (selectedSubmissions.length === 0) return;
+    if (!confirm(`Verify ${selectedSubmissions.length} selected submission${selectedSubmissions.length > 1 ? 's' : ''}?`)) return;
+
+    try {
+      const res = await fetch(`${API_URL}/api/submissions/batch-verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          submission_ids: selectedSubmissions,
+          verification_note: verificationNote.trim() || 'Verified in bulk'
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addToast(`Successfully verified ${selectedSubmissions.length} submissions!`, 'success');
+        setSelectedSubmissions([]);
+        setVerificationNote('');
+        fetchSubmissions();
+      } else {
+        addToast(data.error || 'Failed to batch verify submissions', 'error');
+      }
+    } catch {
+      addToast('Network error during bulk verification', 'error');
+    }
+  };
+
+  const getFilteredVerificationSubmissions = () => {
+    return submissions.filter(s => {
+      // 1. Filter by Status
+      if (verificationFilter === 'ALL') {
+        // include all
+      } else if (verificationFilter === 'PENDING') {
+        if (s.status !== 'SUBMITTED') return false;
+      } else if (verificationFilter === 'NOT INTERESTED') {
+        if (s.status !== 'NOT_PARTICIPATING') return false;
+      } else {
+        if (s.status !== verificationFilter) return false;
+      }
+
+      // 2. Filter by Task
+      if (verificationTaskFilter && String(s.task_id) !== verificationTaskFilter) {
+        return false;
+      }
+
+      // 3. Role / Scope filter
+      const subClassId = s.class_id ? String(s.class_id) : '';
+      if (!isAdmin && !isHOD) {
+        const userClassId = user?.class_id ? String(user?.class_id) : '';
+        if (userClassId && subClassId && subClassId !== userClassId) return false;
+      }
+
+      // 4. Department filter
+      if (verificationDeptFilter) {
+        const subDeptId = s.department_id ? String(s.department_id) : '';
+        if (subDeptId) {
+          if (subDeptId !== verificationDeptFilter) return false;
+        } else if (subClassId) {
+          const c = classes.find(cls => String(cls.id) === subClassId);
+          if (c && String(c.department_id) !== verificationDeptFilter) return false;
+        }
+      }
+
+      // 5. Class filter
+      if (verificationClassFilter) {
+        if (subClassId && subClassId !== verificationClassFilter) return false;
+      }
+
+      // 6. Year filter
+      if (verificationYearFilter) {
+        const subYear = s.class_year !== undefined && s.class_year !== null ? String(s.class_year) : '';
+        if (subYear) {
+          if (subYear !== verificationYearFilter) return false;
+        } else if (subClassId) {
+          const c = classes.find(cls => String(cls.id) === subClassId);
+          if (c && String(c.year) !== verificationYearFilter) return false;
+        }
+      }
+
+      // 7. Search query
+      if (submissionSearchTerm) {
+        const q = submissionSearchTerm.toLowerCase();
+        const matchesName = s.student_name?.toLowerCase().includes(q);
+        const matchesReg = s.register_number?.toLowerCase().includes(q);
+        const matchesTask = s.task_title?.toLowerCase().includes(q);
+        const matchesField = s.custom_field_value?.toLowerCase().includes(q);
+        const matchesReason = s.not_participating_reason?.toLowerCase().includes(q);
+        if (!matchesName && !matchesReg && !matchesTask && !matchesField && !matchesReason) return false;
+      }
+
+      return true;
     });
-    setVerificationNote('');
-    setRejectionReason('');
-    setShowRejectionModal(null);
-    // Only refresh submissions after verify/reject
-    fetchSubmissions();
   };
 
   const handleFileUpload = (taskId: number, file: File | null) => {
@@ -6553,7 +6744,7 @@ export default function App() {
       sheetsData: { name: string; cols: string[]; dataRows: any[]; line5: string }[]
     ): Promise<ArrayBuffer> => {
       const workbook = new ExcelJS.Workbook();
-      workbook.creator = 'IT Task Manager';
+      workbook.creator = 'IT Vault';
       workbook.created = new Date();
 
       let logoId: number | undefined;
@@ -7853,8 +8044,8 @@ export default function App() {
             <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-white p-3 mb-4 md:mb-6 shadow-2xl border-2 border-zinc-200 ring-4 ring-indigo-50 flex items-center justify-center">
               <img src="/logo.png" alt="VSBEC Logo" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-2xl md:text-4xl font-black text-zinc-900 tracking-tight">Academic Portal</h1>
-            <p className="text-zinc-500 mt-2 text-base md:text-lg">VSBEC IT Task Management System</p>
+            <h1 className="text-2xl md:text-4xl font-black text-zinc-900 tracking-tight">IT Vault</h1>
+            <p className="text-zinc-500 mt-2 text-base md:text-lg">VSBEC IT Vault — Academic & Placement Governance Platform</p>
           </div>
 
           <AnimatePresence mode="wait">
@@ -10664,16 +10855,19 @@ export default function App() {
       <div className="p-4 border-b border-zinc-100 flex items-center justify-between shrink-0 h-20">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-full bg-white p-1.5 overflow-hidden shrink-0 shadow-sm border border-zinc-200 flex items-center justify-center">
-            <img src="/logo.png" alt="VSBEC Logo" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="IT Vault" className="w-full h-full object-contain" />
           </div>
-          <span className={cn(
-            "font-bold px-2 py-0.5 rounded text-xs tracking-wider",
-            isIndustry
-              ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
-              : "text-zinc-900"
-          )}>
-            {isAdmin ? 'SUPREME' : isHOD ? 'HOD PORTAL' : isIndustry ? 'CORPORATE HR' : isAdvisor ? 'ADVISOR' : isCoordinator ? 'COORDINATOR' : 'STUDENT'}
-          </span>
+          <div className="min-w-0">
+            <span className="font-black text-sm tracking-tight text-zinc-900 block leading-tight">IT Vault</span>
+            <span className={cn(
+              "font-bold text-[10px] tracking-wider uppercase block truncate",
+              isIndustry
+                ? "text-indigo-600"
+                : "text-zinc-500"
+            )}>
+              {isAdmin ? "SUPREME ADMIN" : isHOD ? "HOD PORTAL" : isIndustry ? "CORPORATE HR" : isAdvisor ? "ADVISOR" : isCoordinator ? "COORDINATOR" : "STUDENT"}
+            </span>
+          </div>
         </div>
         <button
           onClick={() => setIsMobileSidebarOpen(false)}
@@ -11388,6 +11582,569 @@ export default function App() {
     );
   };
 
+  useEffect(() => {
+    if (!inspectingSubmission) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setInspectingSubmission(null);
+        setInspectingProofZoom(1);
+        setInspectingProofRotation(0);
+      } else if (e.key === 'ArrowLeft') {
+        const list = getFilteredVerificationSubmissions();
+        const idx = list.findIndex(s => String(s.id) === String(inspectingSubmission.id));
+        if (idx > 0) {
+          setInspectingSubmission(list[idx - 1]);
+          setInspectingProofZoom(1);
+          setInspectingProofRotation(0);
+        }
+      } else if (e.key === 'ArrowRight') {
+        const list = getFilteredVerificationSubmissions();
+        const idx = list.findIndex(s => String(s.id) === String(inspectingSubmission.id));
+        if (idx >= 0 && idx < list.length - 1) {
+          setInspectingSubmission(list[idx + 1]);
+          setInspectingProofZoom(1);
+          setInspectingProofRotation(0);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [inspectingSubmission, submissions, verificationFilter, verificationTaskFilter, verificationDeptFilter, verificationClassFilter, verificationYearFilter, submissionSearchTerm]);
+
+  const renderTeamReviewModal = () => {
+    if (!teamReviewModal) return null;
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4"
+        >
+          <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+            <h3 className="text-base font-extrabold text-zinc-900 flex items-center gap-2">
+              <Users size={18} className="text-indigo-600" />
+              {teamReviewModal.status === 'APPROVED' ? 'Approve Team Submission' : 'Reject Team Submission'}
+            </h3>
+            <Button variant="ghost" className="p-1 h-7 w-7 text-zinc-400 hover:text-black rounded-lg" onClick={() => setTeamReviewModal(null)}>
+              <X size={16} />
+            </Button>
+          </div>
+
+          <p className="text-xs text-zinc-600">
+            Team: <strong className="text-zinc-900">{teamReviewModal.name}</strong>
+          </p>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-zinc-700">
+              {teamReviewModal.status === 'APPROVED' ? 'Approval Note (Optional)' : 'Reason for Rejection *'}
+            </label>
+            <Textarea
+              placeholder={teamReviewModal.status === 'APPROVED' ? 'Optional feedback or note...' : 'Please specify why this team submission is rejected...'}
+              value={teamRejectionReason}
+              onChange={e => setTeamRejectionReason(e.target.value)}
+              className="text-xs min-h-[90px]"
+            />
+          </div>
+
+          {teamReviewModal.status === 'REJECTED' && (
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                "Proof does not show all team members",
+                "Project repository is incomplete or private",
+                "Deliverables do not match task requirements",
+                "Duplicate or unverified submission proof"
+              ].map((chip, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setTeamRejectionReason(chip)}
+                  className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
+                >
+                  + {chip}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <Button variant="ghost" className="flex-1 text-xs" onClick={() => setTeamReviewModal(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant={teamReviewModal.status === 'APPROVED' ? 'success' : 'danger'}
+              className="flex-1 text-xs font-bold"
+              onClick={async () => {
+                const subId = teamReviewModal.id;
+                const status = teamReviewModal.status;
+                setTeamReviewModal(null);
+                await handleReviewTeamSubmission(subId, status);
+              }}
+            >
+              {teamReviewModal.status === 'APPROVED' ? 'Confirm Approval' : 'Confirm Rejection'}
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
+  const renderSubmissionInspectorModal = () => {
+    if (!inspectingSubmission) return null;
+
+    const filteredList = getFilteredVerificationSubmissions();
+    const currentIndex = filteredList.findIndex(s => String(s.id) === String(inspectingSubmission.id));
+    const hasPrev = currentIndex > 0;
+    const hasNext = currentIndex >= 0 && currentIndex < filteredList.length - 1;
+
+    const isPdf = Boolean(
+      inspectingSubmission.screenshot_url && 
+      (inspectingSubmission.screenshot_url.toLowerCase().includes('.pdf') || inspectingSubmission.screenshot_url.toLowerCase().endsWith('.pdf'))
+    );
+    const isPurged = Boolean(inspectingSubmission.screenshot_url && inspectingSubmission.screenshot_url.startsWith('PURGED'));
+    const hasProof = Boolean(inspectingSubmission.screenshot_url && !isPurged);
+
+    const customVal = inspectingSubmission.custom_field_value?.trim();
+    const isCustomUrl = customVal && (/^https?:\/\//i.test(customVal) || /^www\./i.test(customVal) || customVal.includes('github.com') || customVal.includes('leetcode.com') || customVal.includes('drive.google.com'));
+    const customTargetUrl = isCustomUrl ? (/^https?:\/\//i.test(customVal) ? customVal : `https://${customVal}`) : null;
+
+    return (
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[120] flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-200">
+        <div className="bg-white rounded-3xl w-full max-w-6xl h-[92vh] max-h-[920px] flex flex-col shadow-2xl overflow-hidden border border-zinc-200">
+          {/* Modal Top Bar */}
+          <div className="px-5 py-3.5 border-b border-zinc-100 flex items-center justify-between gap-3 bg-zinc-50/70 shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-indigo-100 text-indigo-800 border border-indigo-200 shrink-0">
+                {inspectingSubmission.task_title}
+              </span>
+              <span className="text-zinc-300">|</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="font-extrabold text-zinc-900 text-sm truncate">
+                  {inspectingSubmission.student_name}
+                </span>
+                <span className="text-xs font-mono text-zinc-500 shrink-0">
+                  ({inspectingSubmission.register_number || 'No Reg#'})
+                </span>
+              </div>
+              <Badge variant={
+                inspectingSubmission.status === 'VERIFIED' ? 'success' :
+                inspectingSubmission.status === 'REJECTED' ? 'danger' :
+                inspectingSubmission.status === 'NOT_PARTICIPATING' ? 'warning' : 'warning'
+              } className="shrink-0 text-xs">
+                {inspectingSubmission.status === 'SUBMITTED' ? 'PENDING VERIFICATION' : inspectingSubmission.status === 'NOT_PARTICIPATING' ? 'NOT INTERESTED' : inspectingSubmission.status}
+              </Badge>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Prev / Next Navigation */}
+              {currentIndex >= 0 && (
+                <div className="flex items-center gap-1 bg-white border border-zinc-200 rounded-xl px-2 py-1 shadow-2xs">
+                  <span className="text-xs font-bold text-zinc-500 mr-1 hidden sm:inline">
+                    {currentIndex + 1} of {filteredList.length}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    className="p-1 h-7 w-7 text-zinc-600 hover:text-black hover:bg-zinc-100 rounded-lg disabled:opacity-30"
+                    disabled={!hasPrev}
+                    onClick={() => {
+                      if (hasPrev) {
+                        setInspectingSubmission(filteredList[currentIndex - 1]);
+                        setInspectingProofZoom(1);
+                        setInspectingProofRotation(0);
+                      }
+                    }}
+                    title="Previous Submission (Left Arrow)"
+                  >
+                    <ChevronLeft size={16} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="p-1 h-7 w-7 text-zinc-600 hover:text-black hover:bg-zinc-100 rounded-lg disabled:opacity-30"
+                    disabled={!hasNext}
+                    onClick={() => {
+                      if (hasNext) {
+                        setInspectingSubmission(filteredList[currentIndex + 1]);
+                        setInspectingProofZoom(1);
+                        setInspectingProofRotation(0);
+                      }
+                    }}
+                    title="Next Submission (Right Arrow)"
+                  >
+                    <ChevronRight size={16} />
+                  </Button>
+                </div>
+              )}
+
+              <Button
+                variant="ghost"
+                className="p-1.5 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-xl"
+                onClick={() => {
+                  setInspectingSubmission(null);
+                  setInspectingProofZoom(1);
+                  setInspectingProofRotation(0);
+                }}
+                title="Close (Esc)"
+              >
+                <X size={20} />
+              </Button>
+            </div>
+          </div>
+
+          {/* Modal Main Content Area (2-column layout) */}
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+            {/* Left / Center: Proof Viewer (7 cols on desktop) */}
+            <div className="lg:col-span-7 bg-zinc-950/95 flex flex-col relative overflow-hidden border-b lg:border-b-0 lg:border-r border-zinc-800">
+              {/* Proof Toolbar */}
+              {hasProof && (
+                <div className="px-4 py-2 bg-zinc-900/90 backdrop-blur-sm border-b border-zinc-800/80 flex items-center justify-between text-zinc-300 z-10 shrink-0">
+                  <div className="flex items-center gap-1">
+                    {!isPdf && (
+                      <>
+                        <button
+                          onClick={() => setInspectingProofZoom(z => Math.min(z + 0.25, 3))}
+                          className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white transition-colors"
+                          title="Zoom In"
+                        >
+                          <ZoomIn size={16} />
+                        </button>
+                        <button
+                          onClick={() => setInspectingProofZoom(z => Math.max(z - 0.25, 0.5))}
+                          className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white transition-colors"
+                          title="Zoom Out"
+                        >
+                          <ZoomOut size={16} />
+                        </button>
+                        <button
+                          onClick={() => { setInspectingProofZoom(1); setInspectingProofRotation(0); }}
+                          className="px-2 py-1 text-[11px] font-bold hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white transition-colors"
+                          title="Reset Zoom & Rotation"
+                        >
+                          {Math.round(inspectingProofZoom * 100)}% Reset
+                        </button>
+                        <button
+                          onClick={() => setInspectingProofRotation(r => (r + 90) % 360)}
+                          className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white transition-colors"
+                          title="Rotate 90°"
+                        >
+                          <RotateCw size={16} />
+                        </button>
+                      </>
+                    )}
+                    {isPdf && (
+                      <span className="text-xs font-bold text-red-400 flex items-center gap-1.5 px-2 py-0.5 bg-red-950/50 rounded-md border border-red-800/50">
+                        <FileText size={14} /> PDF Document Proof
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={inspectingSubmission.screenshot_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg transition-colors"
+                      title="Open original proof in full browser tab"
+                    >
+                      <ExternalLink size={13} /> Open Original
+                    </a>
+                    <a
+                      href={inspectingSubmission.screenshot_url}
+                      download={`Proof_${inspectingSubmission.register_number || 'Student'}_${inspectingSubmission.task_title}`}
+                      className="p-1.5 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg transition-colors"
+                      title="Download Proof File"
+                    >
+                      <Download size={16} />
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Proof Container */}
+              <div className="flex-1 min-h-0 overflow-auto flex items-center justify-center p-4 relative select-none">
+                {isPdf ? (
+                  <div className="w-full h-full min-h-[450px] bg-white rounded-2xl overflow-hidden shadow-inner flex flex-col">
+                    <iframe
+                      src={inspectingSubmission.screenshot_url}
+                      className="w-full flex-1 border-0 rounded-2xl"
+                      title="PDF Proof Document"
+                    />
+                    <div className="p-3 bg-zinc-100 border-t border-zinc-200 flex items-center justify-between text-xs">
+                      <span className="text-zinc-600 font-medium">Viewing PDF submission</span>
+                      <a
+                        href={inspectingSubmission.screenshot_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 font-bold hover:underline flex items-center gap-1"
+                      >
+                        <ExternalLink size={13} /> Open in PDF Reader
+                      </a>
+                    </div>
+                  </div>
+                ) : hasProof ? (
+                  <div className="w-full h-full flex items-center justify-center overflow-auto">
+                    <img
+                      src={inspectingSubmission.screenshot_url}
+                      alt="Student Task Proof"
+                      style={{
+                        transform: `scale(${inspectingProofZoom}) rotate(${inspectingProofRotation}deg)`,
+                        transition: 'transform 0.15s ease-out'
+                      }}
+                      className="max-h-full max-w-full object-contain rounded-lg shadow-2xl origin-center cursor-grab active:cursor-grabbing"
+                    />
+                  </div>
+                ) : isPurged ? (
+                  <div className="text-center p-8 max-w-md bg-zinc-900/80 rounded-2xl border border-zinc-800 text-zinc-400 space-y-3">
+                    <ImageIcon size={48} className="mx-auto text-zinc-600" />
+                    <h4 className="text-base font-bold text-zinc-200">Proof Screenshot Purged</h4>
+                    <p className="text-xs leading-relaxed text-zinc-400">
+                      This submission screenshot has been automatically purged according to the 30-day retention policy. The student's completion record, verified score, and custom field values remain permanent.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-center p-8 max-w-md bg-zinc-900/80 rounded-2xl border border-zinc-800 text-zinc-400 space-y-3">
+                    <AlertTriangle size={48} className="mx-auto text-orange-400" />
+                    <h4 className="text-base font-bold text-zinc-200">
+                      {inspectingSubmission.status === 'NOT_PARTICIPATING' ? 'Not Participating Opt-Out' : 'No Proof Uploaded'}
+                    </h4>
+                    <p className="text-xs text-zinc-400">
+                      {inspectingSubmission.not_participating_reason
+                        ? `Student reason: "${inspectingSubmission.not_participating_reason}"`
+                        : 'No screenshot proof was submitted for this entry.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column: Complete Student & Task Details (5 cols on desktop) */}
+            <div className="lg:col-span-5 flex flex-col h-full bg-white overflow-y-auto divide-y divide-zinc-100">
+              {/* Student Profile Card */}
+              <div className="p-5 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    {inspectingSubmission.student_avatar ? (
+                      <img
+                        src={inspectingSubmission.student_avatar}
+                        alt=""
+                        className="w-12 h-12 rounded-2xl object-cover border border-zinc-200 shadow-2xs"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-extrabold text-base">
+                        {inspectingSubmission.student_name ? inspectingSubmission.student_name.charAt(0).toUpperCase() : 'S'}
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="font-extrabold text-zinc-900 text-base leading-snug">
+                        {inspectingSubmission.student_name}
+                      </h3>
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <span className="font-mono text-xs text-zinc-600 font-bold bg-zinc-100 px-1.5 py-0.5 rounded">
+                          {inspectingSubmission.register_number || 'No Reg#'}
+                        </span>
+                        {inspectingSubmission.register_number && (
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(inspectingSubmission.register_number!);
+                              setInspectingCopied('reg');
+                              setTimeout(() => setInspectingCopied(null), 2000);
+                            }}
+                            className="text-zinc-400 hover:text-zinc-700 p-0.5 rounded"
+                            title="Copy Register Number"
+                          >
+                            {inspectingCopied === 'reg' ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    className="text-xs px-2.5 py-1.5 h-auto text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-bold shrink-0"
+                    onClick={() => setViewingStudentProfileId(String(inspectingSubmission.user_id))}
+                    title="Open full student academic profile with placement metrics"
+                  >
+                    <User size={13} /> Full Profile
+                  </Button>
+                </div>
+
+                {/* Badges: Department, Class, Year */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  {inspectingSubmission.department_name && (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-zinc-100 text-zinc-700 border border-zinc-200/80">
+                      Dept: {inspectingSubmission.department_name}
+                    </span>
+                  )}
+                  {inspectingSubmission.class_name && (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-100">
+                      Class: {inspectingSubmission.class_name}
+                    </span>
+                  )}
+                  {inspectingSubmission.class_year && (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-purple-50 text-purple-800 border border-purple-100">
+                      Year: {inspectingSubmission.class_year}
+                    </span>
+                  )}
+                  {inspectingSubmission.student_email && (
+                    <a
+                      href={`mailto:${inspectingSubmission.student_email}`}
+                      className="text-[11px] font-medium px-2 py-0.5 rounded-lg bg-zinc-50 hover:bg-zinc-100 text-zinc-600 border border-zinc-200/70 flex items-center gap-1 truncate max-w-[200px]"
+                      title={`Email ${inspectingSubmission.student_email}`}
+                    >
+                      <Mail size={11} className="shrink-0" />
+                      <span className="truncate">{inspectingSubmission.student_email}</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Task & Submission Details */}
+              <div className="p-5 space-y-3">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">Submission Details</p>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Submitted On</span>
+                    <span className="font-bold text-zinc-800 block mt-0.5">
+                      {new Date(inspectingSubmission.submitted_at).toLocaleString('en-US', {
+                        month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Resubmission Count</span>
+                    <span className="font-bold text-zinc-800 block mt-0.5">
+                      {inspectingSubmission.resubmission_count || 0} / 2 allowed
+                    </span>
+                  </div>
+                </div>
+
+                {/* Custom Field Value Display */}
+                <div className="p-3.5 bg-zinc-50/90 rounded-2xl border border-zinc-200/80 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-600">
+                      {inspectingSubmission.custom_field_label || 'Submitted Custom Field'}
+                    </span>
+                    {customVal && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(customVal);
+                          setInspectingCopied('custom');
+                          setTimeout(() => setInspectingCopied(null), 2000);
+                        }}
+                        className="text-xs text-zinc-500 hover:text-black flex items-center gap-1 font-semibold"
+                        title="Copy Custom Field Value"
+                      >
+                        {inspectingCopied === 'custom' ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                        <span>{inspectingCopied === 'custom' ? 'Copied' : 'Copy'}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {customVal ? (
+                    isCustomUrl ? (
+                      <a
+                        href={customTargetUrl!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-2.5 bg-indigo-50/90 hover:bg-indigo-100/90 border border-indigo-200 rounded-xl text-indigo-700 font-bold text-xs transition-colors group"
+                      >
+                        <span className="truncate pr-2 font-mono">{customVal}</span>
+                        <ExternalLink size={14} className="shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                      </a>
+                    ) : (
+                      <p className="font-mono text-xs text-zinc-900 bg-white p-2.5 rounded-xl border border-zinc-200 break-all leading-relaxed">
+                        {customVal}
+                      </p>
+                    )
+                  ) : (
+                    <p className="text-xs text-zinc-400 italic">No custom field data provided.</p>
+                  )}
+                </div>
+
+                {/* Existing verification note or rejection reason */}
+                {inspectingSubmission.verification_note && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs space-y-0.5">
+                    <p className="font-extrabold text-emerald-900 uppercase text-[10px] tracking-wider">Verification Note</p>
+                    <p className="text-emerald-800 font-medium">"{inspectingSubmission.verification_note}"</p>
+                    {inspectingSubmission.verified_at && (
+                      <p className="text-[10px] text-emerald-600 pt-1">Verified on {new Date(inspectingSubmission.verified_at).toLocaleDateString()}</p>
+                    )}
+                  </div>
+                )}
+                {inspectingSubmission.rejection_reason && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs space-y-0.5">
+                    <p className="font-extrabold text-red-900 uppercase text-[10px] tracking-wider">Rejection Feedback</p>
+                    <p className="text-red-800 font-medium">"{inspectingSubmission.rejection_reason}"</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Verification / Rejection Action Area */}
+              <div className="p-5 mt-auto bg-zinc-50/70 space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-700 flex items-center justify-between">
+                    <span>Verification Note / Feedback</span>
+                    <span className="text-[10px] text-zinc-400 font-normal">Optional for approval, required for rejection</span>
+                  </label>
+                  <Input
+                    placeholder="e.g. Approved, excellent submission! Or specific feedback..."
+                    value={verificationNote}
+                    onChange={e => setVerificationNote(e.target.value)}
+                    className="text-xs h-9 bg-white"
+                  />
+                </div>
+
+                {/* Quick rejection reason chips */}
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Quick Feedback Chips:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      "Unclear / blurry screenshot",
+                      "Incorrect proof for this task",
+                      "Submitted link is inaccessible",
+                      "Guidelines not fulfilled"
+                    ].map((chip, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setVerificationNote(chip)}
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white border border-zinc-200 hover:border-zinc-400 text-zinc-600 transition-colors"
+                      >
+                        + {chip}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2.5 pt-1">
+                  <Button
+                    variant="success"
+                    className="flex-1 py-2 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm"
+                    onClick={async () => {
+                      await verifySubmission(inspectingSubmission.id, 'VERIFIED', verificationNote);
+                    }}
+                  >
+                    <CheckCircle2 size={16} /> Approve & Verify
+                  </Button>
+                  <Button
+                    variant="danger"
+                    className="flex-1 py-2 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm"
+                    onClick={async () => {
+                      const reason = verificationNote.trim() || 'Submission does not satisfy criteria';
+                      await verifySubmission(inspectingSubmission.id, 'REJECTED', undefined, reason);
+                    }}
+                  >
+                    <XCircle size={16} /> Reject Submission
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <FooterContext.Provider value={setShowFooterModal}>
       <div className="h-screen min-h-[100dvh] bg-[#F5F5F4] dark:bg-[#0f0f12] flex overflow-hidden">
@@ -11397,31 +12154,84 @@ export default function App() {
         {renderProfilePromptModal()}
         {renderHistoryDetailsModal()}
         {renderTaskPendingEmailModal()}
+        {renderTeamReviewModal()}
+        {renderSubmissionInspectorModal()}
         {/* Rejection Modal */}
         <AnimatePresence>
-          {showRejectionModal && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
-              >
-                <h2 className="text-xl font-bold mb-4">Reject Submission</h2>
-                <Textarea
-                  placeholder="Reason for rejection..."
-                  value={rejectionReason}
-                  onChange={e => setRejectionReason(e.target.value)}
-                  required
-                  className="mb-4"
-                />
-                <div className="flex gap-4">
-                  <Button variant="ghost" className="flex-1" onClick={() => setShowRejectionModal(null)}>Cancel</Button>
-                  <Button variant="danger" className="flex-1" onClick={() => verifySubmission(showRejectionModal, 'REJECTED')}>Reject</Button>
-                </div>
-              </motion.div>
-            </div>
-          )}
+          {showRejectionModal && (() => {
+            const targetSub = submissions.find(s => String(s.id) === String(showRejectionModal));
+            return (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="bg-white rounded-2xl p-6 md:p-7 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto space-y-4"
+                >
+                  <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+                    <div>
+                      <h2 className="text-lg font-extrabold text-zinc-900 flex items-center gap-2">
+                        <XCircle className="text-red-600" size={20} /> Reject Submission
+                      </h2>
+                      {targetSub && (
+                        <p className="text-xs text-zinc-500 font-medium mt-0.5">
+                          {targetSub.student_name} ({targetSub.register_number || 'Student'}) • {targetSub.task_title}
+                        </p>
+                      )}
+                    </div>
+                    <Button variant="ghost" className="p-1 h-7 w-7 text-zinc-400 hover:text-black rounded-lg" onClick={() => setShowRejectionModal(null)}>
+                      <X size={16} />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-zinc-700">Reason for Rejection *</label>
+                    <Textarea
+                      placeholder="Explain what needs to be corrected for the student to resubmit..."
+                      value={rejectionReason}
+                      onChange={e => setRejectionReason(e.target.value)}
+                      required
+                      className="text-xs min-h-[90px]"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Quick Suggestions:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        "Screenshot is blurry / illegible",
+                        "Incorrect proof for this task",
+                        "Submitted link is private or inaccessible",
+                        "Does not meet task requirements",
+                        "Student name/register number mismatch"
+                      ].map((chip, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setRejectionReason(chip)}
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
+                        >
+                          + {chip}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <Button variant="ghost" className="flex-1 text-xs" onClick={() => setShowRejectionModal(null)}>Cancel</Button>
+                    <Button
+                      variant="danger"
+                      className="flex-1 text-xs font-bold"
+                      disabled={!rejectionReason.trim()}
+                      onClick={() => verifySubmission(showRejectionModal, 'REJECTED', undefined, rejectionReason)}
+                    >
+                      Confirm Rejection
+                    </Button>
+                  </div>
+                </motion.div>
+              </div>
+            );
+          })()}
         </AnimatePresence>
         <AnimatePresence>
           {viewingStudentProfileId && (
@@ -11718,7 +12528,7 @@ export default function App() {
                   })()}
                 </h2>
                 <p className="hidden sm:block text-xs font-semibold text-zinc-400 uppercase tracking-wider truncate">
-                  {isIndustry ? 'Corporate Partner Portal' : 'Academic Management System'}
+                  {isIndustry ? 'IT Vault • Corporate Portal' : 'VSBEC IT Vault'}
                 </p>
               </div>
             </div>
@@ -13642,7 +14452,7 @@ export default function App() {
 
                       {[...tasks].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).filter(task => {
                         if (!isStudent || studentTaskFilter === 'ALL') return true;
-                        const sub = submissions.find(s => String(s.task_id) === String(task.id) && String(s.user_id) === String(user?.id));
+                        const sub = studentSubmissionsMap.get(String(task.id));
                         const isDeadlinePassed = task.deadline && new Date(task.deadline) < new Date();
                         const isClosed = task.status === 'CLOSED' || isDeadlinePassed;
 
@@ -13652,7 +14462,7 @@ export default function App() {
                         if (studentTaskFilter === 'OVERDUE') return (!sub && isClosed) || sub?.status === 'REJECTED';
                         return true;
                       }).map(task => {
-                        const submission = submissions.find(s => s.task_id === task.id && s.user_id?.toString() === user?.id?.toString());
+                        const submission = studentSubmissionsMap.get(String(task.id));
                         const isDeadlinePassed = task.deadline && new Date(task.deadline) < new Date();
                         const isWithin24h = task.deadline && !isDeadlinePassed && (new Date(task.deadline).getTime() - new Date().getTime()) < 24 * 60 * 60 * 1000;
 
@@ -14265,33 +15075,7 @@ export default function App() {
                         <Button
                           variant="outline"
                           onClick={() => {
-                            const filteredForZip = submissions
-                              .filter(s => {
-                                if (verificationFilter === 'ALL') return true;
-                                if (verificationFilter === 'PENDING') return s.status === 'SUBMITTED';
-                                if (verificationFilter === 'NOT INTERESTED') return s.status === 'NOT_PARTICIPATING';
-                                return s.status === verificationFilter;
-                              })
-                              .filter(s => {
-                                if (verificationTaskFilter && s.task_id?.toString() !== verificationTaskFilter) return false;
-                                const std = users.find(u => u.id === s.user_id);
-                                const subClassId = s.class_id?.toString() || std?.class_id?.toString();
-                                if (!isAdmin && !isHOD) {
-                                  const userClassId = user?.class_id?.toString();
-                                  return userClassId ? subClassId === userClassId : true;
-                                }
-                                if (verificationDeptFilter) {
-                                  const c = classes.find(cls => cls.id?.toString() === subClassId);
-                                  if (c && c.department_id?.toString() !== verificationDeptFilter) return false;
-                                }
-                                if (verificationClassFilter && subClassId !== verificationClassFilter) return false;
-                                if (verificationYearFilter) {
-                                  const c = classes.find(cls => cls.id?.toString() === subClassId);
-                                  if (c && String(c.year) !== verificationYearFilter) return false;
-                                }
-                                return true;
-                              });
-
+                            const filteredForZip = getFilteredVerificationSubmissions();
                             downloadScreenshotsZip(undefined, filteredForZip);
                           }}
                           disabled={screenshotDownloadProgress !== null}
@@ -14312,28 +15096,9 @@ export default function App() {
                         <Button
                           variant="secondary"
                           onClick={() => {
-                            const filteredForPdf = (selectedSubmissions.length > 0
+                            const filteredForPdf = selectedSubmissions.length > 0
                               ? submissions.filter(s => selectedSubmissions.includes(s.id))
-                              : submissions
-                            ).filter(s => {
-                              const std = users.find(u => u.id === s.user_id);
-                              const subClassId = s.class_id?.toString() || std?.class_id?.toString();
-                              if (!isAdmin && !isHOD) {
-                                const userClassId = user?.class_id?.toString();
-                                return userClassId ? subClassId === userClassId : true;
-                              }
-                              if (verificationDeptFilter) {
-                                const c = classes.find(cls => cls.id?.toString() === subClassId);
-                                if (c && c.department_id?.toString() !== verificationDeptFilter) return false;
-                              }
-                              if (verificationClassFilter && subClassId !== verificationClassFilter) return false;
-                              if (verificationYearFilter) {
-                                const c = classes.find(cls => cls.id?.toString() === subClassId);
-                                if (c && String(c.year) !== verificationYearFilter) return false;
-                              }
-                              return true;
-                            });
-
+                              : getFilteredVerificationSubmissions();
                             downloadScreenshotsPdf(undefined, filteredForPdf);
                           }}
                           disabled={screenshotDownloadProgress !== null}
@@ -14354,22 +15119,10 @@ export default function App() {
                         {selectedSubmissions.length > 0 && (
                           <Button
                             variant="success"
-                            onClick={() => {
-                              if (confirm(`Verify ${selectedSubmissions.length} submissions?`)) {
-                                Promise.all(selectedSubmissions.map(id =>
-                                  fetch(`${API_URL}/api/submissions/${id}/verify`, {
-                                    method: 'PATCH',
-                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                                    body: JSON.stringify({ status: 'VERIFIED' })
-                                  })
-                                )).then(() => {
-                                  setSelectedSubmissions([]);
-                                  fetchInitialData();
-                                });
-                              }
-                            }}
+                            onClick={handleBatchVerify}
+                            className="flex items-center gap-1.5 text-xs py-2 px-3.5 rounded-full font-bold shadow-sm"
                           >
-                            Bulk Verify ({selectedSubmissions.length})
+                            <CheckCheck size={14} /> Bulk Verify ({selectedSubmissions.length})
                           </Button>
                         )}
                       </div>
@@ -14628,24 +15381,29 @@ export default function App() {
                           <TH className="w-12">
                             <input
                               type="checkbox"
-                              className="w-4 h-4 rounded border-zinc-300"
+                              className="w-4 h-4 rounded border-zinc-300 cursor-pointer"
+                              title="Select all pending on this page"
                               onChange={e => {
+                                const currentFiltered = getFilteredVerificationSubmissions();
+                                const paginated = currentFiltered.slice((submissionPage - 1) * itemsPerPage, submissionPage * itemsPerPage);
+                                const pendingIds = paginated.filter(sub => sub.status === 'SUBMITTED').map(sub => sub.id);
                                 if (e.target.checked) {
-                                  setSelectedSubmissions(submissions.filter(s => s.status === 'SUBMITTED').map(s => s.id));
+                                  setSelectedSubmissions(prev => Array.from(new Set([...prev, ...pendingIds])));
                                 } else {
-                                  setSelectedSubmissions([]);
+                                  const pendingSet = new Set(pendingIds);
+                                  setSelectedSubmissions(prev => prev.filter(id => !pendingSet.has(id)));
                                 }
                               }}
                             />
                           </TH>
-                          <TH>Student</TH>
+                          <TH>Student Details</TH>
                           <TH>Task</TH>
                           {verificationFilter === 'NOT INTERESTED' ? (
                             <TH colSpan={2}>Reason for Not Interested</TH>
                           ) : (
                             <>
                               <TH>Custom Field</TH>
-                              <TH>Screenshot</TH>
+                              <TH>Proof / Screenshot</TH>
                             </>
                           )}
                           <TH className="text-center">Status</TH>
@@ -14654,42 +15412,7 @@ export default function App() {
                       </THead>
                       <TBody>
                         {(() => {
-                          const filtered = submissions
-                            .filter(s => {
-                              if (verificationFilter === 'ALL') return true;
-                              if (verificationFilter === 'PENDING') return s.status === 'SUBMITTED';
-                              if (verificationFilter === 'NOT INTERESTED') return s.status === 'NOT_PARTICIPATING';
-                              return s.status === verificationFilter;
-                            })
-                            .filter(s => {
-                              const std = users.find(u => u.id === s.user_id);
-                              const subClassId = s.class_id?.toString() || std?.class_id?.toString();
-
-                              if (!isAdmin && !isHOD) {
-                                const userClassId = user?.class_id?.toString();
-                                return userClassId ? subClassId === userClassId : true;
-                              }
-                              if (verificationDeptFilter) {
-                                const std = users.find(u => u.id === s.user_id);
-                                const subClass = classes.find(c => c.id.toString() === subClassId);
-                                const deptId = subClass?.department_id?.toString() || std?.department_id?.toString();
-                                if (deptId && deptId !== verificationDeptFilter) return false;
-                              }
-                              if (verificationYearFilter) {
-                                const subClass = classes.find(c => c.id.toString() === subClassId);
-                                if (subClass && String(subClass.year) !== verificationYearFilter) return false;
-                              }
-                              if (verificationClassFilter) {
-                                return subClassId === verificationClassFilter;
-                              }
-                              return true;
-                            })
-                            .filter(s => verificationTaskFilter ? s.task_id?.toString() === verificationTaskFilter : true)
-                            .filter(s => {
-                              if (!submissionSearchTerm) return true;
-                              const query = submissionSearchTerm.toLowerCase();
-                              return s.student_name?.toLowerCase().includes(query) || s.register_number?.toLowerCase().includes(query) || s.task_title?.toLowerCase().includes(query) || s.not_participating_reason?.toLowerCase().includes(query);
-                            });
+                          const filtered = getFilteredVerificationSubmissions();
 
                           if (filtered.length === 0) {
                             return (
@@ -14698,7 +15421,7 @@ export default function App() {
                                   <div className="max-w-md mx-auto">
                                     <Users size={48} className="mx-auto text-zinc-300 mb-4" />
                                     <p className="font-bold text-base text-zinc-900">No submissions found</p>
-                                    <p className="text-sm text-zinc-400">There are no task submissions matching the filters.</p>
+                                    <p className="text-sm text-zinc-400">There are no task submissions matching your current filters.</p>
                                   </div>
                                 </TD>
                               </TR>
@@ -14711,12 +15434,12 @@ export default function App() {
                           return (
                             <>
                               {paginated.map(s => (
-                                <TR key={s.id} className={cn("border-l-4", s.status === 'VERIFIED' ? "border-emerald-500" : s.status === 'REJECTED' ? "border-red-500" : s.status === 'NOT_PARTICIPATING' ? "border-orange-400" : "border-amber-500")}>
+                                <TR key={s.id} className={cn("border-l-4 transition-colors hover:bg-zinc-50/60", s.status === 'VERIFIED' ? "border-emerald-500" : s.status === 'REJECTED' ? "border-red-500" : s.status === 'NOT_PARTICIPATING' ? "border-orange-400" : "border-amber-500")}>
                                   <TD>
                                     {s.status === 'SUBMITTED' && (
                                       <input
                                         type="checkbox"
-                                        className="w-4 h-4 rounded border-zinc-300"
+                                        className="w-4 h-4 rounded border-zinc-300 cursor-pointer"
                                         checked={selectedSubmissions.includes(s.id)}
                                         onChange={e => {
                                           if (e.target.checked) setSelectedSubmissions(prev => [...prev, s.id]);
@@ -14727,23 +15450,58 @@ export default function App() {
                                   </TD>
                                   <TD>
                                     <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center shrink-0">
-                                        <Users size={16} className="text-zinc-500" />
-                                      </div>
-                                      <div className="break-words min-w-0">
-                                        <p className="text-sm font-bold text-zinc-900 leading-tight break-words">{s.student_name}</p>
-                                        <div className="flex items-center gap-2">
-                                          <p className="text-xs text-zinc-500 font-mono italic break-all">{s.register_number}</p>
-                                          <span className="px-1.5 py-0.5 bg-zinc-100 text-zinc-500 text-xs font-bold rounded uppercase border border-zinc-200">
-                                            {s.class_name || 'N/A'}
-                                          </span>
+                                      {s.student_avatar ? (
+                                        <img
+                                          src={s.student_avatar}
+                                          alt={s.student_name}
+                                          className="w-9 h-9 rounded-full object-cover border border-zinc-200 shrink-0"
+                                        />
+                                      ) : (
+                                        <div className="w-9 h-9 rounded-full bg-indigo-100 border border-indigo-200 text-indigo-800 font-bold text-xs flex items-center justify-center shrink-0">
+                                          {(s.student_name || 'U').charAt(0).toUpperCase()}
                                         </div>
+                                      )}
+                                      <div className="break-words min-w-0 space-y-0.5">
+                                        <p className="text-sm font-bold text-zinc-900 leading-tight break-words">
+                                          {s.student_name}
+                                        </p>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="text-xs text-zinc-500 font-mono italic">{s.register_number || 'No Reg#'}</span>
+                                          {s.class_name && (
+                                            <span className="px-1.5 py-0.2 bg-zinc-100 text-zinc-700 text-[10px] font-bold rounded uppercase border border-zinc-200">
+                                              {s.class_name}
+                                            </span>
+                                          )}
+                                          {s.department_name && (
+                                            <span className="text-[10px] text-zinc-400 font-medium">
+                                              • {s.department_name}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {s.student_email && (
+                                          <a
+                                            href={`mailto:${s.student_email}`}
+                                            className="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline block truncate max-w-[190px]"
+                                            title={s.student_email}
+                                          >
+                                            {s.student_email}
+                                          </a>
+                                        )}
                                       </div>
                                     </div>
                                   </TD>
                                   <TD>
-                                    <p className="text-sm font-medium text-zinc-900 break-words">{s.task_title}</p>
-                                    <p className="text-xs text-zinc-400 capitalize">{new Date(s.submitted_at).toLocaleDateString()}</p>
+                                    <div className="space-y-1">
+                                      <p className="text-sm font-medium text-zinc-900 break-words">{s.task_title}</p>
+                                      <div className="flex items-center gap-2 flex-wrap text-[11px] text-zinc-400">
+                                        <span>{s.submitted_at ? new Date(s.submitted_at).toLocaleDateString() : 'N/A'}</span>
+                                        {s.resubmission_count && s.resubmission_count > 0 ? (
+                                          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded">
+                                            Resubmission #{s.resubmission_count}
+                                          </span>
+                                        ) : null}
+                                      </div>
+                                    </div>
                                   </TD>
                                   {s.status === 'NOT_PARTICIPATING' ? (
                                     <TD colSpan={2}>
@@ -14760,23 +15518,86 @@ export default function App() {
                                   ) : (
                                     <>
                                       <TD>
-                                        <p className="text-xs text-zinc-400 uppercase font-bold mb-1 tracking-widest">Field Data</p>
-                                        <p className="text-sm font-mono text-zinc-900 bg-zinc-100 px-2 py-1 rounded inline-block break-all">
-                                          {s.custom_field_value || '—'}
+                                        <p className="text-[10px] text-zinc-400 uppercase font-extrabold mb-1 tracking-wider">
+                                          {s.custom_field_label || 'Field Data'}
                                         </p>
+                                        {s.custom_field_value ? (() => {
+                                          const val = s.custom_field_value.trim();
+                                          const isUrl = /^https?:\/\//i.test(val) || /^www\./i.test(val) || val.includes('github.com') || val.includes('drive.google.com') || val.includes('leetcode.com');
+                                          const targetUrl = isUrl ? (/^https?:\/\//i.test(val) ? val : `https://${val}`) : null;
+                                          return (
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              {targetUrl ? (
+                                                <a
+                                                  href={targetUrl}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline bg-blue-50/80 border border-blue-200 px-2 py-1 rounded-lg"
+                                                >
+                                                  <ExternalLink size={12} />
+                                                  <span className="max-w-[150px] truncate">{val}</span>
+                                                </a>
+                                              ) : (
+                                                <span className="text-xs font-mono text-zinc-900 bg-zinc-100 px-2 py-1 rounded inline-block break-all max-w-[190px]">
+                                                  {val}
+                                                </span>
+                                              )}
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  navigator.clipboard.writeText(val);
+                                                  addToast('Copied to clipboard', 'info');
+                                                }}
+                                                className="p-1 text-zinc-400 hover:text-zinc-700 rounded hover:bg-zinc-100 transition-colors"
+                                                title="Copy value"
+                                              >
+                                                <Copy size={12} />
+                                              </button>
+                                            </div>
+                                          );
+                                        })() : (
+                                          <span className="text-xs text-zinc-400 font-mono italic">—</span>
+                                        )}
                                       </TD>
                                       <TD>
-                                        {s.screenshot_url && !s.screenshot_url.startsWith('PURGED') ? (
-                                          <div className="relative group/img">
-                                            <img
-                                              src={getCloudinaryThumbnail(s.screenshot_url, 150)}
-                                              className="w-12 h-12 object-cover rounded-lg border-2 border-zinc-200 hover:border-black transition-all cursor-zoom-in"
-                                              onClick={() => window.open(s.screenshot_url, '_blank')}
-                                              alt="Thumbnail"
-                                            />
-                                            <div className="absolute top-0 left-0 w-full h-full bg-black/5 rounded-lg pointer-events-none group-hover/img:bg-transparent transition-colors" />
-                                          </div>
-                                        ) : s.screenshot_url && s.screenshot_url.startsWith('PURGED') ? (
+                                        {s.screenshot_url && !s.screenshot_url.startsWith('PURGED') ? (() => {
+                                          const isPdf = s.screenshot_url.toLowerCase().includes('.pdf') || s.screenshot_url.toLowerCase().endsWith('.pdf');
+                                          return (
+                                            <div className="flex items-center gap-2">
+                                              {isPdf ? (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setInspectingSubmission(s)}
+                                                  className="flex items-center gap-2 p-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl text-red-700 transition-colors group cursor-pointer"
+                                                  title="Inspect PDF Proof"
+                                                >
+                                                  <FileText size={18} className="text-red-600 shrink-0 group-hover:scale-110 transition-transform" />
+                                                  <div className="text-left">
+                                                    <span className="text-xs font-black block">PDF Proof</span>
+                                                    <span className="text-[10px] text-red-500 font-medium flex items-center gap-0.5">
+                                                      <Eye size={10} /> Inspect
+                                                    </span>
+                                                  </div>
+                                                </button>
+                                              ) : (
+                                                <div
+                                                  className="relative group/img cursor-pointer rounded-xl overflow-hidden border-2 border-zinc-200 hover:border-indigo-600 transition-all shadow-2xs"
+                                                  onClick={() => setInspectingSubmission(s)}
+                                                  title="Click to inspect proof in high resolution"
+                                                >
+                                                  <img
+                                                    src={getCloudinaryThumbnail(s.screenshot_url, 150)}
+                                                    className="w-13 h-13 object-cover group-hover/img:scale-110 transition-transform duration-200"
+                                                    alt="Proof Thumbnail"
+                                                  />
+                                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                                    <Eye size={16} />
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        })() : s.screenshot_url && s.screenshot_url.startsWith('PURGED') ? (
                                           <span className="text-xs text-zinc-400 font-mono italic">Purged (30d+)</span>
                                         ) : (
                                           <span className="text-xs text-zinc-400 font-mono italic">No File</span>
@@ -14793,53 +15614,69 @@ export default function App() {
                                     </Badge>
                                   </TD>
                                   <TD className="text-right">
-                                    {s.status === 'SUBMITTED' && (
-                                      <div className="flex justify-end gap-2">
-                                        <Button
-                                          variant="success"
-                                          className="px-3 py-1.5 flex items-center gap-2 text-xs"
-                                          onClick={() => verifySubmission(s.id, 'VERIFIED')}
-                                        >
-                                          <CheckCircle2 size={14} /> Verify
-                                        </Button>
-                                        <Button
-                                          variant="danger"
-                                          className="px-3 py-1.5 flex items-center gap-2 text-xs"
-                                          onClick={() => setShowRejectionModal(s.id)}
-                                        >
-                                          <XCircle size={14} /> Reject
-                                        </Button>
-                                      </div>
-                                    )}
-                                    {s.status === 'REJECTED' && (
-                                      <p className="text-xs text-red-500 font-medium">Wait for Resubmission</p>
-                                    )}
-                                    {s.status === 'VERIFIED' && (
-                                      <p className="text-xs text-emerald-500 font-medium flex items-center gap-1 justify-end">
-                                        <CheckCircle2 size={14} /> Verified
-                                      </p>
-                                    )}
-                                    <Button
-                                      variant="ghost"
-                                      className="p-1.5 ml-1 text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors rounded-lg"
-                                      onClick={async () => {
-                                        if (confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
-                                          const res = await fetch(`${API_URL}/api/submissions/${s.id}`, {
-                                            method: 'DELETE',
-                                            headers: { Authorization: `Bearer ${token}` }
-                                          });
-                                          if (res.ok) {
-                                            fetchInitialData();
-                                          } else {
-                                            const data = await res.json();
-                                            alert(data.error || 'Failed to delete submission');
+                                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                      {/* Quick Inspector Modal Opener */}
+                                      <Button
+                                        variant="secondary"
+                                        className="px-2.5 py-1.5 flex items-center gap-1.5 text-xs font-bold border-zinc-200 hover:border-zinc-900 transition-colors"
+                                        onClick={() => setInspectingSubmission(s)}
+                                        title="Inspect full proof and student details"
+                                      >
+                                        <Eye size={13} className="text-zinc-600" /> Review
+                                      </Button>
+
+                                      {s.status === 'SUBMITTED' && (
+                                        <>
+                                          <Button
+                                            variant="success"
+                                            className="px-2.5 py-1.5 flex items-center gap-1 text-xs font-bold"
+                                            onClick={() => verifySubmission(s.id, 'VERIFIED')}
+                                            title="Approve & Verify"
+                                          >
+                                            <CheckCircle2 size={13} /> Verify
+                                          </Button>
+                                          <Button
+                                            variant="danger"
+                                            className="px-2.5 py-1.5 flex items-center gap-1 text-xs font-bold"
+                                            onClick={() => setShowRejectionModal(s.id)}
+                                            title="Reject submission with feedback"
+                                          >
+                                            <XCircle size={13} /> Reject
+                                          </Button>
+                                        </>
+                                      )}
+                                      {s.status === 'REJECTED' && (
+                                        <span className="text-xs text-red-500 font-semibold px-2 py-1 bg-red-50 rounded-lg border border-red-200">
+                                          Rejected
+                                        </span>
+                                      )}
+                                      {s.status === 'VERIFIED' && (
+                                        <span className="text-xs text-emerald-600 font-bold px-2 py-1 bg-emerald-50 rounded-lg border border-emerald-200 flex items-center gap-1">
+                                          <CheckCircle2 size={13} /> Verified
+                                        </span>
+                                      )}
+                                      <Button
+                                        variant="ghost"
+                                        className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors rounded-lg"
+                                        onClick={async () => {
+                                          if (confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
+                                            const res = await fetch(`${API_URL}/api/submissions/${s.id}`, {
+                                              method: 'DELETE',
+                                              headers: { Authorization: `Bearer ${token}` }
+                                            });
+                                            if (res.ok) {
+                                              fetchInitialData();
+                                            } else {
+                                              const data = await res.json();
+                                              alert(data.error || 'Failed to delete submission');
+                                            }
                                           }
-                                        }
-                                      }}
-                                      title="Delete Submission"
-                                    >
-                                      <Trash2 size={16} />
-                                    </Button>
+                                        }}
+                                        title="Delete Submission"
+                                      >
+                                        <Trash2 size={15} />
+                                      </Button>
+                                    </div>
                                   </TD>
                                 </TR>
                               ))}
@@ -14885,13 +15722,6 @@ export default function App() {
                                         </Button>
                                       </div>
                                     </div>
-                                  </TD>
-                                </TR>
-                              )}
-                              {filtered.length === 0 && (
-                                <TR>
-                                  <TD colSpan={7} className="text-center text-zinc-500 text-sm py-12">
-                                    No submissions found matching your filters.
                                   </TD>
                                 </TR>
                               )}
@@ -15686,7 +16516,7 @@ export default function App() {
                     <div className="space-y-4">
                       <h3 className="text-2xl font-black text-zinc-900">Privacy Policy</h3>
                       <div className="text-zinc-600 leading-relaxed text-sm space-y-4">
-                        <p>The VSBEC IT Academic Task Management System respects the privacy of all users.</p>
+                        <p>The VSBEC IT Vault platform respects the privacy of all users.</p>
                         <p>Information collected through the platform, including login credentials, academic task records, submissions, and user activity, is used only for academic administration and internal institutional purposes.</p>
                         <p>User data is securely stored and accessed only by authorized administrators, department staff, and relevant academic authorities. The system does not share personal information with external parties without institutional approval.</p>
                         <p>All users are expected to maintain confidentiality of their account credentials and report any unauthorized access immediately.</p>
@@ -15698,7 +16528,7 @@ export default function App() {
                     <div className="space-y-4">
                       <h3 className="text-2xl font-black text-zinc-900">Terms of Service</h3>
                       <div className="text-zinc-600 leading-relaxed text-sm space-y-4">
-                        <p>By using the VSBEC IT Academic Task Management System, users agree to use the platform only for academic and institutional purposes.</p>
+                        <p>By using the VSBEC IT Vault platform, users agree to use the platform only for academic and institutional purposes.</p>
                         <p>Students, faculty, and administrators must provide accurate information and use their assigned accounts responsibly.</p>
                         <p>Any misuse of the system, unauthorized access, manipulation of records, or disruption of platform operations may lead to institutional action.</p>
                         <p>The institution reserves the right to modify features, permissions, or policies whenever required for academic management.</p>

@@ -5,8 +5,8 @@
   "regions": ["bom1"],
   "functions": {
     "api/index.ts": {
-      "maxDuration": 30,
-      "memory": 1536
+      "maxDuration": 15,
+      "memory": 1024
     }
   },
   "crons": [
