@@ -6746,10 +6746,8 @@ async function startServer() {
     }
     const t = targetDetails.rows[0];
 
-    if (req.user.role === 'CLASS_ADVISOR' || (req.user.role === 'STUDENT' && req.user.is_coordinator)) {
-      if (t.class_id?.toString() !== req.user.class_id?.toString() && t.user_id === null) {
-        return res.status(403).json({ error: 'Forbidden: You cannot delete this target' });
-      }
+    if (req.user.role !== 'HOD' && req.user.role !== 'SUPREME_ADMIN') {
+      return res.status(403).json({ error: 'Forbidden: Only HOD or Supreme Admin can delete target configurations' });
     }
 
     await pool.query('DELETE FROM leetcode_targets WHERE id = $1', [targetId]);

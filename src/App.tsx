@@ -9718,13 +9718,13 @@ export default function App() {
                         <th className="px-6 py-4 text-center">Weekly Target</th>
                         <th className="px-6 py-4">Duration</th>
                         <th className="px-6 py-4">Created By</th>
-                        {(user?.role !== 'STUDENT' || user?.is_coordinator) && <th className="px-6 py-4 text-center">Actions</th>}
+                        {(isHOD || isAdmin) && <th className="px-6 py-4 text-center">Actions</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-200 text-sm">
                       {leetcodeTargets.length === 0 ? (
                         <tr>
-                          <td colSpan={(user?.role !== 'STUDENT' || user?.is_coordinator) ? 7 : 6} className="px-6 py-12 text-center text-zinc-400 font-semibold">
+                          <td colSpan={(isHOD || isAdmin) ? 7 : 6} className="px-6 py-12 text-center text-zinc-400 font-semibold">
                             No active LeetCode target configurations found. Click "LeetCode Target" to add one.
                           </td>
                         </tr>
@@ -9737,7 +9737,7 @@ export default function App() {
                             <td className="px-6 py-4 text-center font-bold text-indigo-600">{target.weekly_target} / week</td>
                             <td className="px-6 py-4 text-xs font-medium text-zinc-500">{target.start_date} to {target.end_date}</td>
                             <td className="px-6 py-4 text-xs text-zinc-600">{target.creator_name || 'Staff'}</td>
-                            {(user?.role !== 'STUDENT' || user?.is_coordinator) && (
+                            {(isHOD || isAdmin) && (
                               <td className="px-6 py-4 text-center">
                                 <button type="button" onClick={() => handleDeleteLeetcodeTarget(target.id)} className="text-zinc-400 hover:text-red-600 p-1" title="Delete Target">
                                   <Trash2 size={16} />
