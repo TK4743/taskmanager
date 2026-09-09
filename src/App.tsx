@@ -9828,7 +9828,7 @@ export default function App() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-zinc-600 bg-zinc-100 px-3 py-1.5 rounded-xl border border-zinc-200">
-                  Daily Commit Tracker
+                  {leetcodeViewType === 'WEEKLY' ? 'Weekly Commit Tracker' : 'Daily Commit Tracker'}
                 </span>
               </div>
 
