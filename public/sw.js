@@ -14,7 +14,7 @@ self.addEventListener('activate', (event) => {
       return self.clients.matchAll({ type: 'window' }).then((clients) => {
         clients.forEach((client) => {
           if (client.url) {
-            client.navigate(client.url);
+            client.navigate(client.url).catch(() => {});
           }
         });
       });
@@ -90,7 +90,7 @@ self.addEventListener('notificationclick', (event) => {
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(targetUrl);
+          client.navigate(targetUrl).catch(() => {});
           return client.focus();
         }
       }

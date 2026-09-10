@@ -6552,6 +6552,35 @@ export default function App() {
     });
   };
 
+  useEffect(() => {
+    if (!inspectingSubmission) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setInspectingSubmission(null);
+        setInspectingProofZoom(1);
+        setInspectingProofRotation(0);
+      } else if (e.key === 'ArrowLeft') {
+        const list = getFilteredVerificationSubmissions();
+        const idx = list.findIndex(s => String(s.id) === String(inspectingSubmission.id));
+        if (idx > 0) {
+          setInspectingSubmission(list[idx - 1]);
+          setInspectingProofZoom(1);
+          setInspectingProofRotation(0);
+        }
+      } else if (e.key === 'ArrowRight') {
+        const list = getFilteredVerificationSubmissions();
+        const idx = list.findIndex(s => String(s.id) === String(inspectingSubmission.id));
+        if (idx >= 0 && idx < list.length - 1) {
+          setInspectingSubmission(list[idx + 1]);
+          setInspectingProofZoom(1);
+          setInspectingProofRotation(0);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [inspectingSubmission, submissions, verificationFilter, verificationTaskFilter, verificationDeptFilter, verificationClassFilter, verificationYearFilter, submissionSearchTerm]);
+
   const handleFileUpload = (taskId: number, file: File | null) => {
     if (file) {
       // Add a 5MB size limit restriction as requested
@@ -11581,35 +11610,6 @@ export default function App() {
       </AnimatePresence>
     );
   };
-
-  useEffect(() => {
-    if (!inspectingSubmission) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setInspectingSubmission(null);
-        setInspectingProofZoom(1);
-        setInspectingProofRotation(0);
-      } else if (e.key === 'ArrowLeft') {
-        const list = getFilteredVerificationSubmissions();
-        const idx = list.findIndex(s => String(s.id) === String(inspectingSubmission.id));
-        if (idx > 0) {
-          setInspectingSubmission(list[idx - 1]);
-          setInspectingProofZoom(1);
-          setInspectingProofRotation(0);
-        }
-      } else if (e.key === 'ArrowRight') {
-        const list = getFilteredVerificationSubmissions();
-        const idx = list.findIndex(s => String(s.id) === String(inspectingSubmission.id));
-        if (idx >= 0 && idx < list.length - 1) {
-          setInspectingSubmission(list[idx + 1]);
-          setInspectingProofZoom(1);
-          setInspectingProofRotation(0);
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [inspectingSubmission, submissions, verificationFilter, verificationTaskFilter, verificationDeptFilter, verificationClassFilter, verificationYearFilter, submissionSearchTerm]);
 
   const renderTeamReviewModal = () => {
     if (!teamReviewModal) return null;
