@@ -503,6 +503,14 @@ async function startServer() {
   });
 
   app.use('/api/', apiLimiter);
+  // Completely disable caching on all /api/* routes so client apps always get real-time data
+  app.use('/api/', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    next();
+  });
   // Gzip/Brotli compression — reduces JSON response sizes by ~70%, critical for slow mobile connections
   app.use(compression({
     level: 6,
@@ -796,33 +804,13 @@ async function startServer() {
   }
   const apiMemoryCache = new Map<string, CachedApiEntry>();
 
+  // In-memory cache disabled: always return null so API always queries fresh real-time data from database
   const getApiCache = <T = any>(key: string): T | null => {
-    const item = apiMemoryCache.get(key);
-    if (!item) return null;
-    if (Date.now() > item.expiresAt) {
-      apiMemoryCache.delete(key);
-      return null;
-    }
-    return item.data as T;
+    return null;
   };
 
   const setApiCache = (key: string, data: any, ttlSeconds = 30): void => {
-    if (apiMemoryCache.size > 3000) {
-      const now = Date.now();
-      for (const [k, v] of apiMemoryCache.entries()) {
-        if (now > v.expiresAt) {
-          apiMemoryCache.delete(k);
-        }
-      }
-      if (apiMemoryCache.size > 3000) {
-        let count = 0;
-        for (const k of apiMemoryCache.keys()) {
-          apiMemoryCache.delete(k);
-          if (++count >= 300) break;
-        }
-      }
-    }
-    apiMemoryCache.set(key, { data, expiresAt: Date.now() + ttlSeconds * 1000 });
+    // No-op: caching disabled
   };
 
   const invalidateApiCache = (prefix?: string): void => {
@@ -836,6 +824,14 @@ async function startServer() {
       }
     }
   };
+
+  // Explicit on-demand cache purge endpoint
+  app.all('/api/clear-cache', (req, res) => {
+    apiMemoryCache.clear();
+    userAuthCache.clear();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.json({ success: true, message: 'All backend in-memory caches successfully purged and removed.' });
+  });
 
   /**
    * Universal In-App Notification Dispatcher
@@ -934,20 +930,11 @@ async function startServer() {
       const userId = decoded.id;
 
       let user: any = null;
-      const cached = userAuthCache.get(userId);
-      const now = Date.now();
-      if (cached && (now - cached.cachedAt) < 120000) {
-        user = cached.user;
-      } else {
-        const dbUserRes = await pool.query(
-          'SELECT * FROM users WHERE id = $1 LIMIT 1',
-          [userId]
-        );
-        user = dbUserRes.rows[0];
-        if (user) {
-          setUserAuthCache(userId, user);
-        }
-      }
+      const dbUserRes = await pool.query(
+        'SELECT * FROM users WHERE id = $1 LIMIT 1',
+        [userId]
+      );
+      user = dbUserRes.rows[0];
 
       if (!user) {
         return res.status(401).json({ error: 'Unauthorized: User not found' });
