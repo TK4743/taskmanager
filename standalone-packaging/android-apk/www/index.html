@@ -2,22 +2,27 @@
 <html lang="en">
 
 <head>
-  <!-- Production Mobile Backend Gateway (taskmanagervsbec.vercel.app) -->
+  <!-- Production Mobile Backend Gateway (taskmanagervsbec.vercel.app) & Notch Support -->
+  <style>
+    :root {
+      --safe-area-top: env(safe-area-inset-top, 0px);
+    }
+    body {
+      padding-top: env(safe-area-inset-top, 0px);
+      background-color: #0f172a;
+    }
+  </style>
   <script>
     (function() {
-      var defaultUrl = "https://taskmanagervsbec.vercel.app";
-      var getSavedBackend = function() {
-        var saved = localStorage.getItem('it_taskmanager_backend_url');
-        if (!saved || saved.indexOf('it-taskmanager.vercel.app') !== -1 || saved.indexOf('192.168.') !== -1 || saved.indexOf('10.0.2.2') !== -1) {
-          localStorage.setItem('it_taskmanager_backend_url', defaultUrl);
-          return defaultUrl;
-        }
-        return saved;
-      };
+      var backend = "https://taskmanagervsbec.vercel.app".replace(/\/api\/?$/, '');
+
+      // Ensure localStorage always uses taskmanagervsbec.vercel.app
+      try {
+        localStorage.setItem('it_taskmanager_backend_url', backend);
+      } catch (e) {}
 
       var origFetch = window.fetch;
       window.fetch = function(url, opts) {
-        var backend = getSavedBackend().replace(/\/api\/?$/, '');
         var targetUrl = url;
 
         if (typeof url === 'string') {
@@ -35,50 +40,13 @@
           }
         }
 
-        return origFetch.call(this, targetUrl, opts).catch(function(err) {
-          console.error('[Mobile Gateway Error] Cannot reach server at: ' + targetUrl, err);
-          if (!window.__server_err_alerted) {
-            window.__server_err_alerted = true;
-            setTimeout(function() {
-              alert('⚠️ Server Connection Failed!\n\nCannot reach server at:\n' + backend + '\n\nPlease check your mobile internet connection or Wi-Fi.\n\nTap the ⚙️ Server button at bottom-left to configure if needed.');
-              window.__server_err_alerted = false;
-            }, 300);
-          }
-          throw err;
-        });
+        return origFetch.call(this, targetUrl, opts);
       };
-
-      // Floating button to configure or change server IP anytime on mobile
-      window.addEventListener('DOMContentLoaded', function() {
-        var currentBackend = getSavedBackend();
-        var btn = document.createElement('button');
-        btn.id = 'mobile-server-config-btn';
-        btn.innerHTML = '⚙️ ' + currentBackend.replace(/^https?:\/\//, '');
-        btn.style.cssText = 'position:fixed;bottom:12px;left:12px;z-index:999999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);color:#38bdf8;font-size:10px;font-family:sans-serif;font-weight:700;border:1px solid rgba(56,189,248,0.4);padding:6px 10px;border-radius:20px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
-
-        btn.onclick = function() {
-          var current = getSavedBackend();
-          var input = prompt(
-            'VSBEC IT Task Manager - Server Configuration\n\n' +
-            'Live Production Backend:\n' +
-            '• https://taskmanagervsbec.vercel.app\n\n' +
-            'Current Server:',
-            current
-          );
-          if (input !== null && input.trim() !== '') {
-            var formatted = input.trim().replace(/\/api\/?$/, '');
-            localStorage.setItem('it_taskmanager_backend_url', formatted);
-            alert('Connected server set to:\n' + formatted + '\n\nReloading application...');
-            window.location.reload();
-          }
-        };
-        document.body.appendChild(btn);
-      });
     })();
   </script>
 
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>IT Vault — VSB IT Task Manager | VSB Engineering College Karur | Tharunkumar K | VSBEC | VSB Karur | VSBEC IT</title>
   <meta name="description" content="Official IT Vault (VSBEC IT Task Manager) platform for VSB Engineering College, Karur (VSBEC / VSB Karur). Academic task management, submission verification, LeetCode/GitHub tracking, and placement readiness for the Department of Information Technology (VSBEC IT / VSB IT Karur), developed by Tharunkumar K and Tech Squad." />
   <meta name="keywords" content="it vault, vsb it vault, vsbec it vault, vsb vault, vsbec vault, it vault vsb, it vault vsbec, vsbec, vsbkarur, vsbecit, vsb karur, vsbec karur, vsb it, vsbec it, vsb it karur, vsbec it karur, vsb engineering college, vsb engineering college karur, vsbec engineering college, vsbec engineering college karur, vsb college karur, vsbec college karur, vsb it department, vsbec it department, vsb information technology, vsbec information technology, vsb information technology karur, vsbec information technology karur, vsb task manager, vsbec task manager, vsb it task manager, vsbec it task manager, vsbkarur it, vsbkarur task manager, vsb student portal, vsbec student portal, vsb student task manager, vsbec student task manager, vsb academic task manager, vsbec academic task manager, vsb portal karur, vsbec portal karur, vsb placement portal, vsbec placement portal, vsb karur placements, tharunkumar k vsb, tharunkumar k vsbec, tharunkumar k vsb karur, tharunkumar k vsb engineering college, tharunkumar k vsbec karur, tech squad vsb, techsquad vsbec, techsquad vsb, techsquad vsb karur, techsquad vsb engineering college, techsquad vsbec karur, Tharunkumar K, Tech Squad, Techsquad, Tharun K, Tharun4743, Tharunkumar K Portfolio, https://tharunkumark4743.netlify.app/, https://techsquadsih.netlify.app/, Code Thugs 2k26 Winner, GOAT Code Editor, Campus Connect, Full Stack Developer, React, TypeScript, PostgreSQL, Node.js" />
