@@ -1,0 +1,16 @@
+{
+  "name": "vsbec-it-taskmanager-android",
+  "version": "1.0.1",
+  "description": "VSBEC IT Task Manager Android Mobile Application",
+  "author": "Tech Squad",
+  "scripts": {
+    "cap:add": "cap add android",
+    "cap:sync": "cap sync android",
+    "cap:open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.1",
+    "@capacitor/cli": "^7.0.1",
+    "@capacitor/core": "^7.0.1"
+  }
+}

@@ -12,4 +12,12 @@ backups/
 sih-prep/
 scratch_*
 *.pdf
-*.cjs
+.idea/
+.vscode/
+*.iml
+.gradle/
+win-unpacked/
+dist-electron/
+dist-apk/
+*.apk
+*.exe
