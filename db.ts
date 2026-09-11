@@ -30,16 +30,17 @@ const isServerless = Boolean(
   process.env.LAMBDA_TASK_ROOT
 );
 
-// Serverless optimization: In Vercel/Lambda, set poolMin=0 and poolMax=2-3 to prevent Supavisor EMAXCONN (200 limit)
+// Serverless optimization: On Supabase Transaction Mode Pooler (Port 6543), allow up to 10 connections per lambda
+// to handle parallel dashboard queries (departments, classes, users, tasks, submissions, notifications) without queue blocking
 const poolMax = isServerless
-  ? Math.min(process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 3, 4)
+  ? (process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 10)
   : (process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : (process.env.PGMAXCONNECTIONS ? parseInt(process.env.PGMAXCONNECTIONS, 10) : 25));
 
 const poolMin = isServerless ? 0 : (process.env.DB_POOL_MIN ? parseInt(process.env.DB_POOL_MIN, 10) : 1);
-const connectionTimeoutMillis = process.env.DB_CONNECTION_TIMEOUT_MS ? parseInt(process.env.DB_CONNECTION_TIMEOUT_MS, 10) : (isServerless ? 6000 : 15000);
-const idleTimeoutMillis = process.env.DB_IDLE_TIMEOUT_MS ? parseInt(process.env.DB_IDLE_TIMEOUT_MS, 10) : (isServerless ? 1500 : 25000);
+const connectionTimeoutMillis = process.env.DB_CONNECTION_TIMEOUT_MS ? parseInt(process.env.DB_CONNECTION_TIMEOUT_MS, 10) : 10000;
+const idleTimeoutMillis = process.env.DB_IDLE_TIMEOUT_MS ? parseInt(process.env.DB_IDLE_TIMEOUT_MS, 10) : (isServerless ? 15000 : 25000);
 const statementTimeout = process.env.DB_STATEMENT_TIMEOUT_MS ? parseInt(process.env.DB_STATEMENT_TIMEOUT_MS, 10) : 20000;
-const maxUses = process.env.DB_POOL_MAX_USES ? parseInt(process.env.DB_POOL_MAX_USES, 10) : (isServerless ? 100 : 7500);
+const maxUses = process.env.DB_POOL_MAX_USES ? parseInt(process.env.DB_POOL_MAX_USES, 10) : (isServerless ? 500 : 7500);
 
 export const pool = new Pool(databaseUrl ? {
   connectionString: databaseUrl,
