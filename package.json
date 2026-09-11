@@ -6,7 +6,7 @@
     "name": "Techsquad",
     "url": "https://techsquadsih.netlify.app/"
   },
-  "homepage": "https://it-taskmanager.vercel.app/",
+  "homepage": "https://taskmanagervsbec.vercel.app/",
   "private": true,
   "version": "1.0.1",
   "type": "module",
