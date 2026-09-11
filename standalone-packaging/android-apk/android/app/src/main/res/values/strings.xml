@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">VSBEC IT Task Manager</string>
+    <string name="title_activity_main">VSBEC IT Task Manager</string>
+    <string name="package_name">com.vsbec.it.taskmanager</string>
+    <string name="custom_url_scheme">com.vsbec.it.taskmanager</string>
+</resources>

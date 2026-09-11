@@ -1,0 +1,39 @@
+{
+  "name": "vsbec-it-taskmanager-desktop",
+  "version": "1.0.1",
+  "description": "VSBEC IT Task Manager Desktop Windows Application",
+  "main": "main.cjs",
+  "author": "Tech Squad",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "build": "electron-builder --win portable",
+    "build:portable": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.vsbec.it.taskmanager",
+    "productName": "VSBEC IT Task Manager",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "app-config.json",
+      "web/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "web/logo.png"
+    }
+  }
+}

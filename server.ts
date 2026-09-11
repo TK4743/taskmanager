@@ -416,11 +416,9 @@ async function startServer() {
   // Initialize PostgreSQL database schemas only in persistent server environments (e.g. local / Render).
   // In Vercel serverless functions, database schema is already migrated, avoiding 60+ blocking DDL queries on cold start.
   if (!isVercel && process.env.DATABASE_URL) {
-    try {
-      await initDB();
-    } catch (dbErr) {
+    initDB().catch((dbErr) => {
       console.error('[Database Init Warning] Could not complete initDB:', dbErr);
-    }
+    });
   } else if (!process.env.DATABASE_URL) {
     console.warn('[Database] DATABASE_URL is not set. Please configure DATABASE_URL in Vercel Environment Variables.');
   }
@@ -528,6 +526,13 @@ async function startServer() {
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
+        origin.startsWith('http://localhost') ||
+        origin.startsWith('https://localhost') ||
+        origin.startsWith('capacitor://') ||
+        origin.startsWith('ionic://') ||
+        origin.startsWith('http://192.168.') ||
+        origin.startsWith('http://10.') ||
+        origin.startsWith('http://172.') ||
         (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) ||
         origin.endsWith('.vercel.app') ||
         origin.includes('vercel.app')

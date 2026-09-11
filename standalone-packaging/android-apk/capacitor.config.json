@@ -1,0 +1,10 @@
+{
+  "appId": "com.vsbec.it.taskmanager",
+  "appName": "VSBEC IT Task Manager",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

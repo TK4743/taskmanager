@@ -1,0 +1,41 @@
+{
+  "name": "VSBEC IT Vault — VSB IT Task Manager | Tharunkumar K | VSB Engineering College Karur",
+  "short_name": "IT Vault",
+  "description": "Official IT Vault portal (VSBEC IT Task Manager) — Academic task governance, coding competency tracking, and student progress monitoring portal for VSB Engineering College (VSBEC, VSB Karur), Department of Information Technology (VSBEC IT), developed by Tharunkumar K.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
