@@ -30,23 +30,38 @@ if (fs.existsSync(envPath)) {
 
 let html = fs.readFileSync(distIndexPath, 'utf8');
 
+// Ensure viewport-fit=cover is included for notch/display cutout support
+if (html.includes('name="viewport"')) {
+  html = html.replace(/name="viewport"\s+content="([^"]*)"/, (match, content) => {
+    if (!content.includes('viewport-fit=cover')) {
+      return `name="viewport" content="${content}, viewport-fit=cover"`;
+    }
+    return match;
+  });
+}
+
 const gatewayScript = `
-  <!-- Production Mobile Backend Gateway (taskmanagervsbec.vercel.app) -->
+  <!-- Production Mobile Backend Gateway (taskmanagervsbec.vercel.app) & Notch Support -->
+  <style>
+    :root {
+      --safe-area-top: env(safe-area-inset-top, 0px);
+    }
+    body {
+      padding-top: env(safe-area-inset-top, 0px);
+      background-color: #0f172a;
+    }
+  </style>
   <script>
     (function() {
-      var defaultUrl = ${JSON.stringify(defaultBackendUrl)};
-      var getSavedBackend = function() {
-        var saved = localStorage.getItem('it_taskmanager_backend_url');
-        if (!saved || saved.indexOf('it-taskmanager.vercel.app') !== -1 || saved.indexOf('192.168.') !== -1 || saved.indexOf('10.0.2.2') !== -1) {
-          localStorage.setItem('it_taskmanager_backend_url', defaultUrl);
-          return defaultUrl;
-        }
-        return saved;
-      };
+      var backend = ${JSON.stringify(defaultBackendUrl)}.replace(/\\/api\\/?$/, '');
+
+      // Ensure localStorage always uses taskmanagervsbec.vercel.app
+      try {
+        localStorage.setItem('it_taskmanager_backend_url', backend);
+      } catch (e) {}
 
       var origFetch = window.fetch;
       window.fetch = function(url, opts) {
-        var backend = getSavedBackend().replace(/\\/api\\/?$/, '');
         var targetUrl = url;
 
         if (typeof url === 'string') {
@@ -64,49 +79,12 @@ const gatewayScript = `
           }
         }
 
-        return origFetch.call(this, targetUrl, opts).catch(function(err) {
-          console.error('[Mobile Gateway Error] Cannot reach server at: ' + targetUrl, err);
-          if (!window.__server_err_alerted) {
-            window.__server_err_alerted = true;
-            setTimeout(function() {
-              alert('⚠️ Server Connection Failed!\\n\\nCannot reach server at:\\n' + backend + '\\n\\nPlease check your mobile internet connection or Wi-Fi.\\n\\nTap the ⚙️ Server button at bottom-left to configure if needed.');
-              window.__server_err_alerted = false;
-            }, 300);
-          }
-          throw err;
-        });
+        return origFetch.call(this, targetUrl, opts);
       };
-
-      // Floating button to configure or change server IP anytime on mobile
-      window.addEventListener('DOMContentLoaded', function() {
-        var currentBackend = getSavedBackend();
-        var btn = document.createElement('button');
-        btn.id = 'mobile-server-config-btn';
-        btn.innerHTML = '⚙️ ' + currentBackend.replace(/^https?:\\/\\//, '');
-        btn.style.cssText = 'position:fixed;bottom:12px;left:12px;z-index:999999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);color:#38bdf8;font-size:10px;font-family:sans-serif;font-weight:700;border:1px solid rgba(56,189,248,0.4);padding:6px 10px;border-radius:20px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
-
-        btn.onclick = function() {
-          var current = getSavedBackend();
-          var input = prompt(
-            'VSBEC IT Task Manager - Server Configuration\\n\\n' +
-            'Live Production Backend:\\n' +
-            '• https://taskmanagervsbec.vercel.app\\n\\n' +
-            'Current Server:',
-            current
-          );
-          if (input !== null && input.trim() !== '') {
-            var formatted = input.trim().replace(/\\/api\\/?$/, '');
-            localStorage.setItem('it_taskmanager_backend_url', formatted);
-            alert('Connected server set to:\\n' + formatted + '\\n\\nReloading application...');
-            window.location.reload();
-          }
-        };
-        document.body.appendChild(btn);
-      });
     })();
   </script>
 `;
 
 html = html.replace('<head>', '<head>' + gatewayScript);
 fs.writeFileSync(indexPath, html, 'utf8');
-console.log('Mobile API gateway successfully configured with https://taskmanagervsbec.vercel.app');
+console.log('Mobile API gateway successfully configured (clean native UI with notch support)');
