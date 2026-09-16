@@ -616,6 +616,15 @@ async function startServer() {
           } catch (syncErr) {
             console.error('[Morning Pre-Sync Error]:', syncErr);
           }
+
+          // Auto-push previous day LeetCode CSVs and DB snapshot to GitHub
+          try {
+            console.log(`[Scheduler] 🚀 Auto-exporting and pushing ${prevDayStr} LeetCode progress to GitHub...`);
+            await exportAndPushLeetcodeDailyProgress(prevDayStr);
+            await generateDatabaseSnapshot();
+          } catch (exportErr) {
+            console.error('[Morning LeetCode Export Error]:', exportErr);
+          }
         }
       }
 
@@ -694,12 +703,12 @@ async function startServer() {
         }
       }
 
-      // 6. Nightly Final Window (11:50 PM IST onwards / 23:50 - 23:59) -> Final LeetCode & GitHub Sync + CSV GitHub Push
-      if (hours === 23 && minutes >= 50) {
+      // 6. Evening/Nightly Final Window (9:30 PM to 11:59 PM IST) -> Final LeetCode & GitHub Sync + CSV GitHub Push
+      if ((hours === 21 && minutes >= 30) || hours >= 22) {
         const claimed = await claimDailySlot('leetcode_last_daily_csv_push_date', todayStr);
         if (claimed) {
           triggered.push('nightly_sync');
-          console.log(`[Scheduler] 🚀 Triggering 11:55 PM IST LeetCode & GitHub Progress Sync for ${todayStr}...`);
+          console.log(`[Scheduler] 🚀 Evening/Nightly LeetCode & GitHub Progress Sync for ${todayStr}...`);
           try {
             await syncLeetcodeProgressForScope().catch(err => console.error('[Nightly Sync LeetCode Error]:', err));
             if (process.env.GITHUB_TOKEN) {
@@ -6878,10 +6887,24 @@ async function startServer() {
   app.post('/api/leetcode/sync', authenticate, authorizeTargetManagement, asyncHandler(async (req: any, res: Response) => {
     const scope = enforceUserScopeFilter(req.user, req.body);
     const summary = await syncLeetcodeProgressForScope(scope);
+    const syncDate = scope.date || getISTDateStr();
+    exportAndPushLeetcodeDailyProgress(syncDate).catch(e => console.error('[Manual LeetCode Sync Export Error]:', e));
     res.json({
       success: true,
-      message: `LeetCode sync completed. ${summary.synced} synced, ${summary.failed} unavailable.`,
+      message: `LeetCode sync completed. ${summary.synced} synced, ${summary.failed} unavailable. GitHub backup export started.`,
       summary
+    });
+  }));
+
+  // On-demand manual trigger to export LeetCode reports to GitHub
+  app.post('/api/leetcode/export-backup', authenticate, authorize(['SUPREME_ADMIN', 'HOD']), asyncHandler(async (req: any, res: Response) => {
+    const targetDate = req.body?.date || getISTDateStr();
+    console.log(`[Manual Backup] Triggering LeetCode GitHub export for ${targetDate}...`);
+    await exportAndPushLeetcodeDailyProgress(targetDate);
+    await generateDatabaseSnapshot();
+    res.json({
+      success: true,
+      message: `LeetCode daily reports and database snapshot for ${targetDate} successfully exported and pushed to GitHub.`
     });
   }));
 
