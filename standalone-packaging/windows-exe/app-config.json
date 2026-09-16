@@ -1,6 +1,0 @@
-{
-  "appName": "VSBEC IT Task Manager",
-  "version": "1.0.1",
-  "backendApiUrl": "https://taskmanagervsbec.vercel.app/api",
-  "description": "Configured to live production backend (https://taskmanagervsbec.vercel.app/api). You can also set http://localhost:3000/api for local development."
-}
