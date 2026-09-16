@@ -701,18 +701,24 @@ async function startServer() {
           triggered.push('nightly_sync');
           console.log(`[Scheduler] 🚀 Triggering 11:55 PM IST LeetCode & GitHub Progress Sync for ${todayStr}...`);
           try {
-            await syncLeetcodeProgressForScope();
+            await syncLeetcodeProgressForScope().catch(err => console.error('[Nightly Sync LeetCode Error]:', err));
             if (process.env.GITHUB_TOKEN) {
-              await syncGitHubProgressForScope();
+              await syncGitHubProgressForScope().catch(err => console.error('[Nightly Sync GitHub Error]:', err));
             }
-            await exportAndPushLeetcodeDailyProgress(todayStr);
-            await generateDatabaseSnapshot();
           } catch (syncErr) {
             console.error('[Nightly Sync Error]:', syncErr);
-            await pool.query(
-              `DELETE FROM system_settings WHERE key = 'leetcode_last_daily_csv_push_date' AND value = $1`,
-              [todayStr]
-            ).catch(() => {});
+          }
+
+          try {
+            await exportAndPushLeetcodeDailyProgress(todayStr);
+          } catch (exportErr) {
+            console.error('[Nightly Export Error]:', exportErr);
+          }
+
+          try {
+            await generateDatabaseSnapshot();
+          } catch (backupErr) {
+            console.error('[Nightly Backup Error]:', backupErr);
           }
         }
       }
@@ -4777,6 +4783,68 @@ async function startServer() {
     res.json({ tasks, submissions, notifications });
   });
 
+  // ── High-Performance Bootstrap Endpoint (Single Round-Trip Initial Load) ───
+  app.get('/api/bootstrap', authenticate, async (req: any, res: Response) => {
+    try {
+      const dbUser = req.user;
+      if (!dbUser) return res.status(401).json({ error: 'Unauthorized' });
+
+      const getCachedOrQuery = async (key: string, queryFn: () => Promise<any>, ttlSec: number = 30) => {
+        const cached = getApiCache(key);
+        if (cached) return cached;
+        const data = await queryFn();
+        setApiCache(key, data, ttlSec);
+        return data;
+      };
+
+      const [departments, classes, tasks, submissions, notifications] = await Promise.all([
+        getCachedOrQuery('departments_all', async () => {
+          const r = await pool.query('SELECT id, name, created_at FROM departments ORDER BY created_at ASC');
+          return r.rows.map((d: any) => ({ id: d.id, name: d.name, created_at: d.created_at }));
+        }, 60),
+        getCachedOrQuery('classes_all', async () => {
+          const r = await pool.query('SELECT id, name, department_id, year, batch, created_at FROM classes ORDER BY year ASC, name ASC');
+          return r.rows.map((c: any) => ({ id: c.id, name: c.name, department_id: c.department_id, year: c.year, batch: c.batch, created_at: c.created_at }));
+        }, 60),
+        getTasksDataForUser(dbUser),
+        getSubmissionsDataForUser(dbUser),
+        pool.query('SELECT id, message, type, title, is_read, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [dbUser.id]).then(r => r.rows.map((n: any) => ({ id: n.id, message: n.message, type: n.type, title: n.title, is_read: n.is_read, created_at: n.created_at })))
+      ]);
+
+      res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+      res.json({
+        user: {
+          id: dbUser.id,
+          username: dbUser.username,
+          role: dbUser.role,
+          full_name: dbUser.full_name,
+          email: dbUser.email,
+          register_number: dbUser.register_number,
+          department_id: dbUser.department_id,
+          class_id: dbUser.class_id,
+          is_coordinator: dbUser.is_coordinator,
+          avatar_url: dbUser.avatar_url,
+          profile_picture: dbUser.profile_picture,
+          gender: dbUser.gender,
+          phone: dbUser.phone,
+          bio: dbUser.bio,
+          github_url: dbUser.github_url,
+          linkedin_url: dbUser.linkedin_url,
+          telegram_chat_id: dbUser.telegram_chat_id,
+          telegram_username: dbUser.telegram_username,
+        },
+        departments,
+        classes,
+        tasks,
+        submissions,
+        notifications
+      });
+    } catch (err: any) {
+      console.error('[Bootstrap Error]:', err);
+      res.status(500).json({ error: 'Failed to bootstrap application state', details: err.message });
+    }
+  });
+
 
 
   app.patch('/api/submissions/:id/unlock', authenticate, authorize(['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR']), async (req: any, res) => {
@@ -8555,9 +8623,21 @@ async function startServer() {
 
       // 3. Push to GitHub via Contents REST API (for cloud containers / Render)
       if (process.env.GITHUB_TOKEN && filesToSync.length > 0) {
-        console.log('[LeetCode AutoSync] Uploading files to GitHub via Contents API...');
-        for (const fPath of filesToSync) {
-          await updateGitHubFileViaAPI(fPath, commitMsg);
+        console.log(`[LeetCode AutoSync] Uploading ${filesToSync.length} report files to GitHub via Contents API...`);
+        // Prioritize uploading master report first
+        const masterFile = filesToSync.find(f => f.includes('LeetCode_Daily_Report_'));
+        if (masterFile) {
+          await updateGitHubFileViaAPI(masterFile, commitMsg).catch(err => {
+            console.error('[LeetCode AutoSync] Master CSV upload error:', err);
+          });
+        }
+
+        // Upload remaining section/year files in parallel batches of 3
+        const otherFiles = filesToSync.filter(f => f !== masterFile);
+        const batchSize = 3;
+        for (let i = 0; i < otherFiles.length; i += batchSize) {
+          const batch = otherFiles.slice(i, i + batchSize);
+          await Promise.allSettled(batch.map(fPath => updateGitHubFileViaAPI(fPath, commitMsg)));
         }
       }
 
@@ -8733,25 +8813,52 @@ async function startServer() {
   }));
 
   // 6. Nightly 11:55 PM IST LeetCode & GitHub Progress Sync & GitHub Commit
-  app.all('/api/cron/sync-coding-progress', asyncHandler(async (req: Request, res: Response) => {
+  app.all(['/api/cron/sync-coding-progress', '/api/cron/nightly-sync'], asyncHandler(async (req: Request, res: Response) => {
     if (!(await verifyCronAuth(req, res))) return;
 
-    console.log('[Cron Webhook] Executing on-demand daily sync for LeetCode & GitHub...');
-    const leetcodeRes = await syncLeetcodeProgressForScope();
+    console.log('[Cron Webhook] Executing daily sync for LeetCode & GitHub...');
+    let leetcodeRes = null;
     let githubRes = null;
+    try {
+      leetcodeRes = await syncLeetcodeProgressForScope();
+    } catch (err: any) {
+      console.error('[Cron Webhook LeetCode Sync Error]:', err.message);
+    }
+
     if (process.env.GITHUB_TOKEN) {
-      githubRes = await syncGitHubProgressForScope();
+      try {
+        githubRes = await syncGitHubProgressForScope();
+      } catch (err: any) {
+        console.error('[Cron Webhook GitHub Sync Error]:', err.message);
+      }
     }
 
     const todayStr = getISTDateStr();
-    await exportAndPushLeetcodeDailyProgress(todayStr).catch(err => console.error('[Cron Webhook LeetCode Export Error]:', err));
-    await generateDatabaseSnapshot().catch(err => console.error('[Cron Webhook DB Backup Error]:', err));
+    let exportSuccess = false;
+    let backupSuccess = false;
+
+    try {
+      await exportAndPushLeetcodeDailyProgress(todayStr);
+      exportSuccess = true;
+    } catch (err: any) {
+      console.error('[Cron Webhook LeetCode Export Error]:', err.message);
+    }
+
+    try {
+      await generateDatabaseSnapshot();
+      backupSuccess = true;
+    } catch (err: any) {
+      console.error('[Cron Webhook DB Backup Error]:', err.message);
+    }
 
     return res.json({
       success: true,
       timestamp: new Date().toISOString(),
+      date: todayStr,
       leetcode: leetcodeRes,
-      github: githubRes
+      github: githubRes,
+      exportSuccess,
+      backupSuccess
     });
   }));
 

@@ -3845,11 +3845,28 @@ function HistoryChartWrapper({ studentId, type, token }: { studentId: string; ty
 }
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const saved = localStorage.getItem('user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [view, setView] = useState<string>('dashboard');
   const [viewingStudentProfileId, setViewingStudentProfileId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    try {
+      const hasToken = Boolean(localStorage.getItem('token'));
+      const hasUser = Boolean(localStorage.getItem('user'));
+      const hasCachedTasks = Boolean(sessionStorage.getItem('app_cache_tasks'));
+      if (hasToken && hasUser && hasCachedTasks) {
+        return false;
+      }
+    } catch (_) {}
+    return true;
+  });
   const [hasError, setHasError] = useState(false);
 
   // Toast State
@@ -3923,7 +3940,12 @@ export default function App() {
   const [coordinatorStats, setCoordinatorStats] = useState<CoordinatorStats | null>(null);
   const [supremeStats, setSupremeStats] = useState<any>(null);
   const [myClass, setMyClass] = useState<Class | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('app_cache_notifs');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationDropdownRef = useRef<HTMLDivElement>(null);
   const knownNotificationIdsRef = useRef<Set<number>>(new Set());
@@ -5274,6 +5296,86 @@ export default function App() {
       }
       const headers = { Authorization: `Bearer ${activeToken}` };
 
+      const sortClassesList = (clsList: Class[]) => [...(clsList || [])].sort((a, b) => (a.year || 0) - (b.year || 0) || (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
+      const sortDeptsList = (deptList: Department[]) => [...(deptList || [])].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
+      const sortTasksDescending = (taskList: Task[]) => [...(taskList || [])].sort((a, b) => {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.deadline ? new Date(a.deadline).getTime() : 0);
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.deadline ? new Date(b.deadline).getTime() : 0);
+        return timeB - timeA;
+      });
+
+      // 1. Try High-Performance Single-Roundtrip Bootstrap API
+      let bootstrapped = false;
+      try {
+        const bootRes = await fetch(`${API_URL}/api/bootstrap`, { headers });
+        if (bootRes.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
+          setLoginData({ username: '', password: '' });
+          setView('dashboard');
+          setIsLoading(false);
+          return;
+        }
+
+        if (bootRes.ok) {
+          const bData = await bootRes.json();
+          const sortedDepts = sortDeptsList(bData.departments);
+          const sortedClasses = sortClassesList(bData.classes);
+          const sortedTasks = sortTasksDescending(bData.tasks);
+
+          setDepartments(sortedDepts);
+          setClasses(sortedClasses);
+          setTasks(sortedTasks);
+          setSubmissions(bData.submissions || []);
+          if (bData.user) {
+            setUser(bData.user);
+            localStorage.setItem('user', JSON.stringify(bData.user));
+          }
+
+          if (Array.isArray(bData.notifications)) {
+            setNotifications(bData.notifications);
+            bData.notifications.forEach((n: any) => knownNotificationIdsRef.current.add(n.id));
+            try { sessionStorage.setItem('app_cache_notifs', JSON.stringify(bData.notifications)); } catch {}
+          }
+          initialNotifsLoadedRef.current = true;
+
+          try {
+            sessionStorage.setItem('app_cache_depts', JSON.stringify(sortedDepts));
+            sessionStorage.setItem('app_cache_classes', JSON.stringify(sortedClasses));
+            sessionStorage.setItem('app_cache_tasks', JSON.stringify(sortedTasks));
+            sessionStorage.setItem('app_cache_submissions', JSON.stringify(bData.submissions || []));
+          } catch {}
+
+          setIsLoading(false);
+          bootstrapped = true;
+
+          // Asynchronously trigger role stats in background without blocking
+          const curUser = bData.user || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null);
+          if (curUser) {
+            if (curUser.role === 'SUPREME_ADMIN') {
+              fetchSupremeStats(activeToken);
+              fetchIndustryData(activeToken);
+            } else if (curUser.role === 'HOD') {
+              fetchHODStats(activeToken);
+              fetchIndustryData(activeToken);
+            } else if (curUser.role === 'CLASS_ADVISOR' || (curUser.role === 'STUDENT' && curUser.is_coordinator)) {
+              if (curUser.role === 'CLASS_ADVISOR') fetchAdvisorStats(activeToken);
+              if (curUser.role === 'STUDENT' && curUser.is_coordinator) fetchCoordinatorStats(activeToken);
+              fetchMyClass(activeToken);
+            } else if (curUser.role === 'STUDENT') {
+              fetchStudentStats(activeToken);
+              fetchMyTeamsAndInvitations();
+            }
+          }
+        }
+      } catch (bootErr) {
+        console.warn('[Bootstrap API fallback]:', bootErr);
+      }
+
+      if (bootstrapped) return;
+
       const savedUserStr = localStorage.getItem('user');
       const savedUser = savedUserStr ? JSON.parse(savedUserStr) : null;
 
@@ -5324,13 +5426,6 @@ export default function App() {
         parseJSON(notificationsRes),
       ]);
 
-      const sortClassesList = (clsList: Class[]) => [...(clsList || [])].sort((a, b) => (a.year || 0) - (b.year || 0) || (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
-      const sortDeptsList = (deptList: Department[]) => [...(deptList || [])].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
-      const sortTasksDescending = (taskList: Task[]) => [...(taskList || [])].sort((a, b) => {
-        const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.deadline ? new Date(a.deadline).getTime() : 0);
-        const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.deadline ? new Date(b.deadline).getTime() : 0);
-        return timeB - timeA;
-      });
 
       const sortedDepts = sortDeptsList(depts);
       const sortedClasses = sortClassesList(classes);

@@ -638,7 +638,8 @@ export async function initDB() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_task_submissions_user_task_status ON task_submissions(user_id, task_id, status);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_users_role_dept_class ON users(role, department_id, class_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_classes_dept_year ON classes(department_id, year);`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_teams_task_status ON teams(task_id, status);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_tasks_dept_status ON tasks(department_id, status);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_task_classes_class_task ON task_classes(class_id, task_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_task_deadline_alerts ON task_deadline_alerts(task_id, user_id, alert_type);`);
 
     // ─── Module 5: LeetCode Targets & Progress Tracking ───────────────────────
