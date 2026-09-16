@@ -6,7 +6,7 @@ echo.
 echo [*] PC Local URL:       http://localhost:3000
 echo [*] Mobile Phone Wi-Fi: http://192.168.31.20:3000
 echo.
-echo Leave this window open while using the Mobile APK or Desktop App.
+echo Leave this window open while using the application.
 echo ====================================================
 echo.
 call npm run start
