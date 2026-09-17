@@ -80,6 +80,33 @@ export async function generateMergedProofsPdf(
     console.warn('[Proof PDF] Could not preload /logo.png:', err);
   }
 
+  // ── Parallel Pre-fetching of image blobs (concurrency: 6) ───────────────────
+  const blobMap = new Map<string, Blob | null>();
+  const BATCH_SIZE = 6;
+  const uniqueUrls = Array.from(new Set(items.map(it => it.url).filter(Boolean)));
+  
+  for (let b = 0; b < uniqueUrls.length; b += BATCH_SIZE) {
+    if (isAborted && isAborted()) return null;
+    const batch = uniqueUrls.slice(b, b + BATCH_SIZE);
+    if (onProgress) {
+      const pct = Math.round((b / Math.max(1, uniqueUrls.length)) * 45);
+      onProgress({
+        current: Math.min(b + BATCH_SIZE, uniqueUrls.length),
+        total: uniqueUrls.length,
+        percent: pct,
+        statusText: `Pre-fetching proof images (${Math.min(b + BATCH_SIZE, uniqueUrls.length)}/${uniqueUrls.length})...`
+      });
+    }
+    await Promise.all(batch.map(async (url) => {
+      try {
+        const bl = await fetchBlob(url);
+        blobMap.set(url, bl);
+      } catch {
+        blobMap.set(url, null);
+      }
+    }));
+  }
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -105,11 +132,11 @@ export async function generateMergedProofsPdf(
     }
 
     if (onProgress) {
-      const pct = Math.round(((i + 0.5) / total) * 90);
+      const pct = 45 + Math.round(((i + 0.5) / total) * 50);
       onProgress({
         current: pageNum,
         total,
-        percent: pct,
+        percent: Math.min(98, pct),
         statusText: `Rendering proof page ${pageNum} of ${total}...`
       });
     }
@@ -220,7 +247,7 @@ export async function generateMergedProofsPdf(
 
     if (item.url) {
       try {
-        const blob = await fetchBlob(item.url);
+        const blob = blobMap.has(item.url) ? blobMap.get(item.url) : await fetchBlob(item.url);
         if (blob) {
           const { dataUrl, width: origW, height: origH, format } = await blobToDataUrlAndDimensions(blob);
 

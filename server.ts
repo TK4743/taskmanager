@@ -3301,11 +3301,13 @@ async function startServer() {
     }
   });
 
-  // 5. GET /api/team/my
-  app.get('/api/team/my', authenticate, authorize(['STUDENT']), async (req: any, res) => {
-    const studentId = req.user.id;
-    try {
-      const myTeamsRes = await pool.query(`
+  async function getMyTeamsData(studentId: string) {
+    const cacheKey = `team_my_${studentId}`;
+    const cached = getApiCache(cacheKey);
+    if (cached) return cached;
+
+    const [myTeamsRes, invitationsRes] = await Promise.all([
+      pool.query(`
         SELECT DISTINCT t.*, tk.title as task_title, tk.submission_type, tk.min_team_size, tk.max_team_size, u.full_name as leader_name
         FROM teams t
         JOIN tasks tk ON t.task_id = tk.id
@@ -3313,9 +3315,8 @@ async function startServer() {
         JOIN team_members tm ON tm.team_id = t.id
         WHERE tm.student_id = $1 AND tm.status IN ('ACCEPTED', 'PENDING')
         ORDER BY t.created_at DESC
-      `, [studentId]);
-
-      const invitationsRes = await pool.query(`
+      `, [studentId]),
+      pool.query(`
         SELECT ti.*, t.team_name, tk.title as task_title, u.full_name as inviter_name
         FROM team_invitations ti
         JOIN teams t ON ti.team_id = t.id
@@ -3323,12 +3324,22 @@ async function startServer() {
         JOIN users u ON ti.invited_by = u.id
         WHERE ti.student_id = $1 AND ti.status = 'PENDING'
         ORDER BY ti.created_at DESC
-      `, [studentId]);
+      `, [studentId])
+    ]);
 
-      res.json({
-        teams: myTeamsRes.rows,
-        invitations: invitationsRes.rows
-      });
+    const data = {
+      teams: myTeamsRes.rows,
+      invitations: invitationsRes.rows
+    };
+    setApiCache(cacheKey, data, 20);
+    return data;
+  }
+
+  // 5. GET /api/team/my
+  app.get('/api/team/my', authenticate, authorize(['STUDENT']), async (req: any, res) => {
+    try {
+      const data = await getMyTeamsData(req.user.id);
+      res.json(data);
     } catch (err: any) {
       console.error('Fetch my teams error:', err);
       res.status(500).json({ error: 'Failed to fetch team details' });
@@ -3762,30 +3773,37 @@ async function startServer() {
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   // ── Stats: Supreme Admin ──────────────────────────────────────────────────
+  async function getSupremeStatsData() {
+    const cacheKey = 'stats_supreme';
+    const cached = getApiCache(cacheKey);
+    if (cached) return cached;
+
+    const res = await pool.query(`
+      SELECT 
+        (SELECT count(*) FROM departments) as total_departments,
+        (SELECT count(*) FROM classes) as total_classes,
+        (SELECT count(*) FROM users) as total_users,
+        (SELECT count(*) FROM tasks WHERE status = 'OPEN') as total_active_tasks,
+        (SELECT count(*) FROM task_submissions) as total_submissions,
+        (SELECT count(*) FROM task_submissions WHERE status = 'SUBMITTED') as pending_verifications
+    `);
+
+    const row = res.rows[0] || {};
+    const data = {
+      total_departments: parseInt(row.total_departments || '0', 10),
+      total_classes: parseInt(row.total_classes || '0', 10),
+      total_users: parseInt(row.total_users || '0', 10),
+      total_active_tasks: parseInt(row.total_active_tasks || '0', 10),
+      total_submissions: parseInt(row.total_submissions || '0', 10),
+      pending_verifications: parseInt(row.pending_verifications || '0', 10),
+    };
+    setApiCache(cacheKey, data, 30);
+    return data;
+  }
+
   app.get('/api/stats/supreme', authenticate, authorize(['SUPREME_ADMIN']), async (req, res) => {
     try {
-      const cacheKey = 'stats_supreme';
-      const cached = getApiCache(cacheKey);
-      if (cached) return res.json(cached);
-
-      const [totalDepts, totalClasses, totalUsers, activeTasks, totalSubmissions, pendingVerifications] = await Promise.all([
-        pool.query('SELECT count(*) FROM departments'),
-        pool.query('SELECT count(*) FROM classes'),
-        pool.query('SELECT count(*) FROM users'),
-        pool.query("SELECT count(*) FROM tasks WHERE status = 'OPEN'"),
-        pool.query('SELECT count(*) FROM task_submissions'),
-        pool.query("SELECT count(*) FROM task_submissions WHERE status = 'SUBMITTED'"),
-      ]);
-
-      const data = {
-        total_departments: parseInt(totalDepts.rows[0].count),
-        total_classes: parseInt(totalClasses.rows[0].count),
-        total_users: parseInt(totalUsers.rows[0].count),
-        total_active_tasks: parseInt(activeTasks.rows[0].count),
-        total_submissions: parseInt(totalSubmissions.rows[0].count),
-        pending_verifications: parseInt(pendingVerifications.rows[0].count),
-      };
-      setApiCache(cacheKey, data, 30);
+      const data = await getSupremeStatsData();
       res.json(data);
     } catch (err) {
       console.error('Supreme Stats Error:', err);
@@ -3793,17 +3811,18 @@ async function startServer() {
     }
   });
 
-  app.get('/api/stats/hod', authenticate, authorize(['HOD']), async (req: any, res) => {
-    const deptId = req.user.department_id;
+  async function getHODStatsData(deptId: any) {
+    if (!deptId) return null;
     const cacheKey = `stats_hod_${deptId}`;
     const cached = getApiCache(cacheKey);
-    if (cached) return res.json(cached);
+    if (cached) return cached;
 
-    const classesRes = await pool.query('SELECT * FROM classes WHERE department_id = $1 ORDER BY year ASC, name ASC', [deptId]);
+    const [classesRes, deptStudentsRes] = await Promise.all([
+      pool.query('SELECT * FROM classes WHERE department_id = $1 ORDER BY year ASC, name ASC', [deptId]),
+      pool.query('SELECT id, full_name, register_number, class_id FROM users WHERE department_id = $1 AND role = \'STUDENT\' ORDER BY register_number ASC', [deptId])
+    ]);
     const classes = classesRes.rows;
     const classIds = classes.map(c => c.id);
-
-    const deptStudentsRes = await pool.query('SELECT id, full_name, register_number, class_id FROM users WHERE department_id = $1 AND role = \'STUDENT\' ORDER BY register_number ASC', [deptId]);
     const deptStudents = deptStudentsRes.rows;
     const deptStudentIds = deptStudents.map(s => s.id);
 
@@ -3833,12 +3852,15 @@ async function startServer() {
     const tasks = tasksRes.rows;
     const taskIds = tasks.map(t => t.id);
 
-    // ── Batched queries (replaces N+1 — previously 2 queries per task) ────────
-    // Fetch ALL submissions for all tasks in one query
-    const allSubsRes = taskIds.length > 0
-      ? await pool.query('SELECT task_id, user_id, status FROM task_submissions WHERE task_id = ANY($1)', [taskIds])
-      : { rows: [] };
-    // Group submissions by task_id for O(1) lookup
+    const [allSubsRes, allTcRes] = await Promise.all([
+      taskIds.length > 0
+        ? pool.query('SELECT task_id, user_id, status FROM task_submissions WHERE task_id = ANY($1)', [taskIds])
+        : Promise.resolve({ rows: [] }),
+      taskIds.length > 0
+        ? pool.query('SELECT task_id, class_id FROM task_classes WHERE task_id = ANY($1)', [taskIds])
+        : Promise.resolve({ rows: [] })
+    ]);
+
     const subsByTask = new Map<string, { user_id: string; status: string }[]>();
     allSubsRes.rows.forEach(s => {
       const key = s.task_id.toString();
@@ -3846,10 +3868,6 @@ async function startServer() {
       subsByTask.get(key)!.push({ user_id: s.user_id.toString(), status: s.status });
     });
 
-    // Fetch ALL task→class assignments in one query
-    const allTcRes = taskIds.length > 0
-      ? await pool.query('SELECT task_id, class_id FROM task_classes WHERE task_id = ANY($1)', [taskIds])
-      : { rows: [] };
     const tcByTask = new Map<string, string[]>();
     allTcRes.rows.forEach(r => {
       const key = r.task_id.toString();
@@ -3891,23 +3909,34 @@ async function startServer() {
         verified: statuses.filter(s => s === 'VERIFIED').length,
         pending: targetStudentIds.size - sMap.size,
         rejected: statuses.filter(s => s === 'REJECTED').length,
-        not_participating: statuses.filter(s => s === 'NOT_PARTICIPATING').length,
+        not_participATING: statuses.filter(s => s === 'NOT_PARTICIPATING').length,
         class_breakdown
       };
     });
 
-    // Batch participation count — one query with GROUP BY instead of one per class
-    let participationMap = new Map<string, number>();
-    if (deptStudentIds.length > 0) {
-      const partRes = await pool.query(`
-        SELECT u.class_id, count(DISTINCT ts.user_id) as cnt
+    const [partRes, totalAdvisorsRes, subsCountsRes] = await Promise.all([
+      deptStudentIds.length > 0
+        ? pool.query(`
+            SELECT u.class_id, count(DISTINCT ts.user_id) as cnt
+            FROM task_submissions ts
+            JOIN users u ON ts.user_id = u.id
+            WHERE u.department_id = $1
+            GROUP BY u.class_id
+          `, [deptId])
+        : Promise.resolve({ rows: [] }),
+      pool.query("SELECT count(*) as count FROM users WHERE department_id = $1 AND role = 'CLASS_ADVISOR'", [deptId]),
+      pool.query(`
+        SELECT 
+          count(*) FILTER (WHERE ts.status = 'SUBMITTED') as pending_count,
+          count(*) FILTER (WHERE ts.status = 'VERIFIED') as verified_count
         FROM task_submissions ts
         JOIN users u ON ts.user_id = u.id
         WHERE u.department_id = $1
-        GROUP BY u.class_id
-      `, [deptId]);
-      partRes.rows.forEach(r => participationMap.set(r.class_id.toString(), parseInt(r.cnt)));
-    }
+      `, [deptId])
+    ]);
+
+    let participationMap = new Map<string, number>();
+    partRes.rows.forEach(r => participationMap.set(r.class_id.toString(), parseInt(r.cnt)));
 
     const classStats = classes.map(c => {
       const classStudents = studentsByClass[c.id.toString()] || [];
@@ -3918,69 +3947,80 @@ async function startServer() {
       };
     });
 
-    const totalStudentsRes = await pool.query('SELECT count(*) FROM users WHERE department_id = $1 AND role = \'STUDENT\'', [deptId]);
-    const totalAdvisorsRes = await pool.query('SELECT count(*) FROM users WHERE department_id = $1 AND role = \'CLASS_ADVISOR\'', [deptId]);
-    const totalClassesRes = await pool.query('SELECT count(*) FROM classes WHERE department_id = $1', [deptId]);
-
-    const pendingSubmissionsRes = await pool.query(`
-      SELECT count(*) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.department_id = $1 AND ts.status = 'SUBMITTED'
-    `, [deptId]);
-
-    const verifiedSubmissionsRes = await pool.query(`
-      SELECT count(*) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.department_id = $1 AND ts.status = 'VERIFIED'
-    `, [deptId]);
-
+    const subsCounts = subsCountsRes.rows[0] || {};
     const hodData = {
       taskStats,
       classStats,
-      total_students: parseInt(totalStudentsRes.rows[0].count),
-      total_advisors: parseInt(totalAdvisorsRes.rows[0].count),
-      total_classes: parseInt(totalClassesRes.rows[0].count),
-      pending_submissions: parseInt(pendingSubmissionsRes.rows[0].count),
-      verified_submissions: parseInt(verifiedSubmissionsRes.rows[0].count)
+      total_students: deptStudents.length,
+      total_advisors: parseInt(totalAdvisorsRes.rows[0]?.count || '0'),
+      total_classes: classes.length,
+      pending_submissions: parseInt(subsCounts.pending_count || '0'),
+      verified_submissions: parseInt(subsCounts.verified_count || '0')
     };
     setApiCache(cacheKey, hodData, 15);
-    res.json(hodData);
+    return hodData;
+  }
+
+  app.get('/api/stats/hod', authenticate, authorize(['HOD']), async (req: any, res) => {
+    try {
+      const hodData = await getHODStatsData(req.user.department_id);
+      res.json(hodData);
+    } catch (err: any) {
+      console.error('HOD Stats Error:', err);
+      res.status(500).json({ error: 'Failed to fetch HOD stats' });
+    }
   });
 
-  app.get('/api/stats/coordinator', authenticate, async (req: any, res) => {
-    if (req.user.role === 'STUDENT' && !req.user.is_coordinator) {
-      return res.status(403).json({ error: 'Only coordinators can access these stats' });
-    }
-    if (!['STUDENT', 'CLASS_ADVISOR', 'HOD', 'SUPREME_ADMIN'].includes(req.user.role)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    const classId = req.user.class_id;
-    const deptId = req.user.department_id;
+  async function getCoordinatorStatsData(classId: any, deptId: any) {
+    if (!classId) return null;
     const coordCacheKey = `stats_coord_${classId}`;
     const coordCached = getApiCache(coordCacheKey);
-    if (coordCached) return res.json(coordCached);
+    if (coordCached) return coordCached;
 
-    const tasksRes = await pool.query(`
-      SELECT t.*
-      FROM tasks t
-      LEFT JOIN task_classes tc ON t.id = tc.task_id
-      WHERE tc.class_id = $1
-         OR (t.department_id = $2 AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
-         OR (t.department_id IS NULL AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
-      GROUP BY t.id
-      ORDER BY t.created_at ASC
-    `, [classId, deptId]);
+    const [tasksRes, studentsRes] = await Promise.all([
+      pool.query(`
+        SELECT t.*
+        FROM tasks t
+        LEFT JOIN task_classes tc ON t.id = tc.task_id
+        WHERE tc.class_id = $1
+           OR (t.department_id = $2 AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
+           OR (t.department_id IS NULL AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
+        GROUP BY t.id
+        ORDER BY t.created_at ASC
+      `, [classId, deptId]),
+      pool.query("SELECT id, full_name, register_number, gender FROM users WHERE class_id = $1 AND role = 'STUDENT' ORDER BY register_number ASC", [classId])
+    ]);
     const tasks = tasksRes.rows;
-
-    const studentsRes = await pool.query('SELECT id, full_name, register_number FROM users WHERE class_id = $1 AND role = \'STUDENT\' ORDER BY register_number ASC', [classId]);
     const students = studentsRes.rows;
     const studentIds = students.map(s => s.id);
     const taskIds = tasks.map(t => t.id);
 
-    const allSubsRes = (taskIds.length > 0 && studentIds.length > 0)
-      ? await pool.query('SELECT task_id, user_id, status FROM task_submissions WHERE task_id = ANY($1) AND user_id = ANY($2)', [taskIds, studentIds])
-      : { rows: [] };
+    let totalBoys = 0;
+    let totalGirls = 0;
+    students.forEach(s => {
+      const g = (s.gender || '').toUpperCase();
+      if (['MALE', 'BOYS', 'BOY', 'M'].includes(g)) totalBoys++;
+      else if (['FEMALE', 'GIRLS', 'GIRL', 'F'].includes(g)) totalGirls++;
+    });
+
+    const [allSubsRes, countsRes] = await Promise.all([
+      (taskIds.length > 0 && studentIds.length > 0)
+        ? pool.query('SELECT task_id, user_id, status FROM task_submissions WHERE task_id = ANY($1) AND user_id = ANY($2)', [taskIds, studentIds])
+        : Promise.resolve({ rows: [] }),
+      pool.query(`
+        SELECT 
+          count(DISTINCT ts.user_id) FILTER (WHERE ts.status = 'SUBMITTED') as pending_reviews,
+          count(DISTINCT ts.user_id) FILTER (WHERE ts.status = 'VERIFIED') as verified_submissions,
+          count(*) FILTER (WHERE ts.status = 'REJECTED') as rejected_submissions,
+          count(DISTINCT ts.user_id) FILTER (WHERE ts.status = 'VERIFIED' AND UPPER(u.gender) IN ('MALE', 'BOYS', 'BOY', 'M')) as boys_verified,
+          count(DISTINCT ts.user_id) FILTER (WHERE ts.status = 'VERIFIED' AND UPPER(u.gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F')) as girls_verified,
+          count(DISTINCT ts.user_id) FILTER (WHERE ts.status = 'SUBMITTED' AND UPPER(u.gender) IN ('MALE', 'BOYS', 'BOY', 'M')) as boys_pending,
+          count(DISTINCT ts.user_id) FILTER (WHERE ts.status = 'SUBMITTED' AND UPPER(u.gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F')) as girls_pending
+        FROM task_submissions ts
+        JOIN users u ON ts.user_id = u.id
+        WHERE u.class_id = $1
+      `, [classId])
+    ]);
 
     const taskStats = tasks.map(t => {
       const taskSubs = allSubsRes.rows.filter(s => s.task_id.toString() === t.id.toString());
@@ -4008,46 +4048,42 @@ async function startServer() {
       total_tasks: totalTaskCount
     }));
 
-
-
-    const [totalStudentsRes, totalBoysRes, totalGirlsRes, pendingReviewsRes, verifiedSubmissionsRes, rejectedSubmissionsRes, boysVerifiedRes, girlsVerifiedRes, boysPendingRes, girlsPendingRes] = await Promise.all([
-      pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT'", [classId]),
-      pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT' AND UPPER(gender) IN ('MALE', 'BOYS', 'BOY', 'M')", [classId]),
-      pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT' AND UPPER(gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F')", [classId]),
-      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND ts.status = 'SUBMITTED'`, [classId]),
-      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND ts.status = 'VERIFIED'`, [classId]),
-      pool.query(`SELECT count(*) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND ts.status = 'REJECTED'`, [classId]),
-      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND UPPER(u.gender) IN ('MALE', 'BOYS', 'BOY', 'M') AND ts.status = 'VERIFIED'`, [classId]),
-      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND UPPER(u.gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F') AND ts.status = 'VERIFIED'`, [classId]),
-      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND UPPER(u.gender) IN ('MALE', 'BOYS', 'BOY', 'M') AND ts.status = 'SUBMITTED'`, [classId]),
-      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND UPPER(u.gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F') AND ts.status = 'SUBMITTED'`, [classId]),
-    ]);
-
-    const totalBoys = parseInt(totalBoysRes.rows[0].count);
-    const totalGirls = parseInt(totalGirlsRes.rows[0].count);
-    const boysVerified = parseInt(boysVerifiedRes.rows[0].count);
-    const girlsVerified = parseInt(girlsVerifiedRes.rows[0].count);
-    const boysPending = parseInt(boysPendingRes.rows[0].count);
-    const girlsPending = parseInt(girlsPendingRes.rows[0].count);
-
+    const r = countsRes.rows[0] || {};
     const coordData = {
       taskStats,
       studentStats,
-      class_student_count: parseInt(totalStudentsRes.rows[0].count),
-      pending_reviews: parseInt(pendingReviewsRes.rows[0].count),
-      verified_submissions: parseInt(verifiedSubmissionsRes.rows[0].count),
-      rejected_submissions: parseInt(rejectedSubmissionsRes.rows[0].count),
+      class_student_count: students.length,
+      pending_reviews: parseInt(r.pending_reviews || '0'),
+      verified_submissions: parseInt(r.verified_submissions || '0'),
+      rejected_submissions: parseInt(r.rejected_submissions || '0'),
       total_boys: totalBoys,
       total_girls: totalGirls,
-      boys_verified: boysVerified,
-      girls_verified: girlsVerified,
-      boys_pending: boysPending,
-      girls_pending: girlsPending,
-      boys_incomplete: Math.max(0, totalBoys - boysVerified),
-      girls_incomplete: Math.max(0, totalGirls - girlsVerified),
+      boys_verified: parseInt(r.boys_verified || '0'),
+      girls_verified: parseInt(r.girls_verified || '0'),
+      boys_pending: parseInt(r.boys_pending || '0'),
+      girls_pending: parseInt(r.girls_pending || '0'),
+      boys_incomplete: Math.max(0, totalBoys - parseInt(r.boys_verified || '0')),
+      girls_incomplete: Math.max(0, totalGirls - parseInt(r.girls_verified || '0')),
     };
     setApiCache(coordCacheKey, coordData, 15);
-    res.json(coordData);
+    return coordData;
+  }
+
+  app.get('/api/stats/coordinator', authenticate, async (req: any, res) => {
+    if (req.user.role === 'STUDENT' && !req.user.is_coordinator) {
+      return res.status(403).json({ error: 'Only coordinators can access these stats' });
+    }
+    if (!['STUDENT', 'CLASS_ADVISOR', 'HOD', 'SUPREME_ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    try {
+      const coordData = await getCoordinatorStatsData(req.user.class_id, req.user.department_id);
+      res.json(coordData);
+    } catch (err: any) {
+      console.error('Coordinator Stats Error:', err);
+      res.status(500).json({ error: 'Failed to fetch Coordinator stats' });
+    }
   });
 
   // Shared Submissions Data Query for /api/submissions and /api/refresh
@@ -4828,7 +4864,118 @@ async function startServer() {
         return data;
       };
 
-      const [departments, classes, tasks, submissions, notifications] = await Promise.all([
+      const tasksCacheKey = `tasks_${dbUser.role}_${dbUser.id}_${dbUser.class_id || 'all'}_${dbUser.department_id || 'all'}`;
+      const subsCacheKey = `submissions_${dbUser.role}_${dbUser.id}_${dbUser.class_id || 'all'}_${dbUser.department_id || 'all'}_${dbUser.is_coordinator ? 'coord' : 'normal'}`;
+
+      const fetchRoleStats = async () => {
+        try {
+          if (dbUser.role === 'SUPREME_ADMIN') return await getSupremeStatsData();
+          if (dbUser.role === 'HOD') return await getHODStatsData(dbUser.department_id);
+          if (dbUser.role === 'CLASS_ADVISOR') {
+            let cid = dbUser.class_id;
+            if (!cid) {
+              const clsRes = await pool.query('SELECT id FROM classes WHERE advisor_id = $1 LIMIT 1', [dbUser.id]);
+              if (clsRes.rows.length > 0) cid = clsRes.rows[0].id;
+            }
+            return await getAdvisorStatsData(cid, dbUser.department_id, dbUser.id);
+          }
+          if (dbUser.role === 'STUDENT' && dbUser.is_coordinator) {
+            return await getCoordinatorStatsData(dbUser.class_id, dbUser.department_id);
+          }
+          if (dbUser.role === 'STUDENT') {
+            return await getStudentStatsData(dbUser.id, dbUser.class_id, dbUser.department_id);
+          }
+        } catch (e) {
+          console.warn('[Bootstrap Role Stats Warn]:', e);
+        }
+        return null;
+      };
+
+      const fetchRoleTeams = async () => {
+        if (dbUser.role === 'STUDENT') {
+          try {
+            return await getMyTeamsData(dbUser.id);
+          } catch {
+            return null;
+          }
+        }
+        return null;
+      };
+
+      const usersCacheKey = `users_${dbUser.role}_${dbUser.department_id || 'all'}_${dbUser.class_id || 'all'}`;
+      const fetchUsers = async () => {
+        return getCachedOrQuery(usersCacheKey, async () => {
+          let uRes;
+          if (dbUser.role === 'SUPREME_ADMIN') {
+            uRes = await pool.query(`
+              SELECT u.id, u.username, u.full_name, u.email, u.role, u.register_number, u.gender, u.is_coordinator,
+                     u.department_id, u.class_id, COALESCE(u.avatar_url, u.profile_picture) as avatar_url,
+                     d.name as department_name, c.name as class_name, c.year as class_year
+              FROM users u
+              LEFT JOIN departments d ON u.department_id = d.id
+              LEFT JOIN classes c ON u.class_id = c.id
+              WHERE u.role != 'SUPREME_ADMIN'
+              ORDER BY u.role ASC, c.year ASC NULLS LAST, c.name ASC NULLS LAST, u.register_number ASC NULLS LAST, u.full_name ASC
+            `);
+          } else if (dbUser.role === 'HOD') {
+            uRes = await pool.query(`
+              SELECT u.id, u.username, u.full_name, u.email, u.role, u.register_number, u.gender, u.is_coordinator,
+                     u.department_id, u.class_id, COALESCE(u.avatar_url, u.profile_picture) as avatar_url,
+                     c.name as class_name, c.year as class_year
+              FROM users u
+              LEFT JOIN classes c ON u.class_id = c.id
+              WHERE u.department_id = $1 AND u.role != 'SUPREME_ADMIN'
+              ORDER BY u.role ASC, c.year ASC NULLS LAST, c.name ASC NULLS LAST, u.register_number ASC NULLS LAST, u.full_name ASC
+            `, [dbUser.department_id]);
+          } else if (dbUser.role === 'CLASS_ADVISOR' || (dbUser.role === 'STUDENT' && dbUser.is_coordinator)) {
+            let cid = dbUser.class_id;
+            if (!cid && dbUser.role === 'CLASS_ADVISOR') {
+              const clsRes = await pool.query('SELECT id FROM classes WHERE advisor_id = $1 LIMIT 1', [dbUser.id]);
+              if (clsRes.rows.length > 0) cid = clsRes.rows[0].id;
+            }
+            if (cid) {
+              uRes = await pool.query(`
+                SELECT u.id, u.username, u.full_name, u.email, u.role, u.register_number, u.gender, u.is_coordinator,
+                       u.department_id, u.class_id, COALESCE(u.avatar_url, u.profile_picture) as avatar_url,
+                       c.name as class_name, c.year as class_year
+                FROM users u
+                LEFT JOIN classes c ON u.class_id = c.id
+                WHERE u.class_id = $1 AND u.role = 'STUDENT'
+                ORDER BY u.register_number ASC, u.full_name ASC
+              `, [cid]);
+            } else {
+              uRes = { rows: [] };
+            }
+          } else if (dbUser.role === 'INDUSTRY') {
+            uRes = await pool.query(`
+              SELECT u.id, u.username, u.full_name, u.email, u.role, u.register_number, u.gender,
+                     u.department_id, u.class_id, COALESCE(u.avatar_url, u.profile_picture) as avatar_url,
+                     d.name as department_name, c.name as class_name, c.year as class_year
+              FROM users u
+              LEFT JOIN departments d ON u.department_id = d.id
+              LEFT JOIN classes c ON u.class_id = c.id
+              WHERE u.role = 'STUDENT' AND u.is_active = true
+              ORDER BY c.year ASC NULLS LAST, c.name ASC NULLS LAST, u.register_number ASC NULLS LAST, u.full_name ASC
+            `);
+          } else {
+            if (dbUser.class_id) {
+              uRes = await pool.query(`
+                SELECT u.id, u.full_name, u.register_number, u.role, u.class_id, u.department_id, u.gender, u.is_coordinator,
+                       c.name as class_name, c.year as class_year
+                FROM users u
+                LEFT JOIN classes c ON u.class_id = c.id
+                WHERE u.class_id = $1 AND u.role = 'STUDENT'
+                ORDER BY u.register_number ASC
+              `, [dbUser.class_id]);
+            } else {
+              uRes = { rows: [] };
+            }
+          }
+          return uRes.rows;
+        }, 60);
+      };
+
+      const [departments, classes, tasks, submissions, notifications, roleStats, roleTeams, users] = await Promise.all([
         getCachedOrQuery('departments_all', async () => {
           const r = await pool.query('SELECT id, name, created_at FROM departments ORDER BY created_at ASC');
           return r.rows.map((d: any) => ({ id: d.id, name: d.name, created_at: d.created_at }));
@@ -4837,9 +4984,12 @@ async function startServer() {
           const r = await pool.query('SELECT id, name, department_id, year, batch, created_at FROM classes ORDER BY year ASC, name ASC');
           return r.rows.map((c: any) => ({ id: c.id, name: c.name, department_id: c.department_id, year: c.year, batch: c.batch, created_at: c.created_at }));
         }, 60),
-        getTasksDataForUser(dbUser),
-        getSubmissionsDataForUser(dbUser),
-        pool.query('SELECT id, message, type, title, is_read, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [dbUser.id]).then(r => r.rows.map((n: any) => ({ id: n.id, message: n.message, type: n.type, title: n.title, is_read: n.is_read, created_at: n.created_at })))
+        getCachedOrQuery(tasksCacheKey, () => getTasksDataForUser(dbUser), 45),
+        getCachedOrQuery(subsCacheKey, () => getSubmissionsDataForUser(dbUser), 45),
+        pool.query('SELECT id, message, type, title, is_read, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [dbUser.id]).then(r => r.rows.map((n: any) => ({ id: n.id, message: n.message, type: n.type, title: n.title, is_read: n.is_read, created_at: n.created_at }))),
+        fetchRoleStats(),
+        fetchRoleTeams(),
+        fetchUsers()
       ]);
 
       res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
@@ -4866,9 +5016,13 @@ async function startServer() {
         },
         departments,
         classes,
+        users: users || [],
         tasks,
         submissions,
-        notifications
+        notifications,
+        stats: roleStats,
+        teams: roleTeams?.teams || [],
+        invitations: roleTeams?.invitations || []
       });
     } catch (err: any) {
       console.error('[Bootstrap Error]:', err);
@@ -5020,19 +5174,16 @@ async function startServer() {
   });
 
   // ── Stats: Advisor ────────────────────────────────────────────────────────
-  app.get('/api/stats/advisor', authenticate, authorize(['CLASS_ADVISOR']), async (req: any, res) => {
-    let classId = req.user.class_id;
-    const deptId = req.user.department_id;
-
+  async function getAdvisorStatsData(classId: string, deptId: string, userId: string) {
     if (!classId) {
-      const clsRes = await pool.query('SELECT id FROM classes WHERE advisor_id = $1 LIMIT 1', [req.user.id]);
+      const clsRes = await pool.query('SELECT id FROM classes WHERE advisor_id = $1 LIMIT 1', [userId]);
       if (clsRes.rows.length > 0) {
         classId = clsRes.rows[0].id;
       }
     }
 
     if (!classId) {
-      return res.json({
+      return {
         taskStats: [],
         studentStats: [],
         total_students: 0,
@@ -5040,10 +5191,14 @@ async function startServer() {
         verified_tasks_count: 0,
         rejected_tasks_count: 0,
         pending_tasks_count: 0
-      });
+      };
     }
 
-    // Phase 1: Fetch tasks and students in parallel (independent of each other)
+    const cacheKey = `stats_advisor_${classId}`;
+    const cached = getApiCache(cacheKey);
+    if (cached) return cached;
+
+    // Phase 1: Fetch tasks and students in parallel with gender
     const [tasksRes, studentsRes] = await Promise.all([
       pool.query(`
         SELECT t.*, COALESCE(tc.class_ids, '{}') as class_ids
@@ -5056,17 +5211,38 @@ async function startServer() {
            OR (t.department_id IS NULL AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
         ORDER BY t.created_at ASC
       `, [classId, deptId]),
-      pool.query("SELECT id, full_name, register_number FROM users WHERE class_id = $1 AND role = 'STUDENT' ORDER BY register_number ASC", [classId])
+      pool.query("SELECT id, full_name, register_number, gender FROM users WHERE class_id = $1 AND role = 'STUDENT' ORDER BY register_number ASC", [classId])
     ]);
     const tasks = tasksRes.rows;
     const students = studentsRes.rows;
-    const studentIds = students.map(s => s.id);
+    const studentIds = students.map((s: any) => s.id);
+    const taskIds = tasks.map((t: any) => t.id);
 
-    // Batch all submissions for advisor stats in 2 queries (was N+1 per task + N per student)
-    const taskIds = tasks.map(t => t.id);
-    const allAdvisorSubsRes = (taskIds.length > 0 && studentIds.length > 0)
-      ? await pool.query('SELECT task_id, user_id, status FROM task_submissions WHERE task_id = ANY($1) AND user_id = ANY($2)', [taskIds, studentIds])
-      : { rows: [] };
+    let totalBoys = 0;
+    let totalGirls = 0;
+    students.forEach((s: any) => {
+      const g = (s.gender || '').toUpperCase();
+      if (['MALE', 'BOYS', 'BOY', 'M'].includes(g)) totalBoys++;
+      else if (['FEMALE', 'GIRLS', 'GIRL', 'F'].includes(g)) totalGirls++;
+    });
+
+    const [allAdvisorSubsRes, countsRes] = await Promise.all([
+      (taskIds.length > 0 && studentIds.length > 0)
+        ? pool.query('SELECT task_id, user_id, status FROM task_submissions WHERE task_id = ANY($1) AND user_id = ANY($2)', [taskIds, studentIds])
+        : Promise.resolve({ rows: [] }),
+      pool.query(`
+        SELECT 
+          count(DISTINCT ts.user_id) FILTER (WHERE ts.status = 'SUBMITTED') as submitted_count,
+          count(DISTINCT ts.user_id) FILTER (WHERE ts.status = 'VERIFIED') as verified_count,
+          count(*) FILTER (WHERE ts.status = 'REJECTED') as rejected_count,
+          count(DISTINCT ts.user_id) FILTER (WHERE ts.status = 'VERIFIED' AND UPPER(u.gender) IN ('MALE', 'BOYS', 'BOY', 'M')) as boys_verified,
+          count(DISTINCT ts.user_id) FILTER (WHERE ts.status = 'VERIFIED' AND UPPER(u.gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F')) as girls_verified
+        FROM task_submissions ts
+        JOIN users u ON ts.user_id = u.id
+        WHERE u.class_id = $1
+      `, [classId])
+    ]);
+
     const advisorSubsByTask = new Map<string, { status: string }[]>();
     const advisorVerifiedByUser = new Map<string, number>();
     allAdvisorSubsRes.rows.forEach((s: any) => {
@@ -5098,73 +5274,81 @@ async function startServer() {
       total_tasks: totalTasks
     }));
 
-    // Phase 2: Fetch all aggregate counts in parallel (6 queries → concurrent)
-    const [
-      totalStudentsRes, totalBoysRes, totalGirlsRes,
-      submittedCountRes, verifiedCountRes, rejectedCountRes,
-      boysVerifiedRes, girlsVerifiedRes
-    ] = await Promise.all([
-      pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT'", [classId]),
-      pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT' AND UPPER(gender) IN ('MALE', 'BOYS', 'BOY', 'M')", [classId]),
-      pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT' AND UPPER(gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F')", [classId]),
-      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND ts.status = 'SUBMITTED'`, [classId]),
-      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND ts.status = 'VERIFIED'`, [classId]),
-      pool.query(`SELECT count(*) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND ts.status = 'REJECTED'`, [classId]),
-      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND UPPER(u.gender) IN ('MALE', 'BOYS', 'BOY', 'M') AND ts.status = 'VERIFIED'`, [classId]),
-      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND UPPER(u.gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F') AND ts.status = 'VERIFIED'`, [classId])
-    ]);
+    const r = countsRes.rows[0] || {};
+    const totalStudents = students.length;
+    const submittedCount = parseInt(r.submitted_count || '0');
+    const verifiedCount = parseInt(r.verified_count || '0');
+    const rejectedCount = parseInt(r.rejected_count || '0');
+    const boysVerified = parseInt(r.boys_verified || '0');
+    const girlsVerified = parseInt(r.girls_verified || '0');
 
-    const totalStudents = parseInt(totalStudentsRes.rows[0].count);
-    const totalBoys = parseInt(totalBoysRes.rows[0].count);
-    const totalGirls = parseInt(totalGirlsRes.rows[0].count);
-    const submittedCount = parseInt(submittedCountRes.rows[0].count);
-    const verifiedCount = parseInt(verifiedCountRes.rows[0].count);
-    const rejectedCount = parseInt(rejectedCountRes.rows[0].count);
-    const boysVerified = parseInt(boysVerifiedRes.rows[0].count);
-    const girlsVerified = parseInt(girlsVerifiedRes.rows[0].count);
-
-    res.json({
+    const advisorData = {
       taskStats,
       studentStats,
       total_students: totalStudents,
       submitted_tasks_count: submittedCount,
       verified_tasks_count: verifiedCount,
       rejected_tasks_count: rejectedCount,
-      pending_tasks_count: (totalTasks * totalStudents) - submittedCount - verifiedCount,
+      pending_tasks_count: Math.max(0, (totalTasks * totalStudents) - submittedCount - verifiedCount),
       total_boys: totalBoys,
       total_girls: totalGirls,
       boys_verified: boysVerified,
       girls_verified: girlsVerified,
       boys_incomplete: Math.max(0, totalBoys - boysVerified),
       girls_incomplete: Math.max(0, totalGirls - girlsVerified),
-    });
+    };
+    setApiCache(cacheKey, advisorData, 15);
+    return advisorData;
+  }
+
+  app.get('/api/stats/advisor', authenticate, authorize(['CLASS_ADVISOR']), async (req: any, res) => {
+    try {
+      const data = await getAdvisorStatsData(req.user.class_id, req.user.department_id, req.user.id);
+      res.json(data);
+    } catch (err: any) {
+      console.error('Advisor Stats Error:', err);
+      res.status(500).json({ error: 'Failed to fetch advisor stats' });
+    }
   });
 
   // ── Stats: Student ────────────────────────────────────────────────────────
-  app.get('/api/stats/student', authenticate, authorize(['STUDENT']), async (req: any, res) => {
-    const userId = req.user.id;
-    const deptId = req.user.department_id;
-    const classId = req.user.class_id;
+  async function getStudentStatsData(userId: string, classId: string, deptId: string) {
+    const cacheKey = `stats_student_${userId}`;
+    const cached = getApiCache(cacheKey);
+    if (cached) return cached;
 
-    const tasksRes = await pool.query(`
-      SELECT count(DISTINCT t.id) as count
-      FROM tasks t
-      LEFT JOIN task_classes tc ON t.id = tc.task_id
-      WHERE tc.class_id = $1
-         OR (t.department_id = $2 AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
-         OR (t.department_id IS NULL AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
-    `, [classId, deptId]);
-    const totalTasks = parseInt(tasksRes.rows[0].count);
-
-    const subsRes = await pool.query('SELECT status FROM task_submissions WHERE user_id = $1', [userId]);
+    const [tasksRes, subsRes] = await Promise.all([
+      pool.query(`
+        SELECT count(DISTINCT t.id) as count
+        FROM tasks t
+        LEFT JOIN task_classes tc ON t.id = tc.task_id
+        WHERE tc.class_id = $1
+           OR (t.department_id = $2 AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
+           OR (t.department_id IS NULL AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
+      `, [classId, deptId]),
+      pool.query('SELECT status FROM task_submissions WHERE user_id = $1', [userId])
+    ]);
+    const totalTasks = parseInt(tasksRes.rows[0]?.count || '0');
     const subs = subsRes.rows;
 
-    res.json({
+    const data = {
       total_tasks: totalTasks,
-      verified_tasks: subs.filter(s => s.status === 'VERIFIED').length,
-      submitted_tasks: subs.filter(s => s.status === 'SUBMITTED').length,
-      rejected_tasks: subs.filter(s => s.status === 'REJECTED').length,
-    });
+      verified_tasks: subs.filter((s: any) => s.status === 'VERIFIED').length,
+      submitted_tasks: subs.filter((s: any) => s.status === 'SUBMITTED').length,
+      rejected_tasks: subs.filter((s: any) => s.status === 'REJECTED').length,
+    };
+    setApiCache(cacheKey, data, 30);
+    return data;
+  }
+
+  app.get('/api/stats/student', authenticate, authorize(['STUDENT']), async (req: any, res) => {
+    try {
+      const data = await getStudentStatsData(req.user.id, req.user.class_id, req.user.department_id);
+      res.json(data);
+    } catch (err: any) {
+      console.error('Student Stats Error:', err);
+      res.status(500).json({ error: 'Failed to fetch student stats' });
+    }
   });
 
   // ── Student Profile Module Endpoints ─────────────────────────────────────
@@ -5195,16 +5379,21 @@ async function startServer() {
       academic.batch = academic.batch || '2023 - 2027';
       academic.year = academic.year ? (String(academic.year).startsWith('Year') ? academic.year : `Year ${academic.year}`) : 'Year III';
 
-      const personalRes = await client.query('SELECT * FROM student_profiles WHERE user_id = $1', [userId]);
-      const skillsRes = await client.query('SELECT * FROM student_skills WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
-      const projectsRes = await client.query('SELECT * FROM student_projects WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
-      const internshipsRes = await client.query('SELECT * FROM student_internships WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
-      const certsRes = await client.query('SELECT * FROM student_certifications WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
-      const codingRes = await client.query('SELECT * FROM student_coding_profiles WHERE user_id = $1', [userId]);
-      const resumeRes = await client.query('SELECT * FROM student_resumes WHERE user_id = $1', [userId]);
-      const achieveRes = await client.query('SELECT * FROM student_achievements WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
-      const langRes = await client.query('SELECT * FROM student_languages WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
-      const careerRes = await client.query('SELECT * FROM student_career_preferences WHERE user_id = $1', [userId]);
+      const [
+        personalRes, skillsRes, projectsRes, internshipsRes, certsRes,
+        codingRes, resumeRes, achieveRes, langRes, careerRes
+      ] = await Promise.all([
+        client.query('SELECT * FROM student_profiles WHERE user_id = $1', [userId]),
+        client.query('SELECT * FROM student_skills WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
+        client.query('SELECT * FROM student_projects WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
+        client.query('SELECT * FROM student_internships WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
+        client.query('SELECT * FROM student_certifications WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
+        client.query('SELECT * FROM student_coding_profiles WHERE user_id = $1', [userId]),
+        client.query('SELECT * FROM student_resumes WHERE user_id = $1', [userId]),
+        client.query('SELECT * FROM student_achievements WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
+        client.query('SELECT * FROM student_languages WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
+        client.query('SELECT * FROM student_career_preferences WHERE user_id = $1', [userId]),
+      ]);
 
       res.json({
         academic,

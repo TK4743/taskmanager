@@ -3921,7 +3921,12 @@ export default function App() {
       return cached ? JSON.parse(cached) : [];
     } catch { return []; }
   });
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('app_cache_users');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
   const [tasks, setTasks] = useState<Task[]>(() => {
     try {
       const cached = sessionStorage.getItem('app_cache_tasks');
@@ -5327,6 +5332,10 @@ export default function App() {
 
           setDepartments(sortedDepts);
           setClasses(sortedClasses);
+          if (Array.isArray(bData.users)) {
+            setUsers(bData.users);
+            try { sessionStorage.setItem('app_cache_users', JSON.stringify(bData.users)); } catch {}
+          }
           setTasks(sortedTasks);
           setSubmissions(bData.submissions || []);
           if (bData.user) {
@@ -5344,6 +5353,9 @@ export default function App() {
           try {
             sessionStorage.setItem('app_cache_depts', JSON.stringify(sortedDepts));
             sessionStorage.setItem('app_cache_classes', JSON.stringify(sortedClasses));
+            if (Array.isArray(bData.users)) {
+              sessionStorage.setItem('app_cache_users', JSON.stringify(bData.users));
+            }
             sessionStorage.setItem('app_cache_tasks', JSON.stringify(sortedTasks));
             sessionStorage.setItem('app_cache_submissions', JSON.stringify(bData.submissions || []));
           } catch {}
@@ -5444,6 +5456,7 @@ export default function App() {
       try {
         sessionStorage.setItem('app_cache_depts', JSON.stringify(sortedDepts));
         sessionStorage.setItem('app_cache_classes', JSON.stringify(sortedClasses));
+        sessionStorage.setItem('app_cache_users', JSON.stringify(users || []));
         sessionStorage.setItem('app_cache_tasks', JSON.stringify(sortedTasks));
         sessionStorage.setItem('app_cache_submissions', JSON.stringify(submissions));
       } catch { }
@@ -7132,6 +7145,45 @@ export default function App() {
       return true;
     });
 
+    if (targetStudents.length === 0 && submissions.length > 0) {
+      // Resilient fallback: derive student records directly from submissions
+      const stdMap = new Map<string, any>();
+      submissions.forEach(s => {
+        const uid = s.user_id?.toString() || s.register_number;
+        if (!uid || stdMap.has(uid)) return;
+
+        let inScope = true;
+        if (isClsRole && !isAdminRole && !isHODRole) {
+          const cid = (user?.class_id || myClass?.id)?.toString();
+          inScope = cid ? s.class_id?.toString() === cid : false;
+        } else if (isHODRole && !isAdminRole) {
+          inScope = s.department_id?.toString() === user?.department_id?.toString();
+        }
+        if (!inScope) return;
+
+        if (selectedYear) {
+          const sc = classes.find(c => c.id.toString() === s.class_id?.toString());
+          const yr = sc?.year || s.class_year;
+          if (!yr || String(yr) !== String(selectedYear)) return;
+        }
+        if (selectedClassIds.length > 0) {
+          if (!selectedClassIds.includes(s.class_id?.toString() || '')) return;
+        }
+
+        stdMap.set(uid, {
+          id: s.user_id,
+          full_name: s.student_name || 'Student',
+          register_number: s.register_number || 'N/A',
+          class_id: s.class_id,
+          class_name: s.class_name,
+          department_id: s.department_id,
+          role: 'STUDENT',
+          email: s.student_email || ''
+        });
+      });
+      targetStudents.push(...Array.from(stdMap.values()));
+    }
+
     if (targetStudents.length === 0) {
       addToast('No student records found for the selected filters.', 'error');
       return;
@@ -7579,6 +7631,7 @@ export default function App() {
       return true;
     });
 
+    const hasStudents = targetStudents.length > 0;
     const targetStudentIds = new Set(targetStudents.map(s => s.id));
     const targetRegNos = new Set(targetStudents.map(s => s.register_number).filter(Boolean));
 
@@ -7586,8 +7639,24 @@ export default function App() {
     submissions.forEach(sub => {
       if (!sub.screenshot_url || sub.screenshot_url.startsWith('PURGED')) return;
       if (reportFilters.taskId && sub.task_id?.toString() !== reportFilters.taskId) return;
-      if (!targetStudentIds.has(sub.user_id) && (!sub.register_number || !targetRegNos.has(sub.register_number))) return;
       if (selectedStatus !== 'ALL' && sub.status !== selectedStatus) return;
+
+      if (hasStudents) {
+        if (!targetStudentIds.has(sub.user_id) && (!sub.register_number || !targetRegNos.has(sub.register_number))) return;
+      } else {
+        // Fallback using submission's own metadata
+        if (selectedYear) {
+          const uClass = classes.find(c => c.id?.toString() === sub.class_id?.toString());
+          const yr = uClass?.year || sub.class_year;
+          if (yr && String(yr) !== String(selectedYear)) return;
+        }
+        if (user?.role === 'HOD' && sub.department_id && user?.department_id && String(sub.department_id) !== String(user?.department_id)) return;
+        const userClassId = (user?.class_id || myClass?.id)?.toString();
+        if ((user?.role === 'CLASS_ADVISOR' || (user?.role === 'STUDENT' && user?.is_coordinator)) && userClassId) {
+          if (sub.class_id && String(sub.class_id) !== userClassId) return;
+        }
+        if (selectedClassIds.length > 0 && sub.class_id && !selectedClassIds.includes(String(sub.class_id))) return;
+      }
       count++;
     });
 
@@ -7716,6 +7785,44 @@ export default function App() {
         });
       });
 
+      if (targetStudents.length === 0) {
+        // Resilient fallback: extract proof screenshots directly from submissions
+        submissions.forEach(sub => {
+          if (!sub.screenshot_url || sub.screenshot_url.startsWith('PURGED')) return;
+          if (filters?.taskId && sub.task_id?.toString() !== filters.taskId) return;
+
+          let include = false;
+          if (selectedStatus === 'ALL') include = true;
+          else if (selectedStatus === 'VERIFIED') include = sub.status === 'VERIFIED';
+          else if (selectedStatus === 'SUBMITTED') include = sub.status === 'SUBMITTED';
+          else if (selectedStatus === 'REJECTED') include = sub.status === 'REJECTED';
+          if (!include) return;
+
+          const studentClass = classes.find(c => c.id?.toString() === sub.class_id?.toString());
+          const yrNum = studentClass?.year || sub.class_year;
+          if (selectedYear && yrNum && String(yrNum) !== String(selectedYear)) return;
+          if (isHODRole && sub.department_id && user?.department_id && String(sub.department_id) !== String(user?.department_id)) return;
+          const userClassId = (user?.class_id || myClass?.id)?.toString();
+          if (isClsRole && userClassId && sub.class_id && String(sub.class_id) !== userClassId) return;
+          if (selectedClassIds.length > 0 && sub.class_id && !selectedClassIds.includes(String(sub.class_id))) return;
+
+          const safeYear = yrNum ? (romanYearMap[yrNum] ? `${romanYearMap[yrNum]}_Year` : `Year_${yrNum}`) : 'Other_Year';
+          const safeRegNo = (sub.register_number || 'UNKNOWN').replace(/[/\\?%*:|"<>]/g, '_');
+          const safeName = (sub.student_name || 'STUDENT').replace(/[/\\?%*:|"<>]/g, '_');
+          const taskObj = tasks.find(t => t.id === sub.task_id);
+          const safeTask = (sub.task_title || taskObj?.title || 'TASK').replace(/[/\\?%*:|"<>]/g, '_');
+          const safeClass = (sub.class_name || studentClass?.name || 'CLASS').replace(/[/\\?%*:|"<>]/g, '_');
+
+          itemsToDownload.push({
+            url: sub.screenshot_url,
+            filename: filters?.taskId
+              ? `${safeYear}/${safeClass}/${safeRegNo}_${safeName}`
+              : `${safeTask}/${safeYear}/${safeClass}/${safeRegNo}_${safeName}`,
+            displayName: `${safeRegNo} - ${safeName} (${safeTask})`
+          });
+        });
+      }
+
       // Team proofs
       try {
         const classQuery = selectedClassIds.length > 0 ? `?class_ids=${encodeURIComponent(selectedClassIds.join(','))}` : '';
@@ -7794,20 +7901,29 @@ export default function App() {
     const zip = new JSZip();
     let completed = 0;
 
+    const getOptimizedProofUrl = (rawUrl: string): string => {
+      if (!rawUrl) return '';
+      if (rawUrl.includes('res.cloudinary.com') && rawUrl.includes('/upload/') && !rawUrl.includes('/upload/w_')) {
+        return rawUrl.replace('/upload/', '/upload/w_1200,c_limit,q_auto,f_auto/');
+      }
+      return rawUrl;
+    };
+
     const fetchImageBlob = async (url: string): Promise<Blob | null> => {
+      const targetUrl = getOptimizedProofUrl(url);
       try {
-        const directRes = await fetch(url);
+        const directRes = await fetch(targetUrl);
         if (directRes.ok) return await directRes.blob();
       } catch (e) { }
 
       // Fallback to authenticated proxy
       try {
-        const proxyRes = await fetch(`${API_URL}/api/submissions/screenshot-proxy?url=${encodeURIComponent(url)}`, {
+        const proxyRes = await fetch(`${API_URL}/api/submissions/screenshot-proxy?url=${encodeURIComponent(targetUrl)}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (proxyRes.ok) return await proxyRes.blob();
       } catch (e) {
-        console.warn('[Screenshot Download] Proxy failed for:', url, e);
+        console.warn('[Screenshot Download] Proxy failed for:', targetUrl, e);
       }
       return null;
     };
@@ -8006,6 +8122,45 @@ export default function App() {
         });
       });
 
+      if (targetStudents.length === 0) {
+        // Resilient fallback: extract proof screenshots directly from submissions
+        submissions.forEach(sub => {
+          if (!sub.screenshot_url || sub.screenshot_url.startsWith('PURGED')) return;
+          if (filters?.taskId && sub.task_id?.toString() !== filters.taskId) return;
+
+          let include = false;
+          if (selectedStatus === 'ALL') include = true;
+          else if (selectedStatus === 'VERIFIED') include = sub.status === 'VERIFIED';
+          else if (selectedStatus === 'SUBMITTED') include = sub.status === 'SUBMITTED';
+          else if (selectedStatus === 'REJECTED') include = sub.status === 'REJECTED';
+          if (!include) return;
+
+          const studentClass = classes.find(c => c.id?.toString() === sub.class_id?.toString());
+          const yrNum = studentClass?.year || sub.class_year;
+          if (selectedYear && yrNum && String(yrNum) !== String(selectedYear)) return;
+          if (isHODRole && sub.department_id && user?.department_id && String(sub.department_id) !== String(user?.department_id)) return;
+          const userClassId = (user?.class_id || myClass?.id)?.toString();
+          if (isClsRole && userClassId && sub.class_id && String(sub.class_id) !== userClassId) return;
+          if (selectedClassIds.length > 0 && sub.class_id && !selectedClassIds.includes(String(sub.class_id))) return;
+
+          const romanYr = yrNum ? (romanYearMap[yrNum] || yrNum) : '';
+          const taskObj = tasks.find(t => t.id === sub.task_id);
+
+          pdfItems.push({
+            url: sub.screenshot_url,
+            studentName: sub.student_name || 'Student',
+            registerNumber: sub.register_number || 'N/A',
+            className: sub.class_name || studentClass?.name || 'Class',
+            year: romanYr,
+            deptName: sub.department_name || 'Information Technology',
+            taskTitle: sub.task_title || taskObj?.title || 'Task',
+            status: sub.status || 'SUBMITTED',
+            submittedAt: sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString('en-GB') : undefined,
+            isTeam: false
+          });
+        });
+      }
+
       // Team proofs
       try {
         const classQuery = selectedClassIds.length > 0 ? `?class_ids=${encodeURIComponent(selectedClassIds.join(','))}` : '';
@@ -8085,20 +8240,29 @@ export default function App() {
       statusText: `Preparing to generate ${uniqueItems.length}-page Proof PDF...`
     });
 
+    const getOptimizedProofUrl = (rawUrl: string): string => {
+      if (!rawUrl) return '';
+      if (rawUrl.includes('res.cloudinary.com') && rawUrl.includes('/upload/') && !rawUrl.includes('/upload/w_')) {
+        return rawUrl.replace('/upload/', '/upload/w_1200,c_limit,q_auto,f_auto/');
+      }
+      return rawUrl;
+    };
+
     const fetchImageBlob = async (url: string): Promise<Blob | null> => {
+      const targetUrl = getOptimizedProofUrl(url);
       try {
-        const directRes = await fetch(url);
+        const directRes = await fetch(targetUrl);
         if (directRes.ok) return await directRes.blob();
       } catch (e) { }
 
       // Fallback to authenticated proxy
       try {
-        const proxyRes = await fetch(`${API_URL}/api/submissions/screenshot-proxy?url=${encodeURIComponent(url)}`, {
+        const proxyRes = await fetch(`${API_URL}/api/submissions/screenshot-proxy?url=${encodeURIComponent(targetUrl)}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (proxyRes.ok) return await proxyRes.blob();
       } catch (e) {
-        console.warn('[Screenshot PDF] Proxy failed for:', url, e);
+        console.warn('[Screenshot PDF] Proxy failed for:', targetUrl, e);
       }
       return null;
     };
