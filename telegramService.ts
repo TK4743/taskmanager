@@ -2651,13 +2651,53 @@ export async function notifySubmissionBatchVerified(submissionIds: string[]): Pr
 
 /**
  * 📢 Enhanced Daily Group Summary (Tasks + LeetCode + GitHub)
+ * Features concurrency lock & 15-minute cooldown guard to permanently eliminate repeating group messages
  */
-export async function sendGroupSummary(targetChatId?: string, dateOverride?: string): Promise<{ success: boolean; message: string; data?: any }> {
+let isGroupSummarySending = false;
+let lastGroupSummarySentAt = 0;
+
+export async function sendGroupSummary(
+  targetChatId?: string, 
+  dateOverride?: string, 
+  options: { force?: boolean } = {}
+): Promise<{ success: boolean; message: string; data?: any }> {
+  // 1. Prevent concurrent overlapping executions
+  if (isGroupSummarySending) {
+    console.warn('[Telegram Summary] A group summary is already currently in progress. Skipping concurrent request.');
+    return { success: false, message: 'A group summary is currently already being generated and dispatched. Concurrency blocked.' };
+  }
+
+  // 2. Cooldown check (unless forced by explicit admin action)
+  const now = Date.now();
+  if (!options.force) {
+    if (now - lastGroupSummarySentAt < 15 * 60 * 1000) {
+      console.warn(`[Telegram Summary] In-memory cooldown active (${Math.round((now - lastGroupSummarySentAt) / 1000)}s ago). Skipping duplicate send.`);
+      return { success: true, message: 'Group summary was already delivered recently. Cooldown active to prevent duplicate spam.' };
+    }
+
+    // Check database-backed timestamp for cross-instance / serverless protection
+    try {
+      const lockRes = await pool.query(
+        "SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_sent_at'"
+      );
+      if (lockRes.rows[0]?.value) {
+        const lastDbTimestamp = parseInt(lockRes.rows[0].value, 10);
+        if (!isNaN(lastDbTimestamp) && (now - lastDbTimestamp) < 15 * 60 * 1000) {
+          console.warn(`[Telegram Summary] Database cooldown active (${Math.round((now - lastDbTimestamp) / 1000)}s ago). Skipping duplicate send.`);
+          return { success: true, message: 'Group summary was already delivered recently (DB lock active). Skipped duplicate.' };
+        }
+      }
+    } catch (dbErr) {
+      console.error('[Telegram Summary] Cooldown check error:', dbErr);
+    }
+  }
+
   const destChatId = targetChatId || await getGroupChatId() || getAdminChatId();
   if (!destChatId) {
     return { success: false, message: 'No destination Telegram Chat ID configured for Group Summary.' };
   }
 
+  isGroupSummarySending = true;
   try {
     const dateStr = dateOverride || getISTDateStr();
     const pendingTasksData: any[] = [];
@@ -3018,6 +3058,14 @@ export async function sendGroupSummary(targetChatId?: string, dateOverride?: str
 
     const res = await sendTelegramMessage(destChatId, html, { reply_markup: inlineKeyboard });
     if (res.ok) {
+      // Record successful dispatch timestamp in-memory and in DB
+      lastGroupSummarySentAt = Date.now();
+      await pool.query(`
+        INSERT INTO system_settings (key, value, updated_at)
+        VALUES ('telegram_last_group_summary_sent_at', $1, CURRENT_TIMESTAMP)
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+      `, [String(Date.now())]).catch(() => {});
+
       // Generate and send the Excel report attachment if there are incomplete students
       const hasIncompletes = lcIncompleteRows.length > 0 || pendingTasksData.length > 0;
       if (hasIncompletes) {
@@ -3040,6 +3088,8 @@ export async function sendGroupSummary(targetChatId?: string, dateOverride?: str
   } catch (err: any) {
     console.error('[Telegram] sendGroupSummary error:', err);
     return { success: false, message: err.message };
+  } finally {
+    isGroupSummarySending = false;
   }
 }
 

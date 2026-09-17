@@ -476,10 +476,10 @@ async function startServer() {
   app.set('json spaces', 0);
 
   // Throttle variable for in-request opportunistic scheduler check
-  let lastInRequestTick = 0;
+  let lastInRequestTick = Date.now();
   app.use((req, _res, next) => {
     const now = Date.now();
-    if (now - lastInRequestTick > 30000) {
+    if (now - lastInRequestTick > 60000) {
       lastInRequestTick = now;
       checkAndTriggerScheduledAutomations().catch(err => console.error('[Opportunistic Scheduler] Tick error:', err));
     }
@@ -628,33 +628,25 @@ async function startServer() {
         }
       }
 
-      // 2. Morning Group Summary Window (8:00 AM IST to 2:00 PM IST) -> Send Morning Group Summary & 24h Deadline Alerts
-      if (hours >= 8 && hours < 14) {
+      // 2. Morning Group Summary Window (8:00 AM to 8:45 AM IST) -> Send Morning Group Summary & 24h Deadline Alerts
+      if (hours === 8 && minutes < 45) {
         const claimed = await claimDailySlot('telegram_last_group_summary_morning_date', todayStr);
         if (claimed) {
           triggered.push('morning_summary');
           console.log(`[Scheduler] 📊 Triggering 8:00 AM IST Morning Group Summary (${prevDayStr})...`);
 
-          const summaryRes = await sendGroupSummary(undefined, prevDayStr).catch(err => {
+          await sendGroupSummary(undefined, prevDayStr).catch(err => {
             console.error('[Morning Summary Error]:', err);
             return { success: false, message: err?.message || 'Error' };
           });
 
           await sendGroupDeadlineAlert().catch(err => console.error('[Morning Deadline Alert Error]:', err));
-
-          // If delivery failed, rollback the daily lock so the next tick/ping can retry
-          if (!summaryRes || !summaryRes.success) {
-            console.warn('[Morning Summary Failed] Rolling back lock for retry:', summaryRes?.message);
-            await pool.query(
-              `DELETE FROM system_settings WHERE key = 'telegram_last_group_summary_morning_date' AND value = $1`,
-              [todayStr]
-            ).catch(() => {});
-          }
+          // Once claimed for today, the lock is permanent for today. Never delete lock to prevent repeat loops.
         }
       }
 
-      // 3. Evening Reminders Window (8:00 PM to 8:49 PM IST / 20:00 - 20:49) -> Student 1-to-1 Pending Reminders
-      if (hours === 20 && minutes < 50) {
+      // 3. Evening Reminders Window (8:00 PM to 8:45 PM IST / 20:00 - 20:45) -> Student 1-to-1 Pending Reminders
+      if (hours === 20 && minutes < 45) {
         const claimed = await claimDailySlot('telegram_last_reminders_date', todayStr);
         if (claimed) {
           triggered.push('evening_reminders');
@@ -663,12 +655,12 @@ async function startServer() {
         }
       }
 
-      // 4. Evening Pre-Sync Window (8:50 PM IST onwards / 20:50 - 23:59) -> Pre-Sync Today's LeetCode & GitHub Progress
-      if ((hours === 20 && minutes >= 50) || (hours >= 21 && hours < 24)) {
+      // 4. Evening Pre-Sync Window (8:45 PM to 9:00 PM IST / 20:45 - 20:59) -> Pre-Sync Today's LeetCode & GitHub Progress
+      if (hours === 20 && minutes >= 45) {
         const claimed = await claimDailySlot('evening_pre_sync_date', todayStr);
         if (claimed) {
           triggered.push('evening_pre_sync');
-          console.log(`[Scheduler] 🔄 8:50 PM IST Pre-Syncing Today's Data (${todayStr})...`);
+          console.log(`[Scheduler] 🔄 8:45 PM IST Pre-Syncing Today's Data (${todayStr})...`);
           try {
             await syncLeetcodeProgressForScope({ date: todayStr } as any);
             if (process.env.GITHUB_TOKEN) {
@@ -680,26 +672,18 @@ async function startServer() {
         }
       }
 
-      // 5. Evening Group Summary Window (9:00 PM to 11:49 PM IST / 21:00 - 23:49) -> Send Evening Department Progress Summary
-      if (hours >= 21 && (hours < 23 || (hours === 23 && minutes < 50))) {
+      // 5. Evening Group Summary Window (9:00 PM to 9:45 PM IST / 21:00 - 21:45) -> Send Evening Department Progress Summary
+      if (hours === 21 && minutes < 45) {
         const claimed = await claimDailySlot('telegram_last_group_summary_evening_date', todayStr);
         if (claimed) {
           triggered.push('evening_summary');
           console.log(`[Scheduler] 📊 Triggering 9:00 PM IST Evening Group Summary for ${todayStr}...`);
 
-          const summaryRes = await sendGroupSummary().catch(err => {
+          await sendGroupSummary().catch(err => {
             console.error('[Evening Summary Error]:', err);
             return { success: false, message: err?.message || 'Error' };
           });
-
-          // If delivery failed, rollback the daily lock so the next tick/ping can retry
-          if (!summaryRes || !summaryRes.success) {
-            console.warn('[Evening Summary Failed] Rolling back lock for retry:', summaryRes?.message);
-            await pool.query(
-              `DELETE FROM system_settings WHERE key = 'telegram_last_group_summary_evening_date' AND value = $1`,
-              [todayStr]
-            ).catch(() => {});
-          }
+          // Once claimed for today, the lock is permanent for today. Never delete lock to prevent repeat loops.
         }
       }
 
@@ -1105,17 +1089,34 @@ async function startServer() {
   }));
 
   // 6. Telegram Inbound Webhook Endpoint (Public - called by Telegram servers)
+  const processedTelegramUpdateIds = new Set<number>();
+
   app.post('/api/telegram/webhook', asyncHandler(async (req: any, res: Response) => {
     const update = req.body;
-    if (update && typeof update === 'object') {
-      try {
-        await processTelegramUpdate(update);
-      } catch (err: any) {
-        console.error('[Telegram Webhook Error]:', err?.message || err);
+    if (!update || typeof update !== 'object') {
+      return res.status(200).json({ ok: true });
+    }
+
+    const updateId = update.update_id;
+    if (updateId) {
+      if (processedTelegramUpdateIds.has(updateId)) {
+        // Already processed this update, acknowledge immediately to stop retries
+        return res.status(200).json({ ok: true, duplicate: true });
+      }
+      processedTelegramUpdateIds.add(updateId);
+      if (processedTelegramUpdateIds.size > 2000) {
+        const firstKey = processedTelegramUpdateIds.values().next().value;
+        if (firstKey !== undefined) processedTelegramUpdateIds.delete(firstKey);
       }
     }
-    // Acknowledge receipt to Telegram API with 200 OK after processing
+
+    // Immediately acknowledge receipt with 200 OK so Telegram server never retries
     res.status(200).json({ ok: true });
+
+    // Process update asynchronously in background
+    processTelegramUpdate(update).catch((err: any) => {
+      console.error('[Telegram Webhook Error]:', err?.message || err);
+    });
   }));
 
   // 7. Get Webhook Info & Diagnostic Status
@@ -8952,11 +8953,20 @@ async function startServer() {
   app.all('/api/cron/morning-summary', asyncHandler(async (req: Request, res: Response) => {
     if (!(await verifyCronAuth(req, res))) return;
 
-    const now = new Date();
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const istDate = new Date(now.getTime() + istOffset);
-    const prevIstDate = new Date(istDate.getTime() - 24 * 60 * 60 * 1000);
-    const prevDayStr = prevIstDate.toISOString().split('T')[0];
+    const { todayStr, prevDayStr } = getISTTimeParts();
+
+    // Prevent duplicate cron execution on same day
+    const isForced = req.query.force === 'true';
+    if (!isForced) {
+      const claimed = await claimDailySlot('telegram_last_group_summary_morning_date', todayStr);
+      if (!claimed) {
+        return res.json({
+          success: true,
+          message: `Morning group summary for ${todayStr} has already been claimed/delivered. Skipping duplicate run.`,
+          skipped: true
+        });
+      }
+    }
 
     console.log(`[Cron Webhook] 📊 Running automated morning group summary (for previous day: ${prevDayStr})...`);
     // Ensure previous day data is freshly synced before generating summary
@@ -8967,7 +8977,7 @@ async function startServer() {
       }
     } catch (e) {}
 
-    const summaryRes = await sendGroupSummary(undefined, prevDayStr).catch(err => ({ success: false, message: err.message }));
+    const summaryRes = await sendGroupSummary(undefined, prevDayStr, { force: isForced }).catch(err => ({ success: false, message: err.message }));
     const deadlineAlertRes = await sendGroupDeadlineAlert().catch(err => ({ success: false, message: err.message }));
 
     return res.json({
@@ -9018,6 +9028,20 @@ async function startServer() {
     if (!(await verifyCronAuth(req, res))) return;
 
     const todayStr = getISTDateStr();
+
+    // Prevent duplicate cron execution on same day
+    const isForced = req.query.force === 'true';
+    if (!isForced) {
+      const claimed = await claimDailySlot('telegram_last_group_summary_evening_date', todayStr);
+      if (!claimed) {
+        return res.json({
+          success: true,
+          message: `Evening group summary for ${todayStr} has already been claimed/delivered. Skipping duplicate run.`,
+          skipped: true
+        });
+      }
+    }
+
     console.log(`[Cron Webhook] 📊 Running automated 9:00 PM IST daily group summary for ${todayStr}...`);
     // Ensure today's data is freshly synced before generating summary
     try {
@@ -9027,7 +9051,7 @@ async function startServer() {
       }
     } catch (e) {}
 
-    const summaryRes = await sendGroupSummary().catch(err => ({ success: false, message: err.message }));
+    const summaryRes = await sendGroupSummary(undefined, undefined, { force: isForced }).catch(err => ({ success: false, message: err.message }));
 
     return res.json({
       success: true,
