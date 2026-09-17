@@ -1,8 +1,9 @@
 <div align="center">
 
-# 🎓 ACADEMIA–INDUSTRY INTEGRATED PLATFORM & ACADEMIC TASK MANAGER
-### *Enterprise Academic Governance, Live Coding Analytics, AI Skill Gap Intelligence & Multi-Language Sandboxed Assessment Engine*
+# 🏛️ VSBEC IT VAULT — ACADEMIA–INDUSTRY INTEGRATED PLATFORM
+### *Official Institutional IT Vault: Academic Task Governance, Live Coding Analytics, AI Skill Gap Intelligence & Multi-Language Sandboxed Assessment Engine*
 
+[![IT Vault](https://img.shields.io/badge/Platform-VSBEC_IT_Vault-4f46e5?style=for-the-badge&logo=shield&logoColor=white)](https://it-taskmanager.vercel.app/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8+-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.x-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -19,14 +20,14 @@
 <p align="center">
   <b>Department of Information Technology</b> • <b>VSB Engineering College, Karur</b><br/>
   <i>An Autonomous Institution • Accredited by NAAC with 'A' Grade • Approved by AICTE</i><br/>
-  <b>Academia–Industry Integrated Platform</b>
+  <b>VSBEC IT Vault — Official Academic & Placement Governance Platform</b>
 </p>
 
 <p align="center">
-  <a href="https://it-taskmanager.vercel.app/">🌐 <b>Live Production App</b></a> •
-  <a href="https://techsquadsih.netlify.app/">🚀 <b>Techsquad Team Portal</b></a> •
+  <a href="https://it-taskmanager.vercel.app/">🌐 <b>Live IT Vault Portal</b></a> •
+  <a href="https://techsquadsih.netlify.app/">🚀 <b>Tech Squad Portal</b></a> •
   <a href="https://github.com/Tharun4743/taskmanager">📦 <b>GitHub Repository</b></a> •
-  <a href="https://t.me/IT_TaskManager_Alerts_bot">🤖 <b>Telegram Alert Bot</b></a>
+  <a href="https://t.me/IT_TaskManager_Alerts_bot">🤖 <b>IT Vault Telegram Bot</b></a>
 </p>
 
 ---
@@ -62,7 +63,7 @@
 - [6. Anti-Cheat Security & Exam Lockdown Subsystem](#6-anti-cheat-security--exam-lockdown-subsystem)
 - [7. Multi-Language Compiler Sandbox Architecture](#7-multi-language-compiler-sandbox-architecture)
 - [8. In-Memory RAM Directory Cache & Performance Optimization](#8-in-memory-ram-directory-cache--performance-optimization)
-- [9. Database Schema Architecture (35 Relational Tables)](#8-database-schema-architecture-35-relational-tables)
+- [9. Database Schema Architecture (35 Relational Tables)](#9-database-schema-architecture-35-relational-tables)
 - [10. Automated Scorecard & Email Notification Templates](#10-automated-scorecard--email-notification-templates)
 - [11. System Verification & Automated Test Suite](#11-system-verification--automated-test-suite)
 - [12. API Endpoints Reference](#12-api-endpoints-reference)
@@ -72,12 +73,14 @@
 
 ## 1. Executive Overview & Institutional Vision
 
-The **Academia–Industry Integrated Platform & IT Task Manager** is an enterprise-grade institutional governance, technical competency tracking, and corporate recruitment ecosystem engineered specifically for the Department of Information Technology at VSB Engineering College.
+The **IT Vault** (officially **VSBEC IT Vault** — Academia–Industry Integrated Platform & IT Task Manager) is an enterprise-grade institutional governance, technical competency tracking, and corporate recruitment ecosystem engineered specifically for the Department of Information Technology at VSB Engineering College, Karur (VSBEC / VSB Karur).
 
-### Core Institutional Pillars:
-1. **Academic Task Oversight & Peer Review Governance**: Replaces unstructured paper/form submissions with a rigorous 3-tier review pipeline (**Student Coordinator Peer Review** $\rightarrow$ **Class Advisor Validation** $\rightarrow$ **HOD Oversight**), backed by Cloudinary image proof compression and audit logging.
-2. **Algorithmic Momentum & Coding Habit Tracking**: Continuous synchronization with **LeetCode GraphQL** and **GitHub REST APIs** tracks daily problem-solving velocity, weekly target compliance, and commit streaks across all students.
-3. **Corporate Recruitment & Multi-Compiler Assessments**: Empowers corporate talent acquisition partners with a **Monaco IDE assessment suite** featuring multi-language sandboxed execution (**C, C++, Java 17, Python 3**), automated hidden test case validation, anti-cheat webcam PIP proctoring, AI skill-gap matching, and instant OpenXML Excel/PDF scorecard exports.
+Originally developed to streamline departmental assignment management, the platform was re-architected by **Tharunkumar K** and the **Tech Squad** team into **IT Vault** — an all-encompassing digital repository and institutional intelligence vault that securely houses student submission proofs, automated coding habit analytics, proctored competency credentials, and placement readiness dossiers.
+
+### Core Institutional Pillars of IT Vault:
+1. **Academic Task Oversight & 3-Tier Proof Vault**: Replaces unstructured paper/form submissions with a rigorous 3-tier review pipeline (**Student Coordinator Peer Review** $\rightarrow$ **Class Advisor Validation** $\rightarrow$ **HOD Oversight**), backed by Cloudinary image proof compression, revision workflows, and immutable audit logging.
+2. **Algorithmic Momentum & Coding Habit Tracking**: Continuous synchronization with **LeetCode GraphQL** and **GitHub REST APIs** tracks daily problem-solving velocity, weekly target compliance, and commit streaks across all students in the vault.
+3. **Corporate Recruitment & Multi-Compiler Assessments**: Empowers corporate talent acquisition partners with the **IT Vault Monaco IDE assessment suite** featuring multi-language sandboxed execution (**C, C++, Java 17, Python 3**), automated hidden test case validation, anti-cheat webcam PIP proctoring, AI skill-gap matching, and instant OpenXML Excel/PDF scorecard exports.
 4. **Placement Readiness Index 2.0**: A 4-pillar algorithmic evaluation model (Aptitude 35%, LeetCode 25%, Projects 20%, Task Discipline 20%) mapping candidates against Tier-1 Product, Tier-2 IT Services, and Tier-3 Baseline company criteria.
 5. **High Reliability & Zero-Downtime Infrastructure**: In-memory directory caching (<0.01ms lookups), multi-node Brevo email failover pools with real-time credit telemetry, automated database snapshots, and native PWA push notifications.
 
@@ -87,7 +90,7 @@ The **Academia–Industry Integrated Platform & IT Task Manager** is an enterpri
 
 ```mermaid
 flowchart TD
-    subgraph Client["🖥️ Presentation Layer (React 19 + TypeScript + Tailwind CSS v4 + Motion)"]
+    subgraph Client["🖥️ IT Vault Presentation Layer (React 19 + TypeScript + Tailwind CSS v4 + Motion)"]
         UI_Admin["🛡️ Supreme Admin & HOD Command Center"]
         UI_Faculty["👨‍🏫 Year & Class Advisor Workspace"]
         UI_Student["🎓 Student Portal, Portfolio & Marks Studio"]
@@ -96,7 +99,7 @@ flowchart TD
         UI_PWA["📱 PWA Service Worker & Web Push Client"]
     end
 
-    subgraph Gateway["⚡ API Gateway & Core Application Server (Express.js + Node.js 20+)"]
+    subgraph Gateway["⚡ IT Vault API Gateway & Core Application Server (Express.js + Node.js 20+)"]
         Auth["🔐 Dynamic RBAC & JWT Stateless Security Guard"]
         TaskEngine["📝 Task Engine & Multi-Tier Verification Pipeline"]
         SandboxEngine["⚡ Sandboxed Compiler Engine (C, C++, Java 17, Python 3)"]
@@ -126,7 +129,7 @@ flowchart TD
 
 ## 3. Multi-Role Hierarchy & Governance Matrix
 
-The platform implements an ultra-granular, multi-tiered Role-Based Access Control (RBAC) architecture with dynamic sidebar generation, feature flagging, and role-scoped data isolation across **7 distinct institutional personas**:
+The **IT Vault** platform implements an ultra-granular, multi-tiered Role-Based Access Control (RBAC) architecture with dynamic sidebar generation, feature flagging, and role-scoped data isolation across **7 distinct institutional personas**:
 
 ```mermaid
 flowchart TD
@@ -145,11 +148,11 @@ flowchart TD
 | Role Persona | Sidebar Badge | Complete Sidebar Navigation Menu | Accessible Views (`view` state) | Core Governance & Operational Capabilities |
 | :--- | :--- | :--- | :--- | :--- |
 | **Student / Candidate** (`STUDENT`) | `STUDENT` | 1. 📊 **Dashboard**<br/>2. 📋 **Tasks**<br/>3. 💻 **Coding Progress**<br/>4. 📢 **Notice Board**<br/>5. ✨ **Skill Assessment**<br/>6. 🎯 **Placement Rating**<br/>7. 📻 **Live Teaching Hub**<br/>8. 💼 **Opportunities**<br/>9. ⚡ **Coding Tests**<br/>10. ⚡ **Skill Gap AI**<br/>11. ✅ **My Submissions**<br/>12. 👤 **Profile**<br/>13. ⚙️ **Settings** | `dashboard`<br/>`tasks`<br/>`coding-progress`<br/>`notice-board`<br/>`skill-assessment`<br/>`placement-readiness`<br/>`live-teaching-hub`<br/>`opportunities`<br/>`student-coding-assessments`<br/>`skill-gap-analyzer`<br/>`submissions`<br/>`profile`<br/>`settings` | • Task submission with Cloudinary image proof.<br/>• Real-time LeetCode & GitHub habit tracking.<br/>• Sandboxed Monaco IDE coding assessments.<br/>• Proctored aptitude assessments & AI remedial modules.<br/>• Placement Readiness Index 2.0 evaluation.<br/>• 1-Click PDF resume generation.<br/>• Corporate job & internship applications.<br/>• Telegram Bot & Web Push compliance linking. |
-| **Student Coordinator** (`COORDINATOR`) | `COORDINATOR` | *(All Student items above)*<br/>**PLUS:**<br/>14. 🛡️ **Verifications** (Peer Review Command Center) | *(All Student views)*<br/>`verifications` | • All Student capabilities.<br/>• **Tier-1 Peer Review**: Inspect and pre-verify classmate submissions.<br/>• Request submission revisions with peer feedback.<br/>• Cohort defaulter tracking before faculty review. |
+| **Student Coordinator** (`COORDINATOR`) | `COORDINATOR` | *(All Student items above)*<br/>**PLUS:**<br/>14. 🛡️ **Verifications** (Peer Review Command Center) | *(All Student views)*<br/>`verifications` | • All Student capabilities.<br/>• **Tier-1 Peer Review**: Inspect and pre-verify classmate submissions in IT Vault.<br/>• Request submission revisions with peer feedback.<br/>• Cohort defaulter tracking before faculty review. |
 | **Class Advisor / Faculty** (`CLASS_ADVISOR`) | `ADVISOR` | 1. 📊 **Dashboard**<br/>2. 📋 **Tasks**<br/>3. 💻 **Coding Progress**<br/>4. 📢 **Notice Board**<br/>5. ✨ **Skill Assessment**<br/>6. 🎯 **Placement Rating**<br/>7. 📻 **Live Teaching Hub**<br/>8. 🎓 **Faculty Hub**<br/>9. 📊 **Skill Heatmap**<br/>10. 🏛️ **My Class**<br/>11. 👥 **Students**<br/>12. 🛡️ **Verifications**<br/>13. ⚙️ **Settings** | `dashboard`<br/>`tasks`<br/>`leetcode-targets`<br/>`notice-board`<br/>`skill-assessment`<br/>`placement-readiness`<br/>`live-teaching-hub`<br/>`faculty-industry-hub`<br/>`institutional-skill-heatmap`<br/>`my-class`<br/>`users`<br/>`verifications`<br/>`settings` | • **Tier-2 Verification**: Final verification/rejection with rubrics.<br/>• Task creation for assigned section/year.<br/>• Manage assigned section roster and appoint Coordinators.<br/>• Launch Live Teaching sessions & broadcast instant polls.<br/>• Monitor section LeetCode/GitHub momentum.<br/>• Log faculty consultancy projects & FDP credits.<br/>• Reset student passwords and track attendance. |
 | **Staff / Faculty** (`STAFF`) | `STAFF` | 1. 📊 **Dashboard**<br/>2. 📋 **Tasks**<br/>3. 💻 **Coding Progress**<br/>4. 📢 **Notice Board**<br/>5. ✨ **Skill Assessment**<br/>6. 🎯 **Placement Rating**<br/>7. 📻 **Live Teaching Hub**<br/>8. 🎓 **Faculty Hub**<br/>9. 📊 **Skill Heatmap**<br/>10. 🛡️ **Verifications**<br/>11. ⚙️ **Settings** | `dashboard`<br/>`tasks`<br/>`leetcode-targets`<br/>`notice-board`<br/>`skill-assessment`<br/>`placement-readiness`<br/>`live-teaching-hub`<br/>`faculty-industry-hub`<br/>`institutional-skill-heatmap`<br/>`verifications`<br/>`settings` | • Subject-specific task creation and grading.<br/>• Live Teaching Hub screen sharing & interactive polls.<br/>• Review departmental skill heatmaps.<br/>• Log research publications, patents, and consultancy projects. |
 | **Head of Department** (`HOD`) | `HOD PORTAL` | 1. 📊 **Dashboard**<br/>2. 📋 **Tasks**<br/>3. 💻 **Coding Progress**<br/>4. 📢 **Notice Board**<br/>5. ✨ **Skill Assessment**<br/>6. 🎯 **Placement Rating**<br/>7. 📻 **Live Teaching Hub**<br/>8. 🎓 **Faculty Hub**<br/>9. 📊 **Skill Heatmap**<br/>10. 💼 **Industry Partners**<br/>11. 🏛️ **Classes**<br/>12. 👥 **Users**<br/>13. 🛡️ **Verifications**<br/>14. ⚙️ **Settings** | `dashboard`<br/>`tasks`<br/>`leetcode-targets`<br/>`notice-board`<br/>`skill-assessment`<br/>`placement-readiness`<br/>`live-teaching-hub`<br/>`faculty-industry-hub`<br/>`institutional-skill-heatmap`<br/>`industry-approvals`<br/>`classes`<br/>`users`<br/>`verifications`<br/>`settings` | • Department-wide macro governance across all 4 years.<br/>• **Tier-3 Verification Override**: Audit trail & disputes.<br/>• Approve corporate recruiter accounts & job listings.<br/>• Upload & publish Excel assessment question banks.<br/>• 4-Tier LeetCode/GitHub coding baseline management.<br/>• Multi-channel Telegram, Push & Email broadcasts.<br/>• Departmental Placement Readiness index export.<br/>• Manage class sections, advisors, and bulk user migrations. |
-| **Supreme Admin** (`SUPREME_ADMIN`) | `SUPREME` | 1. 📊 **Dashboard**<br/>2. 📋 **Tasks**<br/>3. 💻 **Coding Progress**<br/>4. 📢 **Notice Board**<br/>5. ✨ **Skill Assessment**<br/>6. 🎯 **Placement Rating**<br/>7. 📻 **Live Teaching Hub**<br/>8. 📊 **Skill Heatmap**<br/>9. 💼 **Industry Partners**<br/>10. 🏢 **Departments**<br/>11. 👑 **HOD Accounts**<br/>12. 🛡️ **Verifications**<br/>13. ⚙️ **Settings** | `dashboard`<br/>`tasks`<br/>`leetcode-targets`<br/>`notice-board`<br/>`skill-assessment`<br/>`placement-readiness`<br/>`live-teaching-hub`<br/>`institutional-skill-heatmap`<br/>`industry-approvals`<br/>`departments`<br/>`users`<br/>`verifications`<br/>`settings` | • Complete institutional system authority.<br/>• Master HOD & Faculty user provisioning.<br/>• Multi-department architecture & global database controls.<br/>• Telegram webhook & multi-node Brevo email load balancer audit.<br/>• System performance telemetry, rate limits, and audit logs. |
+| **Supreme Admin** (`SUPREME_ADMIN`) | `SUPREME` | 1. 📊 **Dashboard**<br/>2. 📋 **Tasks**<br/>3. 💻 **Coding Progress**<br/>4. 📢 **Notice Board**<br/>5. ✨ **Skill Assessment**<br/>6. 🎯 **Placement Rating**<br/>7. 📻 **Live Teaching Hub**<br/>8. 📊 **Skill Heatmap**<br/>9. 💼 **Industry Partners**<br/>10. 🏢 **Departments**<br/>11. 👑 **HOD Accounts**<br/>12. 🛡️ **Verifications**<br/>13. ⚙️ **Settings** | `dashboard`<br/>`tasks`<br/>`leetcode-targets`<br/>`notice-board`<br/>`skill-assessment`<br/>`placement-readiness`<br/>`live-teaching-hub`<br/>`institutional-skill-heatmap`<br/>`industry-approvals`<br/>`departments`<br/>`users`<br/>`verifications`<br/>`settings` | • Complete institutional system authority across the IT Vault ecosystem.<br/>• Master HOD & Faculty user provisioning.<br/>• Multi-department architecture & global database controls.<br/>• Telegram webhook & multi-node Brevo email load balancer audit.<br/>• System performance telemetry, rate limits, and audit logs. |
 | **Corporate Industry Partner** (`INDUSTRY`) | `CORPORATE HR` | 1. 📊 **Dashboard**<br/>2. 👤 **Applications**<br/>3. 💼 **Postings**<br/>4. ⚡ **Coding Assessments**<br/>5. 👥 **Candidate Pool**<br/>6. 🎓 **Faculty Hub**<br/>7. 📈 **HR Reports**<br/>8. 🏢 **Company Profile**<br/>9. ⚙️ **Settings** | `industry-dashboard`<br/>`industry-applications`<br/>`industry-postings`<br/>`industry-coding-assessments`<br/>`users`<br/>`faculty-industry-hub`<br/>`industry-reports`<br/>`industry-profile`<br/>`settings` | • Post verified job, internship, and research openings.<br/>• Create 10-question pool sandboxed coding assessments.<br/>• Access pre-screened student talent pool filtered by Readiness Index.<br/>• Inspect candidate test case performance and sandboxed code.<br/>• Propose joint industry consultancy & campus hackathons.<br/>• Export OpenXML Excel, CSV, and PDF recruitment dossiers. |
 
 > 📖 **Deep-Dive Governance Documentation**: For exhaustive sequence diagrams, permission bitmasks, and workflow matrices, refer to **[`ROLES_AND_WORKFLOWS.md`](./ROLES_AND_WORKFLOWS.md)**.
@@ -162,36 +165,36 @@ The platform is structured into **14 integrated enterprise modules**, each deliv
 
 ```mermaid
 mindmap
-  root((🎓 IT Task Manager))
+  root((🏛️ VSBEC IT Vault))
     Core Governance
       Dashboard
-      Tasks
-      Verifications
-      Classes
-      Users
-      Settings
+      Tasks & Proofs
+      3-Tier Verifications
+      Classes & Sections
+      Users & RBAC Directory
+      System Settings
     Competency & Industry
-      Coding Progress
-      Skill Assessment
-      Placement Rating 2.0
-      Industry Partners
+      Coding Progress (LeetCode/GitHub)
+      Skill Assessment (Proctored)
+      Placement Readiness 2.0
+      Industry Partners Portal
       Skill Heatmap
     Pedagogy & Broadcast
       Notice Board
-      Live Teaching Hub
-      Faculty Hub
+      Live Teaching Hub (GOAT CE)
+      Faculty Hub & R&D
 ```
 
 ---
 
 ### 1. Dashboard Module
-The **Dashboard** serves as the dynamic central command center, automatically adapting its telemetry, analytics widgets, quick-action triggers, and alerts to the authenticated user's role.
+The **Dashboard** serves as the dynamic central command center of the **IT Vault**, automatically adapting its telemetry, analytics widgets, quick-action triggers, and alerts to the authenticated user's role.
 
 * **Student / Candidate View**:
   - **Live Task Status Counters**: Active, Pending Verification, Revisions Required, and Completed assignment summaries.
   - **Coding Streak & Velocity Widget**: Today's LeetCode problems solved, weekly target progress bar, and GitHub commit counts.
   - **Placement Readiness Gauge**: Real-time score (0–100%) and Tier badge (`Tier-1 Product`, `Tier-2 IT Services`, `Tier-3 Baseline`).
-  - **Mandatory Compliance Status Pill**: Header badge tracking Push Notifications, Telegram Bot connection, and Profile completion.
+  - **Mandatory IT Vault Compliance Pill**: Header badge tracking Web Push Notifications, Telegram Bot connection, and Profile completion.
   - **24-Hour Urgent Deadline Banner**: Highlighted countdown for upcoming submissions.
 * **Student Coordinator View**:
   - Class-wide submission velocity charts and peer review backlog counter.
@@ -209,7 +212,7 @@ The **Dashboard** serves as the dynamic central command center, automatically ad
 ---
 
 ### 2. Tasks Module
-The **Tasks Module** provides comprehensive academic assignment lifecycle management, supporting individual submissions, collaborative group work, rubric evaluations, and proof verifications.
+The **Tasks Module** operates as the institutional assignment lifecycle engine and proof repository within the **IT Vault**, supporting individual submissions, collaborative group work, rubric evaluations, and Cloudinary proof verifications.
 
 * **Core Capabilities & Categories**:
   - **5 Academic Categories**: `Competition / Hackathon`, `Course Assignment`, `Workshop / Certifications`, `College Work`, and `General Academic Tasks`.
@@ -225,7 +228,7 @@ The **Tasks Module** provides comprehensive academic assignment lifecycle manage
 ---
 
 ### 3. Coding Progress Module
-The **Coding Progress Module** delivers automated, live tracking of student software engineering and algorithmic problem-solving momentum through continuous API synchronizations.
+The **Coding Progress Module** delivers automated, live tracking of student software engineering and algorithmic problem-solving momentum through continuous API synchronizations with the IT Vault database.
 
 * **Dual-Engine Sync Pipeline**:
   - **LeetCode GraphQL API**: Extracts total solved counts, Easy/Medium/Hard problem distribution, contest rating, and global ranking.
@@ -240,7 +243,7 @@ The **Coding Progress Module** delivers automated, live tracking of student soft
 ---
 
 ### 4. Notice Board Module
-The **Notice Board Module** is an institutional broadcast system ensuring urgent notices, academic circulars, placement drives, and hackathon announcements reach students instantly.
+The **Notice Board Module** is an institutional broadcast system ensuring urgent notices, academic circulars, placement drives, and hackathon announcements reach students instantly across multiple communication channels.
 
 * **Multi-Channel Dispatch Engine**:
   - **In-App Real-Time Feed**: Categorized notice stream with priority tags (`Urgent`, `Academic`, `Placement`, `Hackathons`, `General`).
@@ -343,7 +346,7 @@ The **Skill Heatmap Module** provides multi-dimensional visual analytics of tech
 ---
 
 ### 10. Industry Partners & Corporate Recruitment Portal
-The **Industry Partners Module** connects accredited corporate recruiters with pre-screened student candidates through a multi-compiler coding qualification studio.
+The **Industry Partners Module** connects accredited corporate recruiters with pre-screened student candidates through the **IT Vault Corporate Recruitment Portal** and multi-compiler coding qualification studio.
 
 * **Corporate Hiring Architecture**:
   - **Job & Internship Postings**: Verified corporate postings with eligibility filters, CTC specifications, and deadline dates.
@@ -369,7 +372,7 @@ The **Classes Module** governs the institutional academic hierarchy, cohort sect
 ---
 
 ### 12. Users & RBAC Directory Management Module
-The **Users Module** provides high-speed institutional identity governance, credential management, role provisioning, and profile directory services.
+The **Users Module** provides high-speed institutional identity governance, credential management, role provisioning, and profile directory services across **IT Vault**.
 
 * **Performance & Security Features**:
   - **In-Memory RAM Cache**: Sub-0.01ms directory lookups and search filtering for over 1,000+ departmental users.
@@ -383,7 +386,7 @@ The **Users Module** provides high-speed institutional identity governance, cred
 ---
 
 ### 13. Verifications & 3-Tier Proof Audit Module
-The **Verifications Module** is the dedicated command center for inspecting, peer-reviewing, approving, and rejecting academic task submissions with a complete audit trail.
+The **Verifications Module** is the dedicated command center for inspecting, peer-reviewing, approving, and rejecting academic task submissions with a complete audit trail in the **IT Vault**.
 
 * **3-Tier Verification Pipeline**:
   $$\text{Student Submission} \xrightarrow[\text{Peer Review}]{\text{Tier 1: Coordinator}} \text{Pending Faculty} \xrightarrow[\text{Final Approval}]{\text{Tier 2: Advisor}} \text{Verified} \xrightarrow[\text{Audit Override}]{\text{Tier 3: HOD}}$$
@@ -400,7 +403,7 @@ The **Verifications Module** is the dedicated command center for inspecting, pee
 ---
 
 ### 14. Settings, System Governance & Communication Integrations
-The **Settings Module** gives administrators and department heads complete control over communication gateways, security parameters, automated background tasks, and institutional branding.
+The **Settings Module** gives administrators and department heads complete control over communication gateways, security parameters, automated background tasks, and institutional branding across the **IT Vault**.
 
 * **Integrated Subsystems**:
   - **Telegram Bot Webhook Engine**: Webhook registration, health check telemetry, and official department group chat ID mapping (`/setgroup`).
@@ -484,7 +487,7 @@ sequenceDiagram
   ```
   Student Custom Target ➔ Class Target ➔ Year Target ➔ Department Baseline
   ```
-* **Unified Coding Leaderboard**: Side-by-side comparison of LeetCode velocity, difficulty tier distribution (Easy/Medium/Hard), GitHub commit streaks, and target compliance.
+* **Unified Coding Leaderboard**: Side-by-side comparison of LeetCode velocity, difficulty tier distribution (Easy/Medium/Hard), GitHub commit streaks, and target compliance stored in the IT Vault database.
 
 ---
 
@@ -558,13 +561,13 @@ sequenceDiagram
 
 ### Workflow E: Placement Readiness Index 2.0 & Algorithmic Tier Routing
 
-The Placement Readiness Engine calculates an objective score out of 100%:
+The Placement Readiness Engine in **IT Vault** calculates an objective score out of 100%:
 
 $$\text{Placement Readiness Index (PRI)} = (\text{Pillar 1} \times 0.35) + (\text{Pillar 2} \times 0.25) + (\text{Pillar 3} \times 0.20) + (\text{Pillar 4} \times 0.20)$$
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                       PLACEMENT READINESS INDEX (PRI)                       │
+│                    IT VAULT PLACEMENT READINESS INDEX (PRI)                 │
 ├───────────────────────┬──────────┬──────────────────────────────────────────┤
 │ Pillar 1 (35%)        │ Aptitude │ Proctored test scores & clearance record │
 │ Pillar 2 (25%)        │ LeetCode │ Total solved, 7-day streak & difficulty  │
@@ -668,11 +671,11 @@ erDiagram
 
 ## 10. Automated Scorecard & Email Notification Templates
 
-Outbound email templates feature responsive, institutional branding:
+Outbound email templates feature responsive, institutional **IT Vault** branding:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ 🏆 OFFICIAL: Institutional Assessment Scorecard                             │
+│ 🏆 OFFICIAL: VSBEC IT Vault Assessment Scorecard                            │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ VSB ENGINEERING COLLEGE • DEPARTMENT OF INFORMATION TECHNOLOGY              │
 │ Candidate: Tharunkumar K (Reg: 922524205171)                                │
@@ -686,7 +689,7 @@ Outbound email templates feature responsive, institutional branding:
 │ • Q2: Graph Shortest Path (Python 3)   — 40/50 pts [Hidden Tests: 2/3 Pass] │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ 🧠 Skills Matrix Updated: Dynamic Programming · Graph Theory · C++          │
-│ 🚀 [ View Official Scorecard on Placement Portal ]                          │
+│ 🚀 [ View Official Scorecard on IT Vault Portal ]                           │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -732,7 +735,7 @@ Audit Complete: 13/13 PASSED (0 FAILED)
 | `GET` | `/health` | Public | Uptime and database connectivity health probe. |
 | `GET` | `/api/tasks` | Authenticated | Fetches role-scoped academic task lists with filters. |
 | `POST` | `/api/tasks` | Faculty / HOD / Admin | Creates academic assignment with deadlines and rubrics. |
-| `POST` | `/api/submissions` | Student | Uploads proof screenshot and submits task. |
+| `POST` | `/api/submissions` | Student | Uploads proof screenshot and submits task to IT Vault. |
 | `PUT` | `/api/submissions/:id/peer-review` | Coordinator | Peer review approval or revision request. |
 | `PUT` | `/api/submissions/:id/verify` | Faculty / HOD | Final verification or rejection with feedback. |
 | `GET` | `/api/coding/dashboard` | Authenticated | Live LeetCode & GitHub combined analytics matrix. |
@@ -760,8 +763,8 @@ Audit Complete: 13/13 PASSED (0 FAILED)
 
 ## 13. License & Intellectual Property
 
-This project is developed and maintained for the **Department of Information Technology, VSB Engineering College, Karur**.
+The **VSBEC IT Vault** platform is developed, operated, and maintained for the **Department of Information Technology, VSB Engineering College, Karur**.
 
-Developed with ❤️ by **[Techsquad](https://techsquadsih.netlify.app/)** • **[Tharunkumar K](https://github.com/Tharun4743)**.
+Developed with ❤️ by **[Tech Squad](https://techsquadsih.netlify.app/)** • **[Tharunkumar K](https://github.com/Tharun4743)**.
 
 Copyright © 2026 Department of Information Technology, VSB Engineering College. All rights reserved.
