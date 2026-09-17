@@ -819,13 +819,27 @@ async function startServer() {
   }
   const apiMemoryCache = new Map<string, CachedApiEntry>();
 
-  // In-memory cache disabled: always return null so API always queries fresh real-time data from database
+  // High-speed in-memory TTL cache — eliminates repeat DB queries for semi-static data
   const getApiCache = <T = any>(key: string): T | null => {
-    return null;
+    const entry = apiMemoryCache.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expiresAt) {
+      apiMemoryCache.delete(key);
+      return null;
+    }
+    return entry.data as T;
   };
 
   const setApiCache = (key: string, data: any, ttlSeconds = 30): void => {
-    // No-op: caching disabled
+    // Evict oldest 200 entries when cache grows beyond 3000 to prevent memory bloat
+    if (apiMemoryCache.size > 3000) {
+      let evicted = 0;
+      for (const k of apiMemoryCache.keys()) {
+        apiMemoryCache.delete(k);
+        if (++evicted >= 200) break;
+      }
+    }
+    apiMemoryCache.set(key, { data, expiresAt: Date.now() + ttlSeconds * 1000 });
   };
 
   const invalidateApiCache = (prefix?: string): void => {
@@ -945,11 +959,19 @@ async function startServer() {
       const userId = decoded.id;
 
       let user: any = null;
-      const dbUserRes = await pool.query(
-        'SELECT * FROM users WHERE id = $1 LIMIT 1',
-        [userId]
-      );
-      user = dbUserRes.rows[0];
+
+      // Check 45-second in-memory user cache before hitting DB
+      const authCached = userAuthCache.get(String(userId));
+      if (authCached && Date.now() - authCached.cachedAt < 45000) {
+        user = authCached.user;
+      } else {
+        const dbUserRes = await pool.query(
+          'SELECT * FROM users WHERE id = $1 LIMIT 1',
+          [userId]
+        );
+        user = dbUserRes.rows[0];
+        if (user) setUserAuthCache(String(userId), user);
+      }
 
       if (!user) {
         return res.status(401).json({ error: 'Unauthorized: User not found' });
@@ -2176,52 +2198,52 @@ async function startServer() {
     if (dbUser.role === 'SUPREME_ADMIN') {
       tasksRes = await pool.query(`
         SELECT t.*, u.full_name as creator_name, d.name as department_name,
-               (SELECT array_remove(array_agg(class_id), NULL) FROM task_classes WHERE task_id = t.id) as class_ids
+               COALESCE(tc.class_ids, '{}') as class_ids
         FROM tasks t
         LEFT JOIN users u ON t.created_by = u.id
         LEFT JOIN departments d ON t.department_id = d.id
+        LEFT JOIN LATERAL (
+          SELECT array_agg(class_id) as class_ids FROM task_classes WHERE task_id = t.id
+        ) tc ON true
         ORDER BY t.created_at DESC
       `);
     } else if (dbUser.role === 'STUDENT' || dbUser.role === 'CLASS_ADVISOR') {
-      let query = `
+      tasksRes = await pool.query(`
         SELECT t.*, u.full_name as creator_name, d.name as department_name,
-               (SELECT array_remove(array_agg(class_id), NULL) FROM task_classes WHERE task_id = t.id) as class_ids
+               COALESCE(tc.class_ids, '{}') as class_ids
         FROM tasks t
         LEFT JOIN users u ON t.created_by = u.id
         LEFT JOIN departments d ON t.department_id = d.id
+        LEFT JOIN LATERAL (
+          SELECT array_agg(class_id) as class_ids FROM task_classes WHERE task_id = t.id
+        ) tc ON true
         WHERE t.created_by = $1
            OR (t.department_id IS NULL AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
            OR (t.department_id = $2 AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
            OR EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id AND class_id = $3)
-      `;
-      let params: any[] = [dbUser.id, dbUser.department_id, dbUser.class_id];
-
-      query += ' ORDER BY t.created_at DESC';
-      tasksRes = await pool.query(query, params);
+        ORDER BY t.created_at DESC
+      `, [dbUser.id, dbUser.department_id, dbUser.class_id]);
     } else {
-      // HOD
-      const deptClassesRes = await pool.query('SELECT id FROM classes WHERE department_id = $1', [dbUser.department_id]);
-      const deptClassIds = deptClassesRes.rows.map((c: any) => c.id);
-
-      let query = `
+      // HOD — single query, no pre-fetch of class IDs needed
+      tasksRes = await pool.query(`
         SELECT t.*, u.full_name as creator_name, d.name as department_name,
-               (SELECT array_remove(array_agg(class_id), NULL) FROM task_classes WHERE task_id = t.id) as class_ids
+               COALESCE(tc.class_ids, '{}') as class_ids
         FROM tasks t
         LEFT JOIN users u ON t.created_by = u.id
         LEFT JOIN departments d ON t.department_id = d.id
+        LEFT JOIN LATERAL (
+          SELECT array_agg(class_id) as class_ids FROM task_classes WHERE task_id = t.id
+        ) tc ON true
         WHERE t.created_by = $1
            OR (t.department_id IS NULL AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
            OR t.department_id = $2
-      `;
-      let params: any[] = [dbUser.id, dbUser.department_id];
-
-      if (deptClassIds.length > 0) {
-        query += ' OR EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id AND class_id = ANY($3))';
-        params.push(deptClassIds);
-      }
-
-      query += ' ORDER BY t.created_at DESC';
-      tasksRes = await pool.query(query, params);
+           OR EXISTS (
+             SELECT 1 FROM task_classes tcx
+             JOIN classes cls ON tcx.class_id = cls.id
+             WHERE tcx.task_id = t.id AND cls.department_id = $2
+           )
+        ORDER BY t.created_at DESC
+      `, [dbUser.id, dbUser.department_id]);
     }
 
     const tasks = tasksRes.rows;
@@ -5021,17 +5043,22 @@ async function startServer() {
       });
     }
 
-    const tasksRes = await pool.query(`
-      SELECT t.*, (SELECT array_remove(array_agg(class_id), NULL) FROM task_classes WHERE task_id = t.id) as class_ids
-      FROM tasks t
-      WHERE EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id AND class_id = $1)
-         OR (t.department_id = $2 AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
-         OR (t.department_id IS NULL AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
-      ORDER BY t.created_at ASC
-    `, [classId, deptId]);
+    // Phase 1: Fetch tasks and students in parallel (independent of each other)
+    const [tasksRes, studentsRes] = await Promise.all([
+      pool.query(`
+        SELECT t.*, COALESCE(tc.class_ids, '{}') as class_ids
+        FROM tasks t
+        LEFT JOIN LATERAL (
+          SELECT array_agg(class_id) as class_ids FROM task_classes WHERE task_id = t.id
+        ) tc ON true
+        WHERE EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id AND class_id = $1)
+           OR (t.department_id = $2 AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
+           OR (t.department_id IS NULL AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
+        ORDER BY t.created_at ASC
+      `, [classId, deptId]),
+      pool.query("SELECT id, full_name, register_number FROM users WHERE class_id = $1 AND role = 'STUDENT' ORDER BY register_number ASC", [classId])
+    ]);
     const tasks = tasksRes.rows;
-
-    const studentsRes = await pool.query('SELECT id, full_name, register_number FROM users WHERE class_id = $1 AND role = \'STUDENT\' ORDER BY register_number ASC', [classId]);
     const students = studentsRes.rows;
     const studentIds = students.map(s => s.id);
 
@@ -5071,36 +5098,21 @@ async function startServer() {
       total_tasks: totalTasks
     }));
 
-    const totalStudentsRes = await pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT'", [classId]);
-    const totalBoysRes = await pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT' AND UPPER(gender) IN ('MALE', 'BOYS', 'BOY', 'M')", [classId]);
-    const totalGirlsRes = await pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT' AND UPPER(gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F')", [classId]);
-
-    const submittedCountRes = await pool.query(`
-      SELECT count(DISTINCT ts.user_id) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.class_id = $1 AND ts.status = 'SUBMITTED'
-    `, [classId]);
-    const verifiedCountRes = await pool.query(`
-      SELECT count(DISTINCT ts.user_id) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.class_id = $1 AND ts.status = 'VERIFIED'
-    `, [classId]);
-    const rejectedCountRes = await pool.query(`
-      SELECT count(*) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.class_id = $1 AND ts.status = 'REJECTED'
-    `, [classId]);
-
-    const boysVerifiedRes = await pool.query(`
-      SELECT count(DISTINCT ts.user_id) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.class_id = $1 AND UPPER(u.gender) IN ('MALE', 'BOYS', 'BOY', 'M') AND ts.status = 'VERIFIED'
-    `, [classId]);
-    const girlsVerifiedRes = await pool.query(`
-      SELECT count(DISTINCT ts.user_id) FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE u.class_id = $1 AND UPPER(u.gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F') AND ts.status = 'VERIFIED'
-    `, [classId]);
+    // Phase 2: Fetch all aggregate counts in parallel (6 queries → concurrent)
+    const [
+      totalStudentsRes, totalBoysRes, totalGirlsRes,
+      submittedCountRes, verifiedCountRes, rejectedCountRes,
+      boysVerifiedRes, girlsVerifiedRes
+    ] = await Promise.all([
+      pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT'", [classId]),
+      pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT' AND UPPER(gender) IN ('MALE', 'BOYS', 'BOY', 'M')", [classId]),
+      pool.query("SELECT count(*) FROM users WHERE class_id = $1 AND role = 'STUDENT' AND UPPER(gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F')", [classId]),
+      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND ts.status = 'SUBMITTED'`, [classId]),
+      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND ts.status = 'VERIFIED'`, [classId]),
+      pool.query(`SELECT count(*) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND ts.status = 'REJECTED'`, [classId]),
+      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND UPPER(u.gender) IN ('MALE', 'BOYS', 'BOY', 'M') AND ts.status = 'VERIFIED'`, [classId]),
+      pool.query(`SELECT count(DISTINCT ts.user_id) FROM task_submissions ts JOIN users u ON ts.user_id = u.id WHERE u.class_id = $1 AND UPPER(u.gender) IN ('FEMALE', 'GIRLS', 'GIRL', 'F') AND ts.status = 'VERIFIED'`, [classId])
+    ]);
 
     const totalStudents = parseInt(totalStudentsRes.rows[0].count);
     const totalBoys = parseInt(totalBoysRes.rows[0].count);
