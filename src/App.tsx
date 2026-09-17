@@ -4019,14 +4019,26 @@ export default function App() {
   const [leetcodeSortOrder, setLeetcodeSortOrder] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
-    if (user && classes.length > 0) {
+    if (user) {
       if (user.role === 'CLASS_ADVISOR' || (user.role === 'STUDENT' && user.is_coordinator)) {
         if (user.class_id) setSelectedLeetcodeClassId(user.class_id.toString());
         if (user.department_id) setSelectedLeetcodeDeptId(user.department_id.toString());
-        const userClassObj = classes.find(c => String(c.id) === String(user.class_id));
-        if (userClassObj?.year) setSelectedLeetcodeYear(String(userClassObj.year));
+        if (classes.length > 0) {
+          const userClassObj = classes.find(c => String(c.id) === String(user.class_id));
+          if (userClassObj?.year) setSelectedLeetcodeYear(String(userClassObj.year));
+        }
       } else if (user.role === 'HOD') {
-        if (user.department_id) setSelectedLeetcodeDeptId(user.department_id.toString());
+        setSelectedLeetcodeDeptId(user.department_id ? user.department_id.toString() : 'ALL');
+        setSelectedLeetcodeClassId('ALL');
+        setSelectedLeetcodeYear('ALL');
+        setAnalyzerClassFilter('');
+        setAnalyzerYearFilter('');
+      } else if (user.role === 'SUPREME_ADMIN') {
+        setSelectedLeetcodeDeptId('ALL');
+        setSelectedLeetcodeClassId('ALL');
+        setSelectedLeetcodeYear('ALL');
+        setAnalyzerClassFilter('');
+        setAnalyzerYearFilter('');
       }
     }
   }, [user, classes]);
@@ -5792,6 +5804,18 @@ export default function App() {
       });
       const data = await res.json();
       if (res.ok) {
+        // Purge any stale role-scoped sessionStorage items and reset filters
+        sessionStorage.removeItem('app_cache_depts');
+        sessionStorage.removeItem('app_cache_classes');
+        sessionStorage.removeItem('app_cache_users');
+        sessionStorage.removeItem('app_cache_tasks');
+        sessionStorage.removeItem('app_cache_submissions');
+        sessionStorage.removeItem('app_cache_notifs');
+        setSelectedLeetcodeClassId('ALL');
+        setSelectedLeetcodeYear('ALL');
+        setAnalyzerClassFilter('');
+        setAnalyzerYearFilter('');
+
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         setToken(data.token);
@@ -5959,6 +5983,23 @@ export default function App() {
     setSupremeStats(null);
     setMyClass(null);
     setNotifications([]);
+
+    try {
+      sessionStorage.clear();
+    } catch {}
+
+    // Clear platform & analyzer filters to prevent role leakage
+    setSelectedLeetcodeDeptId('ALL');
+    setSelectedLeetcodeYear('ALL');
+    setSelectedLeetcodeClassId('ALL');
+    setLeetcodeStatusFilter('ALL');
+    setLeetcodeSearch('');
+    setAnalyzerClassFilter('');
+    setAnalyzerYearFilter('');
+    setAnalyzerTaskFilter('');
+    setAnalyzerStatusFilter('ALL');
+    setAnalyzerGenderFilter('ALL');
+    setAdminDeptFilter('');
   };
 
   const fetchMyTeamsAndInvitations = async () => {
