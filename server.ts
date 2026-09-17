@@ -6899,7 +6899,7 @@ async function startServer() {
   app.post('/api/leetcode/sync', authenticate, authorizeTargetManagement, asyncHandler(async (req: any, res: Response) => {
     const scope = enforceUserScopeFilter(req.user, req.body);
     const summary = await syncLeetcodeProgressForScope(scope);
-    const syncDate = scope.date || getISTDateStr();
+    const syncDate = req.body?.date || getISTDateStr();
     exportAndPushLeetcodeDailyProgress(syncDate).catch(e => console.error('[Manual LeetCode Sync Export Error]:', e));
     res.json({
       success: true,
