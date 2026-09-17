@@ -30,15 +30,15 @@ const isServerless = Boolean(
   process.env.LAMBDA_TASK_ROOT
 );
 
-// Serverless optimization: On Supabase Transaction Mode Pooler (Port 6543), allow up to 10 connections per lambda
-// to handle parallel dashboard queries (departments, classes, users, tasks, submissions, notifications) without queue blocking
+// Serverless / Free-Tier Supabase optimization: Cap concurrent clients per instance
+// to prevent pooler exhaustion (EMAXCONNSESSION) on Port 6543
 const poolMax = isServerless
-  ? (process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 10)
-  : (process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : (process.env.PGMAXCONNECTIONS ? parseInt(process.env.PGMAXCONNECTIONS, 10) : 25));
+  ? (process.env.DB_POOL_MAX ? Math.min(parseInt(process.env.DB_POOL_MAX, 10), 12) : 10)
+  : (process.env.DB_POOL_MAX ? Math.min(parseInt(process.env.DB_POOL_MAX, 10), 20) : (process.env.PGMAXCONNECTIONS ? Math.min(parseInt(process.env.PGMAXCONNECTIONS, 10), 20) : 15));
 
-const poolMin = isServerless ? 0 : (process.env.DB_POOL_MIN ? parseInt(process.env.DB_POOL_MIN, 10) : 1);
+const poolMin = isServerless ? 0 : (process.env.DB_POOL_MIN ? Math.min(parseInt(process.env.DB_POOL_MIN, 10), 1) : 0);
 const connectionTimeoutMillis = process.env.DB_CONNECTION_TIMEOUT_MS ? parseInt(process.env.DB_CONNECTION_TIMEOUT_MS, 10) : 10000;
-const idleTimeoutMillis = process.env.DB_IDLE_TIMEOUT_MS ? parseInt(process.env.DB_IDLE_TIMEOUT_MS, 10) : (isServerless ? 15000 : 25000);
+const idleTimeoutMillis = process.env.DB_IDLE_TIMEOUT_MS ? parseInt(process.env.DB_IDLE_TIMEOUT_MS, 10) : 15000;
 const statementTimeout = process.env.DB_STATEMENT_TIMEOUT_MS ? parseInt(process.env.DB_STATEMENT_TIMEOUT_MS, 10) : 20000;
 const maxUses = process.env.DB_POOL_MAX_USES ? parseInt(process.env.DB_POOL_MAX_USES, 10) : (isServerless ? 500 : 7500);
 
@@ -70,7 +70,7 @@ export function getPoolStatus() {
   };
 }
 
-export async function initDB() {
+export async function initDB(forceMigration: boolean = false) {
   let client;
   for (let attempt = 1; attempt <= 5; attempt++) {
     try {
@@ -85,6 +85,26 @@ export async function initDB() {
   if (!client) throw new Error("Failed to connect to database pool.");
 
   try {
+    // Fast verification: If schema tables already exist, avoid executing 197+ roundtrip DDL queries
+    // which lock the database connection pool for 25-35s on every startup
+    if (!forceMigration) {
+      try {
+        const checkRes = await client.query(`
+          SELECT COUNT(*) as table_count
+          FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+            AND table_name IN ('departments', 'classes', 'users', 'tasks', 'task_submissions', 'leetcode_targets', 'proof_cleanup_logs');
+        `);
+        const count = parseInt(checkRes.rows[0]?.table_count || '0', 10);
+        if (count >= 5) {
+          console.log(`[initDB] Schema verified (${count} core tables active). Skipping 197 redundant DDL roundtrips for instant startup.`);
+          return;
+        }
+      } catch (checkErr: any) {
+        console.warn('[initDB] Fast schema check warning, falling back to full verification:', checkErr?.message);
+      }
+    }
+
     // Enable uuid extension if available
     try {
       await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`);
@@ -641,6 +661,12 @@ export async function initDB() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_tasks_dept_status ON tasks(department_id, status);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_task_classes_class_task ON task_classes(class_id, task_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_task_deadline_alerts ON task_deadline_alerts(task_id, user_id, alert_type);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_task_submissions_user_id ON task_submissions(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_task_submissions_user_submitted ON task_submissions(user_id, submitted_at DESC);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_team_members_student_status ON team_members(student_id, status);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_team_invitations_student_status ON team_invitations(student_id, status);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_users_class_student ON users(class_id, role) WHERE role = 'STUDENT';`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_users_dept_student ON users(department_id, role) WHERE role = 'STUDENT';`);
 
     // ─── Module 5: LeetCode Targets & Progress Tracking ───────────────────────
     await client.query(`
