@@ -166,7 +166,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
   const applied = (postingId: string) => applications.some(a => a.posting_id === postingId);
 
   return (
-    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] text-zinc-900">
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] text-zinc-900 font-sans">
       <div className="w-full space-y-6">
         {toast && (
           <div className={`fixed bottom-6 right-6 z-[99999] px-5 py-3 rounded-xl shadow-xl font-bold text-sm text-white transition-all ${toastType === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}>

@@ -27,7 +27,7 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
   };
 
   return (
-    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4]">
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] text-zinc-900 font-sans">
       <div className="w-full space-y-6 pb-12">
         
         {/* ── Page Header ────────────────────────────────────────────────────────── */}

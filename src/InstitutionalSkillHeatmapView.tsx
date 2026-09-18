@@ -130,7 +130,7 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
   };
 
   return (
-    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] text-zinc-900">
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] text-zinc-900 font-sans">
       <div className="w-full space-y-6">
         {toast && (
           <div className="fixed bottom-6 right-6 z-[99999] bg-zinc-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-zinc-700 text-xs font-bold flex items-center gap-2 animate-bounce">
@@ -407,9 +407,9 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
 
           {/* Heatmap Table */}
           <div className="overflow-x-auto rounded-xl border border-zinc-200">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse text-xs font-sans">
               <thead>
-                <tr className="bg-zinc-50 text-zinc-600 font-extrabold border-b border-zinc-200 uppercase tracking-wider text-[10px]">
+                <tr className="bg-zinc-50 text-zinc-600 font-extrabold border-b border-zinc-200 uppercase tracking-wider text-[10px] font-sans">
                   <th className="p-3.5">Skill & Category</th>
                   <th className="p-3.5">Student Adoption</th>
                   <th className="p-3.5">Proficiency Spectrum</th>
@@ -418,7 +418,7 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
                   <th className="p-3.5">Accreditation Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200 font-medium">
+              <tbody className="divide-y divide-zinc-200 font-medium font-sans">
                 {filteredSkills.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="text-center py-12 text-zinc-400 font-semibold italic">
@@ -427,7 +427,7 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
                   </tr>
                 ) : (
                   filteredSkills.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-zinc-50/80 transition-colors">
+                    <tr key={idx} className="hover:bg-zinc-50/80 transition-colors font-sans">
                       <td className="p-3.5">
                         <div className="font-extrabold text-zinc-900 text-xs sm:text-sm">{item.skill_name}</div>
                         <div className="text-[11px] text-zinc-500 font-medium mt-0.5">{item.category}</div>

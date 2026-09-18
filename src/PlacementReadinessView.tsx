@@ -198,7 +198,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
   });
 
   return (
-    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4]">
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] text-zinc-900 font-sans">
       <div className="w-full space-y-6">
 
         {/* ── Header ────────────────────────────────────────────────────────── */}
@@ -685,9 +685,9 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
+                  <table className="w-full text-left text-xs border-collapse font-sans">
                     <thead>
-                      <tr className="border-b border-zinc-200 bg-zinc-50 text-zinc-500 font-bold uppercase tracking-wider">
+                      <tr className="border-b border-zinc-200 bg-zinc-50 text-zinc-500 font-bold uppercase tracking-wider font-sans">
                         <th className="p-3">Candidate</th>
                         <th className="p-3">Class</th>
                         <th className="p-3">Readiness Rating</th>
@@ -701,7 +701,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                     </thead>
                     <tbody className="divide-y divide-zinc-100">
                       {filteredStudents.map(s => (
-                        <tr key={s.id} className="hover:bg-zinc-50/80 font-medium">
+                        <tr key={s.id} className="hover:bg-zinc-50/80 font-medium font-sans">
                           {/* Student Info */}
                           <td className="p-3 font-bold text-zinc-900 flex items-center gap-2.5">
                             {s.proctor_photo_url ? (
@@ -747,7 +747,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
 
                           {/* Tier Badge */}
                           <td className="p-3">
-                            <span className={`px-2.5 py-0.5 rounded font-bold text-[11px] ${
+                            <span className={`px-2.5 py-0.5 rounded font-bold text-[11px] font-sans ${
                               s.tier === 'TIER_1'
                                 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                                 : s.tier === 'TIER_2'
