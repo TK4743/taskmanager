@@ -161,7 +161,8 @@ export async function generateMergedProofsPdf(
       
       doc.setFillColor(255, 255, 255);
       doc.setDrawColor(226, 232, 240);
-      doc.roundedRect(logoX - 0.5, logoY - 0.5, logoSize + 1, logoSize + 1, 1, 1, 'FD');
+      const r = (logoSize + 1) / 2;
+      doc.circle(logoX - 0.5 + r, logoY - 0.5 + r, r, 'FD');
       doc.addImage(logoDataUrl, logoFormat, logoX, logoY, logoSize, logoSize, undefined, 'FAST');
       textStartX = margin + 16;
     }

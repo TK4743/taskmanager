@@ -1239,7 +1239,7 @@ const Footer = ({ onShowModal }: { onShowModal: (type: 'PRIVACY' | 'TERMS' | 'SU
       {/* Brand Logo & Name */}
       <div className="flex items-center gap-2.5 shrink-0 min-w-0">
         <div className="w-8 h-8 rounded-full bg-white p-0.5 overflow-hidden shrink-0 border border-zinc-200 shadow-2xs flex items-center justify-center">
-          <img src="/logo.png" alt="VSBEC Logo" className="w-full h-full object-contain" />
+          <img src="/logo.png" alt="VSBEC Logo" className="w-full h-full object-contain rounded-full" />
         </div>
         <span className="font-extrabold text-zinc-900 text-xs tracking-tight whitespace-nowrap">VSBEC IT Vault</span>
       </div>
@@ -2916,8 +2916,8 @@ function SettingsView({
         <Card className="p-6 bg-white border-zinc-200 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-100">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center border border-zinc-200 shadow-sm p-1.5 shrink-0">
-                <img src="/logo.png" alt="VSBEC IT Logo" className="w-full h-full object-contain" />
+              <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center border border-zinc-200 shadow-sm p-1.5 shrink-0 overflow-hidden">
+                <img src="/logo.png" alt="VSBEC IT Logo" className="w-full h-full object-contain rounded-full" />
               </div>
               <div>
                 <h3 className="text-base font-black text-zinc-900 flex items-center gap-2">
@@ -8371,8 +8371,8 @@ export default function App() {
         >
           {/* Header Section */}
           <div className="flex flex-col items-center mb-3 sm:mb-4 text-center">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white dark:bg-zinc-800 p-2 mb-2 shadow-lg border border-zinc-200/80 dark:border-zinc-700/80 ring-4 ring-indigo-50 dark:ring-indigo-950/40 flex items-center justify-center">
-              <img src="/logo.png" alt="VSBEC Logo" className="w-full h-full object-contain" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white dark:bg-zinc-800 p-1.5 mb-2 shadow-lg border border-zinc-200/80 dark:border-zinc-700/80 ring-4 ring-indigo-50 dark:ring-indigo-950/40 flex items-center justify-center overflow-hidden">
+              <img src="/logo.png" alt="VSBEC Logo" className="w-full h-full object-contain rounded-full" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">IT Vault</h1>
             <p className="text-zinc-500 dark:text-zinc-400 mt-0.5 text-xs sm:text-sm font-medium">
@@ -9389,8 +9389,8 @@ export default function App() {
         {/* Sidebar Skeleton (hidden on mobile, matches desktop sidebar) */}
         <div className="hidden lg:flex w-64 bg-white border-r border-zinc-200 flex-col shrink-0">
           <div className="p-4 border-b border-zinc-100 flex items-center gap-3 shrink-0 h-20">
-            <div className="w-10 h-10 rounded-full border border-zinc-200 p-1 flex items-center justify-center bg-white shadow-2xs">
-              <img src="/logo.png" alt="Loading..." className="w-full h-full object-contain" />
+            <div className="w-10 h-10 rounded-full border border-zinc-200 p-1 flex items-center justify-center bg-white shadow-2xs overflow-hidden">
+              <img src="/logo.png" alt="Loading..." className="w-full h-full object-contain rounded-full" />
             </div>
             <div className="space-y-1.5 flex-1">
               <Skeleton className="h-4 w-28" />
@@ -11189,7 +11189,7 @@ export default function App() {
       <div className="p-4 border-b border-zinc-100 flex items-center justify-between shrink-0 h-20">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-full bg-white p-1.5 overflow-hidden shrink-0 shadow-sm border border-zinc-200 flex items-center justify-center">
-            <img src="/logo.png" alt="IT Vault" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="IT Vault" className="w-full h-full object-contain rounded-full" />
           </div>
           <div className="min-w-0">
             <span className="font-black text-sm tracking-tight text-zinc-900 block leading-tight">IT Vault</span>
@@ -12899,7 +12899,7 @@ export default function App() {
                   <div className="fixed sm:absolute left-2 right-2 sm:left-auto sm:right-0 top-16 sm:top-auto sm:mt-2 w-auto sm:w-96 bg-white border border-zinc-200 rounded-2xl shadow-2xl z-50 p-4 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[80vh] overflow-y-auto md:max-h-none md:overflow-visible">
                     <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-zinc-100">
                       <div className="flex items-center gap-2">
-                        <img src="/logo.png" alt="VSBEC Logo" className="w-5 h-5 object-contain" />
+                        <img src="/logo.png" alt="VSBEC Logo" className="w-5 h-5 object-contain rounded-full" />
                         <h3 className="text-sm font-extrabold text-zinc-900">Notifications</h3>
                         {notifications.filter(n => !n.is_read).length > 0 && (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">
