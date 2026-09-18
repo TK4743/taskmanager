@@ -8360,39 +8360,24 @@ export default function App() {
     ];
 
     return (
-      <div className="min-h-screen min-h-[100dvh] bg-gradient-to-b from-slate-50 via-white to-indigo-50/20 dark:from-[#09090b] dark:via-[#0c0c10] dark:to-[#121218] flex flex-col justify-center items-center px-4 py-6 sm:py-8 pb-14 overflow-y-auto relative text-zinc-900 dark:text-zinc-100">
+      <div className="min-h-screen min-h-[100dvh] bg-gradient-to-b from-slate-50 via-white to-indigo-50/20 dark:from-[#09090b] dark:via-[#0c0c10] dark:to-[#121218] flex flex-col justify-center items-center px-4 py-4 sm:py-6 overflow-y-auto relative text-zinc-900 dark:text-zinc-100">
         <div className="fixed top-4 right-4 z-50">
           <ThemeToggle />
         </div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-lg my-auto"
+          className="w-full max-w-md my-auto py-2"
         >
           {/* Header Section */}
-          <div className="flex flex-col items-center mb-4 sm:mb-6 text-center">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white dark:bg-zinc-800 p-2 mb-2.5 shadow-xl border border-zinc-200/80 dark:border-zinc-700/80 ring-4 ring-indigo-50 dark:ring-indigo-950/40 flex items-center justify-center">
+          <div className="flex flex-col items-center mb-3 sm:mb-4 text-center">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white dark:bg-zinc-800 p-2 mb-2 shadow-lg border border-zinc-200/80 dark:border-zinc-700/80 ring-4 ring-indigo-50 dark:ring-indigo-950/40 flex items-center justify-center">
               <img src="/logo.png" alt="VSBEC Logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">IT Vault</h1>
             <p className="text-zinc-500 dark:text-zinc-400 mt-0.5 text-xs sm:text-sm font-medium">
               VSBEC IT Vault — Academic & Placement Governance Platform
             </p>
-
-            {/* Quick Access Top Pill for Recruiters */}
-            <button
-              type="button"
-              onClick={() => {
-                setIndRegError('');
-                setIndRegMsg('');
-                setShowIndustryRegModal(true);
-              }}
-              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 border border-indigo-200/80 dark:border-indigo-800/60 rounded-full text-[11px] font-bold text-indigo-700 dark:text-indigo-300 transition-all cursor-pointer shadow-2xs hover:shadow-xs group"
-            >
-              <Building2 size={13} className="text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
-              <span>Corporate & Industry Partner? Register Here</span>
-              <ChevronRight size={12} className="opacity-70 group-hover:translate-x-0.5 transition-transform" />
-            </button>
           </div>
 
           <AnimatePresence mode="wait">
@@ -8403,13 +8388,13 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               className="w-full"
             >
-              <Card className="p-5 sm:p-7 rounded-3xl bg-white dark:bg-[#141418] border border-zinc-200/80 dark:border-zinc-800 shadow-xl">
-                <div className="mb-5 text-center">
+              <Card className="p-4 sm:p-6 rounded-3xl bg-white dark:bg-[#141418] border border-zinc-200/80 dark:border-zinc-800 shadow-xl">
+                <div className="mb-3.5 text-center">
                   <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Portal Login</h2>
                   <p className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm mt-0.5">Please enter your credentials</p>
                 </div>
 
-                <form onSubmit={handleLogin} className="space-y-3.5">
+                <form onSubmit={handleLogin} className="space-y-3">
                   <div>
                     <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1 block">Email ID / Register Number</label>
                     <Input
@@ -8439,7 +8424,7 @@ export default function App() {
                         tabIndex={-1}
                       >
                         {showPassword ? (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                         ) : (
                           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                         )}
@@ -8484,7 +8469,7 @@ export default function App() {
                   <Button className="w-full py-2.5 sm:py-3 text-base sm:text-lg font-bold rounded-xl mt-1 cursor-pointer">Sign In</Button>
 
                   {/* Prominent Corporate Partner Registration Banner */}
-                  <div className="pt-3.5 mt-4 border-t border-zinc-100 dark:border-zinc-800">
+                  <div className="pt-3 mt-3 border-t border-zinc-100 dark:border-zinc-800">
                     <button
                       type="button"
                       onClick={() => {
@@ -8492,11 +8477,11 @@ export default function App() {
                         setIndRegMsg('');
                         setShowIndustryRegModal(true);
                       }}
-                      className="w-full text-left p-3 sm:p-3.5 bg-gradient-to-r from-indigo-50/70 via-purple-50/40 to-pink-50/30 hover:from-indigo-100/80 hover:to-purple-100/60 dark:from-indigo-950/40 dark:via-purple-950/30 dark:to-zinc-900/60 dark:hover:from-indigo-900/50 border border-indigo-200/80 hover:border-indigo-400 dark:border-indigo-800/60 rounded-2xl transition-all duration-200 cursor-pointer group shadow-2xs hover:shadow-xs flex items-center justify-between gap-3"
+                      className="w-full text-left p-2.5 sm:p-3 bg-gradient-to-r from-indigo-50/70 via-purple-50/40 to-pink-50/30 hover:from-indigo-100/80 hover:to-purple-100/60 dark:from-indigo-950/40 dark:via-purple-950/30 dark:to-zinc-900/60 dark:hover:from-indigo-900/50 border border-indigo-200/80 hover:border-indigo-400 dark:border-indigo-800/60 rounded-2xl transition-all duration-200 cursor-pointer group shadow-2xs hover:shadow-xs flex items-center justify-between gap-3"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-800 border border-indigo-200/80 dark:border-indigo-700/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 group-hover:border-indigo-300 transition-all">
-                          <Building2 size={18} />
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white dark:bg-zinc-800 border border-indigo-200/80 dark:border-indigo-700/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 group-hover:border-indigo-300 transition-all">
+                          <Building2 size={16} />
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
@@ -8507,7 +8492,7 @@ export default function App() {
                           </p>
                         </div>
                       </div>
-                      <span className="shrink-0 px-2.5 py-1 bg-white dark:bg-zinc-800 group-hover:bg-indigo-600 group-hover:text-white text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg border border-indigo-200 dark:border-indigo-700/60 group-hover:border-indigo-600 shadow-2xs transition-all flex items-center gap-0.5">
+                      <span className="shrink-0 px-2 py-1 bg-white dark:bg-zinc-800 group-hover:bg-indigo-600 group-hover:text-white text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg border border-indigo-200 dark:border-indigo-700/60 group-hover:border-indigo-600 shadow-2xs transition-all flex items-center gap-0.5">
                         Register <ChevronRight size={12} className="opacity-70 group-hover:translate-x-0.5 transition-transform" />
                       </span>
                     </button>
