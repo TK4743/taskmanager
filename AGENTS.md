@@ -11,3 +11,7 @@ Alternatively, push explicitly to both:
 - `git push tharun_taskmanager main`
 
 Ensure both repositories always stay in 100% parity on every push.
+
+## Render Repository Protection (STRICT)
+- **NEVER** push to or modify the Render deployment repository: `https://github.com/Tharun4743/IT_taskmanager.git`
+- All future commits, updates, and pushes must strictly target only `origin` (`TK4743/taskmanager.git` and `Tharun4743/taskmanager.git`).
