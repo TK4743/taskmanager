@@ -9,6 +9,7 @@
 \usepackage{graphicx}
 \usepackage{amsmath,amssymb}
 \usepackage{array}
+\usepackage{bookmark}
 \usepackage{tcolorbox}
 \tcbuselibrary{skins}
 \usepackage{tikz}
@@ -63,9 +64,9 @@
     coltitle=Navy
   },
   modcard/.style={
-    enhanced,arc=2pt,boxrule=0.6pt,
-    left=5pt,right=5pt,top=3pt,bottom=3pt,
-    fonttitle=\bfseries\scriptsize,
+    enhanced,arc=2pt,boxrule=0.5pt,
+    left=4pt,right=4pt,top=2pt,bottom=2pt,
+    fonttitle=\bfseries\fontsize{6.5}{7.5}\selectfont,
     colback=LightSilver,colframe=BorderColor,
     coltitle=Navy
   }
@@ -220,13 +221,13 @@
     \end{itemize}
   \end{tcolorbox}
 
-  \vspace{0.10cm}
+  \vspace{0.04cm}
 
   \begin{tcolorbox}[
     enhanced,colback=LightSilver,colframe=BorderColor,
     arc=2.5pt,boxrule=0.7pt,
-    left=8pt,right=8pt,top=4pt,bottom=4pt]
-    \centering\fontsize{7.2}{8.8}\selectfont
+    left=8pt,right=8pt,top=3.5pt,bottom=3.5pt]
+    \centering\fontsize{7.0}{8.5}\selectfont
     \textbf{\color{Navy}Core Evaluative Research Question:}\\[2pt]
     \textit{``Can collaborative peer learning combined with continuous assessment and multi-source evidence \textbf{measurably improve and reliably track} student programming competency over time?''}
   \end{tcolorbox}
@@ -461,7 +462,7 @@
     \begin{column}{0.52\textwidth}
       \begin{plaincard}{Six Key Advantages}
         \fontsize{6.8}{8.2}\selectfont
-        \begin{enumerate}\setlength{\itemsep}{2.2pt}
+        \begin{enumerate}\setlength{\itemsep}{1.0pt}
           \item \textbf{Unified Evidence Pipeline:}\;Ingests commits, problem submissions, and IDE logs centrally.
           \item \textbf{Collaborative Rubrics:}\;Converts peer coding interactions into measurable competency metrics.
           \item \textbf{Continuous Tracking:}\;Rolling skill estimation replaces biased episodic testing.
@@ -473,12 +474,12 @@
     \end{column}
   \end{columns}
 
-  \vspace{0.12cm}
+  \vspace{0.04cm}
   \begin{tcolorbox}[
     enhanced,colback=LightSilver,colframe=BorderColor,
     arc=2pt,boxrule=0.6pt,
-    left=6pt,right=6pt,top=2.5pt,bottom=2.5pt]
-    \centering\fontsize{6.5}{7.8}\selectfont
+    left=6pt,right=6pt,top=2pt,bottom=2pt]
+    \centering\fontsize{6.3}{7.5}\selectfont
     \textbf{\color{Navy}Educational Paradigm Shift:}\;Moves pedagogy from subjective inspection to \textbf{verifiable, telemetry-backed algorithmic competency progression}.
   \end{tcolorbox}
 \end{frame}
@@ -564,34 +565,34 @@
     % Left Column: Modules 1 to 4
     \begin{column}{0.485\textwidth}
       \begin{tcolorbox}[modcard,title={1.\;Collaborative Learning Module}]
-        \fontsize{6.5}{7.8}\selectfont
-        \begin{itemize}\setlength{\itemsep}{1pt}
-          \item Peer study circles with role-based pair programming protocols.
-          \item Synchronous collaborative audio/video and cursor broadcasting.
+        \fontsize{6.0}{7.0}\selectfont
+        \begin{itemize}\setlength{\itemsep}{0pt}
+          \item Peer study circles with role-based pair programming.
+          \item Synchronous audio/video and cursor broadcasting.
         \end{itemize}
-      \end{tcolorbox}\vspace{0.06cm}
+      \end{tcolorbox}\vspace{0.03cm}
 
       \begin{tcolorbox}[modcard,title={2.\;Live Coding Module}]
-        \fontsize{6.5}{7.8}\selectfont
-        \begin{itemize}\setlength{\itemsep}{1pt}
-          \item Multi-user operational transformation editor with syntax highlighting.
-          \item Sandboxed in-browser code execution and runtime debugging engine.
+        \fontsize{6.0}{7.0}\selectfont
+        \begin{itemize}\setlength{\itemsep}{0pt}
+          \item Operational transformation multi-user code editor.
+          \item Sandboxed in-browser code execution engine.
         \end{itemize}
-      \end{tcolorbox}\vspace{0.06cm}
+      \end{tcolorbox}\vspace{0.03cm}
 
       \begin{tcolorbox}[modcard,title={3.\;Continuous Assessment Module}]
-        \fontsize{6.5}{7.8}\selectfont
-        \begin{itemize}\setlength{\itemsep}{1pt}
-          \item Automated micro-challenges spanning code tracing and algorithms.
-          \item Immediate test suite verification with comprehensive edge-case analysis.
+        \fontsize{6.0}{7.0}\selectfont
+        \begin{itemize}\setlength{\itemsep}{0pt}
+          \item Automated micro-challenges and code tracing.
+          \item Immediate test suite verification with edge cases.
         \end{itemize}
-      \end{tcolorbox}\vspace{0.06cm}
+      \end{tcolorbox}\vspace{0.03cm}
 
       \begin{tcolorbox}[modcard,title={4.\;Evidence Collection Module}]
-        \fontsize{6.5}{7.8}\selectfont
-        \begin{itemize}\setlength{\itemsep}{1pt}
-          \item Multi-source telemetry ingestion from GitHub commits and LeetCode.
-          \item Centralized normalization of keystrokes, compiles, and error logs.
+        \fontsize{6.0}{7.0}\selectfont
+        \begin{itemize}\setlength{\itemsep}{0pt}
+          \item GitHub commits, LeetCode, and IDE telemetry ingestion.
+          \item Centralized log and compile activity normalization.
         \end{itemize}
       \end{tcolorbox}
     \end{column}
@@ -599,35 +600,35 @@
     % Right Column: Modules 5 to 7 + Synthesis
     \begin{column}{0.485\textwidth}
       \begin{tcolorbox}[modcard,title={5.\;Competency Analysis Module}]
-        \fontsize{6.5}{7.8}\selectfont
-        \begin{itemize}\setlength{\itemsep}{1pt}
-          \item Dynamic skill vector estimation across algorithmic competencies.
-          \item Alignment with IEEE/ACM CS Curricula 2023 outcome taxonomies.
+        \fontsize{6.0}{7.0}\selectfont
+        \begin{itemize}\setlength{\itemsep}{0pt}
+          \item Dynamic skill vector estimation across competencies.
+          \item Alignment with IEEE/ACM CS Curricula 2023 rubrics.
         \end{itemize}
-      \end{tcolorbox}\vspace{0.06cm}
+      \end{tcolorbox}\vspace{0.03cm}
 
       \begin{tcolorbox}[modcard,title={6.\;Learning Intervention Module}]
-        \fontsize{6.5}{7.8}\selectfont
-        \begin{itemize}\setlength{\itemsep}{1pt}
-          \item Algorithmic peer-matching connecting complementary skill profiles.
-          \item Automated dispatch of targeted remedial problem sets for identified gaps.
+        \fontsize{6.0}{7.0}\selectfont
+        \begin{itemize}\setlength{\itemsep}{0pt}
+          \item Algorithmic peer-matching for skill balance.
+          \item Automated targeted problem set dispatch.
         \end{itemize}
-      \end{tcolorbox}\vspace{0.06cm}
+      \end{tcolorbox}\vspace{0.03cm}
 
       \begin{tcolorbox}[modcard,title={7.\;Reassessment \& Analytics Module}]
-        \fontsize{6.5}{7.8}\selectfont
-        \begin{itemize}\setlength{\itemsep}{1pt}
-          \item Isomorphic post-evaluations measuring pre/post learning differentials.
-          \item Longitudinal cohort mastery dashboards and statistical tracking.
+        \fontsize{6.0}{7.0}\selectfont
+        \begin{itemize}\setlength{\itemsep}{0pt}
+          \item Isomorphic post-evaluations measuring gain ($g$).
+          \item Longitudinal cohort mastery statistical dashboards.
         \end{itemize}
-      \end{tcolorbox}\vspace{0.06cm}
+      \end{tcolorbox}\vspace{0.03cm}
 
       \begin{tcolorbox}[
         enhanced,colback=LightSilver,colframe=BorderColor,
-        arc=2pt,boxrule=0.6pt,
-        left=5pt,right=5pt,top=2.5pt,bottom=2.5pt]
-        \centering\fontsize{6.5}{7.8}\selectfont\bfseries\color{Navy}
-        All 7 modules operate as a synchronized closed loop driving verified competency development.
+        arc=2pt,boxrule=0.5pt,
+        left=4pt,right=4pt,top=2pt,bottom=2pt]
+        \centering\fontsize{6.0}{7.0}\selectfont\bfseries\color{Navy}
+        Synchronized closed-loop driving verified competency growth.
       \end{tcolorbox}
     \end{column}
   \end{columns}
