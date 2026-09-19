@@ -802,7 +802,8 @@ Audit Complete: 13/13 PASSED (0 FAILED)
 
 The **VSBEC IT Vault** platform is developed, operated, and maintained for the **Department of Information Technology, VSB Engineering College, Karur**.
 
-Developed with ❤️ by **[Tech Squad](https://techsquadsih.netlify.app/)** • **[Tharunkumar K](https://github.com/Tharun4743)**.
+Developed by **[Tharunkumar K](https://github.com/Tharun4743)** (Lead Developer).
 
-Copyright © 2026 Department of Information Technology, VSB Engineering College. All rights reserved.
+Copyright © 2026 Tharunkumar K • Department of Information Technology, VSB Engineering College. All rights reserved.
+
 
