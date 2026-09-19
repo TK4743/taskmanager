@@ -21,3 +21,11 @@ dist-electron/
 dist-apk/
 *.apk
 *.exe
+*.aux
+*.nav
+*.out
+*.snm
+*.toc
+*.synctex*
+*.fls
+*.fdb_latexmk
