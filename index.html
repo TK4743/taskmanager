@@ -404,91 +404,17 @@
 </head>
 <body style="background-color: #ffffff; background: #ffffff; margin: 0; padding: 0; min-height: 100%; min-height: 100dvh; color-scheme: light only;">
   <div id="root" style="background-color: #ffffff; background: #ffffff; min-height: 100vh; min-height: 100dvh; min-height: -webkit-fill-available; width: 100%;">
+    <div style="display: flex; min-height: 100vh; min-height: 100dvh; min-height: -webkit-fill-available; width: 100%; align-items: center; justify-content: center; background: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 14px;">
+        <img src="/logo.png" alt="IT Vault Logo" width="64" height="64" style="border-radius: 50%; object-fit: contain; border: 1px solid #e4e4e7; padding: 4px;" />
+        <div style="width: 32px; height: 32px; border: 3px solid #e0e7ff; border-top-color: #4f46e5; border-radius: 50%; animation: initSpin 0.75s linear infinite;"></div>
+      </div>
+    </div>
     <style>
-      @keyframes initShimmer {
-        0% { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
-      }
-      .init-shimmer {
-        background: linear-gradient(90deg, #f4f4f5 0%, #e4e4e7 35%, #f4f4f5 70%);
-        background-size: 200% 100%;
-        animation: initShimmer 1.6s ease-in-out infinite;
-        border-radius: 0.75rem;
+      @keyframes initSpin {
+        to { transform: rotate(360deg); }
       }
     </style>
-    <div style="display:flex; min-height:100vh; min-height:100dvh; min-height:-webkit-fill-available; width:100%; background:#ffffff; font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif; overflow:hidden;">
-      <main style="max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; color: #18181b; width: 100%;">
-        <header style="text-align: center; margin-bottom: 2rem;">
-          <img src="/logo.png" alt="VSBEC IT Vault Logo" width="72" height="72" style="margin-bottom: 0.75rem; object-fit: contain; border-radius: 50%; border: 1px solid #e4e4e7; padding: 4px;" />
-          <h1 style="font-size: 2rem; font-weight: 800; color: #111827; margin: 0.25rem 0 0.5rem 0; letter-spacing: -0.02em;">IT Vault — VSB Engineering College (VSBEC IT Portal, Karur)</h1>
-          <p style="font-size: 1.05rem; color: #4f46e5; font-weight: 600; margin: 0;">
-            Official Academic Task Governance, Coding Progress &amp; Student Placement Portal | VSB Karur (vsbkarur / vsbecit)
-          </p>
-        </header>
-
-        <section style="margin-bottom: 2rem;">
-          <h2 style="font-size: 1.35rem; font-weight: 700; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">About IT Vault VSB (VSBEC IT Task Manager)</h2>
-          <p style="font-size: 0.95rem; color: #4b5563; line-height: 1.6;">
-            <strong>IT Vault</strong> (VSBEC IT Task Manager) is the official student task management, submission, verification, and placement readiness platform designed for the Information Technology department of <strong>VSB Engineering College (VSBEC, Karur, vsbkarur)</strong>. The platform empowers <strong>VSBEC IT (vsbecit)</strong> students, coordinators, class advisors, and department leadership (HOD) with real-time academic task workflows, LeetCode and GitHub coding velocity analytics, automated announcements, and departmental governance.
-          </p>
-        </section>
-
-        <section style="margin-bottom: 2rem;">
-          <h2 style="font-size: 1.35rem; font-weight: 700; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">Core Features &amp; Modules</h2>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-top: 1rem;">
-            <article style="padding: 1.25rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: #fafafa;">
-              <h3 style="font-size: 1.05rem; font-weight: 600; color: #1f2937; margin-top: 0;">Student Task Management</h3>
-              <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">Students can view academic assignments, filter by category (Competition, Course, Workshop, College Work), and track deadlines in real time.</p>
-            </article>
-            <article style="padding: 1.25rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: #fafafa;">
-              <h3 style="font-size: 1.05rem; font-weight: 600; color: #1f2937; margin-top: 0;">Task Submission &amp; Verification Workflow</h3>
-              <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">Multi-tier verification workflow supporting individual and team submissions, screenshot proof uploads via Cloud CDN, and feedback with resubmission support.</p>
-            </article>
-            <article style="padding: 1.25rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: #fafafa;">
-              <h3 style="font-size: 1.05rem; font-weight: 600; color: #1f2937; margin-top: 0;">LeetCode Progress Tracking</h3>
-              <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">Real-time LeetCode problem solve velocity tracking, Easy/Medium/Hard breakdown, dynamic target setting, and automated streak monitoring.</p>
-            </article>
-            <article style="padding: 1.25rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: #fafafa;">
-              <h3 style="font-size: 1.05rem; font-weight: 600; color: #1f2937; margin-top: 0;">GitHub Progress Tracking</h3>
-              <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">Synchronized tracking of daily and weekly student GitHub commits with combined coding performance analytics.</p>
-            </article>
-            <article style="padding: 1.25rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: #fafafa;">
-              <h3 style="font-size: 1.05rem; font-weight: 600; color: #1f2937; margin-top: 0;">Corporate &amp; Industry Placement Studio</h3>
-              <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">Sandboxed multi-compiler coding qualification assessments, placement readiness scorecards, and corporate partner recruitment access.</p>
-            </article>
-            <article style="padding: 1.25rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: #fafafa;">
-              <h3 style="font-size: 1.05rem; font-weight: 600; color: #1f2937; margin-top: 0;">Telegram &amp; Email Notifications</h3>
-              <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">Automated Telegram Bot alerts (@IT_TaskManager_Alerts_bot), Web Push notifications, and multi-node institutional email dispatches.</p>
-            </article>
-          </div>
-        </section>
-
-        <section style="margin-bottom: 2rem;">
-          <h2 style="font-size: 1.35rem; font-weight: 700; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">Frequently Asked Questions (IT Vault VSB)</h2>
-          <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
-            <div>
-              <h3 style="font-size: 1rem; font-weight: 700; color: #1f2937; margin-bottom: 0.25rem;">What is IT Vault VSB?</h3>
-              <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">IT Vault (VSBEC IT Task Manager) is the official academic task governance, coding progress tracking, and placement portal for the Department of Information Technology at VSB Engineering College, Karur (VSBEC / VSB Karur).</p>
-            </div>
-            <div>
-              <h3 style="font-size: 1rem; font-weight: 700; color: #1f2937; margin-bottom: 0.25rem;">How do VSB students log in to IT Vault?</h3>
-              <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">Students and faculty members log in using their official college Email ID or Register Number and password at https://it-taskmanager.vercel.app/.</p>
-            </div>
-            <div>
-              <h3 style="font-size: 1rem; font-weight: 700; color: #1f2937; margin-bottom: 0.25rem;">Who developed IT Vault for VSB Engineering College?</h3>
-              <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">IT Vault was conceptualized, designed, and developed by Tharunkumar K and Tech Squad for the Department of Information Technology, VSB Engineering College (VSBEC), Karur.</p>
-            </div>
-          </div>
-        </section>
-
-        <footer style="margin-top: 2rem; border-top: 1px solid #e5e7eb; padding-top: 1rem; text-align: center; font-size: 0.85rem; color: #6b7280;">
-          <p style="margin: 0.25rem 0;">&copy; 2026 Department of Information Technology, VSB Engineering College, Karur (VSBEC / VSB Karur).</p>
-          <p style="margin: 0.25rem 0;">
-            <a href="https://in.linkedin.com/in/tharunkumark4743?trk=profile-badge" target="_blank" rel="author me external" style="color: #0a66c2; font-weight: 600; text-decoration: underline;">Connect with Tharunkumar K on LinkedIn</a> • <a href="https://tharunkumark4743.netlify.app/" target="_blank" rel="author me external" style="color: #4f46e5; font-weight: 600; text-decoration: underline;">Portfolio</a>
-          </p>
-        </footer>
-      </main>
-    </div>
   </div>
 
   <noscript>
