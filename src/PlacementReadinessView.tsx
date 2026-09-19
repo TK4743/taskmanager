@@ -728,16 +728,16 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               <span className="font-extrabold text-sm text-zinc-900">{s.readiness_score}%</span>
-                              <div className="w-16 h-2 bg-zinc-100 rounded-full overflow-hidden">
+                              <div className="w-16 h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden border border-zinc-200/50 dark:border-zinc-700/60">
                                 <div
-                                  className={`h-full rounded-full ${
+                                  className={`h-full rounded-full transition-all duration-500 shadow-sm ${
                                     s.readiness_score >= 80
-                                      ? 'bg-emerald-500'
+                                      ? 'bg-gradient-to-r from-emerald-400 to-teal-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]'
                                       : s.readiness_score >= 65
-                                      ? 'bg-indigo-500'
+                                      ? 'bg-gradient-to-r from-cyan-400 to-indigo-500 shadow-[0_0_8px_rgba(56,189,248,0.5)]'
                                       : s.readiness_score >= 50
-                                      ? 'bg-amber-500'
-                                      : 'bg-rose-500'
+                                      ? 'bg-gradient-to-r from-amber-400 to-orange-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+                                      : 'bg-gradient-to-r from-rose-400 to-pink-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'
                                   }`}
                                   style={{ width: `${s.readiness_score}%` }}
                                 />
