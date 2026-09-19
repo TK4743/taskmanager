@@ -1,44 +1,31 @@
-PROPRIETARY AND CONFIDENTIAL LICENSE
+MIT LICENSE
 
-Copyright (c) 2024–2026 Techsquad.
-All Rights Reserved.
+Copyright (c) 2026 Tharunkumar K, Santhoshkumar S, and TECH SQUAD.
+Department of Information Technology, VSB Engineering College, Karur – 639111, Tamil Nadu, India.
 
-Department of Information Technology
-VSB Engineering College, Karur – 639111, Tamil Nadu, India.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-==============================================================================
-TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-==============================================================================
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-1. PROPRIETARY RIGHTS
-This software, source code, database architectures, user interface assets, 
-and documentation (collectively referred to as the "Software") are the exclusive,
-confidential, and proprietary property of Techsquad and the Department of 
-Information Technology, VSB Engineering College.
-
-2. STRICT RESTRICTION ON USAGE
-Unauthorized copying, cloning, reverse-engineering, decompilation, disassembly,
-distribution, sublicensing, modification, public display, deployment, or commercial
-exploitation of the Software or any portion thereof, in source code or binary form,
-via any medium or network, is STRICTLY PROHIBITED without prior express written
-authorization from the copyright holder.
-
-3. ACADEMIC AND INTERNAL USE
-The Software is developed exclusively for official internal academic task governance
-and coding competency tracking at VSB Engineering College. No permission is granted
-for third-party or unauthorized institutional deployment.
-
-4. NO WARRANTY
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM,
-OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ==============================================================================
-For authorization, licensing, or permissions, contact:
-Lead Developer: Techsquad (https://techsquadsih.netlify.app/)
-Institution: VSB Engineering College, Karur, Tamil Nadu, India.
+Project: IT Vault – Skill Mapping, Automated Assessment & Placement Collaboration Portal
+Lead Developers: 
+- Tharunkumar K (Reg. No: 922524205171)
+- Santhoshkumar S (Reg. No: 922524205148)
+Team: TECH SQUAD
+Institution: Department of Information Technology, VSB Engineering College, Karur.
 ==============================================================================
