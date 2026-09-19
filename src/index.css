@@ -196,7 +196,7 @@ html.dark {
   /* 6. Vibrant Glowing Colored Badges & Highlights */
   /* Amber / Gold / Yellow */
   .bg-amber-50, .bg-amber-100, .bg-yellow-50, .bg-yellow-100,
-  [class*="bg-amber-50"], [class*="bg-amber-100"], [class*="bg-yellow-50"], [class*="bg-yellow-100"] {
+  [class*="bg-amber-50/"], [class*="bg-amber-100/"], [class*="bg-yellow-50/"], [class*="bg-yellow-100/"] {
     background-color: rgba(245, 158, 11, 0.16) !important;
     border-color: rgba(245, 158, 11, 0.4) !important;
   }
@@ -207,7 +207,7 @@ html.dark {
 
   /* Emerald / Green */
   .bg-emerald-50, .bg-emerald-100, .bg-green-50, .bg-green-100,
-  [class*="bg-emerald-50"], [class*="bg-emerald-100"], [class*="bg-green-50"], [class*="bg-green-100"] {
+  [class*="bg-emerald-50/"], [class*="bg-emerald-100/"], [class*="bg-green-50/"], [class*="bg-green-100/"] {
     background-color: rgba(16, 185, 129, 0.16) !important;
     border-color: rgba(16, 185, 129, 0.4) !important;
   }
@@ -219,8 +219,8 @@ html.dark {
   /* Sky / Blue / Indigo */
   .bg-blue-50, .bg-blue-100, .bg-sky-50, .bg-sky-100,
   .bg-indigo-50, .bg-indigo-100,
-  [class*="bg-blue-50"], [class*="bg-blue-100"], [class*="bg-sky-50"], [class*="bg-sky-100"],
-  [class*="bg-indigo-50"], [class*="bg-indigo-100"] {
+  [class*="bg-blue-50/"], [class*="bg-blue-100/"], [class*="bg-sky-50/"], [class*="bg-sky-100/"],
+  [class*="bg-indigo-50/"], [class*="bg-indigo-100/"] {
     background-color: rgba(56, 189, 248, 0.14) !important;
     border-color: rgba(56, 189, 248, 0.35) !important;
   }
@@ -232,7 +232,7 @@ html.dark {
 
   /* Purple / Violet */
   .bg-purple-50, .bg-purple-100, .bg-violet-50, .bg-violet-100,
-  [class*="bg-purple-50"], [class*="bg-purple-100"], [class*="bg-violet-50"], [class*="bg-violet-100"] {
+  [class*="bg-purple-50/"], [class*="bg-purple-100/"], [class*="bg-violet-50/"], [class*="bg-violet-100/"] {
     background-color: rgba(168, 85, 247, 0.16) !important;
     border-color: rgba(168, 85, 247, 0.4) !important;
   }
@@ -243,8 +243,8 @@ html.dark {
 
   /* Rose / Pink / Red / Orange */
   .bg-rose-50, .bg-rose-100, .bg-pink-50, .bg-pink-100, .bg-red-50, .bg-red-100, .bg-orange-50, .bg-orange-100,
-  [class*="bg-rose-50"], [class*="bg-rose-100"], [class*="bg-pink-50"], [class*="bg-pink-100"],
-  [class*="bg-red-50"], [class*="bg-red-100"], [class*="bg-orange-50"], [class*="bg-orange-100"] {
+  [class*="bg-rose-50/"], [class*="bg-rose-100/"], [class*="bg-pink-50/"], [class*="bg-pink-100/"],
+  [class*="bg-red-50/"], [class*="bg-red-100/"], [class*="bg-orange-50/"], [class*="bg-orange-100/"] {
     background-color: rgba(244, 63, 94, 0.16) !important;
     border-color: rgba(244, 63, 94, 0.4) !important;
   }
@@ -253,6 +253,26 @@ html.dark {
   .text-red-500, .text-red-600, .text-red-700,
   .text-orange-500, .text-orange-600, .text-orange-700 {
     color: #fb7185 !important;
+  }
+
+  /* Solid Vibrant 500-level Action & Progress Elements (Never transparent in dark mode) */
+  .bg-indigo-500, .bg-indigo-600 {
+    background-color: #6366f1 !important;
+  }
+  .bg-emerald-500, .bg-emerald-600 {
+    background-color: #10b981 !important;
+  }
+  .bg-blue-500, .bg-blue-600, .bg-sky-500 {
+    background-color: #0ea5e9 !important;
+  }
+  .bg-amber-500, .bg-amber-600, .bg-orange-500 {
+    background-color: #f59e0b !important;
+  }
+  .bg-rose-500, .bg-rose-600, .bg-red-500, .bg-red-600 {
+    background-color: #f43f5e !important;
+  }
+  .bg-purple-500, .bg-purple-600 {
+    background-color: #a855f7 !important;
   }
 
   /* 7. Input fields, Selects & Textareas */
