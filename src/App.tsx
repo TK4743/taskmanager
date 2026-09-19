@@ -1357,7 +1357,7 @@ const TD = ({ children, className, ...props }: React.TdHTMLAttributes<HTMLTableC
 );
 
 
-const CircularProgress = ({ value, total, label, color = "text-indigo-600", size = "lg" }: { value: number; total: number; label: string; color?: string; size?: 'sm' | 'lg' }) => {
+const CircularProgress = ({ value, total, label, color = "text-indigo-500", size = "lg" }: { value: number; total: number; label: string; color?: string; size?: 'sm' | 'lg' }) => {
   const percentage = total > 0 ? (value / total) * 100 : 0;
   const radius = size === 'lg' ? 36 : 18;
   const strokeWidth = size === 'lg' ? 8 : 4;
@@ -1369,7 +1369,7 @@ const CircularProgress = ({ value, total, label, color = "text-indigo-600", size
     <div className="flex flex-col items-center gap-2">
       <div className={cn("relative", size === 'lg' ? "w-24 h-24" : "w-12 h-12")}>
         <svg className="w-full h-full transform -rotate-90" viewBox={`0 0 ${dim} ${dim}`}>
-          <circle cx={dim / 2} cy={dim / 2} r={radius} stroke="currentColor" strokeWidth={strokeWidth} fill="transparent" className="text-zinc-100" />
+          <circle cx={dim / 2} cy={dim / 2} r={radius} stroke="currentColor" strokeWidth={strokeWidth} fill="transparent" className="text-zinc-100 dark:text-zinc-800" />
           <circle
             cx={dim / 2}
             cy={dim / 2}
@@ -1383,30 +1383,30 @@ const CircularProgress = ({ value, total, label, color = "text-indigo-600", size
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className={cn("font-bold text-zinc-900", size === 'lg' ? "text-lg" : "text-xs")}>{Math.round(percentage)}%</span>
+          <span className={cn("font-bold text-zinc-900 dark:text-zinc-100", size === 'lg' ? "text-lg" : "text-xs")}>{Math.round(percentage)}%</span>
         </div>
       </div>
-      <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{label}</span>
+      <span className="text-xs font-bold text-zinc-400 dark:text-zinc-400 uppercase tracking-widest">{label}</span>
     </div>
   );
 };
 
-const SimpleBarChart = ({ data, label, color = "bg-indigo-500" }: { data: { label: string; value: number; total: number }[]; label: string; color?: string }) => {
+const SimpleBarChart = ({ data, label, color = "bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-500" }: { data: { label: string; value: number; total: number }[]; label: string; color?: string }) => {
   return (
     <div className="flex flex-col gap-4 w-full h-full">
-      <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 border-b border-zinc-100 pb-2">{label}</h4>
+      <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 border-b border-zinc-100 dark:border-zinc-800 pb-2">{label}</h4>
       <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
         {data.map((item, i) => {
           const percentage = item.total > 0 ? (item.value / item.total) * 100 : 0;
           return (
             <div key={i} className="group">
-              <div className="flex justify-between items-center mb-1.5 text-xs font-bold text-zinc-700">
+              <div className="flex justify-between items-center mb-1.5 text-xs font-bold text-zinc-700 dark:text-zinc-200">
                 <span className="truncate mr-4">{item.label}</span>
-                <span className="text-zinc-400 font-mono text-xs whitespace-nowrap">{item.value}/{item.total}</span>
+                <span className="text-zinc-400 dark:text-zinc-400 font-mono text-xs whitespace-nowrap">{item.value}/{item.total}</span>
               </div>
-              <div className="h-2 w-full bg-zinc-100 rounded-full overflow-hidden border border-zinc-200/50">
+              <div className="h-2.5 w-full bg-zinc-100 dark:bg-zinc-800/90 rounded-full overflow-hidden border border-zinc-200/60 dark:border-zinc-700/80 shadow-inner">
                 <div
-                  className={cn("h-full transition-all duration-1000 ease-out rounded-full shadow-sm", color)}
+                  className={cn("h-full transition-all duration-1000 ease-out rounded-full shadow-[0_0_8px_rgba(56,189,248,0.4)]", color)}
                   style={{ width: `${percentage}%` }}
                 />
               </div>
@@ -9193,7 +9193,7 @@ export default function App() {
             {analyzerTaskFilter ? (
               <SimpleBarChart
                 label="Class-wise Completion"
-                color="bg-emerald-500"
+                color="bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 shadow-[0_0_10px_rgba(52,211,153,0.5)]"
                 data={(() => {
                   const classMap = new Map();
                   enriched.forEach(s => {
@@ -9209,7 +9209,7 @@ export default function App() {
             ) : (
               <SimpleBarChart
                 label="Event-wise Performance"
-                color="bg-indigo-500"
+                color="bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-500 shadow-[0_0_10px_rgba(56,189,248,0.5)]"
                 data={tasks.filter(t => {
                   const isDeptMatch = !currentDeptId || t.department_id?.toString() === currentDeptId || !t.department_id;
                   if (!isDeptMatch) return false;
@@ -9763,9 +9763,9 @@ export default function App() {
                 </div>
               </div>
               <div>
-                <div className="w-full bg-zinc-100 rounded-full h-2 mb-2">
+                <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2.5 mb-2 overflow-hidden border border-zinc-200/60 dark:border-zinc-700/80">
                   <div
-                    className="bg-orange-500 h-2 rounded-full transition-all duration-500"
+                    className="bg-gradient-to-r from-amber-400 via-orange-400 to-orange-500 h-full rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(251,146,60,0.5)]"
                     style={{ width: `${Math.min(100, myLeetcodeProgress?.completionDailyPct ?? 0)}%` }}
                   />
                 </div>
@@ -13288,9 +13288,9 @@ export default function App() {
                                   </div>
                                 </div>
                                 <div>
-                                  <div className="w-full bg-zinc-100 rounded-full h-1.5 mb-2">
+                                  <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2 mb-2 overflow-hidden border border-zinc-200/60 dark:border-zinc-700/80">
                                     <div
-                                      className="bg-orange-500 h-1.5 rounded-full transition-all duration-500"
+                                      className="bg-gradient-to-r from-amber-400 to-orange-500 h-full rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(251,146,60,0.5)]"
                                       style={{ width: `${Math.min(100, myLeetcodeProgress?.completionDailyPct ?? 0)}%` }}
                                     />
                                   </div>
@@ -13321,9 +13321,9 @@ export default function App() {
                                   </div>
                                 </div>
                                 <div>
-                                  <div className="w-full bg-zinc-100 rounded-full h-1.5 mb-2">
+                                  <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2 mb-2 overflow-hidden border border-zinc-200/60 dark:border-zinc-700/80">
                                     <div
-                                      className="bg-indigo-500 h-1.5 rounded-full transition-all duration-500"
+                                      className="bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-500 h-full rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(56,189,248,0.5)]"
                                       style={{ width: `${Math.min(100, myLeetcodeProgress?.completionWeeklyPct ?? 0)}%` }}
                                     />
                                   </div>
