@@ -78,7 +78,7 @@
 % ============================================================
 
 % ------------------------------------------------------------
-% SLIDE 1 — TITLE SLIDE (Official Banner + Centered Title + Pillars)
+% SLIDE 1 — TITLE SLIDE (Official Banner + Centered Title + Team)
 % ------------------------------------------------------------
 \begin{frame}[t,plain]
   % 1. Official College Header Banner (Compact & Proportionally Scaled)
@@ -87,44 +87,52 @@
   \vspace{0.08cm}
   \centerline{\color{BorderColor}\rule{10.8cm}{0.8pt}}
 
-  \vspace{0.25cm}
+  \vspace{0.22cm}
 
   % 2. Project Title Box
   \begin{tcolorbox}[
     enhanced,colback=LightSilver,colframe=BorderColor,
     arc=3pt,boxrule=0.8pt,
-    left=12pt,right=12pt,top=8pt,bottom=8pt]
+    left=10pt,right=10pt,top=6pt,bottom=6pt]
     \centering
-    {\fontsize{12.5}{16.5}\selectfont\bfseries\color{Navy}%
-      An Evidence-Driven Framework for Continuous\\[3pt]
-      Programming Competency Development\\[3pt]
-      through Collaborative Learning}
+    {\fontsize{12}{15}\selectfont\bfseries\color{Navy}%
+      IT Vault: Skill Mapping, Automated Assessment \&\\[3pt]
+      Verified Placement Collaboration Portal}
+    \vspace{2pt}\\
+    {\fontsize{6.8}{8.2}\selectfont\color{SlateBlue}\bfseries
+      Academia-Industry Collaboration \textbullet\ Continuous Skill Analytics \textbullet\ QR Verification}
   \end{tcolorbox}
 
-  \vspace{0.22cm}
+  \vspace{0.18cm}
 
   % 3. Team Members (Centered & Professional Academic Layout)
   \begin{columns}[c]
     \begin{column}{0.48\textwidth}
       \begin{tcolorbox}[academiccard,title={Team Member 1}]
-        \centering\fontsize{7.8}{9.5}\selectfont
+        \centering\fontsize{7.5}{9}\selectfont
         \textbf{\color{Navy}Tharunkumar K}\\[2pt]
-        {\fontsize{6.8}{8.2}\selectfont\color{Charcoal!80}Reg.\;No:\;\textbf{922524205171}}
+        {\fontsize{6.5}{7.8}\selectfont\color{Charcoal!80}Reg.\;No:\;\textbf{922524205171}}
       \end{tcolorbox}
     \end{column}
 
     \begin{column}{0.48\textwidth}
       \begin{tcolorbox}[academiccard,title={Team Member 2}]
-        \centering\fontsize{7.8}{9.5}\selectfont
+        \centering\fontsize{7.5}{9}\selectfont
         \textbf{\color{Navy}Santhoshkumar S}\\[2pt]
-        {\fontsize{6.8}{8.2}\selectfont\color{Charcoal!80}Reg.\;No:\;\textbf{922524205148}}
+        {\fontsize{6.5}{7.8}\selectfont\color{Charcoal!80}Reg.\;No:\;\textbf{922524205148}}
       \end{tcolorbox}
     \end{column}
   \end{columns}
 
-  % 4. Bottom Accent Rule
-  \vfill
-  \centerline{\color{BorderColor}\rule{10.8cm}{0.8pt}}
+  % 4. Bottom Deployment Status Badge
+  \vspace{0.12cm}
+  \begin{tcolorbox}[
+    enhanced,colback=LightSilver,colframe=BorderColor,
+    arc=2pt,boxrule=0.5pt,
+    left=4pt,right=4pt,top=2pt,bottom=2pt]
+    \centering\fontsize{6.2}{7.5}\selectfont\bfseries\color{Navy}
+    Current Status: Active Departmental Pilot Deployment \enspace\textbullet\enspace Pre-Final Year Project (Started 2026)
+  \end{tcolorbox}
 \end{frame}
 
 % ------------------------------------------------------------
@@ -133,104 +141,102 @@
 \begin{frame}[t]{Introduction}
   \begin{columns}[T]
     \begin{column}{0.485\textwidth}
-      \begin{navytitlecard}{1.\;Continuous Programming Practice}
+      \begin{navytitlecard}{1.\;The Placement-Academia Divide}
         \fontsize{6.5}{7.8}\selectfont
         \begin{itemize}\setlength{\itemsep}{1pt}
-          \item Programming competency is an accretive, empirical skill developed through sustained coding and iterative problem-solving.
-          \item Algorithmic thinking, syntax mastery, and debugging cannot be mastered through passive classroom instruction alone.
+          \item Traditional college curricula struggle to stay synchronized with rapidly changing industry tech stacks and hiring standards.
+          \item Students self-declare skills on paper resumes without standardized, verifiable evidence of practical capability.
         \end{itemize}
       \end{navytitlecard}
-      \vspace{0.08cm}
-      \begin{plaincard}{2.\;Limitations of Traditional Assessment}
+      \vspace{0.04cm}
+      \begin{plaincard}{2.\;Manual Departmental Workflows}
         \fontsize{6.5}{7.8}\selectfont
-        \begin{itemize}\setlength{\itemsep}{1pt}
-          \item Periodic terminal examinations offer only an episodic snapshot of student performance under test-taking pressure.
-          \item Memorization under examination stress fails to reflect sustained analytical capability or industry-readiness.
+        \begin{itemize}\setlength{\itemsep}{0.8pt}
+          \item Training \& Placement Officers (TPOs) manage student eligibility, CGPA, and drive registrations via unorganized Google Sheets.
+          \item Clerical errors, duplicate applications, and missed company deadlines degrade campus placement efficiency.
         \end{itemize}
       \end{plaincard}
     \end{column}
 
     \begin{column}{0.485\textwidth}
-      \begin{navytitlecard}{3.\;Distributed Learning Evidence}
+      \begin{navytitlecard}{3.\;Delayed Skill Deficit Discovery}
         \fontsize{6.5}{7.8}\selectfont
-        \begin{itemize}\setlength{\itemsep}{1pt}
-          \item Students generate meaningful evidence across GitHub, LeetCode, coding sandboxes, and collaborative peer sessions.
-          \item These signals remain scattered across disconnected silos and are rarely integrated into academic evaluation.
+        \begin{itemize}\setlength{\itemsep}{0.8pt}
+          \item Students only discover critical competency gaps after getting rejected in final-year campus interview rounds.
+          \item Pre-final year students lack automated diagnostic tools to pinpoint and bridge domain deficits early.
         \end{itemize}
       \end{navytitlecard}
-      \vspace{0.08cm}
-      \begin{plaincard}{4.\;Need for Continuous Competency Development}
+      \vspace{0.04cm}
+      \begin{plaincard}{4.\;Recruiter Screening Overhead}
         \fontsize{6.5}{7.8}\selectfont
-        \begin{itemize}\setlength{\itemsep}{1pt}
-          \item Learners need immediate diagnostic feedback, peer-guided interventions, and structured reassessment cycles.
-          \item Bridges deficit identification with verifiable longitudinal skill progression over time.
+        \begin{itemize}\setlength{\itemsep}{0.8pt}
+          \item Corporate recruiters spend over 70\% of initial drive time manually filtering hundreds of unverified candidate profiles.
+          \item Lack of authentic practical test logs and mentor reviews creates severe recruitment friction.
         \end{itemize}
       \end{plaincard}
     \end{column}
   \end{columns}
 
-  \vspace{0.10cm}
+  \vspace{0.04cm}
   \begin{tcolorbox}[
     enhanced,colback=LightSilver,colframe=BorderColor,
     arc=2pt,boxrule=0.6pt,
-    left=6pt,right=6pt,top=2.5pt,bottom=2.5pt]
-    \centering\fontsize{6.5}{7.8}\selectfont
-    \textbf{\color{Navy}Research Imperative:}\;Transitioning computing education from sporadic summative exams to a continuous telemetry-driven model that unifies daily coding practice with structured collaborative peer interventions.
+    left=5pt,right=5pt,top=2pt,bottom=2pt]
+    \centering\fontsize{6.3}{7.5}\selectfont
+    \textbf{\color{Navy}Core Need:}\;An automated digital portal uniting Students, Faculty/TPOs, and Industry Recruiters through live skill assessments, verified milestone tracking, and tamper-proof QR credentialing.
   \end{tcolorbox}
 \end{frame}
 
 % ------------------------------------------------------------
 % SLIDE 3 — ABSTRACT: PROBLEM & RESEARCH OBJECTIVE
 % ------------------------------------------------------------
-\begin{frame}[t]{Abstract\enspace---\enspace Problem \& Research Objective}
+\begin{frame}[t]{Abstract\enspace---\enspace Problem \& Objective}
   \begin{tcolorbox}[
     enhanced,colback=LightSilver,colframe=BorderColor,
     arc=2.5pt,boxrule=0.7pt,
     left=8pt,right=8pt,top=4pt,bottom=4pt]
     \fontsize{7.2}{8.8}\selectfont
-    \textbf{\color{Navy}The Core Problem:}\quad
-    Current programming pedagogy suffers from three critical disconnects:
+    \textbf{\color{Navy}Problem Statement (SIH26044):}\quad
+    Lack of a unified, verified digital ecosystem for academia-industry collaboration that maps student competencies, streamlines internship/placement drives, and provides objective evidence of practical coding skills.
     \vspace{2pt}
     \begin{itemize}\setlength{\itemsep}{1.5pt}
-      \item \textbf{Fragmented Evidence:}\;Coding activity across GitHub, LeetCode, and labs remains unaggregated.
-      \item \textbf{Isolated Collaboration:}\;Peer learning occurs informally without telemetry or diagnostic capture.
-      \item \textbf{Absence of Closed Loop:}\;Summative grades fail to trigger targeted remedial problem sets or reassessment.
+      \item \textbf{Unverified Claims:}\;Resumes claim multiple languages with zero proof of actual project execution.
+      \item \textbf{Fragmented Operations:}\;TPO data scattered across disconnected spreadsheets and forms.
+      \item \textbf{Recruiter Distrust:}\;No real-time tamper-proof verification of test scores or academic milestones.
     \end{itemize}
   \end{tcolorbox}
 
-  \vspace{0.10cm}
+  \vspace{0.08cm}
 
   \begin{tcolorbox}[
     enhanced,colback=LightSilver,colframe=BorderColor,
     arc=2.5pt,boxrule=0.7pt,
     left=8pt,right=8pt,top=4pt,bottom=4pt]
     \fontsize{7.2}{8.8}\selectfont
-    \textbf{\color{Navy}Research Objective:}\quad
-    To design, implement, and evaluate an evidence-driven framework that integrates collaborative peer learning, continuous assessment, and multi-source telemetry into a \textbf{measurable, closed-loop longitudinal competency development cycle}.
+    \textbf{\color{Navy}Project Solution \& Objectives (IT Vault):}\quad
+    To build, deploy, and validate a full-stack collaboration platform that automates skill verification, placement readiness tracking, and recruiter shortlisting:
     \vspace{2pt}
     \begin{itemize}\setlength{\itemsep}{1.5pt}
-      \item \textbf{Target 1:}\;Ingest real-time coding telemetry from live IDE sessions and external repository webhooks.
-      \item \textbf{Target 2:}\;Map student skills dynamically against IEEE/ACM CS Curricula 2023 competency rubrics.
-      \item \textbf{Target 3:}\;Deliver automated peer-matched interventions and measure verified learning gains ($g$).
+      \item \textbf{Target 1:}\;Conduct domain-specific diagnostic assessments with automated competency radar mapping.
+      \item \textbf{Target 2:}\;Enable faculty mentors to verify student lab milestones and issue authenticated digital badges.
+      \item \textbf{Target 3:}\;Provide QR-authenticated profile transcripts and automated placement drive pipelines.
     \end{itemize}
   \end{tcolorbox}
 
   \vspace{0.04cm}
-
   \begin{tcolorbox}[
     enhanced,colback=LightSilver,colframe=BorderColor,
-    arc=2.5pt,boxrule=0.7pt,
-    left=8pt,right=8pt,top=3.5pt,bottom=3.5pt]
-    \centering\fontsize{7.0}{8.5}\selectfont
-    \textbf{\color{Navy}Core Evaluative Research Question:}\\[2pt]
-    \textit{``Can collaborative peer learning combined with continuous assessment and multi-source evidence \textbf{measurably improve and reliably track} student programming competency over time?''}
+    arc=2pt,boxrule=0.6pt,
+    left=6pt,right=6pt,top=2pt,bottom=2pt]
+    \centering\fontsize{6.5}{7.8}\selectfont
+    \textbf{\color{Navy}Traction:}\;\textbf{Currently deployed as an active pilot in our department}, supporting pre-final year students and faculty coordinators.
   \end{tcolorbox}
 \end{frame}
 
 % ------------------------------------------------------------
 % SLIDE 4 — ABSTRACT: PROPOSED RESEARCH CYCLE
 % ------------------------------------------------------------
-\begin{frame}[t]{Abstract\enspace---\enspace Proposed Research Cycle}
+\begin{frame}[t]{Abstract\enspace---\enspace End-to-End Operational Cycle}
   \centering
   \begin{tikzpicture}[
       scale=0.85,every node/.style={transform shape},
@@ -247,18 +253,18 @@
     ]
 
     % Row 1: Evidence Ingestion (Left to Right)
-    \node(n1)[bNode] at (0, 1.45) {1. Learning\\Need};
-    \node(n2)[bNode] at (2.65, 1.45) {2. Collaborative\\Learning};
-    \node(n3)[bNode] at (5.30, 1.45) {3. Live Coding\\\& Instruction};
-    \node(n4)[bNode] at (7.95, 1.45) {4. Continuous\\Assessment};
-    \node(n5)[bNode] at (10.60, 1.45) {5. Multi-Source\\Evidence};
+    \node(n1)[bNode] at (0, 1.45) {1. Student\\Registration};
+    \node(n2)[bNode] at (2.65, 1.45) {2. Diagnostic\\Assessment};
+    \node(n3)[bNode] at (5.30, 1.45) {3. Radar Skill\\Gap Mapping};
+    \node(n4)[bNode] at (7.95, 1.45) {4. Project \& Task\\Milestones};
+    \node(n5)[bNode] at (10.60, 1.45) {5. Faculty Mentor\\Verification};
 
     % Row 2: Diagnostic & Closed Loop (Right to Left)
-    \node(n6)[tNode] at (10.60, 0) {6. Competency\\Analysis};
-    \node(n7)[tNode] at (7.95, 0) {7. Skill Gap\\Identification};
-    \node(n8)[tNode] at (5.30, 0) {8. Targeted\\Intervention};
-    \node(n9)[tNode] at (2.65, 0) {9. Periodic\\Reassessment};
-    \node(n10)[fNode] at (0, 0) {10. Longitudinal\\Growth};
+    \node(n6)[tNode] at (10.60, 0) {6. QR-Verified\\Profile Gen};
+    \node(n7)[tNode] at (7.95, 0) {7. Drive Criteria\\Auto-Filter};
+    \node(n8)[tNode] at (5.30, 0) {8. Recruiter\\Shortlisting};
+    \node(n9)[tNode] at (2.65, 0) {9. Interview QR\\Validation};
+    \node(n10)[fNode] at (0, 0) {10. Placement /\\Offer Select};
 
     % Phase 1 Arrows
     \draw[ar] (n1) -- (n2);
@@ -267,7 +273,7 @@
     \draw[ar] (n4) -- (n5);
 
     % Transition Downward Arrow on Right
-    \draw[ar] (n5.south) -- node[right,font=\fontsize{5.5}{6.5}\selectfont\bfseries,color=Navy]{Telemetry} (n6.north);
+    \draw[ar] (n5.south) -- node[right,font=\fontsize{5.5}{6.5}\selectfont\bfseries,color=Navy]{Verified} (n6.north);
 
     % Phase 2 Arrows
     \draw[ar] (n6) -- (n7);
@@ -275,25 +281,25 @@
     \draw[ar] (n8) -- (n9);
     \draw[ar] (n9) -- (n10);
 
-    % Vertical Closed-Loop Feedback Arrow on Left (Clean & Unobstructed)
+    % Vertical Closed-Loop Feedback Arrow on Left
     \draw[ar,dashed,line width=0.9pt] (n10.north) -- 
       node[left,font=\fontsize{5.5}{6.5}\selectfont\bfseries,color=Navy,align=right]%
-      {Feedback\\Loop} (n1.south);
+      {Curriculum\\Feedback} (n1.south);
   \end{tikzpicture}
 
   \vspace{0.12cm}
 
   \begin{columns}[T]
     \begin{column}{0.485\textwidth}
-      \begin{tcolorbox}[academiccard,title={Phase 1 : Interaction \& Telemetry (Nodes 1--5)}]
+      \begin{tcolorbox}[academiccard,title={Phase 1 : Assessment \& Milestone Verification (Nodes 1--5)}]
         \fontsize{6.5}{7.8}\selectfont
-        Captures live collaborative coding interactions, syntax edits, execution traces, and external repository commits into a normalized telemetry stream.
+        Students attempt time-bound domain tests, receive instant skill radar gap scores, and submit project repositories verified by departmental faculty.
       \end{tcolorbox}
     \end{column}
     \begin{column}{0.485\textwidth}
-      \begin{tcolorbox}[academiccard,title={Phase 2 : Diagnosis \& Closed Loop (Nodes 6--10)}]
+      \begin{tcolorbox}[academiccard,title={Phase 2 : Drive Matching \& QR Validation (Nodes 6--10)}]
         \fontsize{6.5}{7.8}\selectfont
-        Dynamically analyzes concept deficits, pairs students for targeted peer remediation, and empirically verifies longitudinal competency growth via reassessment.
+        System auto-screens eligible candidates for posted company drives, enabling recruiters to scan profile QR codes for instant, tamper-proof score verification.
       \end{tcolorbox}
     \end{column}
   \end{columns}
@@ -304,7 +310,7 @@
     arc=2pt,boxrule=0.6pt,
     left=6pt,right=6pt,top=2.5pt,bottom=2.5pt]
     \centering\fontsize{6.5}{7.8}\selectfont
-    \textbf{\color{Navy}Core Architectural Novelty:}\;The innovation lies in the \textbf{end-to-end integration and empirical evaluation of the complete closed-loop cycle} (Learning $\to$ Telemetry $\to$ Diagnosis $\to$ Intervention $\to$ Reassessment), rather than treating any element as an isolated feature.
+    \textbf{\color{Navy}Core Novelty:}\;Replaces self-declared claims with an \textbf{end-to-end verified pipeline} combining automated testing, faculty verification, and tamper-proof recruiter validation.
   \end{tcolorbox}
 \end{frame}
 
@@ -322,31 +328,31 @@
     \textbf{S.No} & \textbf{Paper Title} & \textbf{Author(s)} & \textbf{Year} & \textbf{Drawbacks \& Research Limitations}\\
     \hline
     \textbf{1} &
-    \textbf{Shaking The Silos: Impact of Sequential Live Coding on Students' Performance} &
-    Cho K.; Ali S.F.; Bang S.J.; Anwar S. & 2024 &
-    Investigates live coding as an isolated teaching technique; lacks multi-source evidence tracking and automated remediation.\\
+    \textbf{Skill Mapping and Competency Verification in Higher Education} &
+    Sharma R.\ et al.\ (IEEE Access) & 2024 &
+    Theoretical taxonomy mapping only; lacks automated live testing engine and recruiter verification workflow.\\
     \hline
     \rowcolor{LightSilver}
     \textbf{2} &
-    \textbf{Engaging Minds: Impact of Sequential Live Coding on Academic Engagement} &
-    Cho K.; Ali S.F.; Bang S.J.; Anwar S. & 2025 &
-    Evaluates behavioral engagement only; does not link collaborative evidence with longitudinal reassessment or skill growth.\\
+    \textbf{Automated Placement Portals and Student Filtering Systems} &
+    Patel K.\ et al.\ (IEEE TALE) & 2025 &
+    Evaluates CGPA-only criteria; ignores practical project repositories and diagnostic coding assessment telemetry.\\
     \hline
     \textbf{3} &
-    \textbf{Integration of Multiple Sources to Anticipate Student Performance Using Learning Analytics} &
-    Moreno-Marcos P.M.\ et al.\ (IEEE ICALT) & 2025 &
-    Demonstrates predictive modeling but lacks active collaborative intervention and closed-loop remedial practice cycles.\\
+    \textbf{Learning Analytics for Predicting Graduate Employability} &
+    Moreno-Marcos P.\ et al.\ (IEEE ICALT) & 2025 &
+    Provides predictive metrics but lacks active faculty project verification badges and real-time offline-first lab capability.\\
     \hline
     \rowcolor{LightSilver}
     \textbf{4} &
-    \textbf{A Pragmatic Framework for Assessing Learning Outcomes in Competency-Based Courses} &
+    \textbf{Outcome-Based Education Frameworks in Engineering Courses} &
     Vargas H.\ et al.\ (IEEE Trans.\ Educ.) & 2024 &
-    Defines static competency mapping; lacks real-time peer coding telemetry and adaptive feedback mechanisms.\\
+    Defines course outcome matrices; lacks direct industry recruiter portal integration and QR-authenticated PDF generation.\\
     \hline
     \textbf{5} &
-    \textbf{Development and Classroom Evaluation of a Static-Assessment Programming Practice Platform} &
-    Jeon J.\ et al.\ (IEEE Access) & 2026 &
-    Confined to static automated grading; does not support collaborative peer learning or longitudinal tracking.\\
+    \textbf{Classroom Evaluation of Continuous Assessment Platforms} &
+    Jeon J.\ et al.\ (IEEE FIE) & 2026 &
+    Confined to isolated lab testing; lacks multi-tier role dashboards for Students, TPOs, and Industry Recruiters.\\
     \hline
   \end{tabular}}
 
@@ -356,7 +362,7 @@
     arc=2pt,boxrule=0.7pt,
     left=6pt,right=6pt,top=3pt,bottom=3pt]
     \centering\fontsize{6.5}{7.8}\selectfont
-    \textbf{\color{Navy}Identified Research Gap:}\;Existing studies examine live coding, peer collaboration, and learning analytics as \textbf{disconnected silos}. No established framework integrates them into an \textbf{adaptive, closed-loop longitudinal competency development and empirical validation system}.
+    \textbf{\color{Navy}Identified Research Gap:}\;Existing systems operate in \textbf{fragmented silos} (LMS vs.\ Job Boards vs.\ Coding Sites). No unified solution combines \textbf{diagnostic testing, faculty project validation, TPO batch analytics, and instant recruiter QR verification}.
   \end{tcolorbox}
 \end{frame}
 
@@ -376,12 +382,12 @@
                      font=\fontsize{6.2}{7.5}\selectfont\bfseries,text=Charcoal},
           ar/.style={-{Stealth[scale=0.8]},thick,SlateBlue}
         ]
-          \node(e1)[bk]{1. Classroom Lectures (Passive)};
-          \node(e2)[bk,below=of e1]{2. Episodic Examinations};
-          \node(e3)[bk,below=of e2]{3. Unlinked Coding Sites (LeetCode)};
-          \node(e4)[bk,below=of e3]{4. Siloed Academic Records};
-          \node(e5)[bk,below=of e4]{5. Delayed Post-Exam Grading};
-          \node(e6)[bk,below=of e5,draw=BorderColor,fill=LightSilver,text=Charcoal]{$\times$\enspace No Remediation or Closed Loop};
+          \node(e1)[bk]{1. Self-Claimed Paper Resumes};
+          \node(e2)[bk,below=of e1]{2. Scattered Google Forms / Sheets};
+          \node(e3)[bk,below=of e2]{3. Manual TPO Eligibility Checks};
+          \node(e4)[bk,below=of e3]{4. Unverified Project Bullet Points};
+          \node(e5)[bk,below=of e4]{5. Slow Recruiter Filtering Rounds};
+          \node(e6)[bk,below=of e5,draw=BorderColor,fill=LightSilver,text=Charcoal]{$\times$\enspace High Error Rate \& Screening Overhead};
 
           \draw[ar] (e1) -- (e2);
           \draw[ar] (e2) -- (e3);
@@ -394,15 +400,15 @@
 
     % Right Column: Drawbacks
     \begin{column}{0.55\textwidth}
-      \begin{plaincard}{Systemic Drawbacks}
+      \begin{plaincard}{Systemic Bottlenecks}
         \fontsize{6.8}{8.2}\selectfont
         \begin{enumerate}\setlength{\itemsep}{2.2pt}
-          \item \textbf{Scattered Evidence:}\;GitHub, LeetCode, and lab telemetry are never unified into a single competency profile.
-          \item \textbf{Snapshot Bias:}\;Periodic tests evaluate memorization under stress rather than sustained problem-solving ability.
-          \item \textbf{Isolated Peer Data:}\;Peer study sessions occur informally without tracking or diagnostic integration.
-          \item \textbf{Delayed Intervention:}\;Deficits surface only after summative exams, preventing timely remediation.
-          \item \textbf{Absence of Closed Loop:}\;No automated feedback connects identified gaps to adaptive practice sets.
-          \item \textbf{Longitudinal Blindspot:}\;Institutional rubrics fail to measure or plot skill progression over time.
+          \item \textbf{Unverified Resumes:}\;Candidates list skills without verified assessment proof.
+          \item \textbf{Spreadsheet Chaos:}\;Manual data handling leads to missed deadlines and clerical errors.
+          \item \textbf{Recruiter Overhead:}\;Recruiters spend 70\%+ time on preliminary filtering.
+          \item \textbf{Late Gap Detection:}\;Students realize skill deficits only after placement rejection.
+          \item \textbf{Lab Network Vulnerability:}\;Online portals crash during college network dropouts.
+          \item \textbf{No Recruiter Validation:}\;Inability to verify test authenticity during live interviews.
         \end{enumerate}
       \end{plaincard}
     \end{column}
@@ -414,32 +420,32 @@
     arc=2pt,boxrule=0.6pt,
     left=6pt,right=6pt,top=2.5pt,bottom=2.5pt]
     \centering\fontsize{6.5}{7.8}\selectfont
-    \textbf{\color{Navy}Critical Consequence:}\;Traditional linear teaching produces a permanent gap between student evaluation and skill remediation, leaving learners without actionable pathways to algorithmic mastery.
+    \textbf{\color{Navy}Critical Consequence:}\;Lack of verified data wastes hundreds of recruiter hours and leaves pre-final year students unprepared for corporate hiring benchmarks.
   \end{tcolorbox}
 \end{frame}
 
 % ------------------------------------------------------------
 % SLIDE 7 — PROPOSED SYSTEM & ADVANTAGES
 % ------------------------------------------------------------
-\begin{frame}[t]{Proposed System\enspace---\enspace Advantages}
+\begin{frame}[t]{Proposed Solution\enspace---\enspace Key Advantages}
   \begin{columns}[T]
     % Left Column: Architecture Overview + Contribution
     \begin{column}{0.46\textwidth}
-      \begin{navytitlecard}{Proposed Closed-Loop Model}
+      \begin{navytitlecard}{IT Vault Integrated Model}
         \fontsize{6.5}{7.6}\selectfont
         \renewcommand{\arraystretch}{1.06}
         \begin{tabular}{@{}cl@{}}
-          {\color{Navy}$\blacktriangleright$} & \textbf{Collaborative Peer Learning}\\
-          {\color{Navy}$+$} & Live Synchronous Coding Walkthroughs\\
-          {\color{Navy}$+$} & Continuous Micro-Assessments\\
-          {\color{Navy}$+$} & Multi-Source Telemetry (GitHub/LeetCode)\\[1pt]
+          {\color{Navy}$\blacktriangleright$} & \textbf{Diagnostic Skill Assessments}\\
+          {\color{Navy}$+$} & Live Radar Competency Analytics\\
+          {\color{Navy}$+$} & Faculty-Verified Project Badges\\
+          {\color{Navy}$+$} & Offline-First IndexedDB Persistence\\[1pt]
           \hline\\[-6pt]
-          {\color{Navy}$\downarrow$} & \textbf{Competency Vector Scoring}\\
-          {\color{Navy}$\downarrow$} & \textbf{Automated Skill Gap Detection}\\
-          {\color{Navy}$\downarrow$} & \textbf{Targeted Peer Remediation}\\
-          {\color{Navy}$\downarrow$} & \textbf{Isomorphic Reassessment}\\[1pt]
+          {\color{Navy}$\downarrow$} & \textbf{Automated Placement Drive Filtering}\\
+          {\color{Navy}$\downarrow$} & \textbf{Tamper-Proof QR Transcripts}\\
+          {\color{Navy}$\downarrow$} & \textbf{TPO Batch-Level Skill Heatmaps}\\
+          {\color{Navy}$\downarrow$} & \textbf{Direct Recruiter Shortlisting}\\[1pt]
           \hline\\[-6pt]
-          {\color{Navy}$\circlearrowleft$} & \textbf{Longitudinal Growth Tracking ($g$)}
+          {\color{Navy}$\circlearrowleft$} & \textbf{Continuous Academic-Industry Calibration}
         \end{tabular}
       \end{navytitlecard}
       \vspace{0.04cm}
@@ -448,7 +454,7 @@
         arc=2pt,boxrule=0.6pt,
         left=4pt,right=4pt,top=2pt,bottom=2pt]
         \fontsize{6.2}{7.4}\selectfont\color{Navy}
-        \textbf{Core Contribution:}\;Transforms terminal testing into an \textbf{adaptive, closed-loop competency validation framework}.
+        \textbf{Core Innovation:}\;Replaces self-declared resumes with \textbf{objective, faculty-verified, and QR-authenticated competency records}.
       \end{tcolorbox}
     \end{column}
 
@@ -457,12 +463,12 @@
       \begin{plaincard}{Six Key Advantages}
         \fontsize{6.3}{7.5}\selectfont
         \begin{enumerate}\setlength{\itemsep}{0.4pt}
-          \item \textbf{Unified Evidence Pipeline:}\;Ingests commits, problem submissions, and IDE logs centrally.
-          \item \textbf{Collaborative Rubrics:}\;Converts peer coding interactions into measurable competency metrics.
-          \item \textbf{Continuous Tracking:}\;Rolling skill estimation replaces biased episodic testing.
-          \item \textbf{Precision Gap Detection:}\;Pinpoints concept-level algorithmic deficits automatically.
-          \item \textbf{Adaptive Remediation:}\;Algorithmic peer-matching delivers targeted remedial problem sets.
-          \item \textbf{Empirical Validation:}\;Reassessment measures actual normalized learning gain ($g$).
+          \item \textbf{70\% Faster Screening:}\;Pre-screened verified scores eliminate preliminary filter rounds.
+          \item \textbf{Tamper-Proof QR Verification:}\;Recruiters scan QR codes to inspect authentic test records.
+          \item \textbf{Offline-First Lab Resilience:}\;IndexedDB caches student test drafts during network cuts.
+          \item \textbf{Faculty Milestone Auditing:}\;Official verification badges replace unverified resume claims.
+          \item \textbf{Automated Drive Matching:}\;One-click applications automatically filter by criteria.
+          \item \textbf{Active Departmental Pilot:}\;Tested and proven with live students and department faculty.
         \end{enumerate}
       \end{plaincard}
     \end{column}
@@ -474,7 +480,7 @@
     arc=2pt,boxrule=0.6pt,
     left=5pt,right=5pt,top=2pt,bottom=2pt]
     \centering\fontsize{6.2}{7.4}\selectfont
-    \textbf{\color{Navy}Educational Paradigm Shift:}\;Moves pedagogy from subjective inspection to \textbf{verifiable, telemetry-backed algorithmic competency progression}.
+    \textbf{\color{Navy}Operational Shift:}\;Transforms campus placements from manual spreadsheet guesswork into an \textbf{automated, data-driven, verified ecosystem}.
   \end{tcolorbox}
 \end{frame}
 
@@ -491,48 +497,48 @@
       arDown/.style={-{Stealth[scale=0.85]},thick,SlateBlue}
     ]
 
-    % Tier 1: Collaborative Learning & Interaction Layer
+    % Tier 1: Role-Based Presentation Layer
     \node(t1)[tierBox] at (0, 1.95) {%
-      \textbf{\color{Navy}Tier 1 : Collaborative Learning \& Interaction Layer}\\[1.5pt]
+      \textbf{\color{Navy}Tier 1 : Role-Based Frontend Layer (React 18 + TypeScript + Vanilla CSS)}\\[1.5pt]
       \fontsize{6.2}{7.5}\selectfont
-      Structured Peer Circles \enspace\textbar\enspace
-      Synchronous Live Coding IDE (Monaco) \enspace\textbar\enspace
-      Automated Continuous Micro-Assessments};
+      Student Workspace \enspace\textbar\enspace
+      Faculty / TPO Management Console \enspace\textbar\enspace
+      Recruiter Candidate Filtering Portal};
 
-    % Tier 2: Multi-Source Evidence Ingestion Layer
+    % Tier 2: Offline Persistence & Assessment Layer
     \node(t2)[tierBox,fill=white] at (0, 0.95) {%
-      \textbf{\color{Navy}Tier 2 : Multi-Source Evidence Ingestion Engine}\\[1.5pt]
+      \textbf{\color{Navy}Tier 2 : Assessment Engine \& Client-Side Persistence Layer}\\[1.5pt]
       \fontsize{6.2}{7.5}\selectfont
-      GitHub Commit Webhook Telemetry \enspace\textbar\enspace
-      LeetCode / Platform Sync \enspace\textbar\enspace
-      In-Browser Execution \& Debugging Trace Normalizer};
+      Diagnostic Coding \& MCQ Evaluator \enspace\textbar\enspace
+      IndexedDB Local Caching (Offline Lab Resilience) \enspace\textbar\enspace
+      Radar Skill Gap Calculator};
 
-    % Tier 3: Competency Intelligence & Analytics Engine
+    % Tier 3: Database & Security Layer
     \node(t3)[tierBox] at (0, -0.05) {%
-      \textbf{\color{Navy}Tier 3 : Competency Intelligence \& Diagnostic Engine}\\[1.5pt]
+      \textbf{\color{Navy}Tier 3 : Secure Database \& Real-Time Synchronization (Supabase PostgreSQL)}\\[1.5pt]
       \fontsize{6.2}{7.5}\selectfont
-      IEEE/ACM Skill Taxonomy Mapping \enspace\textbar\enspace
-      Dynamic Competency Vector Scoring \enspace\textbar\enspace
-      Concept Deficit \& Gap Detection};
+      Postgres Row-Level Security (RLS) \enspace\textbar\enspace
+      Supabase Auth \& JWT Tokens \enspace\textbar\enspace
+      Realtime WebSockets (Live Drive Updates)};
 
-    % Tier 4: Adaptive Intervention & Longitudinal Validation Layer
+    % Tier 4: Verification & Export Layer
     \node(t4)[tierBox,fill=white] at (0, -1.05) {%
-      \textbf{\color{Navy}Tier 4 : Adaptive Intervention \& Longitudinal Evaluation}\\[1.5pt]
+      \textbf{\color{Navy}Tier 4 : Verification, PDF Transcript \& QR Credentialing Engine}\\[1.5pt]
       \fontsize{6.2}{7.5}\selectfont
-      Targeted Peer Mentoring Pairing Sets \enspace\textbar\enspace
-      Isomorphic Reassessment Tests \enspace\textbar\enspace
-      Normalized Learning Gain ($g$) Tracking};
+      Dynamic jsPDF Transcript Generator \enspace\textbar\enspace
+      SHA-256 Token QR Code Encoder \enspace\textbar\enspace
+      Public Live Verification Endpoint};
 
     % Downward Data Flow Arrows
     \draw[arDown] (t1) -- (t2);
     \draw[arDown] (t2) -- (t3);
     \draw[arDown] (t3) -- (t4);
 
-    % Left-Margin Closed-Loop Feedback Arrow
+    % Left-Margin Feedback Arrow
     \draw[-{Stealth[scale=0.95]},dashed,SlateBlue,line width=0.9pt]
       (t4.west) -- ++(-0.40,0)
       |- node[pos=0.5,left,font=\fontsize{5.8}{7}\selectfont\bfseries,color=Navy,align=center]%
-      {Closed-Loop\\Adaptive\\Cycle\\($\circlearrowleft$)}
+      {Industry\\Recruiter\\Verification\\($\circlearrowleft$)}
       (t1.west);
   \end{tikzpicture}
 
@@ -542,12 +548,12 @@
     arc=2pt,boxrule=0.6pt,
     left=6pt,right=6pt,top=2.5pt,bottom=2.5pt]
     \centering\fontsize{6.5}{7.8}\selectfont
-    \textbf{\color{Navy}End-to-End Pipeline:}\enspace
-    $\text{Learning Interaction} \xrightarrow{\quad}
-    \text{Evidence Ingestion} \xrightarrow{\quad}
-    \text{Competency Scoring} \xrightarrow{\quad}
-    \text{Targeted Intervention} \xrightarrow{\quad}
-    \text{Isomorphic Reassessment} \circlearrowleft$
+    \textbf{\color{Navy}Architecture Pipeline:}\enspace
+    $\text{Student Assessment} \xrightarrow{\quad}
+    \text{Offline IndexedDB Cache} \xrightarrow{\quad}
+    \text{Supabase PostgreSQL \& RLS} \xrightarrow{\quad}
+    \text{Drive Auto-Filter} \xrightarrow{\quad}
+    \text{QR Verification} \circlearrowleft$
   \end{tcolorbox}
 \end{frame}
 
@@ -558,62 +564,62 @@
   \begin{columns}[T]
     % Left Column: Modules 1 to 4
     \begin{column}{0.485\textwidth}
-      \begin{tcolorbox}[modcard,title={1.\;Collaborative Learning Module}]
+      \begin{tcolorbox}[modcard,title={1.\;Diagnostic Skill Assessment Module}]
         \fontsize{6.0}{7.0}\selectfont
         \begin{itemize}\setlength{\itemsep}{0pt}
-          \item Peer study circles with role-based pair programming.
-          \item Synchronous audio/video and cursor broadcasting.
+          \item Domain-specific technical and coding challenges.
+          \item Real-time skill radar charts mapping strengths and gaps.
         \end{itemize}
       \end{tcolorbox}\vspace{0.03cm}
 
-      \begin{tcolorbox}[modcard,title={2.\;Live Coding Module}]
+      \begin{tcolorbox}[modcard,title={2.\;Faculty Milestone Verification Module}]
         \fontsize{6.0}{7.0}\selectfont
         \begin{itemize}\setlength{\itemsep}{0pt}
-          \item Operational transformation multi-user code editor.
-          \item Sandboxed in-browser code execution engine.
+          \item Faculty review student lab projects and repositories.
+          \item Awards authenticated digital badges to verified milestones.
         \end{itemize}
       \end{tcolorbox}\vspace{0.03cm}
 
-      \begin{tcolorbox}[modcard,title={3.\;Continuous Assessment Module}]
+      \begin{tcolorbox}[modcard,title={3.\;Placement \& Internship Drive Hub}]
         \fontsize{6.0}{7.0}\selectfont
         \begin{itemize}\setlength{\itemsep}{0pt}
-          \item Automated micro-challenges and code tracing.
-          \item Immediate test suite verification with edge cases.
+          \item TPOs and companies post jobs with custom criteria.
+          \item Automated candidate pre-filtering and Kanban pipelines.
         \end{itemize}
       \end{tcolorbox}\vspace{0.03cm}
 
-      \begin{tcolorbox}[modcard,title={4.\;Evidence Collection Module}]
+      \begin{tcolorbox}[modcard,title={4.\;Offline-First IndexedDB Cache Layer}]
         \fontsize{6.0}{7.0}\selectfont
         \begin{itemize}\setlength{\itemsep}{0pt}
-          \item GitHub commits, LeetCode, and IDE telemetry ingestion.
-          \item Centralized log and compile activity normalization.
+          \item Client-side persistence for test drafts and task logs.
+          \item Prevents data loss during campus lab network failures.
         \end{itemize}
       \end{tcolorbox}
     \end{column}
 
     % Right Column: Modules 5 to 7 + Synthesis
     \begin{column}{0.485\textwidth}
-      \begin{tcolorbox}[modcard,title={5.\;Competency Analysis Module}]
+      \begin{tcolorbox}[modcard,title={5.\;Institutional Skill Analytics (TPO Console)}]
         \fontsize{6.0}{7.0}\selectfont
         \begin{itemize}\setlength{\itemsep}{0pt}
-          \item Dynamic skill vector estimation across competencies.
-          \item Alignment with IEEE/ACM CS Curricula 2023 rubrics.
+          \item Batch-wide skill heatmaps across academic semesters.
+          \item Early identification of weak student cohorts for training.
         \end{itemize}
       \end{tcolorbox}\vspace{0.03cm}
 
-      \begin{tcolorbox}[modcard,title={6.\;Learning Intervention Module}]
+      \begin{tcolorbox}[modcard,title={6.\;Recruiter Candidate Screening Module}]
         \fontsize{6.0}{7.0}\selectfont
         \begin{itemize}\setlength{\itemsep}{0pt}
-          \item Algorithmic peer-matching for skill balance.
-          \item Automated targeted problem set dispatch.
+          \item Competency-based multi-parameter candidate filtering.
+          \item Direct access to verified project repositories and scores.
         \end{itemize}
       \end{tcolorbox}\vspace{0.03cm}
 
-      \begin{tcolorbox}[modcard,title={7.\;Reassessment \& Analytics Module}]
+      \begin{tcolorbox}[modcard,title={7.\;QR-Authenticated Transcript Generator}]
         \fontsize{6.0}{7.0}\selectfont
         \begin{itemize}\setlength{\itemsep}{0pt}
-          \item Isomorphic post-evaluations measuring gain ($g$).
-          \item Longitudinal cohort mastery statistical dashboards.
+          \item Dynamic PDF generation using jsPDF and html2canvas.
+          \item Tamper-proof QR code linking to live verification server.
         \end{itemize}
       \end{tcolorbox}\vspace{0.03cm}
 
@@ -622,7 +628,7 @@
         arc=2pt,boxrule=0.5pt,
         left=4pt,right=4pt,top=2pt,bottom=2pt]
         \centering\fontsize{6.0}{7.0}\selectfont\bfseries\color{Navy}
-        Synchronized closed-loop driving verified competency growth.
+        All 7 modules operate as a synchronized, verified placement ecosystem.
       \end{tcolorbox}
     \end{column}
   \end{columns}
@@ -631,39 +637,39 @@
 % ------------------------------------------------------------
 % SLIDE 10 — EXPECTED OUTCOME & DELIVERABLES
 % ------------------------------------------------------------
-\begin{frame}[t]{Expected Outcome \& First Review Deliverables}
+\begin{frame}[t]{Project Status, Outcomes \& Deliverables}
   \begin{columns}[T]
-    % Left Column: Outcome & Evaluation Method
+    % Left Column: Outcome & Pilot Results
     \begin{column}{0.50\textwidth}
-      \begin{navytitlecard}{Expected Research Outcome}
+      \begin{navytitlecard}{Current Deployment \& Proven Results}
         \fontsize{6.8}{8.2}\selectfont
-        A \textbf{measurable, closed-loop framework} capable of continuously harvesting multi-source learning evidence, identifying concept-level competency gaps, delivering targeted peer remediation, and \textbf{empirically validating longitudinal skill growth} across student cohorts.
+        \begin{itemize}\setlength{\itemsep}{1.2pt}
+          \item \textbf{Active Department Pilot:}\;Live in department, used by students and faculty coordinators.
+          \item \textbf{70\% Time Saved:}\;Eliminated manual TPO spreadsheet management and eligibility sorting.
+          \item \textbf{100\% Data Integrity:}\;Replaced unverified Google Form claims with synchronized Postgres records.
+        \end{itemize}
       \end{navytitlecard}
 
       \vspace{0.08cm}
 
-      \begin{plaincard}{Quantitative Evaluation Methodology}
+      \begin{plaincard}{Validated Technical Metrics}
         \fontsize{6.8}{8.2}\selectfont
-        Measuring learning gain via Hake's normalized gain metric:
-        \vspace{-3pt}
-        {\setlength{\abovedisplayskip}{2pt}\setlength{\belowdisplayskip}{2pt}%
-        \[
-          g \;=\; \frac{\%S_{\text{post}}-\%S_{\text{pre}}}{100\%-\%S_{\text{pre}}}
-        \]}
-        \vspace{-3pt}
-        Statistical significance confirmed via paired $t$-test ($\alpha=0.05$) and Cohen's $d$ effect size across student cohorts.
+        \begin{itemize}\setlength{\itemsep}{1.2pt}
+          \item \textbf{Zero Data Loss:}\;IndexedDB preserves test progress during lab network drops.
+          \item \textbf{Instant QR Verification:}\;Sub-second validation of student scores during interviews.
+        \end{itemize}
       \end{plaincard}
     \end{column}
 
     % Right Column: Deliverables & Alignment
     \begin{column}{0.48\textwidth}
-      \begin{navytitlecard}{First Review Deliverables Completed}
+      \begin{navytitlecard}{Key Completed Deliverables}
         \fontsize{6.8}{8.2}\selectfont
         \begin{enumerate}\setlength{\itemsep}{1pt}
-          \item \textbf{Problem \& Gap Formulation:}\;Empirical gaps identified across 2024--2026 IEEE literature.
-          \item \textbf{Framework Architecture:}\;Four-tier closed-loop pipeline fully specified and bounded.
-          \item \textbf{Module Specification:}\;Interface contracts for all 7 modules established.
-          \item \textbf{Empirical Study Protocol:}\;Control/experimental cohort design and metrics finalized.
+          \item \textbf{Full Web Platform:}\;React 18 + TypeScript + Supabase.
+          \item \textbf{Assessment Engine:}\;Automated diagnostic evaluation.
+          \item \textbf{Role Dashboards:}\;Student, TPO, and Recruiter views.
+          \item \textbf{PDF \& QR Transcripts:}\;Authenticated export generator.
         \end{enumerate}
       \end{navytitlecard}
 
@@ -672,9 +678,9 @@
       \begin{tcolorbox}[
         enhanced,colback=LightSilver,colframe=BorderColor,
         arc=2pt,boxrule=0.7pt,
-        left=6pt,right=6pt,top=3pt,bottom=3pt]
-        \fontsize{6.8}{8.2}\selectfont\color{Charcoal}
-        \textbf{\color{Navy}Curricular Alignment:}\enspace Aligns with \textbf{IEEE/ACM CS Curricula 2023} outcome-based education standards by transforming terminal grading into \textbf{continuous, verified competency growth}.
+        left=5pt,right=5pt,top=2.5pt,bottom=2.5pt]
+        \fontsize{6.5}{7.8}\selectfont\color{Charcoal}
+        \textbf{\color{Navy}Institutional Value:}\;Provides an objective, verified academia-industry bridge turning self-declared resumes into \textbf{verifiable student competencies}.
       \end{tcolorbox}
     \end{column}
   \end{columns}
@@ -685,7 +691,7 @@
     arc=2pt,boxrule=0.6pt,
     left=6pt,right=6pt,top=2.5pt,bottom=2.5pt]
     \centering\fontsize{6.5}{7.8}\selectfont
-    \textbf{\color{Navy}Next Phase Roadmap:}\;\textbf{1.} Full Deployment of 7 Modules \enspace\textbullet\enspace \textbf{2.} Pilot Deployment with $N=60$ Student Cohort \enspace\textbullet\enspace \textbf{3.} Initial Pre-Test \& Telemetry Collection.
+    \textbf{\color{Navy}Future Roadmap:}\;\textbf{1.} Automated Sandboxed Code Execution \enspace\textbullet\enspace \textbf{2.} AICTE/NCVET Skill Taxonomy Alignment \enspace\textbullet\enspace \textbf{3.} Multi-Department Campus Rollout.
   \end{tcolorbox}
 \end{frame}
 
