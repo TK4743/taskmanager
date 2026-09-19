@@ -9247,15 +9247,15 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex items-center gap-1 bg-zinc-200/60 p-1 rounded-full border border-zinc-200">
+            <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/80 dark:border-zinc-700/80 shadow-inner">
               <button
                 type="button"
                 onClick={() => setAnalyzerGenderFilter('ALL')}
                 className={cn(
                   "px-3.5 py-1 rounded-full text-xs font-bold transition-all",
                   analyzerGenderFilter === 'ALL'
-                    ? "bg-black text-white shadow-sm"
-                    : "text-zinc-600 hover:text-black hover:bg-zinc-100"
+                    ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60"
                 )}
               >
                 All ({enriched.length})
@@ -9266,8 +9266,8 @@ export default function App() {
                 className={cn(
                   "px-3.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1",
                   analyzerGenderFilter === 'BOYS'
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-blue-700 hover:bg-blue-50"
+                    ? "bg-blue-600 dark:bg-sky-500 text-white shadow-sm"
+                    : "text-blue-600 dark:text-sky-400 hover:bg-blue-50 dark:hover:bg-sky-950/40"
                 )}
               >
                 Boys ({boysEnriched.length})
@@ -9278,8 +9278,8 @@ export default function App() {
                 className={cn(
                   "px-3.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1",
                   analyzerGenderFilter === 'GIRLS'
-                    ? "bg-pink-600 text-white shadow-sm"
-                    : "text-pink-700 hover:bg-pink-50"
+                    ? "bg-pink-600 dark:bg-rose-500 text-white shadow-sm"
+                    : "text-pink-600 dark:text-rose-400 hover:bg-pink-50 dark:hover:bg-rose-950/40"
                 )}
               >
                 Girls ({girlsEnriched.length})
