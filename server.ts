@@ -8997,6 +8997,10 @@ async function startServer() {
     } catch (e) {}
 
     const summaryRes = await sendGroupSummary(undefined, prevDayStr, { force: isForced }).catch(err => ({ success: false, message: err.message }));
+    if ((!summaryRes || !summaryRes.success) && !isForced) {
+      await releaseDailySlot('telegram_last_group_summary_morning_date', todayStr);
+    }
+
     const deadlineAlertRes = await sendGroupDeadlineAlert().catch(err => ({ success: false, message: err.message }));
 
     return res.json({
@@ -9071,6 +9075,9 @@ async function startServer() {
     } catch (e) {}
 
     const summaryRes = await sendGroupSummary(undefined, undefined, { force: isForced }).catch(err => ({ success: false, message: err.message }));
+    if ((!summaryRes || !summaryRes.success) && !isForced) {
+      await releaseDailySlot('telegram_last_group_summary_evening_date', todayStr);
+    }
 
     return res.json({
       success: true,
