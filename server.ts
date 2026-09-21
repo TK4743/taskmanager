@@ -573,6 +573,16 @@ async function startServer() {
     }
   }
 
+  async function releaseDailySlot(key: string, todayStr: string): Promise<void> {
+    try {
+      await pool.query(`
+        DELETE FROM system_settings WHERE key = $1 AND value = $2
+      `, [key, todayStr]);
+    } catch (err) {
+      console.error(`[Scheduler Lock Release Error] ${key}:`, err);
+    }
+  }
+
   function getISTTimeParts(d = new Date()) {
     const formatter = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Kolkata',
@@ -603,11 +613,11 @@ async function startServer() {
       const { todayStr, prevDayStr, hours, minutes } = getISTTimeParts();
 
       // 1. Morning Pre-Sync Window (7:50 AM IST onwards) -> Pre-Sync Previous Day LeetCode & GitHub Progress
-      if ((hours === 7 && minutes >= 50) || (hours >= 8 && hours < 14)) {
+      if (hours >= 7 && hours < 20) {
         const claimed = await claimDailySlot('morning_pre_sync_date', todayStr);
         if (claimed) {
           triggered.push('morning_pre_sync');
-          console.log(`[Scheduler] 🔄 7:50 AM IST Pre-Syncing Previous Day Tasks, LeetCode & GitHub (${prevDayStr})...`);
+          console.log(`[Scheduler] 🔄 Pre-Syncing Previous Day Tasks, LeetCode & GitHub (${prevDayStr})...`);
           try {
             await syncLeetcodeProgressForScope({ date: prevDayStr } as any);
             if (process.env.GITHUB_TOKEN) {
@@ -628,39 +638,43 @@ async function startServer() {
         }
       }
 
-      // 2. Morning Group Summary Window (8:00 AM to 8:45 AM IST) -> Send Morning Group Summary & 24h Deadline Alerts
-      if (hours === 8 && minutes < 45) {
+      // 2. Morning Group Summary Window (8:00 AM IST onwards) -> Send Morning Group Summary & 24h Deadline Alerts
+      if (hours >= 8 && hours < 20) {
         const claimed = await claimDailySlot('telegram_last_group_summary_morning_date', todayStr);
         if (claimed) {
-          triggered.push('morning_summary');
-          console.log(`[Scheduler] 📊 Triggering 8:00 AM IST Morning Group Summary (${prevDayStr})...`);
+          console.log(`[Scheduler] 📊 Triggering Morning Group Summary (${prevDayStr})...`);
 
-          await sendGroupSummary(undefined, prevDayStr).catch(err => {
+          const summaryRes = await sendGroupSummary(undefined, prevDayStr).catch(err => {
             console.error('[Morning Summary Error]:', err);
             return { success: false, message: err?.message || 'Error' };
           });
 
-          await sendGroupDeadlineAlert().catch(err => console.error('[Morning Deadline Alert Error]:', err));
-          // Once claimed for today, the lock is permanent for today. Never delete lock to prevent repeat loops.
+          if (summaryRes && summaryRes.success) {
+            triggered.push('morning_summary');
+            await sendGroupDeadlineAlert().catch(err => console.error('[Morning Deadline Alert Error]:', err));
+          } else {
+            console.warn(`[Morning Summary Warning] Delivery failed: ${summaryRes?.message || 'Unknown'}. Releasing slot lock to allow retry.`);
+            await releaseDailySlot('telegram_last_group_summary_morning_date', todayStr);
+          }
         }
       }
 
-      // 3. Evening Reminders Window (8:00 PM to 8:45 PM IST / 20:00 - 20:45) -> Student 1-to-1 Pending Reminders
-      if (hours === 20 && minutes < 45) {
+      // 3. Evening Reminders Window (8:00 PM IST onwards / 20:00+) -> Student 1-to-1 Pending Reminders
+      if (hours >= 20) {
         const claimed = await claimDailySlot('telegram_last_reminders_date', todayStr);
         if (claimed) {
           triggered.push('evening_reminders');
-          console.log(`[Scheduler] 📢 Triggering 8:00 PM IST Evening Student Deadline Reminders for ${todayStr}...`);
+          console.log(`[Scheduler] 📢 Triggering Evening Student Deadline Reminders for ${todayStr}...`);
           await triggerPendingTaskReminders().catch(err => console.error('[Evening Reminders Error]:', err));
         }
       }
 
-      // 4. Evening Pre-Sync Window (8:45 PM to 9:00 PM IST / 20:45 - 20:59) -> Pre-Sync Today's LeetCode & GitHub Progress
-      if (hours === 20 && minutes >= 45) {
+      // 4. Evening Pre-Sync Window (8:45 PM IST onwards / 20:45+) -> Pre-Sync Today's LeetCode & GitHub Progress
+      if ((hours === 20 && minutes >= 45) || hours >= 21) {
         const claimed = await claimDailySlot('evening_pre_sync_date', todayStr);
         if (claimed) {
           triggered.push('evening_pre_sync');
-          console.log(`[Scheduler] 🔄 8:45 PM IST Pre-Syncing Today's Data (${todayStr})...`);
+          console.log(`[Scheduler] 🔄 Pre-Syncing Today's Data (${todayStr})...`);
           try {
             await syncLeetcodeProgressForScope({ date: todayStr } as any);
             if (process.env.GITHUB_TOKEN) {
@@ -672,22 +686,27 @@ async function startServer() {
         }
       }
 
-      // 5. Evening Group Summary Window (9:00 PM to 9:45 PM IST / 21:00 - 21:45) -> Send Evening Department Progress Summary
-      if (hours === 21 && minutes < 45) {
+      // 5. Evening Group Summary Window (9:00 PM IST onwards / 21:00+) -> Send Evening Department Progress Summary
+      if (hours >= 21) {
         const claimed = await claimDailySlot('telegram_last_group_summary_evening_date', todayStr);
         if (claimed) {
-          triggered.push('evening_summary');
-          console.log(`[Scheduler] 📊 Triggering 9:00 PM IST Evening Group Summary for ${todayStr}...`);
+          console.log(`[Scheduler] 📊 Triggering Evening Group Summary for ${todayStr}...`);
 
-          await sendGroupSummary().catch(err => {
+          const summaryRes = await sendGroupSummary().catch(err => {
             console.error('[Evening Summary Error]:', err);
             return { success: false, message: err?.message || 'Error' };
           });
-          // Once claimed for today, the lock is permanent for today. Never delete lock to prevent repeat loops.
+
+          if (summaryRes && summaryRes.success) {
+            triggered.push('evening_summary');
+          } else {
+            console.warn(`[Evening Summary Warning] Delivery failed: ${summaryRes?.message || 'Unknown'}. Releasing slot lock to allow retry.`);
+            await releaseDailySlot('telegram_last_group_summary_evening_date', todayStr);
+          }
         }
       }
 
-      // 6. Evening/Nightly Final Window (9:30 PM to 11:59 PM IST) -> Final LeetCode & GitHub Sync + CSV GitHub Push
+      // 6. Evening/Nightly Final Window (9:30 PM IST onwards) -> Final LeetCode & GitHub Sync + CSV GitHub Push
       if ((hours === 21 && minutes >= 30) || hours >= 22) {
         const claimed = await claimDailySlot('leetcode_last_daily_csv_push_date', todayStr);
         if (claimed) {
@@ -696,7 +715,7 @@ async function startServer() {
           try {
             await syncLeetcodeProgressForScope().catch(err => console.error('[Nightly Sync LeetCode Error]:', err));
             if (process.env.GITHUB_TOKEN) {
-              await syncGitHubProgressForScope().catch(err => console.error('[Nightly Sync GitHub Error]:', err));
+              await syncGitHubProgressForScope({ date: todayStr });
             }
           } catch (syncErr) {
             console.error('[Nightly Sync Error]:', syncErr);
@@ -1046,7 +1065,7 @@ async function startServer() {
   // 3. Trigger Instant Group Summary Notification
   app.post('/api/telegram/send-group-summary', authenticate, authorize(['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR']), asyncHandler(async (req: any, res: Response) => {
     const { targetChatId } = req.body;
-    const result = await sendGroupSummary(targetChatId);
+    const result = await sendGroupSummary(targetChatId, undefined, { force: true });
     res.json(result);
   }));
 
