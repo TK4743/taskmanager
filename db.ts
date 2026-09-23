@@ -216,6 +216,7 @@ export async function initDB(forceMigration: boolean = false) {
         verification_note TEXT,
         rejection_reason TEXT,
         resubmission_count INT DEFAULT 0,
+        original_filename VARCHAR(500),
         submitted_at TIMESTAMP,
         verified_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -355,6 +356,7 @@ export async function initDB(forceMigration: boolean = false) {
         submitted_by UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
         proof_url VARCHAR(1000),
         cloudinary_public_id VARCHAR(255),
+        original_filename VARCHAR(500),
         remarks TEXT,
         status VARCHAR(50) DEFAULT 'PENDING',
         reviewed_by UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -584,6 +586,8 @@ export async function initDB(forceMigration: boolean = false) {
     `);
     await client.query(`
       ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS not_participating_reason TEXT;
+      ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS original_filename VARCHAR(500);
+      ALTER TABLE team_submissions ADD COLUMN IF NOT EXISTS original_filename VARCHAR(500);
     `);
     await client.query(`
       ALTER TABLE tasks ADD COLUMN IF NOT EXISTS submission_type VARCHAR(50) DEFAULT 'INDIVIDUAL';
