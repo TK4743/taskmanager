@@ -149,6 +149,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
   const [isCapturingPhoto, setIsCapturingPhoto] = useState<boolean>(false);
   const [capturedPhotoUrl, setCapturedPhotoUrl] = useState<string | null>(null);
   const [faceDetectionError, setFaceDetectionError] = useState<string | null>(null);
+  const [isFaceVerified, setIsFaceVerified] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const pipVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -405,6 +406,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
     }
     setIsCapturingPhoto(true);
     setFaceDetectionError(null);
+    setIsFaceVerified(false);
     try {
       const video = videoRef.current;
       const canvas = document.createElement('canvas');
@@ -421,7 +423,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
 
       // ── Face Detection Gate ──────────────────────────────────────────────────
       // Use browser's native FaceDetector API if available (Chrome/Edge)
-      // Falls back gracefully if not supported — still requires camera to be active
+      // If not available, block the test — face must be explicitly confirmed.
       if ('FaceDetector' in window) {
         try {
           const faceDetector = new (window as any).FaceDetector({ fastMode: false, maxDetectedFaces: 1 });
@@ -429,18 +431,28 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
           const faces = await faceDetector.detect(imageBitmap);
           imageBitmap.close();
           if (faces.length === 0) {
+            // No face detected — hard block
             setFaceDetectionError('No face detected in the frame. Please ensure your face is clearly visible, well-lit, and centered in the camera view, then retry.');
             addToast('❌ Face not detected. Position your face clearly in the camera frame.', 'error');
+            setIsFaceVerified(false);
             setIsCapturingPhoto(false);
             return;
           }
+          // Face confirmed by FaceDetector API
+          setIsFaceVerified(true);
         } catch (faceErr) {
-          console.warn('[FaceDetector] Detection skipped (API error):', faceErr);
-          // Non-fatal: proceed if FaceDetector throws (e.g. unsupported model)
+          console.warn('[FaceDetector] Detection API error:', faceErr);
+          // FaceDetector threw an unexpected error — treat as unverified and block
+          setFaceDetectionError('Face detection encountered an error. Please retry capturing your photo.');
+          addToast('❌ Face detection failed. Please retake your photo.', 'error');
+          setIsFaceVerified(false);
+          setIsCapturingPhoto(false);
+          return;
         }
       } else {
-        // Fallback: validate that the video is actually streaming live frames
-        // (not a frozen/black frame) by checking if sufficient pixel variance exists
+        // FaceDetector API is not supported on this browser.
+        // Perform a basic liveness check (non-black frame), but still block the test
+        // because we cannot confirm a face is present without the API.
         const imageData = ctx.getImageData(0, 0, 480, 480);
         const pixels = imageData.data;
         let nonBlackPixels = 0;
@@ -453,9 +465,16 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
         if (activeFraction < 0.15) {
           setFaceDetectionError('Camera appears to be covered or not showing your face. Please uncover your camera, ensure good lighting, and position your face in the frame.');
           addToast('❌ Camera covered or face not visible. Please check your webcam.', 'error');
+          setIsFaceVerified(false);
           setIsCapturingPhoto(false);
           return;
         }
+        // Camera is live but FaceDetector is unavailable — cannot verify face
+        setFaceDetectionError('Automatic face detection is not supported on this browser. Please use Google Chrome or Microsoft Edge to take the proctored assessment.');
+        addToast('❌ Face detection not supported on this browser. Use Chrome or Edge.', 'error');
+        setIsFaceVerified(false);
+        setIsCapturingPhoto(false);
+        return;
       }
       // ── End Face Detection Gate ──────────────────────────────────────────────
 
@@ -868,6 +887,11 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
       addToast('❌ Face verification failed. Please retake your photo with your face clearly visible.', 'error');
       return;
     }
+    // Hard block: face must have been positively detected by the FaceDetector API
+    if (!isFaceVerified) {
+      addToast('❌ Face not verified. Your face must be clearly detected before the test can begin.', 'error');
+      return;
+    }
     setShowStartConfirmModal(false);
     await enterFullscreen();
 
@@ -931,6 +955,8 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
   const handleRetakeTest = async () => {
     stopWebcam();
     setCapturedPhotoUrl(null);
+    setIsFaceVerified(false);
+    setFaceDetectionError(null);
     setTestStarted(false);
     setTestCompleted(false);
     setTestResult(null);
@@ -1410,6 +1436,8 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                       type="button"
                       onClick={() => {
                         setCapturedPhotoUrl(null);
+                        setIsFaceVerified(false);
+                        setFaceDetectionError(null);
                         startWebcam();
                       }}
                       className="absolute bottom-2 right-2 p-2 bg-black/80 hover:bg-black text-white rounded-xl shadow transition"
@@ -1472,6 +1500,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                       onClick={() => {
                         setFaceDetectionError(null);
                         setCapturedPhotoUrl(null);
+                        setIsFaceVerified(false);
                         startWebcam();
                       }}
                       className="mt-2 px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold rounded-lg transition cursor-pointer"
@@ -1520,10 +1549,10 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                 </button>
                 <button
                   type="button"
-                  disabled={!capturedPhotoUrl || !isCameraActive || isMobileDevice || !!faceDetectionError}
+                  disabled={!capturedPhotoUrl || !isCameraActive || isMobileDevice || !!faceDetectionError || !isFaceVerified}
                   onClick={handleStartAssessment}
                   className={`px-6 py-2.5 rounded-xl text-xs font-bold shadow-md transition flex items-center gap-2 ${
-                    capturedPhotoUrl && isCameraActive && !isMobileDevice && !faceDetectionError
+                    capturedPhotoUrl && isCameraActive && !isMobileDevice && !faceDetectionError && isFaceVerified
                       ? 'bg-black hover:bg-zinc-800 text-white cursor-pointer'
                       : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
                   }`}
