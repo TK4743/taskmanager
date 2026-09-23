@@ -268,6 +268,7 @@ interface TeamSubmission {
   submitted_by: string;
   proof_url: string;
   cloudinary_public_id?: string;
+  original_filename?: string;
   remarks?: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   reviewed_by?: string;
@@ -319,6 +320,7 @@ interface Submission {
   custom_field_value?: string;
   status: 'PENDING' | 'SUBMITTED' | 'VERIFIED' | 'REJECTED' | 'NOT_PARTICIPATING';
   screenshot_url: string;
+  original_filename?: string;
   verification_note?: string;
   rejection_reason?: string;
   submitted_at: string;
@@ -6211,7 +6213,8 @@ export default function App() {
       const formData = new FormData();
       formData.append('teamId', currentTaskTeam.id);
       formData.append('remarks', teamRemarks);
-      formData.append('screenshot', teamProofFile);
+      formData.append('screenshot', teamProofFile, teamProofFile.name);
+      formData.append('original_filename', teamProofFile.name);
 
       const res = await fetch(`${API_URL}/api/team/submit`, {
         method: 'POST',
@@ -6492,6 +6495,7 @@ export default function App() {
       const formData = new FormData();
       formData.append('task_id', taskId.toString());
       formData.append('screenshot', fileToUpload, fileForTask.name);
+      formData.append('original_filename', fileForTask.name);
       formData.append('custom_field_value', customFieldValue);
 
       const res = await fetch(`${API_URL}/api/submissions`, {
@@ -8066,6 +8070,7 @@ export default function App() {
 
         pdfItems.push({
           url: s.screenshot_url,
+          originalFileName: s.original_filename,
           studentName: s.student_name || std?.full_name || 'Student',
           registerNumber: s.register_number || std?.register_number || 'N/A',
           className: s.class_name || sClass?.name || 'Class',
@@ -8149,6 +8154,7 @@ export default function App() {
 
             pdfItems.push({
               url: sub.screenshot_url,
+              originalFileName: sub.original_filename,
               studentName: student.full_name || 'Student',
               registerNumber: student.register_number || 'N/A',
               className: student.class_name || studentClass?.name || 'Class',
@@ -8189,6 +8195,7 @@ export default function App() {
 
           pdfItems.push({
             url: sub.screenshot_url,
+            originalFileName: sub.original_filename,
             studentName: sub.student_name || 'Student',
             registerNumber: sub.register_number || 'N/A',
             className: sub.class_name || studentClass?.name || 'Class',
@@ -12142,21 +12149,39 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    {inspectingSubmission.original_filename ? (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-800/90 border border-zinc-700/80 rounded-lg text-zinc-200 text-xs font-mono max-w-[200px] sm:max-w-[320px] truncate" title={`Original Uploaded File: ${inspectingSubmission.original_filename}`}>
+                        <FileText size={13} className="text-indigo-400 shrink-0" />
+                        <span className="truncate">{inspectingSubmission.original_filename}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(inspectingSubmission.original_filename!);
+                            setInspectingCopied('toolbar_filename');
+                            setTimeout(() => setInspectingCopied(null), 2000);
+                          }}
+                          className="text-zinc-400 hover:text-white p-0.5 rounded transition-colors ml-0.5 shrink-0"
+                          title="Copy original filename"
+                        >
+                          {inspectingCopied === 'toolbar_filename' ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                        </button>
+                      </div>
+                    ) : null}
                     <a
                       href={inspectingSubmission.screenshot_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg transition-colors"
+                      className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg transition-colors shrink-0"
                       title="Open original proof in full browser tab"
                     >
                       <ExternalLink size={13} /> Open Original
                     </a>
                     <a
                       href={inspectingSubmission.screenshot_url}
-                      download={`Proof_${inspectingSubmission.register_number || 'Student'}_${inspectingSubmission.task_title}`}
-                      className="p-1.5 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg transition-colors"
-                      title="Download Proof File"
+                      download={inspectingSubmission.original_filename || `Proof_${inspectingSubmission.register_number || 'Student'}_${inspectingSubmission.task_title}`}
+                      className="p-1.5 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg transition-colors shrink-0"
+                      title={`Download Proof File (${inspectingSubmission.original_filename || 'original'})`}
                     >
                       <Download size={16} />
                     </a>
@@ -12365,6 +12390,59 @@ export default function App() {
                     <p className="text-xs text-zinc-400 italic">No custom field data provided.</p>
                   )}
                 </div>
+
+                {/* Uploaded Proof File Info */}
+                {hasProof && (
+                  <div className="p-3.5 bg-zinc-50/90 rounded-2xl border border-zinc-200/80 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-600 flex items-center gap-1.5">
+                        <FileText size={13} className="text-indigo-600" /> Original File Name
+                      </span>
+                      {inspectingSubmission.original_filename && (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(inspectingSubmission.original_filename!);
+                            setInspectingCopied('right_filename');
+                            setTimeout(() => setInspectingCopied(null), 2000);
+                          }}
+                          className="text-xs text-zinc-500 hover:text-black flex items-center gap-1 font-semibold"
+                          title="Copy original file name"
+                        >
+                          {inspectingCopied === 'right_filename' ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                          <span>{inspectingCopied === 'right_filename' ? 'Copied' : 'Copy'}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between p-2.5 bg-white border border-zinc-200 rounded-xl">
+                      <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                        <span className="p-2 bg-indigo-50 text-indigo-700 rounded-lg shrink-0">
+                          {isPdf ? <FileText size={18} /> : <ImageIcon size={18} />}
+                        </span>
+                        <div className="min-w-0">
+                          <span className="font-mono text-xs font-bold text-zinc-900 block truncate" title={inspectingSubmission.original_filename || (isPdf ? 'PDF Proof' : 'Proof Image')}>
+                            {inspectingSubmission.original_filename || (isPdf ? 'Proof_Document.pdf' : 'Proof_Screenshot.png')}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">
+                            {isPdf ? 'PDF Document' : 'Proof Image'}
+                          </span>
+                        </div>
+                      </div>
+                      {inspectingSubmission.screenshot_url && !isPurged && (
+                        <a
+                          href={inspectingSubmission.screenshot_url}
+                          download={inspectingSubmission.original_filename || `Proof_${inspectingSubmission.register_number || 'Student'}_${inspectingSubmission.task_title}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-zinc-500 hover:text-indigo-600 hover:bg-zinc-50 rounded-lg transition-colors shrink-0"
+                          title="Download / Open Proof"
+                        >
+                          <Download size={16} />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Existing verification note or rejection reason */}
                 {inspectingSubmission.verification_note && (
@@ -15641,10 +15719,34 @@ export default function App() {
                                     </div>
                                   )}
 
-                                  {/* Proof Image */}
+                                  {/* Proof Image & Original File Name */}
                                   {sub.proof_url && (
-                                    <div className="rounded-xl overflow-hidden bg-zinc-900 border border-zinc-200 max-h-48 flex items-center justify-center cursor-pointer" onClick={() => window.open(sub.proof_url, '_blank')}>
-                                      <img src={sub.proof_url} alt="Team Proof" className="max-h-48 object-contain" />
+                                    <div className="space-y-1.5">
+                                      <div className="rounded-xl overflow-hidden bg-zinc-900 border border-zinc-200 max-h-48 flex items-center justify-center cursor-pointer relative group/img" onClick={() => window.open(sub.proof_url, '_blank')} title="Click to open original proof">
+                                        <img src={sub.proof_url} alt="Team Proof" className="max-h-48 object-contain group-hover/img:scale-105 transition-transform" />
+                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
+                                          <Eye size={14} /> Open Original Proof
+                                        </div>
+                                      </div>
+                                      {sub.original_filename && (
+                                        <div className="flex items-center justify-between px-2.5 py-1 bg-zinc-50 border border-zinc-200 rounded-lg text-xs">
+                                          <span className="font-mono text-zinc-700 truncate max-w-[280px]" title={`Uploaded file: ${sub.original_filename}`}>
+                                            📄 {sub.original_filename}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigator.clipboard.writeText(sub.original_filename!);
+                                              addToast('Filename copied to clipboard', 'info');
+                                            }}
+                                            className="text-zinc-400 hover:text-zinc-700 p-0.5 rounded transition-colors"
+                                            title="Copy file name"
+                                          >
+                                            <Copy size={12} />
+                                          </button>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
 
@@ -15867,14 +15969,15 @@ export default function App() {
                                       <TD>
                                         {s.screenshot_url && !s.screenshot_url.startsWith('PURGED') ? (() => {
                                           const isPdf = s.screenshot_url.toLowerCase().includes('.pdf') || s.screenshot_url.toLowerCase().endsWith('.pdf');
+                                          const fileName = s.original_filename || (isPdf ? 'Proof_Document.pdf' : 'Proof_Screenshot.png');
                                           return (
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2.5 max-w-[240px]">
                                               {isPdf ? (
                                                 <button
                                                   type="button"
                                                   onClick={() => setInspectingSubmission(s)}
-                                                  className="flex items-center gap-2 p-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl text-red-700 transition-colors group cursor-pointer"
-                                                  title="Inspect PDF Proof"
+                                                  className="flex items-center gap-2 p-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl text-red-700 transition-colors group cursor-pointer shrink-0"
+                                                  title={`Inspect PDF: ${fileName}`}
                                                 >
                                                   <FileText size={18} className="text-red-600 shrink-0 group-hover:scale-110 transition-transform" />
                                                   <div className="text-left">
@@ -15886,9 +15989,9 @@ export default function App() {
                                                 </button>
                                               ) : (
                                                 <div
-                                                  className="relative group/img cursor-pointer rounded-xl overflow-hidden border-2 border-zinc-200 hover:border-indigo-600 transition-all shadow-2xs"
+                                                  className="relative group/img cursor-pointer rounded-xl overflow-hidden border-2 border-zinc-200 hover:border-indigo-600 transition-all shadow-2xs shrink-0"
                                                   onClick={() => setInspectingSubmission(s)}
-                                                  title="Click to inspect proof in high resolution"
+                                                  title={`Click to inspect proof: ${fileName}`}
                                                 >
                                                   <img
                                                     src={getCloudinaryThumbnail(s.screenshot_url, 150)}
@@ -15900,6 +16003,35 @@ export default function App() {
                                                   </div>
                                                 </div>
                                               )}
+
+                                              <div className="min-w-0 flex-1">
+                                                <span 
+                                                  className="font-mono text-xs font-bold text-zinc-800 hover:text-indigo-600 cursor-pointer block truncate" 
+                                                  onClick={() => setInspectingSubmission(s)}
+                                                  title={`Uploaded file name: ${fileName}`}
+                                                >
+                                                  {fileName}
+                                                </span>
+                                                <div className="flex items-center gap-1.5 pt-0.5">
+                                                  <span className="text-[10px] uppercase font-extrabold tracking-wider text-zinc-400">
+                                                    {isPdf ? 'PDF' : (fileName.split('.').pop() || 'IMG').toUpperCase()}
+                                                  </span>
+                                                  {s.original_filename && (
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigator.clipboard.writeText(s.original_filename!);
+                                                        addToast('Filename copied to clipboard', 'info');
+                                                      }}
+                                                      className="text-zinc-400 hover:text-zinc-700 p-0.5 rounded transition-colors"
+                                                      title="Copy file name"
+                                                    >
+                                                      <Copy size={11} />
+                                                    </button>
+                                                  )}
+                                                </div>
+                                              </div>
                                             </div>
                                           );
                                         })() : s.screenshot_url && s.screenshot_url.startsWith('PURGED') ? (

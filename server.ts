@@ -2391,7 +2391,8 @@ async function startServer() {
   const submissionSchemaValidator = z.object({
     task_id: z.string().min(1, 'Task ID is required'),
     custom_field_value: z.string().optional(),
-    not_participating_reason: z.string().optional()
+    not_participating_reason: z.string().optional(),
+    original_filename: z.string().optional().nullable()
   });
 
   app.get('/api/tasks/:id', authenticate, async (req: any, res) => {
@@ -3577,14 +3578,16 @@ async function startServer() {
       return res.status(400).json({ error: `Cannot submit. Minimum ${minTeamSize} accepted members required (currently ${acceptedCount}).` });
     }
 
+    const original_filename = (req.file?.originalname || req.body?.original_filename || '').trim() || null;
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       const subInsert = await client.query(`
-        INSERT INTO team_submissions (team_id, submitted_by, proof_url, cloudinary_public_id, remarks, status)
-        VALUES ($1, $2, $3, $4, $5, 'PENDING')
+        INSERT INTO team_submissions (team_id, submitted_by, proof_url, cloudinary_public_id, remarks, original_filename, status)
+        VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')
         RETURNING *
-      `, [teamId, student.id, req.file.path, req.file.filename, remarks || '']);
+      `, [teamId, student.id, req.file.path, req.file.filename, remarks || '', original_filename]);
 
       await client.query('UPDATE teams SET status = \'SUBMITTED\', updated_at = CURRENT_TIMESTAMP WHERE id = $1', [teamId]);
 
@@ -4170,6 +4173,7 @@ async function startServer() {
       class_year: s.class_year,
       status: s.status,
       screenshot_url: s.screenshot_url,
+      original_filename: s.original_filename || null,
       custom_field_value: s.custom_field_value,
       verification_note: s.verification_note,
       rejection_reason: s.rejection_reason,
@@ -4297,6 +4301,7 @@ async function startServer() {
     const { task_id, custom_field_value } = req.body;
     const screenshot_url = req.file?.path || null; // Cloudinary URL
     const cloudinary_public_id = req.file?.filename || null; // Cloudinary Public ID
+    const original_filename = (req.file?.originalname || req.body?.original_filename || '').trim() || null;
 
     if (!screenshot_url) return res.status(400).json({ error: 'Screenshot is required' });
 
@@ -4371,9 +4376,9 @@ async function startServer() {
         const newCount = existing.status === 'REJECTED' ? existing.resubmission_count + 1 : existing.resubmission_count;
         await pool.query(`
           UPDATE task_submissions
-          SET status = 'SUBMITTED', screenshot_url = $1, cloudinary_public_id = $2, custom_field_value = $3, submitted_at = NOW(), resubmission_count = $4, updated_at = NOW()
-          WHERE id = $5
-        `, [screenshot_url, cloudinary_public_id, custom_field_value, newCount, existing.id]);
+          SET status = 'SUBMITTED', screenshot_url = $1, cloudinary_public_id = $2, custom_field_value = $3, submitted_at = NOW(), resubmission_count = $4, original_filename = $5, updated_at = NOW()
+          WHERE id = $6
+        `, [screenshot_url, cloudinary_public_id, custom_field_value, newCount, original_filename, existing.id]);
 
         // 1. In-App + Chrome Notification to Student
         await createInAppNotification(req.user.id, `Your submission for "${task.title}" has been resubmitted and is awaiting verification.`, 'TASK_SUBMITTED', 'Submission Received');
@@ -4425,10 +4430,10 @@ async function startServer() {
       }
 
       const subRes = await pool.query(`
-        INSERT INTO task_submissions (task_id, user_id, status, screenshot_url, cloudinary_public_id, custom_field_value, submitted_at)
-        VALUES ($1, $2, 'SUBMITTED', $3, $4, $5, NOW())
+        INSERT INTO task_submissions (task_id, user_id, status, screenshot_url, cloudinary_public_id, custom_field_value, original_filename, submitted_at)
+        VALUES ($1, $2, 'SUBMITTED', $3, $4, $5, $6, NOW())
         RETURNING id
-      `, [task_id, req.user.id, screenshot_url, cloudinary_public_id, custom_field_value]);
+      `, [task_id, req.user.id, screenshot_url, cloudinary_public_id, custom_field_value, original_filename]);
 
       // 1. In-App + Chrome Notification to Student
       await createInAppNotification(req.user.id, `Your submission for "${task.title}" has been received and is awaiting verification.`, 'TASK_SUBMITTED', 'Submission Received');

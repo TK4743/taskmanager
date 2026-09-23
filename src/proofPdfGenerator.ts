@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 
 export interface ProofPdfItem {
   url: string;
+  originalFileName?: string;
   studentName: string;
   registerNumber: string;
   className: string;
@@ -236,6 +237,14 @@ export async function generateMergedProofsPdf(
       doc.setFontSize(7.5);
       doc.setTextColor(148, 163, 184); // slate-400
       doc.text(`Date: ${item.submittedAt}`, rightColX, 35, { align: 'right' });
+    }
+
+    if (item.originalFileName) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139); // slate-500
+      const truncatedName = item.originalFileName.length > 35 ? item.originalFileName.substring(0, 32) + '...' : item.originalFileName;
+      doc.text(`File: ${truncatedName}`, rightColX, 39, { align: 'right' });
     }
 
     // ── 3. Screenshot Image Section ──
