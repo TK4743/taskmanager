@@ -9357,7 +9357,9 @@ async function startServer() {
       proctor_photo_url,
       track_type = 'GENERAL_APTITUDE',
       track_title: clientTrackTitle,
-      cutoff_percentage: clientCutoff
+      cutoff_percentage: clientCutoff,
+      violation_count = 0,
+      integrity_events = []
     } = req.body;
 
     // Securely bind to authenticated session
@@ -9479,12 +9481,16 @@ async function startServer() {
     }
 
     // Save record to student_assessments
+    const safeViolationCount = Math.max(0, parseInt(String(violation_count), 10) || 0);
+    const safeIntegrityEvents = Array.isArray(integrity_events) ? integrity_events : [];
+
     const insertRes = await pool.query(`
       INSERT INTO student_assessments (
         user_id, student_name, register_number, total_questions, correct_count,
         score_percentage, category_breakdown, answers_summary, strengths, gaps, 
-        time_taken_seconds, proctor_photo_url, track_type, track_title, cutoff_percentage, is_passed
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        time_taken_seconds, proctor_photo_url, track_type, track_title, cutoff_percentage, is_passed,
+        violation_count, integrity_events
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING *;
     `, [
       targetUserId,
@@ -9502,7 +9508,9 @@ async function startServer() {
       track_type,
       trackTitle,
       cutoffPercentage,
-      isPassed
+      isPassed,
+      safeViolationCount,
+      JSON.stringify(safeIntegrityEvents)
     ]);
 
     // ── 📱 Telegram Bot Notification Dispatcher ──────────────────────────────
@@ -9544,12 +9552,17 @@ async function startServer() {
       const hods = await pool.query("SELECT telegram_chat_id FROM users WHERE role IN ('HOD', 'SUPREME_ADMIN') AND telegram_chat_id IS NOT NULL;");
       for (const h of hods.rows) {
         if (!h.telegram_chat_id) continue;
+        const violationAlert = safeViolationCount > 0
+          ? `\n🚨 <b>Integrity Incidents: ${safeViolationCount}</b> (${safeIntegrityEvents.map((e: any) => e.type?.replace(/_/g, ' ')).join(', ')})`
+          : `\n✅ <b>Integrity: Clean — 0 incidents</b>`;
+
         const hodMsg = 
           `📢 <b>STUDENT ASSESSMENT SUBMISSION ALERT</b>\n\n` +
           `Candidate: <b>${targetName}</b> (<code>${targetRegNo}</code>)\n` +
           `Track: <b>${trackTitle}</b>\n` +
           `Score: <b>${scorePercentage}%</b> (${correctCount}/${totalQuestions}) • <b>${isPassed ? 'PASSED ✅' : 'NEEDS ACTION ⚠️'}</b>\n` +
-          `Proctoring: ${proctor_photo_url ? 'Face Verified in Cloudinary 📷' : 'Standard Submission'}\n\n` +
+          `Proctoring: ${proctor_photo_url ? 'Face Verified in Cloudinary 📷' : 'Standard Submission'}` +
+          violationAlert + `\n\n` +
           `View full institutional cohort rankings on HOD Placement Dashboard.`;
 
         sendTelegramMessage(h.telegram_chat_id, hodMsg, { parse_mode: 'HTML' }).catch(() => {});
@@ -9901,6 +9914,8 @@ async function startServer() {
         sa.correct_count, sa.score_percentage, sa.category_breakdown, sa.strengths,
         sa.gaps, sa.time_taken_seconds, sa.proctor_photo_url, sa.created_at,
         sa.track_type, sa.track_title, sa.cutoff_percentage, sa.is_passed,
+        COALESCE(sa.violation_count, 0) AS violation_count,
+        COALESCE(sa.integrity_events, '[]'::jsonb) AS integrity_events,
         c.name AS class_name, c.year AS class_year, u.class_id
       FROM student_assessments sa
       LEFT JOIN users u ON u.id = sa.user_id

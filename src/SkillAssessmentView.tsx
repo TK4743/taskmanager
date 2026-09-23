@@ -129,6 +129,8 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showFsWarning, setShowFsWarning] = useState(false);
   const [violationCount, setViolationCount] = useState(0);
+  const [integrityEvents, setIntegrityEvents] = useState<{ type: string; timestamp: string; elapsed_seconds: number }[]>([]);
+  const testStartTimeRef = useRef<number | null>(null);
 
   // ── Device Enforcement State (Laptop/Desktop only) ──────────────────────────
   const [isMobileDevice, setIsMobileDevice] = useState<boolean>(() => checkIsMobileOrTablet().isMobile);
@@ -188,6 +190,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
   const [assignments, setAssignments] = useState<any[]>([]);
   const [emailNodesStatus, setEmailNodesStatus] = useState<any>(null);
   const [isLoadingEmailStatus, setIsLoadingEmailStatus] = useState<boolean>(false);
+  const [showIntegrityModal, setShowIntegrityModal] = useState<any | null>(null);
 
   const fetchEmailNodesStatus = async () => {
     setIsLoadingEmailStatus(true);
@@ -532,12 +535,25 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
   useEffect(() => {
     if (!testStarted || testCompleted) return;
 
+    // Helper: push a timestamped integrity event
+    const logEvent = (type: string) => {
+      const elapsed = testStartTimeRef.current
+        ? Math.floor((Date.now() - testStartTimeRef.current) / 1000)
+        : 0;
+      setIntegrityEvents(prev => [...prev, {
+        type,
+        timestamp: new Date().toISOString(),
+        elapsed_seconds: elapsed
+      }]);
+    };
+
     const handleFsChange = () => {
       const isFs = Boolean(document.fullscreenElement || (document as any).webkitFullscreenElement);
       setIsFullscreen(isFs);
 
       if (!isFs && testStarted && !testCompleted) {
         setViolationCount(prev => prev + 1);
+        logEvent('FULLSCREEN_EXIT');
         setShowFsWarning(true);
       } else if (isFs) {
         setShowFsWarning(false);
@@ -547,6 +563,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
     const handleVisibilityChange = () => {
       if (document.hidden && testStarted && !testCompleted) {
         setViolationCount(prev => prev + 1);
+        logEvent('TAB_SWITCH');
         setShowFsWarning(true);
       }
     };
@@ -554,6 +571,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
     const handleWindowBlur = () => {
       if (testStarted && !testCompleted) {
         setViolationCount(prev => prev + 1);
+        logEvent('WINDOW_BLUR');
         setShowFsWarning(true);
       }
     };
@@ -562,6 +580,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
       e.preventDefault();
       e.stopPropagation();
       setViolationCount(prev => prev + 1);
+      logEvent('CONTEXT_MENU');
       addToast('🚫 Right-click context menu is strictly disabled during the aptitude assessment!', 'error');
     };
 
@@ -569,6 +588,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
       e.preventDefault();
       e.stopPropagation();
       setViolationCount(prev => prev + 1);
+      logEvent('COPY_ATTEMPT');
       addToast('🚫 Copying questions or options is strictly prohibited during the assessment!', 'error');
     };
 
@@ -576,6 +596,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
       e.preventDefault();
       e.stopPropagation();
       setViolationCount(prev => prev + 1);
+      logEvent('CUT_ATTEMPT');
       addToast('🚫 Cut action is disabled during the assessment!', 'error');
     };
 
@@ -583,6 +604,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
       e.preventDefault();
       e.stopPropagation();
       setViolationCount(prev => prev + 1);
+      logEvent('PASTE_ATTEMPT');
       addToast('🚫 Paste action is disabled during the assessment!', 'error');
     };
 
@@ -606,6 +628,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
         e.preventDefault();
         e.stopPropagation();
         setViolationCount(prev => prev + 1);
+        logEvent('DEVTOOLS_SHORTCUT');
         addToast('🚫 Developer Tools and Source inspection shortcuts are strictly disabled!', 'error');
         return;
       }
@@ -615,6 +638,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
         e.preventDefault();
         e.stopPropagation();
         setViolationCount(prev => prev + 1);
+        logEvent(key === 'c' ? 'COPY_ATTEMPT' : key === 'v' ? 'PASTE_ATTEMPT' : key === 'x' ? 'CUT_ATTEMPT' : 'SELECT_ALL');
         addToast('🚫 Clipboard shortcuts (Copy/Paste/Cut/Select-All) are disabled during the test!', 'error');
         return;
       }
@@ -624,6 +648,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
         e.preventDefault();
         e.stopPropagation();
         setViolationCount(prev => prev + 1);
+        logEvent('NAV_SHORTCUT');
         setShowFsWarning(true);
       }
 
@@ -901,6 +926,9 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
     setCurrentIdx(0);
     setSelectedAnswers({});
     setTimeLeft(selectedTrackDuration * 60);
+    setViolationCount(0);
+    setIntegrityEvents([]);
+    testStartTimeRef.current = Date.now();
     setTestStarted(true);
     setTestCompleted(false);
     setTestResult(null);
@@ -930,7 +958,9 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
           proctor_photo_url: capturedPhotoUrl,
           track_type: isMicroQuiz ? 'MICRO_REMEDIAL' : selectedTrack,
           track_title: selectedTrackTitle,
-          cutoff_percentage: selectedTrackCutoff
+          cutoff_percentage: selectedTrackCutoff,
+          violation_count: violationCount,
+          integrity_events: integrityEvents
         })
       });
       const data = await res.json();
@@ -957,6 +987,9 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
     setCapturedPhotoUrl(null);
     setIsFaceVerified(false);
     setFaceDetectionError(null);
+    setViolationCount(0);
+    setIntegrityEvents([]);
+    testStartTimeRef.current = null;
     setTestStarted(false);
     setTestCompleted(false);
     setTestResult(null);
@@ -2596,6 +2629,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                       <th className="p-3">Track</th>
                       <th className="p-3">Score (%)</th>
                       <th className="p-3">Result</th>
+                      <th className="p-3">Integrity</th>
                       <th className="p-3">Correct</th>
                       <th className="p-3">Time</th>
                       <th className="p-3 text-right">Attempt Date</th>
@@ -2641,6 +2675,29 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                               {Number(r.score_percentage) >= (r.cutoff_percentage || 60) ? 'PASSED' : 'REMEDIAL'}
                             </span>
                           </td>
+
+                          {/* Integrity Badge */}
+                          <td className="p-3">
+                            <button
+                              type="button"
+                              onClick={() => setShowIntegrityModal(r)}
+                              title={`${r.violation_count || 0} incident(s) — click to view log`}
+                              className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border transition hover:scale-105 cursor-pointer ${
+                                !r.violation_count || r.violation_count === 0
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : r.violation_count <= 2
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }`}
+                            >
+                              <ShieldAlert size={10} />
+                              {!r.violation_count || r.violation_count === 0
+                                ? 'Clean'
+                                : `${r.violation_count} incident${r.violation_count > 1 ? 's' : ''}`
+                              }
+                            </button>
+                          </td>
+
                           <td className="p-3 text-zinc-600">{r.correct_count} / {r.total_questions}</td>
                           <td className="p-3 text-zinc-600">{Math.floor(r.time_taken_seconds / 60)}m {r.time_taken_seconds % 60}s</td>
                           <td className="p-3 text-right text-zinc-400 font-mono text-[11px]">
@@ -2650,6 +2707,154 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                       ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════
+            INTEGRITY VIOLATIONS DETAIL MODAL (HOD only)
+            ═══════════════════════════════════════════════════════ */}
+        {showIntegrityModal && (
+          <div
+            className="fixed inset-0 z-[9999999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={() => setShowIntegrityModal(null)}
+          >
+            <div
+              className="bg-white border border-zinc-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[85vh] overflow-y-auto"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <ShieldAlert size={18} className={`${
+                      !showIntegrityModal.violation_count || showIntegrityModal.violation_count === 0
+                        ? 'text-emerald-500'
+                        : showIntegrityModal.violation_count <= 2
+                        ? 'text-amber-500'
+                        : 'text-rose-500'
+                    }`} />
+                    <h3 className="text-base font-extrabold text-zinc-900">Integrity Violations Log</h3>
+                  </div>
+                  <p className="text-xs text-zinc-500 font-medium">
+                    {showIntegrityModal.student_name} • <span className="font-mono">{showIntegrityModal.register_number}</span>
+                  </p>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    {showIntegrityModal.track_title} — {new Date(showIntegrityModal.created_at).toLocaleString()}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowIntegrityModal(null)}
+                  className="p-1.5 rounded-xl hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition cursor-pointer shrink-0"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Summary banner */}
+              <div className={`flex items-center gap-3 p-3 rounded-2xl border ${
+                !showIntegrityModal.violation_count || showIntegrityModal.violation_count === 0
+                  ? 'bg-emerald-50 border-emerald-200'
+                  : showIntegrityModal.violation_count <= 2
+                  ? 'bg-amber-50 border-amber-200'
+                  : 'bg-rose-50 border-rose-200'
+              }`}>
+                <span className="text-2xl">
+                  {!showIntegrityModal.violation_count || showIntegrityModal.violation_count === 0 ? '✅' :
+                    showIntegrityModal.violation_count <= 2 ? '⚠️' : '🚨'}
+                </span>
+                <div>
+                  <p className={`text-sm font-extrabold ${
+                    !showIntegrityModal.violation_count || showIntegrityModal.violation_count === 0
+                      ? 'text-emerald-800'
+                      : showIntegrityModal.violation_count <= 2
+                      ? 'text-amber-800'
+                      : 'text-rose-800'
+                  }`}>
+                    {!showIntegrityModal.violation_count || showIntegrityModal.violation_count === 0
+                      ? 'Clean Session — No Integrity Incidents'
+                      : `${showIntegrityModal.violation_count} Integrity Incident${showIntegrityModal.violation_count > 1 ? 's' : ''} Recorded`
+                    }
+                  </p>
+                  <p className="text-[11px] text-zinc-500 font-medium mt-0.5">
+                    Score: <strong>{showIntegrityModal.score_percentage}%</strong> • Time: {Math.floor(showIntegrityModal.time_taken_seconds / 60)}m {showIntegrityModal.time_taken_seconds % 60}s
+                    {showIntegrityModal.violation_count >= 3 && <span className="ml-2 text-rose-600 font-bold">• AUTO-SUBMITTED</span>}
+                  </p>
+                </div>
+              </div>
+
+              {/* Face photo */}
+              {showIntegrityModal.proctor_photo_url && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-50 border border-zinc-200">
+                  <img
+                    src={showIntegrityModal.proctor_photo_url}
+                    alt="Proctor photo"
+                    className="w-14 h-14 rounded-xl object-cover border-2 border-indigo-300 shadow"
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-zinc-800">Verified Face Identity</p>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">Captured at test start via webcam proctoring</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Event timeline */}
+              {Array.isArray(showIntegrityModal.integrity_events) && showIntegrityModal.integrity_events.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-zinc-400">Incident Timeline</p>
+                  <div className="space-y-2">
+                    {showIntegrityModal.integrity_events.map((evt: any, idx: number) => {
+                      const typeLabels: Record<string, { label: string; icon: string; color: string }> = {
+                        FULLSCREEN_EXIT:  { label: 'Exited Fullscreen',         icon: '🖥️',  color: 'text-orange-700 bg-orange-50 border-orange-200' },
+                        TAB_SWITCH:       { label: 'Tab / Window Switch',        icon: '🔀',  color: 'text-amber-700  bg-amber-50  border-amber-200'  },
+                        WINDOW_BLUR:      { label: 'App / Window Lost Focus',    icon: '👁️',  color: 'text-amber-700  bg-amber-50  border-amber-200'  },
+                        COPY_ATTEMPT:     { label: 'Copy Attempt',               icon: '📋',  color: 'text-rose-700   bg-rose-50   border-rose-200'   },
+                        CUT_ATTEMPT:      { label: 'Cut Attempt',                icon: '✂️',  color: 'text-rose-700   bg-rose-50   border-rose-200'   },
+                        PASTE_ATTEMPT:    { label: 'Paste Attempt',              icon: '📌',  color: 'text-rose-700   bg-rose-50   border-rose-200'   },
+                        SELECT_ALL:       { label: 'Select-All Attempt',         icon: '🔲',  color: 'text-rose-700   bg-rose-50   border-rose-200'   },
+                        CONTEXT_MENU:     { label: 'Right-Click Attempt',        icon: '🖱️',  color: 'text-zinc-700   bg-zinc-50   border-zinc-200'   },
+                        DEVTOOLS_SHORTCUT:{ label: 'DevTools Shortcut',          icon: '🔧',  color: 'text-purple-700 bg-purple-50 border-purple-200' },
+                        NAV_SHORTCUT:     { label: 'Navigation Shortcut',        icon: '⌨️',  color: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
+                      };
+                      const meta = typeLabels[evt.type] || { label: evt.type?.replace(/_/g, ' ') || 'Unknown', icon: '⚠️', color: 'text-zinc-700 bg-zinc-50 border-zinc-200' };
+                      const elapsedMin = Math.floor((evt.elapsed_seconds || 0) / 60);
+                      const elapsedSec = (evt.elapsed_seconds || 0) % 60;
+                      return (
+                        <div key={idx} className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border text-xs font-semibold ${meta.color}`}>
+                          <span className="text-base shrink-0">{meta.icon}</span>
+                          <div className="flex-1">
+                            <span className="font-bold">{meta.label}</span>
+                            {evt.timestamp && (
+                              <span className="ml-2 font-mono text-[10px] opacity-70">
+                                {new Date(evt.timestamp).toLocaleTimeString()}
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-mono text-[10px] shrink-0 opacity-60">
+                            +{elapsedMin}m{elapsedSec}s
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
+                  <p className="text-xs font-bold text-emerald-700">✅ No integrity events recorded for this session.</p>
+                  <p className="text-[11px] text-emerald-600 mt-1">Student maintained a clean, uninterrupted test environment.</p>
+                </div>
+              )}
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowIntegrityModal(null)}
+                  className="px-5 py-2 bg-zinc-900 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
