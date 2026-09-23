@@ -9707,9 +9707,11 @@ async function startServer() {
 
     const result = await pool.query(`
       SELECT 
-        id, track_type, track_title, total_questions, correct_count,
+        id, student_name, register_number, track_type, track_title, total_questions, correct_count,
         score_percentage, is_passed, cutoff_percentage, time_taken_seconds,
         proctor_photo_url, category_breakdown, strengths, gaps, answers_summary,
+        COALESCE(violation_count, 0) AS violation_count,
+        COALESCE(integrity_events, '[]'::jsonb) AS integrity_events,
         created_at
       FROM student_assessments
       WHERE user_id = $1
