@@ -3,7 +3,7 @@
 # 🏛️ VSBEC IT VAULT — ACADEMIA–INDUSTRY INTEGRATED PLATFORM
 ### *Enterprise Institutional Task Governance, LeetCode/GitHub Daemon Sync & Sandboxed Assessment Engine*
 
-[![Recognition](https://img.shields.io/badge/Recognition-SIH%202026%20Top%2050-10b981?style=for-the-badge&logo=checkmarx&logoColor=white)](#) [![Deployment](https://img.shields.io/badge/Deployment-Production%20Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](#) [![Role](https://img.shields.io/badge/Role-Lead%20Architect-4f46e5?style=for-the-badge&logo=codeforces&logoColor=white)](#) [![Frontend](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite%206-61DAFB?style=for-the-badge&logo=react&logoColor=white)](#) [![Backend](https://img.shields.io/badge/Backend-Node.js%2020%20%2B%20Express-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](#) [![Database](https://img.shields.io/badge/Database-PostgreSQL%2014%20(35%20Tables)-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](#) [![License](https://img.shields.io/badge/License-Strict%20Proprietary-dc2626?style=for-the-badge&logo=lock&logoColor=white)](#)
+[![Recognition](https://img.shields.io/badge/Recognition-SIH%202026%20Top%2050-10b981?style=for-the-badge&logo=checkmarx&logoColor=white)](#) [![Deployment](https://img.shields.io/badge/Deployment-Production%20Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](#) [![Role](https://img.shields.io/badge/Role-Lead%20Architect-4f46e5?style=for-the-badge&logo=codeforces&logoColor=white)](#) [![Frontend](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite%206-61DAFB?style=for-the-badge&logo=react&logoColor=white)](#) [![Backend](https://img.shields.io/badge/Backend-Node.js%2020%20%2B%20Express-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](#) [![Database](https://img.shields.io/badge/Database-PostgreSQL%2014%20(13%20Tables)-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](#) [![License](https://img.shields.io/badge/License-Strict%20Proprietary-dc2626?style=for-the-badge&logo=lock&logoColor=white)](#)
 
 <p align="center">
   <a href="https://github.com/Tharun4743/taskmanager">📦 <b>Official GitHub Repository</b></a>
@@ -45,7 +45,7 @@ In engineering institutions, departmental task tracking and algorithmic prep fac
 **VSBEC IT Vault** is an institutional task governance, real-time coding competency tracking, and corporate recruitment ecosystem engineered for the **Department of IT, VSB Engineering College**:
 
 * 🏆 **SIH 2026 Internal Hackathon Top 50 (Official SIH Portal Nominee):** Shortlisted in the SIH 2026 Internal Hackathon (Top 50 out of 300+ teams) with official SIH portal submission.
-* 👥 **Real-World Implementation:** Actively adopted by **365+ students across 6 departmental sections** (II IT-A/B/C & III IT-A/B/C) for centralized academic governance, LeetCode habit tracking, and corporate coding assessments.
+* 👥 **Real-World Implementation:** Actively adopted by **365+ enrolled students** in the Department of Information Technology for centralized academic governance, LeetCode habit tracking, and corporate coding assessments.
 * 🛡️ **3-Tier Verification Pipeline:** Enforces an audit trail where tasks are peer-reviewed by Coordinators, validated by Advisors, and authorized by HOD.
 * ⚡ **Algorithmic Momentum Daemons:** Schedulers poll LeetCode GraphQL and GitHub REST APIs daily, computing solve velocity and commit streaks.
 * 💻 **Sandboxed Multi-Language Compiler:** Isolated execution runtime supporting Monaco Editor assessments for **C, C++, Java, and Python**.
@@ -60,7 +60,7 @@ graph TD
     Client["Client UI (React 19 + Vite 6)"] --> Gateway["API Gateway & Middleware (Node.js / Express 4)"]
     Gateway --> RBAC["Role-Based Access Guard & Monaco Assessment Core"]
     Gateway --> Sandbox["Sandboxed Compiler Engine (C, C++, Java 17, Python 3)"]
-    Gateway --> DB[("PostgreSQL 14 Cluster (35 Relational Tables)")]
+    Gateway --> DB[("PostgreSQL 14 Database (13 Relational Tables)")]
     Gateway --> Daemons["Telemetry Schedulers (LeetCode GraphQL & GitHub REST)"]
     Gateway --> Alerts["Notification Relays (Telegram Webhook & VAPID Push)"]
 ```
@@ -69,7 +69,7 @@ graph TD
 | :--- | :--- | :--- |
 | **User Interface** | React 19, TypeScript 5.8, Vite 6, Tailwind CSS | Single-page portal with role layouts, Monaco IDE, and PIP proctoring |
 | **Application Layer** | Node.js 20+, Express 4.x, TypeScript | RESTful API server, dynamic RBAC middleware, and report compilers |
-| **Data Layer** | PostgreSQL 14+ (35 Tables), In-Memory Cache | Relational schema with row-level security and sub-0.01ms student lookups |
+| **Data Layer** | PostgreSQL 14+ (13 Tables), In-Memory Cache | Relational schema with foreign key integrity and optimized indexed lookups |
 | **Compiler Sandbox** | Isolated Node.js Child Process Jails | Secure compilation for C, C++, Java, and Python with timeout traps |
 | **External Daemons** | LeetCode GraphQL, GitHub REST, Telegram Bot | Automated nightly profile sync, webhook relays, and email dispatches |
 
@@ -92,7 +92,7 @@ flowchart LR
 * 🏆 **SIH 2026 Top 50 Finalist:** Shortlisted Top 50 out of 300+ campus teams with central SIH portal nomination.
 * 📜 **100% Digitized Submissions:** Eradicated paper logs, saving 15+ faculty hours weekly.
 * 🤖 **100+ Telegram Community:** Morning briefs and deadline alerts delivered with 99.9% reliability.
-* ⚡ **Sub-0.01ms Lookup Latency:** High-concurrency caching enables instant student search.
+* ⚡ **Optimized Low-Latency Lookups:** Indexed relational queries enable instantaneous student record retrieval.
 
 ---
 
