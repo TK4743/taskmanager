@@ -876,6 +876,8 @@ export async function initDB(forceMigration: boolean = false) {
       ALTER TABLE student_assessments ADD COLUMN IF NOT EXISTS track_title VARCHAR(150) DEFAULT 'General Aptitude Benchmark';
       ALTER TABLE student_assessments ADD COLUMN IF NOT EXISTS cutoff_percentage NUMERIC(5,2) DEFAULT 60.00;
       ALTER TABLE student_assessments ADD COLUMN IF NOT EXISTS is_passed BOOLEAN DEFAULT FALSE;
+      ALTER TABLE student_assessments ADD COLUMN IF NOT EXISTS violation_count INTEGER DEFAULT 0;
+      ALTER TABLE student_assessments ADD COLUMN IF NOT EXISTS integrity_events JSONB DEFAULT '[]'::jsonb;
 
       CREATE INDEX IF NOT EXISTS idx_assessment_q_track ON assessment_questions(track_type, is_active);
       CREATE INDEX IF NOT EXISTS idx_student_assessments_track ON student_assessments(user_id, track_type);
