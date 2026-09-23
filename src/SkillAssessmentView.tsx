@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { API_URL } from './config';
 import { checkIsMobileOrTablet } from './lib/deviceCheck';
+import { downloadAssessmentAuditPdf } from './assessmentAuditPdfGenerator';
 
 interface SkillAssessmentViewProps {
   user: any;
@@ -191,6 +192,30 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
   const [emailNodesStatus, setEmailNodesStatus] = useState<any>(null);
   const [isLoadingEmailStatus, setIsLoadingEmailStatus] = useState<boolean>(false);
   const [showIntegrityModal, setShowIntegrityModal] = useState<any | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState<string | null>(null);
+
+  const handleDownloadPdf = async (item: any) => {
+    if (!item) return;
+    const downloadKey = item.id || 'current';
+    setIsGeneratingPdf(downloadKey);
+    try {
+      addToast('Preparing official Assessment & Audit PDF...', 'info');
+      const auditPayload = {
+        ...item,
+        student_name: item.student_name || user?.name || user?.full_name || 'STUDENT',
+        register_number: item.register_number || user?.register_number || user?.reg_no || 'N/A',
+        class_name: item.class_name || user?.class_name,
+        class_year: item.class_year || user?.year,
+      };
+      await downloadAssessmentAuditPdf(auditPayload);
+      addToast('Audit Report PDF downloaded successfully!', 'success');
+    } catch (err) {
+      console.error('Failed to generate audit PDF:', err);
+      addToast('Failed to generate PDF. Please try again.', 'error');
+    } finally {
+      setIsGeneratingPdf(null);
+    }
+  };
 
   const fetchEmailNodesStatus = async () => {
     setIsLoadingEmailStatus(true);
@@ -2632,7 +2657,8 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                       <th className="p-3">Integrity</th>
                       <th className="p-3">Correct</th>
                       <th className="p-3">Time</th>
-                      <th className="p-3 text-right">Attempt Date</th>
+                      <th className="p-3">Attempt Date</th>
+                      <th className="p-3 text-right">Audit PDF</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100 font-medium">
@@ -2700,8 +2726,20 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
 
                           <td className="p-3 text-zinc-600">{r.correct_count} / {r.total_questions}</td>
                           <td className="p-3 text-zinc-600">{Math.floor(r.time_taken_seconds / 60)}m {r.time_taken_seconds % 60}s</td>
-                          <td className="p-3 text-right text-zinc-400 font-mono text-[11px]">
+                          <td className="p-3 text-zinc-400 font-mono text-[11px]">
                             {new Date(r.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="p-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadPdf(r)}
+                              disabled={isGeneratingPdf === r.id}
+                              title="Download Official Audit & Scorecard PDF"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition hover:scale-105 cursor-pointer disabled:opacity-50"
+                            >
+                              <Download size={11} className={isGeneratingPdf === r.id ? 'animate-bounce' : ''} />
+                              <span>{isGeneratingPdf === r.id ? 'Building...' : 'PDF'}</span>
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -2847,7 +2885,17 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                 </div>
               )}
 
-              <div className="pt-2 flex justify-end">
+              <div className="pt-2 flex items-center justify-between gap-3 border-t border-zinc-100">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadPdf(showIntegrityModal)}
+                  disabled={isGeneratingPdf === (showIntegrityModal.id || 'current')}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+                >
+                  <Download size={13} className={isGeneratingPdf === (showIntegrityModal.id || 'current') ? 'animate-bounce' : ''} />
+                  <span>{isGeneratingPdf === (showIntegrityModal.id || 'current') ? 'Generating PDF...' : 'Download Audit PDF'}</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setShowIntegrityModal(null)}
@@ -3284,7 +3332,17 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
 
 
 
-                  <div className="pt-4 border-t border-zinc-100 flex justify-end">
+                  <div className="pt-4 border-t border-zinc-100 flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadPdf(viewingScorecard)}
+                      disabled={isGeneratingPdf === (viewingScorecard.id || 'current')}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+                    >
+                      <Download size={13} className={isGeneratingPdf === (viewingScorecard.id || 'current') ? 'animate-bounce' : ''} />
+                      <span>{isGeneratingPdf === (viewingScorecard.id || 'current') ? 'Preparing PDF...' : 'Download Official PDF Scorecard'}</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => setViewingScorecard(null)}
