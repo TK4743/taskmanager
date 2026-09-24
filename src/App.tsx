@@ -134,7 +134,8 @@ import {
   TrendingUp,
   Terminal,
   Radio,
-  Menu
+  Menu,
+  History
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -4267,6 +4268,8 @@ interface AppRouteState {
   view: string;
   codingPlatformTab?: 'LEETCODE' | 'GITHUB';
   footerModal?: 'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES' | null;
+  studentTaskFilter?: 'ALL' | 'PENDING_ACTION' | 'UNDER_REVIEW' | 'VERIFIED' | 'REJECTED' | 'NOT_INTERESTED' | 'OVERDUE';
+  verificationFilter?: 'PENDING' | 'VERIFIED' | 'REJECTED' | 'NOT INTERESTED' | 'ALL';
 }
 
 const parseRouteFromPath = (pathname: string): AppRouteState => {
@@ -4289,10 +4292,56 @@ const parseRouteFromPath = (pathname: string): AppRouteState => {
     return { view: 'leetcode-targets', codingPlatformTab: 'LEETCODE', footerModal: null };
   }
 
-  // Tasks & submissions
-  if (cleanPath.startsWith('tasks')) return { view: 'tasks', footerModal: null };
-  if (cleanPath === 'submissions' || cleanPath === 'my-submissions') return { view: 'submissions', footerModal: null };
-  if (cleanPath === 'verifications' || cleanPath === 'verification') return { view: 'verifications', footerModal: null };
+  // Tasks sub-routes (Support /tasks/rejected, /tasks/not-interested, /tasks/all, etc.)
+  if (cleanPath === 'tasks/rejected') {
+    return { view: 'tasks', studentTaskFilter: 'REJECTED', verificationFilter: 'REJECTED', footerModal: null };
+  }
+  if (cleanPath === 'tasks/not-interested' || cleanPath === 'tasks/notinterested' || cleanPath === 'tasks/opted-out') {
+    return { view: 'tasks', studentTaskFilter: 'NOT_INTERESTED', verificationFilter: 'NOT INTERESTED', footerModal: null };
+  }
+  if (cleanPath === 'tasks/verified') {
+    return { view: 'tasks', studentTaskFilter: 'VERIFIED', verificationFilter: 'VERIFIED', footerModal: null };
+  }
+  if (cleanPath === 'tasks/under-review') {
+    return { view: 'tasks', studentTaskFilter: 'UNDER_REVIEW', footerModal: null };
+  }
+  if (cleanPath === 'tasks/pending' || cleanPath === 'tasks/pending-action') {
+    return { view: 'tasks', studentTaskFilter: 'PENDING_ACTION', verificationFilter: 'PENDING', footerModal: null };
+  }
+  if (cleanPath === 'tasks/overdue') {
+    return { view: 'tasks', studentTaskFilter: 'OVERDUE', footerModal: null };
+  }
+  if (cleanPath === 'tasks/all') {
+    return { view: 'tasks', studentTaskFilter: 'ALL', verificationFilter: 'ALL', footerModal: null };
+  }
+  if (cleanPath === 'tasks' || cleanPath.startsWith('tasks/')) {
+    return { view: 'tasks', footerModal: null };
+  }
+
+  // Verifications sub-routes
+  if (cleanPath === 'verifications/rejected' || cleanPath === 'verification/rejected') {
+    return { view: 'verifications', verificationFilter: 'REJECTED', footerModal: null };
+  }
+  if (cleanPath === 'verifications/not-interested' || cleanPath === 'verifications/notinterested' || cleanPath === 'verification/not-interested') {
+    return { view: 'verifications', verificationFilter: 'NOT INTERESTED', footerModal: null };
+  }
+  if (cleanPath === 'verifications/verified' || cleanPath === 'verification/verified') {
+    return { view: 'verifications', verificationFilter: 'VERIFIED', footerModal: null };
+  }
+  if (cleanPath === 'verifications/pending' || cleanPath === 'verification/pending') {
+    return { view: 'verifications', verificationFilter: 'PENDING', footerModal: null };
+  }
+  if (cleanPath === 'verifications/all' || cleanPath === 'verification/all') {
+    return { view: 'verifications', verificationFilter: 'ALL', footerModal: null };
+  }
+  if (cleanPath === 'verifications' || cleanPath === 'verification' || cleanPath.startsWith('verifications/')) {
+    return { view: 'verifications', footerModal: null };
+  }
+
+  // Submissions
+  if (cleanPath === 'submissions' || cleanPath === 'my-submissions' || cleanPath.startsWith('submissions/')) {
+    return { view: 'submissions', footerModal: null };
+  }
 
   // Assessment & Placement
   if (cleanPath === 'assessment' || cleanPath === 'assessments' || cleanPath === 'skill-assessment') return { view: 'skill-assessment', footerModal: null };
@@ -4332,7 +4381,9 @@ const parseRouteFromPath = (pathname: string): AppRouteState => {
 const getPathFromState = (
   view: string,
   codingPlatformTab: 'LEETCODE' | 'GITHUB',
-  footerModal: 'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES' | null
+  footerModal: 'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES' | null,
+  studentTaskFilter?: 'ALL' | 'PENDING_ACTION' | 'UNDER_REVIEW' | 'VERIFIED' | 'REJECTED' | 'NOT_INTERESTED' | 'OVERDUE',
+  verificationFilter?: 'PENDING' | 'VERIFIED' | 'REJECTED' | 'NOT INTERESTED' | 'ALL'
 ): string => {
   if (footerModal === 'SOURCES') return '/sources';
   if (footerModal === 'PRIVACY') return '/privacy';
@@ -4343,12 +4394,25 @@ const getPathFromState = (
     case 'leetcode-targets':
     case 'coding-progress':
       return codingPlatformTab === 'GITHUB' ? '/codingprogress/github' : '/codingprogress/leetcode';
-    case 'tasks':
+    case 'tasks': {
+      if (studentTaskFilter === 'REJECTED') return '/tasks/rejected';
+      if (studentTaskFilter === 'NOT_INTERESTED') return '/tasks/not-interested';
+      if (studentTaskFilter === 'VERIFIED') return '/tasks/verified';
+      if (studentTaskFilter === 'UNDER_REVIEW') return '/tasks/under-review';
+      if (studentTaskFilter === 'PENDING_ACTION') return '/tasks/pending';
+      if (studentTaskFilter === 'OVERDUE') return '/tasks/overdue';
       return '/tasks';
+    }
     case 'submissions':
       return '/submissions';
-    case 'verifications':
+    case 'verifications': {
+      if (verificationFilter === 'REJECTED') return '/verifications/rejected';
+      if (verificationFilter === 'NOT INTERESTED') return '/verifications/not-interested';
+      if (verificationFilter === 'VERIFIED') return '/verifications/verified';
+      if (verificationFilter === 'PENDING') return '/verifications/pending';
+      if (verificationFilter === 'ALL') return '/verifications/all';
       return '/verifications';
+    }
     case 'notice-board':
       return '/notices';
     case 'skill-assessment':
@@ -4397,6 +4461,70 @@ const getPathFromState = (
       return '/dashboard';
   }
 };
+
+// Resilient Error Boundary to eliminate White Page / Blank Screen crashes
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallbackTitle?: string;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('ErrorBoundary captured runtime error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 my-8 bg-rose-50/80 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900 rounded-3xl text-center max-w-lg mx-auto shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto mb-3">
+            <AlertTriangle size={24} />
+          </div>
+          <h3 className="text-base font-bold text-zinc-900 dark:text-white mb-1">
+            {this.props.fallbackTitle || 'Section Display Recovered'}
+          </h3>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 max-w-md mx-auto leading-relaxed">
+            {this.state.error?.message || 'An unexpected rendering error was handled gracefully. Please try reloading or navigate back to the dashboard.'}
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => this.setState({ hasError: false, error: null })}
+              className="px-4 py-2 text-xs font-bold rounded-xl border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 cursor-pointer shadow-2xs"
+            >
+              Retry View
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.href = '/dashboard';
+              }}
+              className="px-4 py-2 text-xs font-bold rounded-xl bg-black text-white hover:bg-zinc-800 cursor-pointer shadow-xs"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const [user, setUser] = useState<User | null>(() => {
@@ -5014,7 +5142,13 @@ export default function App() {
   });
   const [uploading, setUploading] = useState<number | null>(null);
   const [showTaskPreview, setShowTaskPreview] = useState(false);
-  const [verificationFilter, setVerificationFilter] = useState<'PENDING' | 'VERIFIED' | 'REJECTED' | 'ALL'>('PENDING');
+  const [verificationFilter, setVerificationFilter] = useState<'PENDING' | 'VERIFIED' | 'REJECTED' | 'NOT INTERESTED' | 'ALL'>(() => {
+    if (typeof window !== 'undefined') {
+      const r = parseRouteFromPath(window.location.pathname);
+      if (r.verificationFilter) return r.verificationFilter;
+    }
+    return 'PENDING';
+  });
   const [verificationDeptFilter, setVerificationDeptFilter] = useState('');
   const [verificationYearFilter, setVerificationYearFilter] = useState('');
   const [verificationClassFilter, setVerificationClassFilter] = useState('');
@@ -5039,6 +5173,12 @@ export default function App() {
         setCodingPlatformTab(route.codingPlatformTab);
       }
       setShowFooterModal(route.footerModal || null);
+      if (route.studentTaskFilter) {
+        setStudentTaskFilter(route.studentTaskFilter);
+      }
+      if (route.verificationFilter) {
+        setVerificationFilter(route.verificationFilter);
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -5053,7 +5193,7 @@ export default function App() {
       return;
     }
 
-    const targetPath = getPathFromState(view, codingPlatformTab, showFooterModal);
+    const targetPath = getPathFromState(view, codingPlatformTab, showFooterModal, studentTaskFilter, verificationFilter);
     const currentPath = window.location.pathname;
 
     if (currentPath !== targetPath) {
@@ -5063,7 +5203,7 @@ export default function App() {
         window.history.pushState(null, '', targetPath);
       }
     }
-  }, [view, codingPlatformTab, showFooterModal]);
+  }, [view, codingPlatformTab, showFooterModal, studentTaskFilter, verificationFilter]);
 
   const getPaginationRange = (current: number, total: number) => {
     if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -5510,7 +5650,13 @@ export default function App() {
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
   const [isUploadingPoster, setIsUploadingPoster] = useState(false);
   const [selectedPosterModal, setSelectedPosterModal] = useState<string | null>(null);
-  const [studentTaskFilter, setStudentTaskFilter] = useState<'ALL' | 'PENDING_ACTION' | 'UNDER_REVIEW' | 'VERIFIED' | 'OVERDUE'>('ALL');
+  const [studentTaskFilter, setStudentTaskFilter] = useState<'ALL' | 'PENDING_ACTION' | 'UNDER_REVIEW' | 'VERIFIED' | 'REJECTED' | 'NOT_INTERESTED' | 'OVERDUE'>(() => {
+    if (typeof window !== 'undefined') {
+      const r = parseRouteFromPath(window.location.pathname);
+      if (r.studentTaskFilter) return r.studentTaskFilter;
+    }
+    return 'ALL';
+  });
   
   // Fast O(1) Student Submissions Lookup Map for Instant Task Card Rendering
   const studentSubmissionsMap = useMemo(() => {
@@ -13832,6 +13978,7 @@ export default function App() {
 
 
           <div className="flex-1 min-h-0 bg-[#F5F5F4] dark:bg-[#0f0f12] relative overflow-x-hidden">
+            <ErrorBoundary fallbackTitle="Portal View Error">
             <Suspense fallback={<ViewLoadingFallback />}>
               <AnimatePresence mode="wait">
               {view === 'dashboard' && isIndustry && (
@@ -15564,6 +15711,26 @@ export default function App() {
                           </button>
                           <button
                             type="button"
+                            onClick={() => setStudentTaskFilter('REJECTED')}
+                            className={cn(
+                              "px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border cursor-pointer flex items-center gap-1.5",
+                              studentTaskFilter === 'REJECTED' ? "bg-red-600 text-white border-red-600 shadow-sm" : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                            )}
+                          >
+                            <XCircle size={14} /> Rejected
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setStudentTaskFilter('NOT_INTERESTED')}
+                            className={cn(
+                              "px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border cursor-pointer flex items-center gap-1.5",
+                              studentTaskFilter === 'NOT_INTERESTED' ? "bg-orange-600 text-white border-orange-600 shadow-sm" : "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
+                            )}
+                          >
+                            <AlertTriangle size={14} /> Not Interested
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => setStudentTaskFilter('OVERDUE')}
                             className={cn(
                               "px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border cursor-pointer flex items-center gap-1.5",
@@ -15575,18 +15742,52 @@ export default function App() {
                         </div>
                       )}
 
-                      {[...tasks].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).filter(task => {
-                        if (!isStudent || studentTaskFilter === 'ALL') return true;
-                        const sub = studentSubmissionsMap.get(String(task.id));
-                        const isDeadlinePassed = task.deadline && new Date(task.deadline) < new Date();
-                        const isClosed = task.status === 'CLOSED' || isDeadlinePassed;
+                      {(() => {
+                        const filteredTasks = [...tasks].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).filter(task => {
+                          if (!isStudent || studentTaskFilter === 'ALL') return true;
+                          const sub = studentSubmissionsMap.get(String(task.id));
+                          const isDeadlinePassed = task.deadline && new Date(task.deadline) < new Date();
+                          const isClosed = task.status === 'CLOSED' || isDeadlinePassed;
 
-                        if (studentTaskFilter === 'PENDING_ACTION') return !sub && !isClosed;
-                        if (studentTaskFilter === 'UNDER_REVIEW') return sub?.status === 'SUBMITTED';
-                        if (studentTaskFilter === 'VERIFIED') return sub?.status === 'VERIFIED';
-                        if (studentTaskFilter === 'OVERDUE') return (!sub && isClosed) || sub?.status === 'REJECTED';
-                        return true;
-                      }).map(task => {
+                          if (studentTaskFilter === 'PENDING_ACTION') return !sub && !isClosed;
+                          if (studentTaskFilter === 'UNDER_REVIEW') return sub?.status === 'SUBMITTED';
+                          if (studentTaskFilter === 'VERIFIED') return sub?.status === 'VERIFIED';
+                          if (studentTaskFilter === 'REJECTED') return sub?.status === 'REJECTED';
+                          if (studentTaskFilter === 'NOT_INTERESTED') return sub?.status === 'NOT_PARTICIPATING';
+                          if (studentTaskFilter === 'OVERDUE') return !sub && isClosed;
+                          return true;
+                        });
+
+                        if (filteredTasks.length === 0) {
+                          return (
+                            <Card className="p-10 text-center border-dashed border-2 border-zinc-200 dark:border-zinc-800 rounded-3xl my-4">
+                              <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 text-zinc-400 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                <ClipboardList size={24} />
+                              </div>
+                              <h4 className="text-base font-bold text-zinc-800 dark:text-zinc-200 mb-1">
+                                No Tasks Found in this Category
+                              </h4>
+                              <p className="text-xs text-zinc-500 max-w-sm mx-auto mb-4">
+                                {studentTaskFilter === 'REJECTED'
+                                  ? 'You have zero rejected submissions. Great job!'
+                                  : studentTaskFilter === 'NOT_INTERESTED'
+                                  ? 'You have not marked any tasks as skipped or not interested.'
+                                  : 'No tasks currently match your selected filter.'}
+                              </p>
+                              {studentTaskFilter !== 'ALL' && (
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setStudentTaskFilter('ALL')}
+                                  className="text-xs font-bold"
+                                >
+                                  View All Tasks
+                                </Button>
+                              )}
+                            </Card>
+                          );
+                        }
+
+                        return filteredTasks.map(task => {
                         const submission = studentSubmissionsMap.get(String(task.id));
                         const isDeadlinePassed = task.deadline && new Date(task.deadline) < new Date();
                         const isWithin24h = task.deadline && !isDeadlinePassed && (new Date(task.deadline).getTime() - new Date().getTime()) < 24 * 60 * 60 * 1000;
@@ -16169,7 +16370,8 @@ export default function App() {
                             )}
                           </Card>
                         );
-                      })}
+                      });
+                    })()}
                     </div>
                   </PageLayout>
                 </motion.div>
@@ -17678,6 +17880,7 @@ export default function App() {
               }
             </AnimatePresence>
             </Suspense>
+            </ErrorBoundary>
           </div>
 
           <AnimatePresence>
