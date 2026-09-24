@@ -4273,7 +4273,11 @@ interface AppRouteState {
 }
 
 const parseRouteFromPath = (pathname: string): AppRouteState => {
-  const cleanPath = (pathname || '/').toLowerCase().replace(/^\/+|\/+$/g, '');
+  const cleanPath = (pathname || '/')
+    .split('?')[0]
+    .split('#')[0]
+    .toLowerCase()
+    .replace(/^\/+|\/+$/g, '');
 
   // Footer Modals
   if (cleanPath === 'sources') return { view: 'dashboard', footerModal: 'SOURCES' };
@@ -4315,7 +4319,7 @@ const parseRouteFromPath = (pathname: string): AppRouteState => {
     return { view: 'tasks', studentTaskFilter: 'ALL', verificationFilter: 'ALL', footerModal: null };
   }
   if (cleanPath === 'tasks' || cleanPath.startsWith('tasks/')) {
-    return { view: 'tasks', footerModal: null };
+    return { view: 'tasks', studentTaskFilter: 'ALL', footerModal: null };
   }
 
   // Verifications sub-routes
@@ -5186,9 +5190,13 @@ export default function App() {
       setShowFooterModal(route.footerModal || null);
       if (route.studentTaskFilter) {
         setStudentTaskFilter(route.studentTaskFilter);
+      } else if (route.view === 'tasks') {
+        setStudentTaskFilter('ALL');
       }
       if (route.verificationFilter) {
         setVerificationFilter(route.verificationFilter);
+      } else if (route.view === 'verifications') {
+        setVerificationFilter('PENDING');
       }
     };
 
