@@ -94,9 +94,8 @@ html.dark {
   label {
     color: var(--text-secondary);
   }
-  /* Better touch targets on mobile */
+  /* Better touch behavior on mobile */
   button, [role="button"] {
-    min-height: 36px;
     touch-action: manipulation;
   }
 }
@@ -390,155 +389,23 @@ html.dark {
   padding-right: env(safe-area-inset-right, 0px);
 }
 
-/* ── Mobile Bottom Navigation Bar ───────────────────────────────────────── */
-.mobile-bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 60;
-  display: flex;
-  align-items: stretch;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-top: 1px solid rgba(228, 228, 231, 0.8);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  box-shadow: 0 -4px 24px -2px rgba(0,0,0,0.08), 0 -1px 0 rgba(0,0,0,0.04);
+/* ── Mobile Utility Helpers ─────────────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-html.dark .mobile-bottom-nav {
-  background: rgba(18, 18, 23, 0.97) !important;
-  border-top-color: rgba(38, 38, 46, 0.9) !important;
-  box-shadow: 0 -4px 24px -2px rgba(0,0,0,0.4), 0 -1px 0 rgba(255,255,255,0.04) !important;
-}
-
-.mobile-bottom-nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 10px 4px 8px;
-  min-height: 56px;
-  font-size: 10px;
-  font-weight: 600;
-  color: #94a3b8;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  -webkit-tap-highlight-color: transparent;
-  transition: color 0.18s ease, transform 0.15s ease;
-  touch-action: manipulation;
-  position: relative;
-  letter-spacing: 0.01em;
-}
-
-.mobile-bottom-nav-item:active {
-  transform: scale(0.92);
-}
-
-.mobile-bottom-nav-item.active {
-  color: #6366f1;
-}
-
-html.dark .mobile-bottom-nav-item {
-  color: #64748b;
-}
-
-html.dark .mobile-bottom-nav-item.active {
-  color: #818cf8;
-}
-
-.mobile-bottom-nav-item .nav-icon-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 30px;
-  border-radius: 14px;
-  transition: background 0.18s ease, transform 0.15s cubic-bezier(0.34,1.56,0.64,1);
-}
-
-.mobile-bottom-nav-item.active .nav-icon-wrap {
-  background: rgba(99, 102, 241, 0.12);
-  transform: scale(1.08) translateY(-1px);
-}
-
-html.dark .mobile-bottom-nav-item.active .nav-icon-wrap {
-  background: rgba(129, 140, 248, 0.18);
-}
-
-.mobile-bottom-nav-item .nav-badge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 3px;
-  background: #f43f5e;
-  color: white;
-  font-size: 9px;
-  font-weight: 800;
-  border-radius: 9999px;
-  border: 2px solid white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-html.dark .mobile-bottom-nav-item .nav-badge {
-  border-color: #121217;
-}
-
-/* Space for mobile bottom nav in main content (only on mobile) */
-@media (max-width: 1023px) {
-  .mobile-nav-spacer {
-    height: calc(56px + env(safe-area-inset-bottom, 0px));
-    flex-shrink: 0;
-  }
-}
-
-@media (min-width: 1024px) {
-  .mobile-bottom-nav {
-    display: none !important;
-  }
-  .mobile-nav-spacer {
-    display: none !important;
-  }
-}
-
-/* ── Mobile Card & Layout Improvements ──────────────────────────────────── */
+/* ── Mobile Card & Layout Polish ────────────────────────────────────────── */
 @media (max-width: 640px) {
-  /* Tighter card padding on mobile */
-  .card-mobile-tight {
-    padding: 1rem !important;
-    border-radius: 1rem !important;
-  }
-
-  /* Better modal on mobile — full bottom sheet style */
   .modal-mobile-bottom {
     border-bottom-left-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
     border-top-left-radius: 1.25rem !important;
     border-top-right-radius: 1.25rem !important;
     margin-bottom: 0 !important;
-  }
-
-  /* Bigger tap targets for all buttons */
-  button, [role="button"] {
-    min-height: 40px;
-  }
-
-  /* Prevent text overflow in header */
-  header h2 {
-    max-width: calc(100vw - 160px);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 }
 
