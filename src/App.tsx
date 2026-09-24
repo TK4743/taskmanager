@@ -1290,14 +1290,12 @@ const Footer = ({ onShowModal }: { onShowModal: (type: 'PRIVACY' | 'TERMS' | 'SU
 const PageLayout = ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const onShowModal = React.useContext(FooterContext);
   return (
-    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-8 pb-3 sm:pb-4 md:pb-8 bg-[#F5F5F4] dark:bg-[#0f0f12] flex flex-col min-h-0 custom-scrollbar">
-      <div className="w-full flex flex-col min-h-full">
-        <div className={cn("flex-1 flex flex-col space-y-4 md:space-y-6 w-full", className)} {...props}>
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-3.5 sm:p-5 md:p-8 bg-[#F5F5F4] dark:bg-[#0f0f12] flex flex-col min-h-0 custom-scrollbar">
+      <div className="w-full max-w-full flex flex-col min-h-full">
+        <div className={cn("flex-1 flex flex-col space-y-4 md:space-y-6 w-full max-w-full", className)} {...props}>
           {children}
         </div>
         {onShowModal && <Footer onShowModal={onShowModal} />}
-        {/* Spacer for mobile bottom navigation bar */}
-        <div className="mobile-nav-spacer" aria-hidden="true" />
       </div>
     </div>
   );
@@ -9292,56 +9290,56 @@ export default function App() {
         </div>
 
         {/* Separate Gender Breakdown Cards */}
-        <div className="px-6 py-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-zinc-50 border-b border-zinc-200">
-          <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex items-center justify-between shadow-sm">
+        <div className="px-3 sm:px-6 py-3 sm:py-4 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 bg-zinc-50 border-b border-zinc-200">
+          <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
             <div>
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Total Students</p>
-              <p className="text-2xl font-black text-zinc-900 mt-0.5">{enriched.length}</p>
+              <p className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Total Students</p>
+              <p className="text-xl sm:text-2xl font-black text-zinc-900 mt-0.5">{enriched.length}</p>
             </div>
-            <div className="text-right text-xs font-semibold text-zinc-600 space-y-0.5">
-              <p className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md flex items-center justify-end gap-1"><User size={12} /> Boys: {boysEnriched.length}</p>
-              <p className="bg-pink-50 text-pink-700 px-2 py-0.5 rounded-md flex items-center justify-end gap-1"><User size={12} /> Girls: {girlsEnriched.length}</p>
+            <div className="text-left sm:text-right text-[11px] sm:text-xs font-semibold text-zinc-600 space-y-0.5">
+              <p className="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded-md flex items-center sm:justify-end gap-1"><User size={11} /> Boys: {boysEnriched.length}</p>
+              <p className="bg-pink-50 text-pink-700 px-1.5 py-0.5 rounded-md flex items-center sm:justify-end gap-1"><User size={11} /> Girls: {girlsEnriched.length}</p>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-[#18181c] p-4 rounded-2xl border border-indigo-200 dark:border-indigo-500/40 flex items-center justify-between shadow-sm">
+          <div className="bg-white dark:bg-[#18181c] p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-indigo-200 dark:border-indigo-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
             <div>
-              <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Responded Students</p>
-              <p className="text-2xl font-black text-indigo-700 dark:text-indigo-300 mt-0.5">{respondedCount}</p>
+              <p className="text-[9px] sm:text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Responded</p>
+              <p className="text-xl sm:text-2xl font-black text-indigo-700 dark:text-indigo-300 mt-0.5">{respondedCount}</p>
               <span className="text-[9px] font-semibold text-indigo-500 dark:text-indigo-400">Interested</span>
             </div>
-            <div className="text-right text-xs font-semibold space-y-0.5">
-              <p className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md flex items-center justify-end gap-1"><User size={12} /> Boys: {boysResponded}</p>
-              <p className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md flex items-center justify-end gap-1"><User size={12} /> Girls: {girlsResponded}</p>
+            <div className="text-left sm:text-right text-[11px] sm:text-xs font-semibold space-y-0.5">
+              <p className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-md flex items-center sm:justify-end gap-1"><User size={11} /> Boys: {boysResponded}</p>
+              <p className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-md flex items-center sm:justify-end gap-1"><User size={11} /> Girls: {girlsResponded}</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex items-center justify-between shadow-sm">
+          <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
             <div>
-              <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Completed / Verified</p>
-              <p className="text-2xl font-black text-emerald-600 mt-0.5">{completedCount}</p>
+              <p className="text-[9px] sm:text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Completed</p>
+              <p className="text-xl sm:text-2xl font-black text-emerald-600 mt-0.5">{completedCount}</p>
             </div>
-            <div className="text-right text-xs font-semibold space-y-0.5">
-              <p className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md flex items-center justify-end gap-1"><User size={12} /> Boys: {boysCompleted}</p>
-              <p className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md flex items-center justify-end gap-1"><User size={12} /> Girls: {girlsCompleted}</p>
+            <div className="text-left sm:text-right text-[11px] sm:text-xs font-semibold space-y-0.5">
+              <p className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-md flex items-center sm:justify-end gap-1"><User size={11} /> Boys: {boysCompleted}</p>
+              <p className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-md flex items-center sm:justify-end gap-1"><User size={11} /> Girls: {girlsCompleted}</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex items-center justify-between shadow-sm">
+          <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
             <div>
-              <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wider">Skipped / Not Interested</p>
-              <p className="text-2xl font-black text-orange-600 mt-0.5">{skippedCount}</p>
+              <p className="text-[9px] sm:text-[10px] font-bold text-orange-500 uppercase tracking-wider">Skipped</p>
+              <p className="text-xl sm:text-2xl font-black text-orange-600 mt-0.5">{skippedCount}</p>
             </div>
-            <div className="text-right text-xs font-semibold space-y-0.5">
-              <p className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded-md flex items-center justify-end gap-1"><User size={12} /> Boys: {boysSkipped}</p>
-              <p className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded-md flex items-center justify-end gap-1"><User size={12} /> Girls: {girlsSkipped}</p>
+            <div className="text-left sm:text-right text-[11px] sm:text-xs font-semibold space-y-0.5">
+              <p className="bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded-md flex items-center sm:justify-end gap-1"><User size={11} /> Boys: {boysSkipped}</p>
+              <p className="bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded-md flex items-center sm:justify-end gap-1"><User size={11} /> Girls: {girlsSkipped}</p>
             </div>
           </div>
         </div>
 
         {/* Visualization Section */}
-        <div className="px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-8 bg-zinc-50/20 border-b border-zinc-100">
-          <div className="lg:col-span-1 flex justify-center items-center bg-white p-8 rounded-3xl border border-zinc-100 shadow-sm">
+        <div className="px-3.5 sm:px-8 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8 bg-zinc-50/20 border-b border-zinc-100">
+          <div className="lg:col-span-1 flex justify-center items-center bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-zinc-100 shadow-xs">
             <CircularProgress
               value={completedCount}
               total={enriched.length}
@@ -9350,7 +9348,7 @@ export default function App() {
               size="lg"
             />
           </div>
-          <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-zinc-100 shadow-sm min-h-[200px]">
+          <div className="lg:col-span-2 bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-zinc-100 shadow-xs min-h-[180px]">
             {analyzerTaskFilter ? (
               <SimpleBarChart
                 label="Class-wise Completion"
@@ -9462,7 +9460,7 @@ export default function App() {
                 return (
                   <TR key={student.id}>
                     <TD className="text-sm text-zinc-900">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-bold text-zinc-900">{student.full_name}</span>
                         {student.gender && (() => {
                           const isBoy = ['MALE', 'BOYS', 'BOY', 'M'].includes((student.gender || '').toUpperCase());
@@ -12684,7 +12682,7 @@ export default function App() {
 
   return (
     <FooterContext.Provider value={setShowFooterModal}>
-      <div className="h-screen min-h-[100dvh] bg-[#F5F5F4] dark:bg-[#0f0f12] flex overflow-hidden">
+      <div className="h-[100dvh] min-h-[100dvh] max-h-[100dvh] bg-[#F5F5F4] dark:bg-[#0f0f12] flex overflow-hidden">
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         {renderAssignTargetModal()}
         {renderTelegramLinkModal()}
@@ -13020,7 +13018,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        <main className="flex-1 flex flex-col min-w-0 h-[100dvh] max-h-[100dvh] overflow-hidden">
           <header className="h-14 md:h-20 bg-white border-b border-zinc-200 px-3 md:px-8 flex items-center justify-between shrink-0 gap-2">
             <div className="flex items-center gap-2 md:gap-4 min-w-0">
               <button
@@ -13299,9 +13297,9 @@ export default function App() {
                         <UnifiedAnalyzer role="SUPREME_ADMIN" title="Global System Analyzer" />
                       </div>
                     ) : isHOD ? (
-                      <div className="flex flex-col gap-10">
+                      <div className="flex flex-col gap-5 sm:gap-8">
                         {/* Premium Header Stats */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
                           <StatCard title="Active Classes" value={hodStats?.total_classes || 0} icon={<Building2 />} color="blue" />
                           <StatCard title="Class Advisors" value={hodStats?.total_advisors || 0} icon={<UserCheck />} color="emerald" />
                           <StatCard title="Total Enrollment" value={hodStats?.total_students || 0} icon={<GraduationCap />} color="indigo" />
@@ -13335,8 +13333,8 @@ export default function App() {
                       }).map(s => s.user_id)).size || advisorStats?.verified_tasks_count || 0;
 
                       return (
-                        <div className="flex flex-col gap-10">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="flex flex-col gap-5 sm:gap-8">
+                          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-6">
                             <StatCard title="Class Students" value={totalClassStudents} icon={<Users />} color="bg-blue-500" />
                             <StatCard title="Responded Students" value={respondedCount} icon={<CheckCircle2 />} color="bg-indigo-500" />
                             <StatCard title="Pending Verification" value={pendingCount} icon={<Clock />} color="bg-orange-500" />
@@ -13346,7 +13344,7 @@ export default function App() {
                         </div>
                       );
                     })() : (
-                      <div className="flex flex-col gap-8">
+                      <div className="flex flex-col gap-5 sm:gap-8">
                         {isCoordinator ? (() => {
                           const activeClassId = user?.class_id || myClass?.id;
                           const myClassStudentsCount = users.filter(u => u.role === 'STUDENT' && (activeClassId ? String(u.class_id) === String(activeClassId) : true)).length;
@@ -13370,11 +13368,11 @@ export default function App() {
                           return (
                             <>
                               <div>
-                                <div className="flex items-center gap-3 mb-4">
-                                  <div className="w-1.5 h-6 bg-zinc-900 rounded-full" />
-                                  <h3 className="text-xl font-bold text-zinc-900 tracking-tight">My Class Summary</h3>
+                                <div className="flex items-center gap-2.5 mb-3">
+                                  <div className="w-1.5 h-5 bg-zinc-900 dark:bg-white rounded-full" />
+                                  <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white tracking-tight">My Class Summary</h3>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-6">
                                   <StatCard title="Class Students" value={totalClassStudents} icon={<Users />} color="bg-blue-500" />
                                   <StatCard title="Responded Students" value={respondedCount} icon={<CheckCircle2 />} color="bg-indigo-500" />
                                   <StatCard title="Pending Verification" value={pendingCount} icon={<Clock />} color="bg-orange-500" />
@@ -13383,25 +13381,25 @@ export default function App() {
                               </div>
 
                               <div
-                                className="bg-zinc-900 rounded-3xl p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 cursor-pointer hover:bg-black transition-all group shadow-md"
+                                className="bg-zinc-900 dark:bg-zinc-800 rounded-2xl sm:rounded-3xl p-4 sm:p-7 text-white flex flex-row items-center justify-between gap-3 sm:gap-6 cursor-pointer hover:bg-black transition-all group shadow-md"
                                 onClick={() => setView('verifications')}
                               >
-                                <div className="flex items-center gap-6 text-center md:text-left">
-                                  <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <ShieldCheck size={32} className="text-white" />
+                                <div className="flex items-center gap-3 sm:gap-5 min-w-0">
+                                  <div className="w-11 h-11 sm:w-14 sm:h-14 bg-white/10 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+                                    <ShieldCheck size={24} className="text-white" />
                                   </div>
-                                  <div>
-                                    <h3 className="text-2xl font-bold">Coordinator Workspace</h3>
-                                    <p className="text-zinc-400">Manage and verify peer submissions for your class.</p>
+                                  <div className="min-w-0">
+                                    <h3 className="text-base sm:text-2xl font-bold truncate">Coordinator Workspace</h3>
+                                    <p className="text-xs sm:text-sm text-zinc-400 truncate sm:whitespace-normal">Verify class submissions</p>
                                   </div>
                                 </div>
-                                <div className="flex flex-col items-center md:items-end">
-                                  <span className="text-4xl font-black">{submissions.filter(s => {
+                                <div className="flex flex-col items-end shrink-0">
+                                  <span className="text-2xl sm:text-4xl font-black text-amber-400">{submissions.filter(s => {
                                     const std = users.find(u => u.id === s.user_id);
                                     const cid = s.class_id || std?.class_id;
                                     return s.status === 'SUBMITTED' && cid && String(cid) === String(user?.class_id);
                                   }).length}</span>
-                                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">Pending Tasks</span>
+                                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-zinc-400">Pending</span>
                                 </div>
                               </div>
 
@@ -14284,7 +14282,7 @@ export default function App() {
                       )}
                     </div>
 
-                    <Table className="min-w-[700px] md:min-w-0">
+                    <Table className="w-full">
                       <THead>
                         <TR>
                           <TH>Candidate Name</TH>
@@ -15595,15 +15593,15 @@ export default function App() {
                   className="w-full h-full flex flex-col min-h-0"
                 >
                   <PageLayout>
-                    <div className="flex justify-between items-center flex-wrap gap-3 mb-4">
-                      <div className="flex gap-2 flex-wrap">
+                    <div className="flex justify-between items-center flex-wrap gap-2.5 mb-3 sm:mb-4">
+                      <div className="flex gap-1.5 overflow-x-auto no-scrollbar max-w-full pb-1 shrink-0">
                         {['PENDING', 'VERIFIED', 'REJECTED', 'NOT INTERESTED', 'ALL'].map(f => (
                           <button
                             key={f}
                             onClick={() => setVerificationFilter(f as any)}
                             className={cn(
-                              "px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap",
-                              verificationFilter === f ? "bg-black text-white" : "bg-white text-zinc-400 border border-zinc-200 hover:border-zinc-300"
+                              "px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap shrink-0",
+                              verificationFilter === f ? "bg-black text-white dark:bg-white dark:text-black shadow-xs" : "bg-white dark:bg-[#18181c] text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300"
                             )}
                           >
                             {f}
@@ -15938,7 +15936,259 @@ export default function App() {
                       );
                     })()}
 
-                    <Table className="min-w-[800px] md:min-w-0">
+                    {(() => {
+                      const filtered = getFilteredVerificationSubmissions();
+                      const totalPages = Math.ceil(filtered.length / itemsPerPage);
+                      const paginated = filtered.slice((submissionPage - 1) * itemsPerPage, submissionPage * itemsPerPage);
+
+                      return (
+                        <>
+                          {/* ── Mobile Touch Cards Layout (< md) ─────────────── */}
+                          <div className="block md:hidden space-y-3">
+                            {filtered.length === 0 ? (
+                              <Card className="text-center py-10 p-4">
+                                <Users size={40} className="mx-auto text-zinc-300 dark:text-zinc-600 mb-2" />
+                                <p className="font-bold text-sm text-zinc-900 dark:text-white">No submissions found</p>
+                                <p className="text-xs text-zinc-400">There are no task submissions matching your current filters.</p>
+                              </Card>
+                            ) : (
+                              paginated.map(s => {
+                                const isPdf = Boolean(
+                                  s.screenshot_url && 
+                                  (s.screenshot_url.toLowerCase().includes('.pdf') || s.screenshot_url.toLowerCase().endsWith('.pdf'))
+                                );
+                                const isPurged = Boolean(s.screenshot_url && s.screenshot_url.startsWith('PURGED'));
+                                const hasProof = Boolean(s.screenshot_url && !isPurged);
+                                const fileName = s.original_filename || (isPdf ? 'Proof_Document.pdf' : 'Proof_Screenshot.png');
+
+                                return (
+                                  <Card
+                                    key={s.id}
+                                    className={cn(
+                                      "p-3.5 rounded-2xl border-l-4 transition-all shadow-xs bg-white dark:bg-[#141418] space-y-3",
+                                      s.status === 'VERIFIED' ? "border-l-emerald-500" :
+                                      s.status === 'REJECTED' ? "border-l-red-500" :
+                                      s.status === 'NOT_PARTICIPATING' ? "border-l-orange-400" :
+                                      "border-l-amber-500"
+                                    )}
+                                  >
+                                    <div className="flex items-start justify-between gap-2.5">
+                                      <div className="flex items-center gap-2.5 min-w-0">
+                                        {s.status === 'SUBMITTED' && (
+                                          <input
+                                            type="checkbox"
+                                            className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 cursor-pointer shrink-0 mt-0.5"
+                                            checked={selectedSubmissions.includes(s.id)}
+                                            onChange={e => {
+                                              if (e.target.checked) setSelectedSubmissions(prev => [...prev, s.id]);
+                                              else setSelectedSubmissions(prev => prev.filter(id => id !== s.id));
+                                            }}
+                                          />
+                                        )}
+                                        {s.student_avatar ? (
+                                          <img
+                                            src={s.student_avatar}
+                                            alt={s.student_name}
+                                            className="w-9 h-9 rounded-full object-cover border border-zinc-200 dark:border-zinc-700 shrink-0"
+                                          />
+                                        ) : (
+                                          <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300 font-bold text-xs flex items-center justify-center shrink-0">
+                                            {(s.student_name || 'U').charAt(0).toUpperCase()}
+                                          </div>
+                                        )}
+                                        <div className="min-w-0">
+                                          <p className="text-sm font-bold text-zinc-900 dark:text-white leading-tight truncate">
+                                            {s.student_name}
+                                          </p>
+                                          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                                            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">{s.register_number || 'No Reg#'}</span>
+                                            {s.class_name && (
+                                              <span className="px-1.5 py-0.2 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold rounded uppercase">
+                                                {s.class_name}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <Badge variant={
+                                        s.status === 'VERIFIED' ? 'success' :
+                                        s.status === 'REJECTED' ? 'danger' : 'warning'
+                                      } className={cn("shrink-0 text-[10px] font-bold", s.status === 'NOT_PARTICIPATING' ? 'bg-orange-100 text-orange-700 border-orange-200' : '')}>
+                                        {s.status === 'SUBMITTED' ? 'PENDING' : s.status === 'NOT_PARTICIPATING' ? 'NOT INTERESTED' : s.status}
+                                      </Badge>
+                                    </div>
+
+                                    <div className="bg-zinc-50 dark:bg-zinc-900/60 p-2.5 rounded-xl border border-zinc-100 dark:border-zinc-800/80 space-y-1">
+                                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 line-clamp-2">{s.task_title}</p>
+                                      <div className="flex items-center gap-2 text-[10px] text-zinc-400">
+                                        <span>Submitted: {s.submitted_at ? new Date(s.submitted_at).toLocaleDateString() : 'N/A'}</span>
+                                        {s.resubmission_count && s.resubmission_count > 0 ? (
+                                          <span className="px-1 py-0.2 bg-amber-50 text-amber-700 border border-amber-200 rounded font-bold">
+                                            #{s.resubmission_count}
+                                          </span>
+                                        ) : null}
+                                      </div>
+                                    </div>
+
+                                    {s.status === 'NOT_PARTICIPATING' && (
+                                      <div className="p-2.5 bg-orange-50/90 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/40 rounded-xl">
+                                        <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                                          <AlertTriangle size={11} className="text-orange-500 shrink-0" /> Reason
+                                        </p>
+                                        <p className="text-xs text-orange-950 dark:text-orange-200 font-semibold leading-relaxed">
+                                          "{s.not_participating_reason || 'No specific reason provided'}"
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {s.status !== 'NOT_PARTICIPATING' && s.custom_field_value && (() => {
+                                      const val = s.custom_field_value.trim();
+                                      const isUrl = /^https?:\/\//i.test(val) || /^www\./i.test(val) || val.includes('github.com') || val.includes('drive.google.com') || val.includes('leetcode.com');
+                                      const targetUrl = isUrl ? (/^https?:\/\//i.test(val) ? val : `https://${val}`) : null;
+                                      return (
+                                        <div className="flex items-center justify-between gap-2 p-2 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg text-xs">
+                                          <span className="text-[10px] font-bold text-zinc-400 uppercase truncate">
+                                            {s.custom_field_label || 'Data'}:
+                                          </span>
+                                          <div className="flex items-center gap-1.5 min-w-0">
+                                            {targetUrl ? (
+                                              <a
+                                                href={targetUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline truncate max-w-[180px]"
+                                              >
+                                                <ExternalLink size={11} />
+                                                <span className="truncate">{val}</span>
+                                              </a>
+                                            ) : (
+                                              <span className="font-mono text-zinc-900 dark:text-zinc-100 truncate max-w-[180px]">{val}</span>
+                                            )}
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                navigator.clipboard.writeText(val);
+                                                addToast('Copied to clipboard', 'info');
+                                              }}
+                                              className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 shrink-0"
+                                              title="Copy"
+                                            >
+                                              <Copy size={12} />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
+
+                                    {s.status !== 'NOT_PARTICIPATING' && hasProof && (
+                                      <div className="flex items-center justify-between gap-2 p-2 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-zinc-100 dark:border-zinc-800">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          {isPdf ? (
+                                            <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-600 flex items-center justify-center shrink-0">
+                                              <FileText size={18} />
+                                            </div>
+                                          ) : (
+                                            <img
+                                              src={getCloudinaryThumbnail(s.screenshot_url, 100)}
+                                              alt="Proof"
+                                              className="w-9 h-9 rounded-lg object-cover border border-zinc-200 dark:border-zinc-700 shrink-0"
+                                            />
+                                          )}
+                                          <div className="min-w-0">
+                                            <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">{fileName}</p>
+                                            <p className="text-[10px] text-zinc-400 uppercase font-semibold">{isPdf ? 'PDF Document' : 'Screenshot'}</p>
+                                          </div>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => setInspectingSubmission(s)}
+                                          className="px-2.5 py-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 rounded-lg flex items-center gap-1 shrink-0"
+                                        >
+                                          <Eye size={12} /> View
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    <div className="flex items-center gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                                      {s.status === 'SUBMITTED' ? (
+                                        <>
+                                          <Button
+                                            variant="success"
+                                            className="flex-1 py-2 text-xs font-bold flex items-center justify-center gap-1.5 rounded-xl shadow-xs"
+                                            onClick={() => verifySubmission(s.id, 'VERIFIED')}
+                                          >
+                                            <CheckCircle2 size={14} /> Verify
+                                          </Button>
+                                          <Button
+                                            variant="danger"
+                                            className="flex-1 py-2 text-xs font-bold flex items-center justify-center gap-1.5 rounded-xl shadow-xs"
+                                            onClick={() => setShowRejectionModal(s.id)}
+                                          >
+                                            <XCircle size={14} /> Reject
+                                          </Button>
+                                          <Button
+                                            variant="secondary"
+                                            className="p-2 text-zinc-600 dark:text-zinc-400 rounded-xl"
+                                            onClick={() => setInspectingSubmission(s)}
+                                            title="Inspect full details"
+                                          >
+                                            <Eye size={16} />
+                                          </Button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Button
+                                            variant="secondary"
+                                            className="flex-1 py-1.5 text-xs font-bold flex items-center justify-center gap-1.5 rounded-xl"
+                                            onClick={() => setInspectingSubmission(s)}
+                                          >
+                                            <Eye size={13} /> Full Details
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            className="p-2 text-zinc-500 rounded-xl"
+                                            onClick={() => fetchReviews(s.id)}
+                                            title="Review History"
+                                          >
+                                            <History size={16} />
+                                          </Button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </Card>
+                                );
+                              })
+                            )}
+
+                            {filtered.length > itemsPerPage && (
+                              <div className="flex items-center justify-between pt-2 pb-4">
+                                <Button
+                                  variant="secondary"
+                                  className="px-3 py-1.5 text-xs font-semibold"
+                                  disabled={submissionPage === 1}
+                                  onClick={() => setSubmissionPage(prev => prev - 1)}
+                                >
+                                  Previous
+                                </Button>
+                                <span className="text-xs font-bold text-zinc-500">
+                                  Page {submissionPage} of {totalPages}
+                                </span>
+                                <Button
+                                  variant="secondary"
+                                  className="px-3 py-1.5 text-xs font-semibold"
+                                  disabled={submissionPage === totalPages}
+                                  onClick={() => setSubmissionPage(prev => prev + 1)}
+                                >
+                                  Next
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Desktop Table View (>= md) */}
+                          <div className="hidden md:block">
+                            <Table className="w-full">
                       <THead>
                         <TR>
                           <TH className="w-12">
@@ -16323,6 +16573,10 @@ export default function App() {
                         })()}
                       </TBody>
                     </Table>
+                  </div>
+                </>
+              );
+            })()}
                   </PageLayout>
                 </motion.div>
               )}
@@ -18075,118 +18329,7 @@ export default function App() {
 
         </AnimatePresence>
       </div>
-
-      {/* Mobile Bottom Navigation Bar — shown only on mobile/tablet (< lg) */}
-      <MobileBottomNav
-        view={view}
-        setView={setView}
-        isStudent={isStudent}
-        isAdvisor={isAdvisor}
-        isCoordinator={isCoordinator}
-        isHOD={isHOD}
-        isAdmin={isAdmin}
-        isIndustry={isIndustry}
-        pendingSubmissionsCount={submissions.filter(s => s.status === 'SUBMITTED').length}
-        fetchNotices={fetchNotices}
-        setIsMobileSidebarOpen={setIsMobileSidebarOpen}
-      />
     </FooterContext.Provider>
-
-
-
-  );
-}
-
-// ── Mobile Bottom Navigation Bar ─────────────────────────────────────────
-function MobileBottomNav({
-  view,
-  setView,
-  isStudent,
-  isAdvisor,
-  isCoordinator,
-  isHOD,
-  isAdmin,
-  isIndustry,
-  pendingSubmissionsCount,
-  fetchNotices,
-  setIsMobileSidebarOpen,
-}: {
-  view: string;
-  setView: (v: string) => void;
-  isStudent: boolean;
-  isAdvisor: boolean;
-  isCoordinator: boolean;
-  isHOD: boolean;
-  isAdmin: boolean;
-  isIndustry: boolean;
-  pendingSubmissionsCount: number;
-  fetchNotices: () => void;
-  setIsMobileSidebarOpen: (v: boolean) => void;
-}) {
-  // Determine active tab for each nav item
-  const isDash = view === 'dashboard' || view === 'industry-portal' || view === 'industry-dashboard';
-  const isTasks = view === 'tasks' || view === 'industry-postings' || view === 'industry-coding-assessments';
-  const isVerify = view === 'verifications' || view === 'submissions';
-  const isProfile = view === 'profile' || view === 'settings' || view === 'users' || view === 'my-class' || view === 'classes' || view === 'departments';
-  const isCoding = view === 'leetcode-targets' || view === 'coding-progress';
-  const isNotice = view === 'notice-board';
-
-  const navItems = React.useMemo(() => {
-    if (isIndustry) {
-      return [
-        { id: 'home', label: 'Home', icon: <LayoutDashboard size={20} />, active: isDash, onClick: () => setView('industry-dashboard') },
-        { id: 'postings', label: 'Postings', icon: <Briefcase size={20} />, active: isTasks, onClick: () => setView('industry-postings') },
-        { id: 'pool', label: 'Candidates', icon: <Users size={20} />, active: view === 'users', onClick: () => setView('users') },
-        { id: 'profile', label: 'Profile', icon: <Building2 size={20} />, active: isProfile, onClick: () => setView('industry-profile') },
-      ];
-    }
-    if (isStudent) {
-      return [
-        { id: 'home', label: 'Home', icon: <LayoutDashboard size={20} />, active: isDash, onClick: () => setView('dashboard') },
-        { id: 'tasks', label: 'Tasks', icon: <ClipboardList size={20} />, active: isTasks, onClick: () => setView('tasks') },
-        { id: 'coding', label: 'Coding', icon: <Code size={20} />, active: isCoding, onClick: () => setView('leetcode-targets') },
-        { id: 'notice', label: 'Notices', icon: <Megaphone size={20} />, active: isNotice, onClick: () => { setView('notice-board'); fetchNotices(); } },
-        { id: 'profile', label: 'Profile', icon: <User size={20} />, active: view === 'profile', onClick: () => setView('profile') },
-      ];
-    }
-    // HOD / Admin / Advisor / Coordinator
-    return [
-      { id: 'home', label: 'Home', icon: <LayoutDashboard size={20} />, active: isDash, onClick: () => setView('dashboard') },
-      { id: 'tasks', label: 'Tasks', icon: <ClipboardList size={20} />, active: isTasks, onClick: () => setView('tasks') },
-      {
-        id: 'verify',
-        label: 'Verify',
-        icon: <ShieldCheck size={20} />,
-        active: isVerify,
-        badge: pendingSubmissionsCount > 0 ? (pendingSubmissionsCount > 9 ? '9+' : String(pendingSubmissionsCount)) : undefined,
-        onClick: () => setView('verifications'),
-      },
-      { id: 'coding', label: 'Coding', icon: <Code size={20} />, active: isCoding, onClick: () => setView('leetcode-targets') },
-      { id: 'more', label: 'More', icon: <Menu size={20} />, active: false, onClick: () => setIsMobileSidebarOpen(true) },
-    ];
-  }, [view, isIndustry, isStudent, isDash, isTasks, isVerify, isCoding, isNotice, isProfile, pendingSubmissionsCount]);
-
-  return (
-    <nav className="mobile-bottom-nav lg:hidden" aria-label="Mobile navigation">
-      {navItems.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          className={cn('mobile-bottom-nav-item', item.active && 'active')}
-          onClick={item.onClick}
-          aria-label={item.label}
-          aria-current={item.active ? 'page' : undefined}
-        >
-          <span className="nav-icon-wrap">
-            {item.icon}
-            {item.badge && (
-              <span className="nav-badge">{item.badge}</span>
-            )}
-          </span>
-          <span>{item.label}</span>
-        </button>
-      ))}
-    </nav>
   );
 }
 
@@ -18243,14 +18386,14 @@ function StatCard({ title, value, icon, color, emoji }: { title: string; value: 
   const scheme = colorMap[key] || colorMap.blue;
 
   return (
-    <Card className={cn("relative overflow-hidden p-5 border shadow-sm hover:shadow-md transition-all bg-white rounded-2xl", scheme.border)}>
-      <div className="flex items-center justify-between gap-4">
-        <div className="space-y-1 min-w-0">
-          <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider truncate">{title}</p>
-          <p className="text-3xl font-black text-zinc-900 tracking-tight">{value}</p>
+    <Card className={cn("relative overflow-hidden p-3.5 sm:p-5 border shadow-xs hover:shadow-md transition-all bg-white dark:bg-[#141418] rounded-xl sm:rounded-2xl", scheme.border)}>
+      <div className="flex items-center justify-between gap-2.5 sm:gap-4">
+        <div className="space-y-0.5 sm:space-y-1 min-w-0">
+          <p className="text-[10px] sm:text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider truncate">{title}</p>
+          <p className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{value}</p>
         </div>
-        <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0", scheme.bg)}>
-          {icon ? (React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement, { size: 22 }) : icon) : (emoji || <LayoutDashboard size={22} />)}
+        <div className={cn("w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-xs shrink-0", scheme.bg)}>
+          {icon ? (React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement, { size: 18 }) : icon) : (emoji || <LayoutDashboard size={18} />)}
         </div>
       </div>
     </Card>
