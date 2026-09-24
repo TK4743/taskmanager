@@ -15509,14 +15509,16 @@ export default function App() {
                             )}
                             {(isAdmin || isHOD || isAdvisor || isCoordinator) && (
                               <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-4">
-                                <Button
-                                  variant="secondary"
-                                  className="bg-amber-50 text-amber-900 hover:bg-amber-100 border-amber-200 text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition-all"
-                                  onClick={() => openTaskPendingEmailModal(task)}
-                                  title="Send official email reminder to all incomplete students across assigned classes"
-                                >
-                                  <Mail size={14} className="text-amber-600" /> Send Pending Email Alert
-                                </Button>
+                                {(isAdmin || isHOD) && (
+                                  <Button
+                                    variant="secondary"
+                                    className="bg-amber-50 text-amber-900 hover:bg-amber-100 border-amber-200 text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition-all"
+                                    onClick={() => openTaskPendingEmailModal(task)}
+                                    title="Send official email reminder to all incomplete students across assigned classes"
+                                  >
+                                    <Mail size={14} className="text-amber-600" /> Send Pending Email Alert
+                                  </Button>
+                                )}
 
                                 {(isAdmin || isHOD || isAdvisor || isCoordinator) && (
                                   <>
