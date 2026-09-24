@@ -4353,7 +4353,7 @@ const parseRouteFromPath = (pathname: string): AppRouteState => {
   if (cleanPath === 'teaching-hub' || cleanPath === 'live-teaching-hub') return { view: 'live-teaching-hub', footerModal: null };
   if (cleanPath === 'opportunities') return { view: 'opportunities', footerModal: null };
   if (cleanPath === 'coding-tests' || cleanPath === 'student-coding-assessments') return { view: 'student-coding-assessments', footerModal: null };
-  if (cleanPath === 'skill-gap' || cleanPath === 'skill-gap-analyzer') return { view: 'skill-gap-analyzer', footerModal: null };
+  if (cleanPath === 'skill-gap' || cleanPath === 'skill-gap-analyzer' || cleanPath === 'analyzer' || cleanPath === 'progress-analyzer') return { view: 'skill-gap-analyzer', footerModal: null };
   if (cleanPath === 'heatmap' || cleanPath === 'skill-heatmap' || cleanPath === 'institutional-skill-heatmap') return { view: 'institutional-skill-heatmap', footerModal: null };
 
   // Notice board
@@ -4397,6 +4397,8 @@ const getPathFromState = (
   switch (view) {
     case 'leetcode-targets':
     case 'coding-progress':
+    case 'coding_progress':
+    case 'leetcode_targets':
       return codingPlatformTab === 'GITHUB' ? '/codingprogress/github' : '/codingprogress/leetcode';
     case 'tasks': {
       if (studentTaskFilter === 'REJECTED') return '/tasks/rejected';
@@ -4409,7 +4411,8 @@ const getPathFromState = (
     }
     case 'submissions':
       return '/submissions';
-    case 'verifications': {
+    case 'verifications':
+    case 'verification': {
       if (verificationFilter === 'REJECTED') return '/verifications/rejected';
       if (verificationFilter === 'NOT INTERESTED') return '/verifications/not-interested';
       if (verificationFilter === 'VERIFIED') return '/verifications/verified';
@@ -17890,6 +17893,80 @@ export default function App() {
                   </motion.div>
                 )
               }
+
+              {/* Fallback for role-restricted routes accessed without required role */}
+              {((view === 'departments' && !isAdmin) ||
+                (view === 'classes' && !isHOD) ||
+                (view === 'my-class' && !isAdvisor) ||
+                (view === 'industry-approvals' && !isAdmin && !isHOD)) && (
+                <motion.div
+                  key="access-restricted"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="w-full h-full flex flex-col min-h-0"
+                >
+                  <PageLayout>
+                    <Card className="p-12 text-center max-w-lg mx-auto my-12 rounded-3xl border-dashed border-2 border-zinc-200 dark:border-zinc-800 shadow-sm">
+                      <div className="w-14 h-14 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                        <AlertTriangle size={28} />
+                      </div>
+                      <h3 className="text-base font-bold text-zinc-900 dark:text-white mb-1">
+                        Access Restricted
+                      </h3>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-5 leading-relaxed max-w-sm mx-auto">
+                        This section requires administrative or faculty privileges that are not assigned to your current account.
+                      </p>
+                      <Button
+                        onClick={() => setView('dashboard')}
+                        className="bg-black text-white hover:bg-zinc-800 text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer"
+                      >
+                        Return to Dashboard
+                      </Button>
+                    </Card>
+                  </PageLayout>
+                </motion.div>
+              )}
+
+              {/* Fallback for unrecognized view state */}
+              {![
+                'dashboard', 'tasks', 'submissions', 'verifications', 'notice-board',
+                'leetcode-targets', 'coding-progress', 'coding_progress', 'leetcode_targets',
+                'skill-assessment', 'placement-readiness', 'live-teaching-hub', 'opportunities',
+                'student-coding-assessments', 'skill-gap-analyzer', 'institutional-skill-heatmap',
+                'departments', 'classes', 'my-class', 'users', 'industry-approvals', 'settings', 'profile',
+                'industry-dashboard', 'industry-postings', 'industry-coding-assessments',
+                'industry-applications', 'industry-reports', 'industry-profile', 'industry-portal',
+                'analyzer', 'verification'
+              ].includes(view) && (
+                <motion.div
+                  key="view-not-found"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="w-full h-full flex flex-col min-h-0"
+                >
+                  <PageLayout>
+                    <Card className="p-12 text-center max-w-lg mx-auto my-12 rounded-3xl border-dashed border-2 border-zinc-200 dark:border-zinc-800 shadow-sm">
+                      <div className="w-14 h-14 bg-zinc-100 dark:bg-zinc-800 text-zinc-400 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                        <AlertTriangle size={28} />
+                      </div>
+                      <h3 className="text-base font-bold text-zinc-900 dark:text-white mb-1">
+                        Page Not Found
+                      </h3>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-5 leading-relaxed max-w-sm mx-auto">
+                        The requested portal page does not exist or may have been moved.
+                      </p>
+                      <Button
+                        onClick={() => setView('dashboard')}
+                        className="bg-black text-white hover:bg-zinc-800 text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer"
+                      >
+                        Go to Dashboard
+                      </Button>
+                    </Card>
+                  </PageLayout>
+                </motion.div>
+              )}
             </AnimatePresence>
             </Suspense>
             </ErrorBoundary>
