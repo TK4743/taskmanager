@@ -1290,12 +1290,14 @@ const Footer = ({ onShowModal }: { onShowModal: (type: 'PRIVACY' | 'TERMS' | 'SU
 const PageLayout = ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const onShowModal = React.useContext(FooterContext);
   return (
-    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] dark:bg-[#0f0f12] flex flex-col min-h-0 custom-scrollbar">
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-8 pb-3 sm:pb-4 md:pb-8 bg-[#F5F5F4] dark:bg-[#0f0f12] flex flex-col min-h-0 custom-scrollbar">
       <div className="w-full flex flex-col min-h-full">
-        <div className={cn("flex-1 flex flex-col space-y-6 w-full", className)} {...props}>
+        <div className={cn("flex-1 flex flex-col space-y-4 md:space-y-6 w-full", className)} {...props}>
           {children}
         </div>
         {onShowModal && <Footer onShowModal={onShowModal} />}
+        {/* Spacer for mobile bottom navigation bar */}
+        <div className="mobile-nav-spacer" aria-hidden="true" />
       </div>
     </div>
   );
@@ -18063,9 +18065,118 @@ export default function App() {
 
         </AnimatePresence>
       </div>
+
+      {/* Mobile Bottom Navigation Bar — shown only on mobile/tablet (< lg) */}
+      <MobileBottomNav
+        view={view}
+        setView={setView}
+        isStudent={isStudent}
+        isAdvisor={isAdvisor}
+        isCoordinator={isCoordinator}
+        isHOD={isHOD}
+        isAdmin={isAdmin}
+        isIndustry={isIndustry}
+        pendingSubmissionsCount={submissions.filter(s => s.status === 'SUBMITTED').length}
+        fetchNotices={fetchNotices}
+        setIsMobileSidebarOpen={setIsMobileSidebarOpen}
+      />
     </FooterContext.Provider>
 
 
+
+  );
+}
+
+// ── Mobile Bottom Navigation Bar ─────────────────────────────────────────
+function MobileBottomNav({
+  view,
+  setView,
+  isStudent,
+  isAdvisor,
+  isCoordinator,
+  isHOD,
+  isAdmin,
+  isIndustry,
+  pendingSubmissionsCount,
+  fetchNotices,
+  setIsMobileSidebarOpen,
+}: {
+  view: string;
+  setView: (v: string) => void;
+  isStudent: boolean;
+  isAdvisor: boolean;
+  isCoordinator: boolean;
+  isHOD: boolean;
+  isAdmin: boolean;
+  isIndustry: boolean;
+  pendingSubmissionsCount: number;
+  fetchNotices: () => void;
+  setIsMobileSidebarOpen: (v: boolean) => void;
+}) {
+  // Determine active tab for each nav item
+  const isDash = view === 'dashboard' || view === 'industry-portal' || view === 'industry-dashboard';
+  const isTasks = view === 'tasks' || view === 'industry-postings' || view === 'industry-coding-assessments';
+  const isVerify = view === 'verifications' || view === 'submissions';
+  const isProfile = view === 'profile' || view === 'settings' || view === 'users' || view === 'my-class' || view === 'classes' || view === 'departments';
+  const isCoding = view === 'leetcode-targets' || view === 'coding-progress';
+  const isNotice = view === 'notice-board';
+
+  const navItems = React.useMemo(() => {
+    if (isIndustry) {
+      return [
+        { id: 'home', label: 'Home', icon: <LayoutDashboard size={20} />, active: isDash, onClick: () => setView('industry-dashboard') },
+        { id: 'postings', label: 'Postings', icon: <Briefcase size={20} />, active: isTasks, onClick: () => setView('industry-postings') },
+        { id: 'pool', label: 'Candidates', icon: <Users size={20} />, active: view === 'users', onClick: () => setView('users') },
+        { id: 'profile', label: 'Profile', icon: <Building2 size={20} />, active: isProfile, onClick: () => setView('industry-profile') },
+      ];
+    }
+    if (isStudent) {
+      return [
+        { id: 'home', label: 'Home', icon: <LayoutDashboard size={20} />, active: isDash, onClick: () => setView('dashboard') },
+        { id: 'tasks', label: 'Tasks', icon: <ClipboardList size={20} />, active: isTasks, onClick: () => setView('tasks') },
+        { id: 'coding', label: 'Coding', icon: <Code size={20} />, active: isCoding, onClick: () => setView('leetcode-targets') },
+        { id: 'notice', label: 'Notices', icon: <Megaphone size={20} />, active: isNotice, onClick: () => { setView('notice-board'); fetchNotices(); } },
+        { id: 'profile', label: 'Profile', icon: <User size={20} />, active: view === 'profile', onClick: () => setView('profile') },
+      ];
+    }
+    // HOD / Admin / Advisor / Coordinator
+    return [
+      { id: 'home', label: 'Home', icon: <LayoutDashboard size={20} />, active: isDash, onClick: () => setView('dashboard') },
+      { id: 'tasks', label: 'Tasks', icon: <ClipboardList size={20} />, active: isTasks, onClick: () => setView('tasks') },
+      {
+        id: 'verify',
+        label: 'Verify',
+        icon: <ShieldCheck size={20} />,
+        active: isVerify,
+        badge: pendingSubmissionsCount > 0 ? (pendingSubmissionsCount > 9 ? '9+' : String(pendingSubmissionsCount)) : undefined,
+        onClick: () => setView('verifications'),
+      },
+      { id: 'coding', label: 'Coding', icon: <Code size={20} />, active: isCoding, onClick: () => setView('leetcode-targets') },
+      { id: 'more', label: 'More', icon: <Menu size={20} />, active: false, onClick: () => setIsMobileSidebarOpen(true) },
+    ];
+  }, [view, isIndustry, isStudent, isDash, isTasks, isVerify, isCoding, isNotice, isProfile, pendingSubmissionsCount]);
+
+  return (
+    <nav className="mobile-bottom-nav lg:hidden" aria-label="Mobile navigation">
+      {navItems.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          className={cn('mobile-bottom-nav-item', item.active && 'active')}
+          onClick={item.onClick}
+          aria-label={item.label}
+          aria-current={item.active ? 'page' : undefined}
+        >
+          <span className="nav-icon-wrap">
+            {item.icon}
+            {item.badge && (
+              <span className="nav-badge">{item.badge}</span>
+            )}
+          </span>
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </nav>
   );
 }
 
