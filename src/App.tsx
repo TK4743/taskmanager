@@ -6930,6 +6930,14 @@ export default function App() {
     };
     const getSection = (cn: string) => { const m = cn.trim().match(/([A-Za-z])$/); return m ? m[1].toUpperCase() : ''; };
 
+    // Build "III YEAR IT SECTION A" style string from a Class object
+    const buildClassInfo = (cls: any): string => {
+      const yr = cls.year ? toRomanYear(Number(cls.year)) : '';
+      const dept = getDeptAbbr(cls.department_name || user?.department_name || 'IT');
+      const sec = getSection(cls.name);
+      return [yr, dept, sec ? `SECTION ${sec}` : ''].filter(Boolean).join(' ');
+    };
+
     const getExcelColumnName = (colIndex: number): string => {
       let temp = colIndex;
       let letter = '';
