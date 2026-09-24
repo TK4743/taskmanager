@@ -3988,7 +3988,27 @@ export default function App() {
       });
     }
   };
-  const [reportFilters, setReportFilters] = useState<{ classIds: string[]; taskId: string; year: string; status: string }>({ classIds: [], taskId: '', year: '', status: 'ALL' });
+  const [reportFilters, setReportFilters] = useState<{
+    classIds: string[];
+    taskId: string;
+    year: string;
+    status: string;
+    gender: 'ALL' | 'BOYS' | 'GIRLS';
+  }>({ classIds: [], taskId: '', year: '', status: 'ALL', gender: 'ALL' });
+
+  const getStudentGender = (student: any): 'MALE' | 'FEMALE' => {
+    const g = (student?.gender || student?.student_gender || '').toUpperCase();
+    if (['FEMALE', 'GIRLS', 'GIRL', 'F'].includes(g)) return 'FEMALE';
+    return 'MALE';
+  };
+
+  const isStudentGenderMatch = (student: any, filter?: 'ALL' | 'BOYS' | 'GIRLS'): boolean => {
+    if (!filter || filter === 'ALL') return true;
+    const g = getStudentGender(student);
+    if (filter === 'BOYS') return g === 'MALE';
+    if (filter === 'GIRLS') return g === 'FEMALE';
+    return true;
+  };
   const [screenshotDownloadProgress, setScreenshotDownloadProgress] = useState<{
     current: number;
     total: number;
@@ -6892,12 +6912,13 @@ export default function App() {
     }
   };
 
-  const exportToExcel = async (filters?: { classIds?: string[]; taskId?: string; year?: string; status?: string; }) => {
+  const exportToExcel = async (filters?: { classIds?: string[]; taskId?: string; year?: string; status?: string; gender?: 'ALL' | 'BOYS' | 'GIRLS'; }) => {
     const isAdminRole = user?.role === 'SUPREME_ADMIN';
     const isHODRole = user?.role === 'HOD';
     const isClsRole = user?.role === 'CLASS_ADVISOR' || (user?.role === 'STUDENT' && user?.is_coordinator);
-    const selectedClassIds = filters?.classIds || [];
-    const selectedYear = filters?.year || '';
+    const selectedClassIds = filters?.classIds || reportFilters.classIds || [];
+    const selectedYear = filters?.year || reportFilters.year || '';
+    const selectedGender = filters?.gender || reportFilters.gender || 'ALL';
 
     // ── Small helpers ──────────────────────────────────────────────────────────
     const ACADEMIC_YEAR = '2024-2028';
@@ -7155,17 +7176,8 @@ export default function App() {
 
       return await workbook.xlsx.writeBuffer();
     };
-
-    // Build "III YEAR IT SECTION A" style string from a Class object
-    const buildClassInfo = (cls: Class): string => {
-      const yr = cls.year ? toRomanYear(Number(cls.year)) : '';
-      const dept = getDeptAbbr(cls.department_name || user?.department_name || 'IT');
-      const sec = getSection(cls.name);
-      return [yr, dept, sec ? `SECTION ${sec}` : ''].filter(Boolean).join(' ');
-    };
-
     // 1. Scope students by role and optional classIds filter
-    const targetStudents = users.filter(u => {
+    const scopedStudents = users.filter(u => {
       if (u.role !== 'STUDENT') return false;
 
       let inScope = true;
@@ -7190,7 +7202,7 @@ export default function App() {
       return true;
     });
 
-    if (targetStudents.length === 0 && submissions.length > 0) {
+    if (scopedStudents.length === 0 && submissions.length > 0) {
       // Resilient fallback: derive student records directly from submissions
       const stdMap = new Map<string, any>();
       submissions.forEach(s => {
@@ -7219,6 +7231,7 @@ export default function App() {
           id: s.user_id,
           full_name: s.student_name || 'Student',
           register_number: s.register_number || 'N/A',
+          gender: s.student_gender || s.gender,
           class_id: s.class_id,
           class_name: s.class_name,
           department_id: s.department_id,
@@ -7226,11 +7239,15 @@ export default function App() {
           email: s.student_email || ''
         });
       });
-      targetStudents.push(...Array.from(stdMap.values()));
+      scopedStudents.push(...Array.from(stdMap.values()));
     }
 
+    const targetStudents = scopedStudents.filter(u => isStudentGenderMatch(u, selectedGender));
+    const boysStudents = scopedStudents.filter(u => isStudentGenderMatch(u, 'BOYS'));
+    const girlsStudents = scopedStudents.filter(u => isStudentGenderMatch(u, 'GIRLS'));
+
     if (targetStudents.length === 0) {
-      addToast('No student records found for the selected filters.', 'error');
+      addToast(`No ${selectedGender === 'BOYS' ? 'male' : selectedGender === 'GIRLS' ? 'female' : ''} student records found for the selected filters.`, 'error');
       return;
     }
 
@@ -7296,10 +7313,7 @@ export default function App() {
       ? (tasks.find(t => t.id?.toString() === filters.taskId)?.title || 'TASK REPORT')
       : 'ALL TASKS';
 
-    const sheet1Line5 = `${selectedTaskTitle} - ${classInfoStr}`;
-    const sheet2Line5 = `TASK COMPLETION SUMMARY - ${classInfoStr}`;
-
-    // ── PRE-FETCH TEAM REPORT DATA ──────────────────────────────────────────────
+    // ── PRE-FETCH TEAM REPORT DATA ─────────────────────────────────────────────
     const teamRows: any[] = [];
     const teamStudentMap = new Map<string, { status: string; teamName: string; remarks?: string }>();
 
@@ -7376,135 +7390,136 @@ export default function App() {
       console.error('Error fetching team report data for excel:', err);
     }
 
-    // ── SHEET 1: Detailed rows ─────────────────────────────────────────────────
-    const detailedRows: any[] = [];
-    let sno = 1;
+    // ── Helper: Build Detailed Rows ───────────────────────────────────────────
+    const buildDetailedRows = (studentsList: any[]): any[] => {
+      const rows: any[] = [];
+      let sIndex = 1;
 
-    if (!filters?.taskId) {
-      // Matrix Mode (Multiple Tasks): One row per student
-      targetStudents.forEach(student => {
-        const studentRow: any = {
-          'S.No': sno,
-          'Reg No': student.register_number || '—',
-          'Name': student.full_name || '—',
-          'Mail ID': student.email || '—'
-        };
+      if (!filters?.taskId) {
+        // Matrix Mode (Multiple Tasks): One row per student
+        studentsList.forEach(student => {
+          const studentRow: any = {
+            'S.No': sIndex,
+            'Reg No': student.register_number || '—',
+            'Name': student.full_name || '—',
+            'Gender': getStudentGender(student),
+            'Mail ID': student.email || '—'
+          };
 
-        let hasMatchingStatus = (selectedStatus === 'ALL');
+          let hasMatchingStatus = (selectedStatus === 'ALL');
 
-        targetTasks.forEach((task, idx) => {
-          if (Array.isArray(task.class_ids) && task.class_ids.length > 0 && !task.class_ids.some((cid: any) => cid.toString() === student.class_id?.toString())) {
-            studentRow[`Task ${idx + 1}: ${task.title}`] = 'N/A';
-            return;
-          }
+          targetTasks.forEach((task, idx) => {
+            if (Array.isArray(task.class_ids) && task.class_ids.length > 0 && !task.class_ids.some((cid: any) => cid.toString() === student.class_id?.toString())) {
+              studentRow[`Task ${idx + 1}: ${task.title}`] = 'N/A';
+              return;
+            }
 
-          const sub = getSub(student.id, student.register_number, task.id);
-          const teamInfo = teamStudentMap.get(`${student.id}_${task.id}`);
+            const sub = getSub(student.id, student.register_number, task.id);
+            const teamInfo = teamStudentMap.get(`${student.id}_${task.id}`);
 
-          let rawStatus = sub ? sub.status : 'NOT_SUBMITTED';
-          if (teamInfo && rawStatus === 'NOT_SUBMITTED') {
-            rawStatus = teamInfo.status;
-          }
+            let rawStatus = sub ? sub.status : 'NOT_SUBMITTED';
+            if (teamInfo && rawStatus === 'NOT_SUBMITTED') {
+              rawStatus = teamInfo.status;
+            }
 
-          const statusLabel =
-            rawStatus === 'VERIFIED' ? 'Verified' :
-              rawStatus === 'SUBMITTED' ? 'Submitted' :
-                rawStatus === 'REJECTED' ? 'Rejected' :
-                  rawStatus === 'NOT_PARTICIPATING' ? 'Not Interested' : 'Not Registered';
+            const statusLabel =
+              rawStatus === 'VERIFIED' ? 'Verified' :
+                rawStatus === 'SUBMITTED' ? 'Submitted' :
+                  rawStatus === 'REJECTED' ? 'Rejected' :
+                    rawStatus === 'NOT_PARTICIPATING' ? 'Not Interested' : 'Not Registered';
 
-          const cellVal = (sub?.screenshot_url && !sub.screenshot_url.startsWith('PURGED'))
-            ? { text: statusLabel, hyperlink: sub.screenshot_url }
-            : statusLabel;
+            const cellVal = (sub?.screenshot_url && !sub.screenshot_url.startsWith('PURGED'))
+              ? { text: statusLabel, hyperlink: sub.screenshot_url }
+              : statusLabel;
 
-          studentRow[`Task ${idx + 1}: ${task.title}`] = cellVal;
+            studentRow[`Task ${idx + 1}: ${task.title}`] = cellVal;
 
-          if (selectedStatus !== 'ALL' && rawStatus === selectedStatus) {
-            hasMatchingStatus = true;
+            if (selectedStatus !== 'ALL' && rawStatus === selectedStatus) {
+              hasMatchingStatus = true;
+            }
+          });
+
+          if (hasMatchingStatus) {
+            studentRow['S.No'] = sIndex++;
+            rows.push(studentRow);
           }
         });
+      } else {
+        // Single Task Mode: One row per student-task pair
+        studentsList.forEach(student => {
+          targetTasks.forEach(task => {
+            if (Array.isArray(task.class_ids) && task.class_ids.length > 0 && !task.class_ids.some((cid: any) => cid.toString() === student.class_id?.toString())) {
+              return;
+            }
+            const sub = getSub(student.id, student.register_number, task.id);
+            const teamInfo = teamStudentMap.get(`${student.id}_${task.id}`);
 
-        if (hasMatchingStatus) {
-          studentRow['S.No'] = sno++;
-          detailedRows.push(studentRow);
-        }
-      });
-    } else {
-      // Original Mode (Single Task): One row per student-task pair
-      targetStudents.forEach(student => {
-        targetTasks.forEach(task => {
-          if (Array.isArray(task.class_ids) && task.class_ids.length > 0 && !task.class_ids.some((cid: any) => cid.toString() === student.class_id?.toString())) {
-            return;
-          }
-          const sub = getSub(student.id, student.register_number, task.id);
-          const teamInfo = teamStudentMap.get(`${student.id}_${task.id}`);
+            let rawStatus = sub ? sub.status : 'NOT_SUBMITTED';
+            let customFieldValue = sub?.custom_field_value || '—';
 
-          let rawStatus = sub ? sub.status : 'NOT_SUBMITTED';
-          let customFieldValue = sub?.custom_field_value || '—';
+            if (teamInfo && rawStatus === 'NOT_SUBMITTED') {
+              rawStatus = teamInfo.status;
+              customFieldValue = `Team: ${teamInfo.teamName}${teamInfo.remarks ? ` (${teamInfo.remarks})` : ''}`;
+            }
 
-          if (teamInfo && rawStatus === 'NOT_SUBMITTED') {
-            rawStatus = teamInfo.status;
-            customFieldValue = `Team: ${teamInfo.teamName}${teamInfo.remarks ? ` (${teamInfo.remarks})` : ''}`;
-          }
+            const isNotParticipating = rawStatus === 'NOT_PARTICIPATING';
+            const isParticipating = rawStatus === 'SUBMITTED' || rawStatus === 'VERIFIED' || rawStatus === 'REJECTED';
 
-          const isNotParticipating = rawStatus === 'NOT_PARTICIPATING';
-          const isParticipating = rawStatus === 'SUBMITTED' || rawStatus === 'VERIFIED' || rawStatus === 'REJECTED';
+            const statusLabel =
+              rawStatus === 'VERIFIED' ? 'Verified' :
+                rawStatus === 'SUBMITTED' ? 'Submitted' :
+                  rawStatus === 'REJECTED' ? 'Rejected' :
+                    rawStatus === 'NOT_PARTICIPATING' ? 'Not Interested' : 'Not Registered';
 
-          const statusLabel =
-            rawStatus === 'VERIFIED' ? 'Verified' :
-              rawStatus === 'SUBMITTED' ? 'Submitted' :
-                rawStatus === 'REJECTED' ? 'Rejected' :
-                  rawStatus === 'NOT_PARTICIPATING' ? 'Not Interested' : 'Not Registered';
+            let include = false;
+            if (selectedStatus === 'ALL') include = true;
+            else if (selectedStatus === 'VERIFIED') include = rawStatus === 'VERIFIED';
+            else if (selectedStatus === 'SUBMITTED') include = rawStatus === 'SUBMITTED';
+            else if (selectedStatus === 'REJECTED') include = rawStatus === 'REJECTED';
+            else if (selectedStatus === 'NOT_SUBMITTED') include = rawStatus === 'NOT_SUBMITTED';
+            else if (selectedStatus === 'NOT_PARTICIPATING') include = rawStatus === 'NOT_PARTICIPATING';
 
-          let include = false;
-          if (selectedStatus === 'ALL') include = true;
-          else if (selectedStatus === 'VERIFIED') include = rawStatus === 'VERIFIED';
-          else if (selectedStatus === 'SUBMITTED') include = rawStatus === 'SUBMITTED';
-          else if (selectedStatus === 'REJECTED') include = rawStatus === 'REJECTED';
-          else if (selectedStatus === 'NOT_SUBMITTED') include = rawStatus === 'NOT_SUBMITTED';
-          else if (selectedStatus === 'NOT_PARTICIPATING') include = rawStatus === 'NOT_PARTICIPATING';
+            const screenshotVal = (sub?.screenshot_url && !sub.screenshot_url.startsWith('PURGED'))
+              ? { text: 'View Proof', hyperlink: sub.screenshot_url }
+              : (sub?.screenshot_url?.startsWith('PURGED') ? 'Purged (30d+)' : (isParticipating ? 'No File' : '—'));
 
-          const screenshotVal = (sub?.screenshot_url && !sub.screenshot_url.startsWith('PURGED'))
-            ? { text: 'View Proof', hyperlink: sub.screenshot_url }
-            : (sub?.screenshot_url?.startsWith('PURGED') ? 'Purged (30d+)' : (isParticipating ? 'No File' : '—'));
-
-          const reasonVal = rawStatus === 'REJECTED'
-            ? (sub?.rejection_reason || sub?.verification_note || teamInfo?.remarks || 'Rejected')
-            : isNotParticipating
-              ? (sub?.not_participating_reason || 'Not Interested')
-              : '—';
-
-          const participatingVal = rawStatus === 'REJECTED'
-            ? 'Rejected'
-            : (rawStatus === 'VERIFIED' || rawStatus === 'SUBMITTED')
-              ? 'Yes'
+            const reasonVal = rawStatus === 'REJECTED'
+              ? (sub?.rejection_reason || sub?.verification_note || teamInfo?.remarks || 'Rejected')
               : isNotParticipating
-                ? 'No'
+                ? (sub?.not_participating_reason || 'Not Interested')
                 : '—';
 
-          if (include) {
-            detailedRows.push({
-              'S.No': sno++,
-              'Name': student.full_name || '—',
-              'Reg No': student.register_number || '—',
-              'Mail ID': student.email || '—',
-              'Task Name': task.title,
-              'Participating / Interested': participatingVal,
-              'Task Status': statusLabel,
-              'Custom Field': customFieldValue,
-              'Proof Screenshot': screenshotVal,
-              'Reason (If Not Participating / Rejection)': reasonVal,
-            });
-          }
+            const participatingVal = rawStatus === 'REJECTED'
+              ? 'Rejected'
+              : (rawStatus === 'VERIFIED' || rawStatus === 'SUBMITTED')
+                ? 'Yes'
+                : isNotParticipating
+                  ? 'No'
+                  : '—';
+
+            if (include) {
+              rows.push({
+                'S.No': sIndex++,
+                'Name': student.full_name || '—',
+                'Reg No': student.register_number || '—',
+                'Gender': getStudentGender(student),
+                'Mail ID': student.email || '—',
+                'Task Name': task.title,
+                'Participating / Interested': participatingVal,
+                'Task Status': statusLabel,
+                'Custom Field': customFieldValue,
+                'Proof Screenshot': screenshotVal,
+                'Reason (If Not Participating / Rejection)': reasonVal,
+              });
+            }
+          });
         });
-      });
-    }
+      }
 
-    if (detailedRows.length === 0) {
-      addToast('No records matched the selected filters.', 'error');
-      return;
-    }
+      return rows;
+    };
 
-    // ── SHEET 2: Summary per task per class ────────────────────────────────────
+    // ── Helper: Build Summary Rows ───────────────────────────────────────────
     const classGroups: { classId: string; className: string }[] = [];
     if (selectedClassIds.length > 0) {
       selectedClassIds.forEach(cid => {
@@ -7517,7 +7532,7 @@ export default function App() {
       classGroups.push({ classId: cid, className: cls?.name || cid });
     } else {
       const seen = new Set<string>();
-      targetStudents.forEach(st => {
+      scopedStudents.forEach(st => {
         const cid = st.class_id?.toString() || '';
         if (!seen.has(cid)) {
           seen.add(cid);
@@ -7527,48 +7542,56 @@ export default function App() {
       });
     }
 
-    const summaryRows: any[] = [];
-    targetTasks.forEach(task => {
-      classGroups.forEach(({ classId, className }) => {
-        if (Array.isArray(task.class_ids) && task.class_ids.length > 0 && !task.class_ids.some((cid: any) => cid.toString() === classId)) {
-          return;
-        }
-        const classStudents = targetStudents.filter(st => st.class_id?.toString() === classId);
-        if (classStudents.length === 0) return;
-
-        let verifiedCount = 0, submittedCount = 0, rejectedCount = 0, notSubmittedCount = 0, notParticipatingCount = 0;
-        classStudents.forEach(st => {
-          const sub = getSub(st.id, st.register_number, task.id);
-          const teamInfo = teamStudentMap.get(`${st.id}_${task.id}`);
-          let rs = sub ? sub.status : 'NOT_SUBMITTED';
-          if (teamInfo && rs === 'NOT_SUBMITTED') {
-            rs = teamInfo.status;
+    const buildSummaryRows = (studentsList: any[], categoryLabel?: string): any[] => {
+      const rows: any[] = [];
+      targetTasks.forEach(task => {
+        classGroups.forEach(({ classId, className }) => {
+          if (Array.isArray(task.class_ids) && task.class_ids.length > 0 && !task.class_ids.some((cid: any) => cid.toString() === classId)) {
+            return;
           }
+          const classStudents = studentsList.filter(st => st.class_id?.toString() === classId);
+          if (classStudents.length === 0) return;
 
-          if (rs === 'VERIFIED') verifiedCount++;
-          else if (rs === 'SUBMITTED') submittedCount++;
-          else if (rs === 'REJECTED') rejectedCount++;
-          else if (rs === 'NOT_PARTICIPATING') notParticipatingCount++;
-          else notSubmittedCount++;
-        });
+          let verifiedCount = 0, submittedCount = 0, rejectedCount = 0, notSubmittedCount = 0, notParticipatingCount = 0;
+          classStudents.forEach(st => {
+            const sub = getSub(st.id, st.register_number, task.id);
+            const teamInfo = teamStudentMap.get(`${st.id}_${task.id}`);
+            let rs = sub ? sub.status : 'NOT_SUBMITTED';
+            if (teamInfo && rs === 'NOT_SUBMITTED') {
+              rs = teamInfo.status;
+            }
 
-        summaryRows.push({
-          'Task Name': task.title,
-          'Class': className,
-          'Total Students': classStudents.length,
-          'Verified': verifiedCount,
-          'Submitted': submittedCount,
-          'Rejected': rejectedCount,
-          'Not Participating': notParticipatingCount,
-          'Not Submitted': notSubmittedCount,
+            if (rs === 'VERIFIED') verifiedCount++;
+            else if (rs === 'SUBMITTED') submittedCount++;
+            else if (rs === 'REJECTED') rejectedCount++;
+            else if (rs === 'NOT_PARTICIPATING') notParticipatingCount++;
+            else notSubmittedCount++;
+          });
+
+          const rowItem: any = {
+            'Task Name': task.title,
+            'Class': className,
+          };
+          if (categoryLabel) {
+            rowItem['Category'] = categoryLabel;
+          }
+          rowItem['Total Students'] = classStudents.length;
+          rowItem['Verified'] = verifiedCount;
+          rowItem['Submitted'] = submittedCount;
+          rowItem['Rejected'] = rejectedCount;
+          rowItem['Not Participating'] = notParticipatingCount;
+          rowItem['Not Submitted'] = notSubmittedCount;
+
+          rows.push(rowItem);
         });
       });
-    });
+      return rows;
+    };
 
-    // ── Build Workbook ─────────────────────────────────────────────────────────
+    // ── Build Workbook Columns & Sheets ──────────────────────────────────────
     let sheet1Cols: string[] = [];
     if (!filters?.taskId) {
-      sheet1Cols = ['S.No', 'Reg No', 'Name', 'Mail ID'];
+      sheet1Cols = ['S.No', 'Reg No', 'Name', 'Gender', 'Mail ID'];
       targetTasks.forEach((task, idx) => {
         sheet1Cols.push(`Task ${idx + 1}: ${task.title}`);
       });
@@ -7577,6 +7600,7 @@ export default function App() {
         'S.No',
         'Name',
         'Reg No',
+        'Gender',
         'Mail ID',
         'Task Name',
         'Participating / Interested',
@@ -7587,6 +7611,7 @@ export default function App() {
       ];
     }
     const sheet2Cols = ['Task Name', 'Class', 'Total Students', 'Verified', 'Submitted', 'Rejected', 'Not Participating', 'Not Submitted'];
+    const sheet2ColsWithCategory = ['Task Name', 'Class', 'Category', 'Total Students', 'Verified', 'Submitted', 'Rejected', 'Not Participating', 'Not Submitted'];
     const sheet3Cols = [
       'S.No',
       'Team Name',
@@ -7600,26 +7625,99 @@ export default function App() {
 
     const sheet3Line5 = `TEAM WISE TASK REPORT - ${classInfoStr}`;
 
-    const sheetsData = [
-      {
-        name: 'Detailed Report',
-        cols: sheet1Cols,
-        dataRows: detailedRows,
-        line5: sheet1Line5
-      },
-      {
-        name: 'Summary',
-        cols: sheet2Cols,
-        dataRows: summaryRows.length ? summaryRows : [{ 'Task Name': 'No summary data.' }],
-        line5: sheet2Line5
-      },
-      {
-        name: 'Team Wise Report',
-        cols: sheet3Cols,
-        dataRows: teamRows.length ? teamRows : [{ 'S.No': 1, 'Team Name': 'No team data available for selection' }],
-        line5: sheet3Line5
-      }
-    ];
+    let sheetsData: { name: string; cols: string[]; dataRows: any[]; line5: string }[] = [];
+
+    if (selectedGender === 'BOYS') {
+      const boysRows = buildDetailedRows(targetStudents);
+      const boysSummary = buildSummaryRows(targetStudents);
+      sheetsData = [
+        {
+          name: 'Boys Detailed Report',
+          cols: sheet1Cols,
+          dataRows: boysRows.length ? boysRows : [{ 'S.No': 1, 'Name': 'No male students matching filters' }],
+          line5: `${selectedTaskTitle} - ${classInfoStr} [BOYS ONLY]`
+        },
+        {
+          name: 'Boys Summary',
+          cols: sheet2Cols,
+          dataRows: boysSummary.length ? boysSummary : [{ 'Task Name': 'No summary data.' }],
+          line5: `TASK COMPLETION SUMMARY - ${classInfoStr} [BOYS ONLY]`
+        },
+        {
+          name: 'Team Wise Report',
+          cols: sheet3Cols,
+          dataRows: teamRows.length ? teamRows : [{ 'S.No': 1, 'Team Name': 'No team data available for selection' }],
+          line5: sheet3Line5
+        }
+      ];
+    } else if (selectedGender === 'GIRLS') {
+      const girlsRows = buildDetailedRows(targetStudents);
+      const girlsSummary = buildSummaryRows(targetStudents);
+      sheetsData = [
+        {
+          name: 'Girls Detailed Report',
+          cols: sheet1Cols,
+          dataRows: girlsRows.length ? girlsRows : [{ 'S.No': 1, 'Name': 'No female students matching filters' }],
+          line5: `${selectedTaskTitle} - ${classInfoStr} [GIRLS ONLY]`
+        },
+        {
+          name: 'Girls Summary',
+          cols: sheet2Cols,
+          dataRows: girlsSummary.length ? girlsSummary : [{ 'Task Name': 'No summary data.' }],
+          line5: `TASK COMPLETION SUMMARY - ${classInfoStr} [GIRLS ONLY]`
+        },
+        {
+          name: 'Team Wise Report',
+          cols: sheet3Cols,
+          dataRows: teamRows.length ? teamRows : [{ 'S.No': 1, 'Team Name': 'No team data available for selection' }],
+          line5: sheet3Line5
+        }
+      ];
+    } else {
+      // ALL STUDENTS: Generate split tabs for All, Boys, and Girls + Split Summary
+      const allRows = buildDetailedRows(targetStudents);
+      const boysRows = buildDetailedRows(boysStudents);
+      const girlsRows = buildDetailedRows(girlsStudents);
+
+      const summaryCombined = [
+        ...buildSummaryRows(targetStudents, 'Overall Total'),
+        ...buildSummaryRows(boysStudents, 'Boys Only'),
+        ...buildSummaryRows(girlsStudents, 'Girls Only')
+      ];
+
+      sheetsData = [
+        {
+          name: 'Detailed Report (All)',
+          cols: sheet1Cols,
+          dataRows: allRows.length ? allRows : [{ 'S.No': 1, 'Name': 'No records matched the selected filters.' }],
+          line5: `${selectedTaskTitle} - ${classInfoStr} [ALL STUDENTS]`
+        },
+        {
+          name: 'Boys (Detailed)',
+          cols: sheet1Cols,
+          dataRows: boysRows.length ? boysRows : [{ 'S.No': 1, 'Name': 'No male students matching filters' }],
+          line5: `${selectedTaskTitle} - ${classInfoStr} [BOYS ONLY]`
+        },
+        {
+          name: 'Girls (Detailed)',
+          cols: sheet1Cols,
+          dataRows: girlsRows.length ? girlsRows : [{ 'S.No': 1, 'Name': 'No female students matching filters' }],
+          line5: `${selectedTaskTitle} - ${classInfoStr} [GIRLS ONLY]`
+        },
+        {
+          name: 'Summary (Gender Split)',
+          cols: sheet2ColsWithCategory,
+          dataRows: summaryCombined.length ? summaryCombined : [{ 'Task Name': 'No summary data.' }],
+          line5: `TASK COMPLETION SUMMARY - ${classInfoStr}`
+        },
+        {
+          name: 'Team Wise Report',
+          cols: sheet3Cols,
+          dataRows: teamRows.length ? teamRows : [{ 'S.No': 1, 'Team Name': 'No team data available for selection' }],
+          line5: sheet3Line5
+        }
+      ];
+    }
 
     const dateTag = new Date().toISOString().split('T')[0];
     const roleTag = isAdminRole ? 'SuperAdmin' : isHODRole ? 'HOD' : 'Class';
@@ -7627,6 +7725,7 @@ export default function App() {
     const taskObj = tasks.find(t => t.id?.toString() === filters?.taskId);
     const taskTag = taskObj ? `${(taskObj.title || 'Task').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 18)}_` : '';
     const statusTag = selectedStatus === 'ALL' ? 'All' : selectedStatus.charAt(0) + selectedStatus.slice(1).toLowerCase();
+    const genderTag = selectedGender === 'BOYS' ? 'Boys_' : selectedGender === 'GIRLS' ? 'Girls_' : '';
 
     try {
       const finalBuffer = await createExcelReportWorkbook(sheetsData);
@@ -7634,7 +7733,7 @@ export default function App() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${roleTag}_${yearTag}${taskTag}Report_${statusTag}_${dateTag}.xlsx`;
+      a.download = `${roleTag}_${yearTag}${taskTag}${genderTag}Report_${statusTag}_${dateTag}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -7652,9 +7751,11 @@ export default function App() {
     const selectedClassIds = reportFilters.classIds || [];
     const selectedYear = reportFilters.year || '';
     const selectedStatus = reportFilters.status || 'ALL';
+    const selectedGender = reportFilters.gender || 'ALL';
 
     const targetStudents = users.filter(u => {
       if (u.role !== 'STUDENT') return false;
+      if (!isStudentGenderMatch(u, selectedGender)) return false;
       if (selectedYear) {
         const uClass = classes.find(c => c.id?.toString() === u.class_id?.toString());
         if (!uClass || String(uClass.year) !== String(selectedYear)) return false;
@@ -7690,6 +7791,7 @@ export default function App() {
         if (!targetStudentIds.has(sub.user_id) && (!sub.register_number || !targetRegNos.has(sub.register_number))) return;
       } else {
         // Fallback using submission's own metadata
+        if (!isStudentGenderMatch(sub, selectedGender)) return;
         if (selectedYear) {
           const uClass = classes.find(c => c.id?.toString() === sub.class_id?.toString());
           const yr = uClass?.year || sub.class_year;
@@ -7710,15 +7812,16 @@ export default function App() {
 
   // ── Download Screenshots as ZIP ─────────────────────────────────────────────
   const downloadScreenshotsZip = async (
-    filters?: { classIds?: string[]; taskId?: string; year?: string; status?: string; },
+    filters?: { classIds?: string[]; taskId?: string; year?: string; status?: string; gender?: 'ALL' | 'BOYS' | 'GIRLS'; },
     explicitSubmissions?: any[]
   ) => {
     const isAdminRole = user?.role === 'SUPREME_ADMIN';
     const isHODRole = user?.role === 'HOD';
     const isClsRole = user?.role === 'CLASS_ADVISOR' || (user?.role === 'STUDENT' && user?.is_coordinator);
-    const selectedClassIds = filters?.classIds || [];
-    const selectedYear = filters?.year || '';
-    const selectedStatus = filters?.status || 'ALL';
+    const selectedClassIds = filters?.classIds || reportFilters.classIds || [];
+    const selectedYear = filters?.year || reportFilters.year || '';
+    const selectedStatus = filters?.status || reportFilters.status || 'ALL';
+    const selectedGender = filters?.gender || reportFilters.gender || 'ALL';
     const romanYearMap: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
 
     const itemsToDownload: {
@@ -7749,6 +7852,7 @@ export default function App() {
       // Mode 2: Report Studio filters
       const targetStudents = users.filter(u => {
         if (u.role !== 'STUDENT') return false;
+        if (!isStudentGenderMatch(u, selectedGender)) return false;
         if (selectedYear) {
           const uClass = classes.find(c => c.id?.toString() === u.class_id?.toString());
           if (!uClass || String(uClass.year) !== String(selectedYear)) return false;
@@ -7835,6 +7939,7 @@ export default function App() {
         submissions.forEach(sub => {
           if (!sub.screenshot_url || sub.screenshot_url.startsWith('PURGED')) return;
           if (filters?.taskId && sub.task_id?.toString() !== filters.taskId) return;
+          if (!isStudentGenderMatch(sub, selectedGender)) return;
 
           let include = false;
           if (selectedStatus === 'ALL') include = true;
@@ -7880,6 +7985,11 @@ export default function App() {
           teamData.forEach(t => {
             if (filters?.taskId && t.task_id?.toString() !== filters.taskId.toString()) return;
             if (!t.proof_url || t.proof_url.startsWith('PURGED')) return;
+
+            if (selectedGender !== 'ALL') {
+              const leaderStd = users.find(u => u.register_number === t.leader_regno);
+              if (leaderStd && !isStudentGenderMatch(leaderStd, selectedGender)) return;
+            }
 
             const teamClass = classes.find(c => c.id?.toString() === t.class_id?.toString());
             if (selectedYear) {
@@ -8023,7 +8133,8 @@ export default function App() {
       const taskObj = tasks.find(t => t.id?.toString() === filters?.taskId);
       const taskTag = taskObj ? `${(taskObj.title || 'Task').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 18)}_` : '';
       const statusTag = selectedStatus === 'ALL' ? 'All' : selectedStatus.charAt(0) + selectedStatus.slice(1).toLowerCase();
-      const zipFileName = `${roleTag}_${yearTag}${taskTag}Screenshots_${statusTag}_${dateTag}.zip`;
+      const genderTag = selectedGender === 'BOYS' ? 'Boys_' : selectedGender === 'GIRLS' ? 'Girls_' : '';
+      const zipFileName = `${roleTag}_${yearTag}${taskTag}${genderTag}Screenshots_${statusTag}_${dateTag}.zip`;
 
       const downloadUrl = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
@@ -8045,15 +8156,16 @@ export default function App() {
 
   // ── Download Screenshots as Merged Multi-Page PDF ───────────────────────────
   const downloadScreenshotsPdf = async (
-    filters?: { classIds?: string[]; taskId?: string; year?: string; status?: string; },
+    filters?: { classIds?: string[]; taskId?: string; year?: string; status?: string; gender?: 'ALL' | 'BOYS' | 'GIRLS'; },
     explicitSubmissions?: any[]
   ) => {
     const isAdminRole = user?.role === 'SUPREME_ADMIN';
     const isHODRole = user?.role === 'HOD';
     const isClsRole = user?.role === 'CLASS_ADVISOR' || (user?.role === 'STUDENT' && user?.is_coordinator);
-    const selectedClassIds = filters?.classIds || [];
-    const selectedYear = filters?.year || '';
-    const selectedStatus = filters?.status || 'ALL';
+    const selectedClassIds = filters?.classIds || reportFilters.classIds || [];
+    const selectedYear = filters?.year || reportFilters.year || '';
+    const selectedStatus = filters?.status || reportFilters.status || 'ALL';
+    const selectedGender = filters?.gender || reportFilters.gender || 'ALL';
     const romanYearMap: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
 
     const pdfItems: ProofPdfItem[] = [];
@@ -8086,6 +8198,7 @@ export default function App() {
       // Mode 2: Report Studio filters
       const targetStudents = users.filter(u => {
         if (u.role !== 'STUDENT') return false;
+        if (!isStudentGenderMatch(u, selectedGender)) return false;
         if (selectedYear) {
           const uClass = classes.find(c => c.id?.toString() === u.class_id?.toString());
           if (!uClass || String(uClass.year) !== String(selectedYear)) return false;
@@ -8174,6 +8287,7 @@ export default function App() {
         submissions.forEach(sub => {
           if (!sub.screenshot_url || sub.screenshot_url.startsWith('PURGED')) return;
           if (filters?.taskId && sub.task_id?.toString() !== filters.taskId) return;
+          if (!isStudentGenderMatch(sub, selectedGender)) return;
 
           let include = false;
           if (selectedStatus === 'ALL') include = true;
@@ -8221,6 +8335,11 @@ export default function App() {
           teamData.forEach(t => {
             if (filters?.taskId && t.task_id?.toString() !== filters.taskId.toString()) return;
             if (!t.proof_url || t.proof_url.startsWith('PURGED')) return;
+
+            if (selectedGender !== 'ALL') {
+              const leaderStd = users.find(u => u.register_number === t.leader_regno);
+              if (leaderStd && !isStudentGenderMatch(leaderStd, selectedGender)) return;
+            }
 
             const teamClass = classes.find(c => c.id?.toString() === t.class_id?.toString());
             if (selectedYear) {
@@ -8337,7 +8456,8 @@ export default function App() {
       const taskObj = tasks.find(t => t.id?.toString() === filters?.taskId);
       const taskTag = taskObj ? `${(taskObj.title || 'Task').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 18)}_` : '';
       const statusTag = selectedStatus === 'ALL' ? 'All' : selectedStatus.charAt(0) + selectedStatus.slice(1).toLowerCase();
-      const pdfFileName = `${roleTag}_${yearTag}${taskTag}Proofs_${statusTag}_${dateTag}.pdf`;
+      const genderTag = selectedGender === 'BOYS' ? 'Boys_' : selectedGender === 'GIRLS' ? 'Girls_' : '';
+      const pdfFileName = `${roleTag}_${yearTag}${taskTag}${genderTag}Proofs_${statusTag}_${dateTag}.pdf`;
 
       const downloadUrl = URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
@@ -16812,6 +16932,122 @@ export default function App() {
                       />
                     </div>
 
+                    {/* Gender Filter (All / Boys / Girls) */}
+                    {(() => {
+                      const selectedClassIds = reportFilters.classIds || [];
+                      const selectedYear = reportFilters.year || '';
+                      const scopedStudents = users.filter(u => {
+                        if (u.role !== 'STUDENT') return false;
+                        if (selectedYear) {
+                          const uClass = classes.find(c => c.id?.toString() === u.class_id?.toString());
+                          if (!uClass || String(uClass.year) !== String(selectedYear)) return false;
+                        }
+                        if (isAdmin) {
+                          if (selectedClassIds.length > 0) return selectedClassIds.includes(u.class_id?.toString() || '');
+                          return true;
+                        }
+                        if (isHOD) {
+                          if (u.department_id?.toString() !== user?.department_id?.toString()) return false;
+                          if (selectedClassIds.length > 0) return selectedClassIds.includes(u.class_id?.toString() || '');
+                          return true;
+                        }
+                        const userClassId = (user?.class_id || myClass?.id)?.toString();
+                        if (isAdvisor || isCoordinator) {
+                          return u.class_id?.toString() === userClassId;
+                        }
+                        if (selectedClassIds.length > 0) return selectedClassIds.includes(u.class_id?.toString() || '');
+                        return true;
+                      });
+
+                      const totalBoys = scopedStudents.filter(s => getStudentGender(s) === 'MALE').length;
+                      const totalGirls = scopedStudents.filter(s => getStudentGender(s) === 'FEMALE').length;
+                      const totalAll = scopedStudents.length;
+                      const currentGender = reportFilters.gender || 'ALL';
+
+                      return (
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-1.5">
+                              <Users size={11} /> Gender Filter
+                            </label>
+                            <span className="text-[10px] font-bold text-zinc-500">
+                              {currentGender === 'BOYS' ? 'Boys Only' : currentGender === 'GIRLS' ? 'Girls Only' : 'All (Split in Excel)'}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 p-1.5 bg-zinc-100/80 dark:bg-zinc-800/60 rounded-2xl border border-zinc-200/60 dark:border-zinc-700/60">
+                            <button
+                              type="button"
+                              onClick={() => setReportFilters(prev => ({ ...prev, gender: 'ALL' }))}
+                              className={cn(
+                                "flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all",
+                                currentGender === 'ALL'
+                                  ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-sm ring-1 ring-black/5"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              )}
+                            >
+                              <span>👥 All</span>
+                              {totalAll > 0 && (
+                                <span className={cn(
+                                  "text-[10px] px-1.5 py-0.5 rounded-full font-mono",
+                                  currentGender === 'ALL'
+                                    ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                                    : "bg-zinc-200/60 dark:bg-zinc-700/60 text-zinc-500"
+                                )}>
+                                  {totalAll}
+                                </span>
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setReportFilters(prev => ({ ...prev, gender: 'BOYS' }))}
+                              className={cn(
+                                "flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all",
+                                currentGender === 'BOYS'
+                                  ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-400"
+                                  : "text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                              )}
+                            >
+                              <span>👦 Boys</span>
+                              {totalBoys > 0 && (
+                                <span className={cn(
+                                  "text-[10px] px-1.5 py-0.5 rounded-full font-mono",
+                                  currentGender === 'BOYS'
+                                    ? "bg-blue-700 text-blue-100"
+                                    : "bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300"
+                                )}>
+                                  {totalBoys}
+                                </span>
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setReportFilters(prev => ({ ...prev, gender: 'GIRLS' }))}
+                              className={cn(
+                                "flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all",
+                                currentGender === 'GIRLS'
+                                  ? "bg-pink-600 text-white shadow-sm ring-2 ring-pink-400"
+                                  : "text-pink-700 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-950/40"
+                              )}
+                            >
+                              <span>👧 Girls</span>
+                              {totalGirls > 0 && (
+                                <span className={cn(
+                                  "text-[10px] px-1.5 py-0.5 rounded-full font-mono",
+                                  currentGender === 'GIRLS'
+                                    ? "bg-pink-700 text-pink-100"
+                                    : "bg-pink-100 dark:bg-pink-900/60 text-pink-800 dark:text-pink-300"
+                                )}>
+                                  {totalGirls}
+                                </span>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
 
 
 
@@ -16918,7 +17154,7 @@ export default function App() {
                         <div className="flex justify-end pt-1">
                           <Button
                             variant="ghost"
-                            onClick={() => { setShowExportModal(false); setReportFilters({ classIds: [], taskId: '', year: '', status: 'ALL' }); }}
+                            onClick={() => { setShowExportModal(false); setReportFilters({ classIds: [], taskId: '', year: '', status: 'ALL', gender: 'ALL' }); }}
                             className="rounded-2xl text-zinc-500 hover:text-zinc-800 px-4"
                           >
                             Cancel
