@@ -4262,6 +4262,142 @@ function HistoryChartWrapper({ studentId, type, token }: { studentId: string; ty
   }
 }
 
+// --- Clean Browser URL Route Synchronization ---
+interface AppRouteState {
+  view: string;
+  codingPlatformTab?: 'LEETCODE' | 'GITHUB';
+  footerModal?: 'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES' | null;
+}
+
+const parseRouteFromPath = (pathname: string): AppRouteState => {
+  const cleanPath = (pathname || '/').toLowerCase().replace(/^\/+|\/+$/g, '');
+
+  // Footer Modals
+  if (cleanPath === 'sources') return { view: 'dashboard', footerModal: 'SOURCES' };
+  if (cleanPath === 'privacy') return { view: 'dashboard', footerModal: 'PRIVACY' };
+  if (cleanPath === 'terms') return { view: 'dashboard', footerModal: 'TERMS' };
+  if (cleanPath === 'support') return { view: 'dashboard', footerModal: 'SUPPORT' };
+
+  // Coding progress sub-routes
+  if (cleanPath === 'codingprogress/github' || cleanPath === 'coding-progress/github' || cleanPath === 'leetcode-targets/github') {
+    return { view: 'leetcode-targets', codingPlatformTab: 'GITHUB', footerModal: null };
+  }
+  if (cleanPath === 'codingprogress/leetcode' || cleanPath === 'coding-progress/leetcode' || cleanPath === 'leetcode-targets/leetcode') {
+    return { view: 'leetcode-targets', codingPlatformTab: 'LEETCODE', footerModal: null };
+  }
+  if (cleanPath === 'codingprogress' || cleanPath === 'coding-progress' || cleanPath === 'leetcode-targets') {
+    return { view: 'leetcode-targets', codingPlatformTab: 'LEETCODE', footerModal: null };
+  }
+
+  // Tasks & submissions
+  if (cleanPath.startsWith('tasks')) return { view: 'tasks', footerModal: null };
+  if (cleanPath === 'submissions' || cleanPath === 'my-submissions') return { view: 'submissions', footerModal: null };
+  if (cleanPath === 'verifications' || cleanPath === 'verification') return { view: 'verifications', footerModal: null };
+
+  // Assessment & Placement
+  if (cleanPath === 'assessment' || cleanPath === 'assessments' || cleanPath === 'skill-assessment') return { view: 'skill-assessment', footerModal: null };
+  if (cleanPath === 'placement' || cleanPath === 'placement-readiness' || cleanPath === 'placement-rating') return { view: 'placement-readiness', footerModal: null };
+  if (cleanPath === 'teaching-hub' || cleanPath === 'live-teaching-hub') return { view: 'live-teaching-hub', footerModal: null };
+  if (cleanPath === 'opportunities') return { view: 'opportunities', footerModal: null };
+  if (cleanPath === 'coding-tests' || cleanPath === 'student-coding-assessments') return { view: 'student-coding-assessments', footerModal: null };
+  if (cleanPath === 'skill-gap' || cleanPath === 'skill-gap-analyzer') return { view: 'skill-gap-analyzer', footerModal: null };
+  if (cleanPath === 'heatmap' || cleanPath === 'skill-heatmap' || cleanPath === 'institutional-skill-heatmap') return { view: 'institutional-skill-heatmap', footerModal: null };
+
+  // Notice board
+  if (cleanPath === 'notices' || cleanPath === 'notice-board') return { view: 'notice-board', footerModal: null };
+
+  // Student Profile
+  if (cleanPath.startsWith('profile') || cleanPath === 'my-profile') return { view: 'profile', footerModal: null };
+
+  // Staff & Administration
+  if (cleanPath === 'my-class') return { view: 'my-class', footerModal: null };
+  if (cleanPath === 'classes') return { view: 'classes', footerModal: null };
+  if (cleanPath === 'departments') return { view: 'departments', footerModal: null };
+  if (cleanPath === 'users' || cleanPath === 'students') return { view: 'users', footerModal: null };
+  if (cleanPath === 'industry-approvals' || cleanPath === 'industry-partners') return { view: 'industry-approvals', footerModal: null };
+  if (cleanPath === 'settings') return { view: 'settings', footerModal: null };
+
+  // Corporate / Industry Portal
+  if (cleanPath === 'industry/dashboard' || cleanPath === 'industry-dashboard' || cleanPath === 'industry-portal') return { view: 'industry-dashboard', footerModal: null };
+  if (cleanPath === 'industry/postings' || cleanPath === 'industry-postings') return { view: 'industry-postings', footerModal: null };
+  if (cleanPath === 'industry/coding-assessments' || cleanPath === 'industry-coding-assessments') return { view: 'industry-coding-assessments', footerModal: null };
+  if (cleanPath === 'industry/applications' || cleanPath === 'industry-applications') return { view: 'industry-applications', footerModal: null };
+  if (cleanPath === 'industry/reports' || cleanPath === 'industry-reports') return { view: 'industry-reports', footerModal: null };
+  if (cleanPath === 'industry/profile' || cleanPath === 'industry-profile') return { view: 'industry-profile', footerModal: null };
+
+  // Dashboard / default
+  return { view: 'dashboard', footerModal: null };
+};
+
+const getPathFromState = (
+  view: string,
+  codingPlatformTab: 'LEETCODE' | 'GITHUB',
+  footerModal: 'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES' | null
+): string => {
+  if (footerModal === 'SOURCES') return '/sources';
+  if (footerModal === 'PRIVACY') return '/privacy';
+  if (footerModal === 'TERMS') return '/terms';
+  if (footerModal === 'SUPPORT') return '/support';
+
+  switch (view) {
+    case 'leetcode-targets':
+    case 'coding-progress':
+      return codingPlatformTab === 'GITHUB' ? '/codingprogress/github' : '/codingprogress/leetcode';
+    case 'tasks':
+      return '/tasks';
+    case 'submissions':
+      return '/submissions';
+    case 'verifications':
+      return '/verifications';
+    case 'notice-board':
+      return '/notices';
+    case 'skill-assessment':
+      return '/assessment';
+    case 'placement-readiness':
+      return '/placement';
+    case 'live-teaching-hub':
+      return '/teaching-hub';
+    case 'opportunities':
+      return '/opportunities';
+    case 'student-coding-assessments':
+      return '/coding-tests';
+    case 'skill-gap-analyzer':
+      return '/skill-gap';
+    case 'institutional-skill-heatmap':
+      return '/heatmap';
+    case 'profile':
+      return '/profile';
+    case 'my-class':
+      return '/my-class';
+    case 'classes':
+      return '/classes';
+    case 'departments':
+      return '/departments';
+    case 'users':
+      return '/users';
+    case 'industry-approvals':
+      return '/industry-approvals';
+    case 'settings':
+      return '/settings';
+    case 'industry-dashboard':
+    case 'industry-portal':
+      return '/industry/dashboard';
+    case 'industry-postings':
+      return '/industry/postings';
+    case 'industry-coding-assessments':
+      return '/industry/coding-assessments';
+    case 'industry-applications':
+      return '/industry/applications';
+    case 'industry-reports':
+      return '/industry/reports';
+    case 'industry-profile':
+      return '/industry/profile';
+    case 'dashboard':
+    default:
+      return '/dashboard';
+  }
+};
+
 export default function App() {
   const [user, setUser] = useState<User | null>(() => {
     try {
@@ -4272,7 +4408,7 @@ export default function App() {
     }
   });
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [view, setView] = useState<string>('dashboard');
+  const [view, setView] = useState<string>(() => (typeof window !== 'undefined' ? parseRouteFromPath(window.location.pathname).view : 'dashboard'));
   const [viewingStudentProfileId, setViewingStudentProfileId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(() => {
     try {
@@ -4482,7 +4618,7 @@ export default function App() {
   }, [user, classes]);
 
   // GitHub & Combined Progress Tracking State
-  const [codingPlatformTab, setCodingPlatformTab] = useState<'LEETCODE' | 'GITHUB'>('LEETCODE');
+  const [codingPlatformTab, setCodingPlatformTab] = useState<'LEETCODE' | 'GITHUB'>(() => (typeof window !== 'undefined' ? parseRouteFromPath(window.location.pathname).codingPlatformTab || 'LEETCODE' : 'LEETCODE'));
   const [myGithubProgress, setMyGithubProgress] = useState<any>(null);
   const [githubStats, setGithubStats] = useState<any>(null);
   const [githubProgressList, setGithubProgressList] = useState<any[]>([]);
@@ -4884,12 +5020,50 @@ export default function App() {
   const [verificationClassFilter, setVerificationClassFilter] = useState('');
   const [verificationTaskFilter, setVerificationTaskFilter] = useState('');
   const [studentFilter, setStudentFilter] = useState<'ALL' | 'COORDINATORS'>('ALL');
-  const [showFooterModal, setShowFooterModal] = useState<'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES' | null>(null);
+  const [showFooterModal, setShowFooterModal] = useState<'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES' | null>(() => (typeof window !== 'undefined' ? parseRouteFromPath(window.location.pathname).footerModal || null : null));
   const [searchTerm, setSearchTerm] = useState('');
   const [userPage, setUserPage] = useState(1);
   const [submissionSearchTerm, setSubmissionSearchTerm] = useState('');
   const [submissionPage, setSubmissionPage] = useState(1);
   const [itemsPerPage] = useState(15);
+
+  // Browser History & URL Route Synchronization
+  const isPopStateRef = useRef(false);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      isPopStateRef.current = true;
+      const route = parseRouteFromPath(window.location.pathname);
+      setView(route.view);
+      if (route.codingPlatformTab) {
+        setCodingPlatformTab(route.codingPlatformTab);
+      }
+      setShowFooterModal(route.footerModal || null);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (isPopStateRef.current) {
+      isPopStateRef.current = false;
+      return;
+    }
+
+    const targetPath = getPathFromState(view, codingPlatformTab, showFooterModal);
+    const currentPath = window.location.pathname;
+
+    if (currentPath !== targetPath) {
+      if (currentPath === '/' || currentPath === '') {
+        window.history.replaceState(null, '', targetPath);
+      } else {
+        window.history.pushState(null, '', targetPath);
+      }
+    }
+  }, [view, codingPlatformTab, showFooterModal]);
 
   const getPaginationRange = (current: number, total: number) => {
     if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -6417,6 +6591,9 @@ export default function App() {
     setUser(null);
     setLoginData({ username: '', password: '' });
     setView('dashboard');
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', '/');
+    }
 
     // Clear all fetched state variables to prevent leakage
     setDepartments([]);
