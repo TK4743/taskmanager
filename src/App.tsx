@@ -5402,8 +5402,18 @@ export default function App() {
           setIsLoading(false);
           bootstrapped = true;
 
-          // Asynchronously trigger role stats in background without blocking
           const curUser = bData.user || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null);
+
+          // Instantly hydrate role stats from bootstrap payload if present
+          if (bData.stats && curUser) {
+            if (curUser.role === 'SUPREME_ADMIN') setSupremeStats(bData.stats);
+            else if (curUser.role === 'HOD') setHodStats(bData.stats);
+            else if (curUser.role === 'CLASS_ADVISOR') setAdvisorStats(bData.stats);
+            else if (curUser.role === 'STUDENT' && curUser.is_coordinator) setCoordinatorStats(bData.stats);
+            else if (curUser.role === 'STUDENT') setStudentStats(bData.stats);
+          }
+
+          // Asynchronously trigger role stats in background without blocking
           if (curUser) {
             if (curUser.role === 'SUPREME_ADMIN') {
               fetchSupremeStats(activeToken);

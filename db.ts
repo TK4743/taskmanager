@@ -98,6 +98,15 @@ export async function initDB(forceMigration: boolean = false) {
         const count = parseInt(checkRes.rows[0]?.table_count || '0', 10);
         if (count >= 5) {
           console.log(`[initDB] Schema verified (${count} core tables active). Skipping 197 redundant DDL roundtrips for instant startup.`);
+          // Ensure essential recent column migrations exist even on fast path
+          try {
+            await client.query(`
+              ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS verified_by_id UUID REFERENCES users(id) ON DELETE SET NULL;
+              CREATE INDEX IF NOT EXISTS idx_task_submissions_verified_by ON task_submissions(verified_by_id);
+            `);
+          } catch (colErr: any) {
+            console.warn('[initDB] Fast column migration warning:', colErr?.message || colErr);
+          }
           return;
         }
       } catch (checkErr: any) {
