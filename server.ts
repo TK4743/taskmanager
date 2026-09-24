@@ -4153,7 +4153,43 @@ async function startServer() {
       }
     } catch (queryErr: any) {
       console.error('[getSubmissionsDataForUser Error]:', queryErr.message);
-      subsRes = { rows: [] };
+      if (queryErr.message && queryErr.message.includes('verified_by')) {
+        try {
+          const fallbackBaseQuery = `
+            SELECT ts.*, 
+                   t.title as task_title, t.custom_field_label, COALESCE(t.custom_field_type, 'text') as custom_field_type, t.deadline as task_deadline, t.submission_type,
+                   u.full_name as student_name, u.register_number, u.email as student_email, COALESCE(u.profile_picture, u.avatar_url) as student_avatar,
+                   u.gender as student_gender,
+                   u.class_id, u.department_id,
+                   c.name as class_name, c.year as class_year,
+                   d.name as department_name,
+                   NULL as verified_by_name, NULL as verified_by_username, NULL as verified_by_role
+            FROM task_submissions ts
+            JOIN tasks t ON ts.task_id = t.id
+            JOIN users u ON ts.user_id = u.id
+            LEFT JOIN classes c ON u.class_id = c.id
+            LEFT JOIN departments d ON u.department_id = d.id
+          `;
+          if (dbUser.role === 'STUDENT') {
+            if (dbUser.is_coordinator && dbUser.class_id) {
+              subsRes = await pool.query(`${fallbackBaseQuery} WHERE u.class_id = $1 ORDER BY ts.submitted_at DESC NULLS LAST`, [dbUser.class_id]);
+            } else {
+              subsRes = await pool.query(`${fallbackBaseQuery} WHERE ts.user_id = $1 ORDER BY ts.submitted_at DESC NULLS LAST`, [dbUser.id]);
+            }
+          } else if (dbUser.role === 'CLASS_ADVISOR') {
+            subsRes = dbUser.class_id ? await pool.query(`${fallbackBaseQuery} WHERE u.class_id = $1 ORDER BY ts.submitted_at DESC NULLS LAST`, [dbUser.class_id]) : { rows: [] };
+          } else if (dbUser.role === 'HOD') {
+            subsRes = dbUser.department_id ? await pool.query(`${fallbackBaseQuery} WHERE u.department_id = $1 AND u.role = 'STUDENT' ORDER BY ts.submitted_at DESC NULLS LAST`, [dbUser.department_id]) : { rows: [] };
+          } else {
+            subsRes = await pool.query(`${fallbackBaseQuery} ORDER BY ts.submitted_at DESC NULLS LAST`);
+          }
+        } catch (fallbackErr: any) {
+          console.error('[getSubmissionsDataForUser Fallback Error]:', fallbackErr.message);
+          subsRes = { rows: [] };
+        }
+      } else {
+        subsRes = { rows: [] };
+      }
     }
 
     return subsRes.rows.map((s: any) => ({
