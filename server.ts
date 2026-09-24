@@ -4116,6 +4116,7 @@ async function startServer() {
       SELECT ts.*, 
              t.title as task_title, t.custom_field_label, COALESCE(t.custom_field_type, 'text') as custom_field_type, t.deadline as task_deadline, t.submission_type,
              u.full_name as student_name, u.register_number, u.email as student_email, COALESCE(u.profile_picture, u.avatar_url) as student_avatar,
+             u.gender as student_gender,
              u.class_id, u.department_id,
              c.name as class_name, c.year as class_year,
              d.name as department_name
@@ -4166,6 +4167,7 @@ async function startServer() {
       student_email: s.student_email,
       student_avatar: s.student_avatar,
       register_number: s.register_number,
+      student_gender: s.student_gender || s.gender,
       department_id: s.department_id,
       department_name: s.department_name,
       class_id: s.class_id,
