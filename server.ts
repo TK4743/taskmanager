@@ -4119,12 +4119,14 @@ async function startServer() {
              u.gender as student_gender,
              u.class_id, u.department_id,
              c.name as class_name, c.year as class_year,
-             d.name as department_name
+             d.name as department_name,
+             vr.full_name as verified_by_name, vr.username as verified_by_username, vr.role as verified_by_role
       FROM task_submissions ts
       JOIN tasks t ON ts.task_id = t.id
       JOIN users u ON ts.user_id = u.id
       LEFT JOIN classes c ON u.class_id = c.id
       LEFT JOIN departments d ON u.department_id = d.id
+      LEFT JOIN users vr ON ts.verified_by_id = vr.id
     `;
 
     try {
@@ -4184,6 +4186,9 @@ async function startServer() {
       submitted_at: s.submitted_at,
       verified_at: s.verified_at,
       resubmission_count: s.resubmission_count,
+      verified_by_name: s.verified_by_name || null,
+      verified_by_username: s.verified_by_username || null,
+      verified_by_role: s.verified_by_role || null,
     }));
   }
 
@@ -4583,9 +4588,9 @@ async function startServer() {
     const note = verification_note || 'Batch verified';
     await pool.query(`
       UPDATE task_submissions
-      SET status = 'VERIFIED', verification_note = $1, verified_at = CURRENT_TIMESTAMP, updated_at = NOW()
+      SET status = 'VERIFIED', verification_note = $1, verified_at = CURRENT_TIMESTAMP, verified_by_id = $3, updated_at = NOW()
       WHERE id = ANY($2) AND status != 'VERIFIED'
-    `, [note, submission_ids]);
+    `, [note, submission_ids, req.user.id]);
 
     // Dispatch In-App Notifications to all verified students
     try {
@@ -4674,13 +4679,15 @@ async function startServer() {
             verification_note = $2,
             rejection_reason = $3,
             verified_at = NOW(),
+            verified_by_id = $5,
             updated_at = NOW()
         WHERE id = $4
       `, [
         status,
         status === 'VERIFIED' ? verification_note || null : null,
         status === 'REJECTED' ? rejection_reason || null : null,
-        req.params.id
+        req.params.id,
+        req.user.id
       ]);
 
       await client.query(`

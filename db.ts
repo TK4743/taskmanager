@@ -601,6 +601,10 @@ export async function initDB(forceMigration: boolean = false) {
     await client.query(`
       ALTER TABLE leetcode_daily_progress ADD COLUMN IF NOT EXISTS solved_yesterday INT NOT NULL DEFAULT 0;
     `);
+    await client.query(`
+      ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS verified_by_id UUID REFERENCES users(id) ON DELETE SET NULL;
+    `);
+
 
     // Create indexes — original tables
     await client.query(`CREATE INDEX IF NOT EXISTS idx_tasks_dept ON tasks(department_id);`);

@@ -330,6 +330,9 @@ interface Submission {
   not_participating_reason?: string;
   class_ids?: (string | number)[];
   task_category?: string;
+  verified_by_name?: string | null;
+  verified_by_username?: string | null;
+  verified_by_role?: string | null;
 }
 
 interface Notification {
@@ -7506,6 +7509,15 @@ export default function App() {
                   : '—';
 
             if (include) {
+              const verifierRole = sub?.verified_by_role === 'SUPREME_ADMIN' ? 'Admin'
+                : sub?.verified_by_role === 'HOD' ? 'HOD'
+                : sub?.verified_by_role === 'CLASS_ADVISOR' ? 'Advisor'
+                : sub?.verified_by_role === 'STUDENT' && sub?.verified_by_username ? 'Coordinator'
+                : null;
+              const verifierLabel = sub?.verified_by_name
+                ? `${sub.verified_by_name}${sub.verified_by_username ? ` (${sub.verified_by_username})` : ''}${verifierRole ? ` — ${verifierRole}` : ''}`
+                : rawStatus === 'VERIFIED' ? 'Verified (legacy)' : '—';
+
               rows.push({
                 'S.No': sIndex++,
                 'Name': student.full_name || '—',
@@ -7518,6 +7530,7 @@ export default function App() {
                 'Custom Field': customFieldValue,
                 'Proof Screenshot': screenshotVal,
                 'Reason (If Not Participating / Rejection)': reasonVal,
+                'Verified By': verifierLabel,
               });
             }
           });
@@ -7615,7 +7628,8 @@ export default function App() {
         'Task Status',
         'Custom Field',
         'Proof Screenshot',
-        'Reason (If Not Participating / Rejection)'
+        'Reason (If Not Participating / Rejection)',
+        'Verified By'
       ];
     }
     const sheet2Cols = ['Task Name', 'Class', 'Total Students', 'Verified', 'Submitted', 'Rejected', 'Not Participating', 'Not Submitted'];
