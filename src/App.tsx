@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense, lazy, Component } from 'react';
 import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { API_URL, FEATURE_FLAGS } from './config';
@@ -4474,8 +4474,12 @@ interface ErrorBoundaryState {
 }
 
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = { hasError: false, error: null };
+  public props: ErrorBoundaryProps;
+
   constructor(props: ErrorBoundaryProps) {
     super(props);
+    this.props = props;
     this.state = { hasError: false, error: null };
   }
 
@@ -4483,7 +4487,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: any) {
     console.error('ErrorBoundary captured runtime error:', error, errorInfo);
   }
 
@@ -4503,7 +4507,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
           <div className="flex items-center justify-center gap-3">
             <button
               type="button"
-              onClick={() => this.setState({ hasError: false, error: null })}
+              onClick={() => (this as any).setState({ hasError: false, error: null })}
               className="px-4 py-2 text-xs font-bold rounded-xl border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 cursor-pointer shadow-2xs"
             >
               Retry View
@@ -4511,7 +4515,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             <button
               type="button"
               onClick={() => {
-                this.setState({ hasError: false, error: null });
+                (this as any).setState({ hasError: false, error: null });
                 window.location.href = '/dashboard';
               }}
               className="px-4 py-2 text-xs font-bold rounded-xl bg-black text-white hover:bg-zinc-800 cursor-pointer shadow-xs"
@@ -5149,6 +5153,13 @@ export default function App() {
     }
     return 'PENDING';
   });
+  const [studentTaskFilter, setStudentTaskFilter] = useState<'ALL' | 'PENDING_ACTION' | 'UNDER_REVIEW' | 'VERIFIED' | 'REJECTED' | 'NOT_INTERESTED' | 'OVERDUE'>(() => {
+    if (typeof window !== 'undefined') {
+      const r = parseRouteFromPath(window.location.pathname);
+      if (r.studentTaskFilter) return r.studentTaskFilter;
+    }
+    return 'ALL';
+  });
   const [verificationDeptFilter, setVerificationDeptFilter] = useState('');
   const [verificationYearFilter, setVerificationYearFilter] = useState('');
   const [verificationClassFilter, setVerificationClassFilter] = useState('');
@@ -5650,13 +5661,6 @@ export default function App() {
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
   const [isUploadingPoster, setIsUploadingPoster] = useState(false);
   const [selectedPosterModal, setSelectedPosterModal] = useState<string | null>(null);
-  const [studentTaskFilter, setStudentTaskFilter] = useState<'ALL' | 'PENDING_ACTION' | 'UNDER_REVIEW' | 'VERIFIED' | 'REJECTED' | 'NOT_INTERESTED' | 'OVERDUE'>(() => {
-    if (typeof window !== 'undefined') {
-      const r = parseRouteFromPath(window.location.pathname);
-      if (r.studentTaskFilter) return r.studentTaskFilter;
-    }
-    return 'ALL';
-  });
   
   // Fast O(1) Student Submissions Lookup Map for Instant Task Card Rendering
   const studentSubmissionsMap = useMemo(() => {
