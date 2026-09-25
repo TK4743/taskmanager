@@ -3004,9 +3004,21 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
 
             {/* Assessment Records List */}
             {isLoadingMyAssessments ? (
-              <div className="bg-white border border-zinc-200 rounded-3xl p-12 text-center shadow-sm space-y-3">
-                <RefreshCw size={24} className="animate-spin mx-auto text-indigo-600" />
-                <p className="text-xs font-bold text-zinc-600">Loading your verified assessment records & scorecards...</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="bg-white dark:bg-[#141418] border border-zinc-200/80 dark:border-zinc-800 rounded-3xl p-6 shadow-2xs space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="h-4 w-32 rounded-md bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                      <div className="h-6 w-20 rounded-full bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                    </div>
+                    <div className="h-8 w-28 rounded-lg bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                    <div className="h-2 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+                    <div className="flex justify-between items-center pt-2">
+                      <div className="h-4 w-24 rounded-md bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                      <div className="h-8 w-28 rounded-xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : myAssessments.length === 0 ? (
               <div className="bg-white border border-zinc-200 rounded-3xl p-12 text-center shadow-sm space-y-4 max-w-2xl mx-auto">

@@ -278,9 +278,23 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
             </div>
 
             {loading && (
-              <div className="text-center py-20 text-zinc-400 text-xs font-semibold bg-white rounded-2xl border border-zinc-200 shadow-2xs">
-                <div className="inline-block w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mb-3"></div>
-                <div>Fetching verified corporate postings...</div>
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="p-6 bg-white dark:bg-[#141418] rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-2 flex-1">
+                        <div className="h-5 w-48 rounded-lg bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                        <div className="h-3.5 w-32 rounded-md bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                      </div>
+                      <div className="h-6 w-20 rounded-full bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                    </div>
+                    <div className="h-12 w-full rounded-xl bg-zinc-100 dark:bg-zinc-900/60 animate-pulse" />
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="h-4 w-28 rounded-md bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                      <div className="h-8 w-24 rounded-xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
