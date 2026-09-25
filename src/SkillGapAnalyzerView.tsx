@@ -341,12 +341,38 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
           </div>
         )}
 
-        {/* Loading Spinner */}
+        {/* Loading Skeleton */}
         {loading && (
-          <div className="bg-white border border-zinc-200 rounded-2xl p-12 text-center shadow-xs">
-            <div className="inline-block w-8 h-8 border-3 border-zinc-900 border-t-transparent rounded-full animate-spin mb-3"></div>
-            <div className="text-xs font-black text-zinc-800">Computing AI Skill Intelligence Matrix...</div>
-            <p className="text-[11px] text-zinc-400 mt-1">Cross-referencing verified skills, portfolio projects, CGPA, and LeetCode problem solving</p>
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-[#141418] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800">
+                <div className="space-y-2">
+                  <div className="h-6 w-56 rounded-lg bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                  <div className="h-3.5 w-36 rounded-md bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                </div>
+                <div className="h-8 w-24 rounded-full bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 space-y-2">
+                    <div className="h-3.5 w-20 rounded-md bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                    <div className="h-7 w-28 rounded-lg bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {[1, 2].map((i) => (
+                <div key={i} className="bg-white dark:bg-[#141418] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-3">
+                  <div className="h-5 w-40 rounded-lg bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                  <div className="space-y-2 pt-2">
+                    {[1, 2, 3, 4].map((j) => (
+                      <div key={j} className="h-10 w-full rounded-xl bg-zinc-100 dark:bg-zinc-900/60 animate-pulse" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

@@ -1880,8 +1880,8 @@ const ToastContainer = ({ toasts, removeToast }: { toasts: ToastMessage[], remov
   );
 };
 
-const Skeleton = ({ className, shimmer = true }: { className?: string; shimmer?: boolean }) => (
-  <div className={cn(shimmer ? "skeleton-shimmer" : "animate-pulse bg-zinc-200", "rounded-xl", className)} />
+const Skeleton = ({ className, shimmer = true, ...props }: React.HTMLAttributes<HTMLDivElement> & { shimmer?: boolean }) => (
+  <div className={cn(shimmer ? "skeleton-shimmer" : "animate-pulse bg-zinc-200", "rounded-xl", className)} {...props} />
 );
 
 export const getStudentRegisterNumber = (userObj: any, profileObj?: any): string => {
@@ -2331,10 +2331,36 @@ function StudentProfileView({
   if (loading) {
     return (
       <PageLayout>
-        <Card className="flex flex-col items-center justify-center py-20 text-zinc-500">
-          <Loader2 size={40} className="animate-spin text-black mb-4" />
-          <p className="font-semibold text-sm">Loading Student Profile...</p>
-        </Card>
+        <div className="space-y-6">
+          <Card className="p-6 md:p-8">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+              <Skeleton className="w-24 h-24 rounded-full shrink-0" />
+              <div className="space-y-3 flex-1 text-center sm:text-left w-full">
+                <Skeleton className="h-6 w-48 mx-auto sm:mx-0 rounded-lg" />
+                <Skeleton className="h-4 w-32 mx-auto sm:mx-0 rounded-md" />
+                <div className="flex flex-wrap gap-2 justify-center sm:justify-start pt-1">
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                </div>
+              </div>
+            </div>
+          </Card>
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-10 w-36 rounded-xl shrink-0" />
+            ))}
+          </div>
+          <Card className="p-6 md:p-8 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-3.5 w-24 rounded-md" />
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       </PageLayout>
     );
   }
@@ -3870,9 +3896,20 @@ function StaffStudentProfileModal({
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto pt-4 space-y-4 pr-1">
           {loading ? (
-            <div className="py-20 text-center text-zinc-500">
-              <Loader2 size={32} className="animate-spin mx-auto mb-2 text-black" />
-              <p className="text-xs font-semibold">Loading student details...</p>
+            <div className="py-6 space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="p-3 bg-zinc-50/50 rounded-xl border border-zinc-200/60 space-y-2">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-3 pt-2">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-16 w-full rounded-xl" />
+                ))}
+              </div>
             </div>
           ) : error ? (
             <div className="p-4 bg-red-50 text-red-700 text-xs font-semibold rounded-xl border border-red-200">
@@ -10299,9 +10336,7 @@ export default function App() {
         {/* Sidebar Skeleton (hidden on mobile, matches desktop sidebar) */}
         <div className="hidden lg:flex w-64 bg-white border-r border-zinc-200 flex-col shrink-0">
           <div className="p-4 border-b border-zinc-100 flex items-center gap-3 shrink-0 h-20">
-            <div className="w-10 h-10 rounded-full border border-zinc-200 p-1 flex items-center justify-center bg-white shadow-2xs overflow-hidden">
-              <img src="/logo.png" alt="Loading..." className="w-full h-full object-contain rounded-full" />
-            </div>
+            <Skeleton className="w-10 h-10 rounded-full shrink-0" />
             <div className="space-y-1.5 flex-1">
               <Skeleton className="h-4 w-28" />
               <Skeleton className="h-2.5 w-16" />
@@ -12469,9 +12504,16 @@ export default function App() {
               </div>
 
               {emailAlertLoading ? (
-                <div className="py-12 text-center space-y-3">
-                  <Loader2 size={32} className="animate-spin text-indigo-600 mx-auto" />
-                  <p className="text-sm font-bold text-zinc-600">Scanning assigned classes for incomplete students...</p>
+                <div className="py-6 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Skeleton className="h-16 rounded-xl" />
+                    <Skeleton className="h-16 rounded-xl" />
+                  </div>
+                  <div className="space-y-2 pt-2">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-12 w-full rounded-xl" />
+                    ))}
+                  </div>
                 </div>
               ) : emailAlertSuccessStats ? (
                 /* Success Results Display */
@@ -19219,11 +19261,75 @@ export default function App() {
 
 function ViewLoadingFallback() {
   return (
-    <div className="w-full h-full min-h-[400px] flex flex-col items-center justify-center p-8 text-zinc-500">
-      <div className="w-10 h-10 border-3 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-3.5" />
-      <span className="text-xs font-bold uppercase tracking-widest text-zinc-400 animate-pulse">
-        Loading View...
-      </span>
+    <div className="w-full h-full min-h-[500px] flex flex-col p-4 sm:p-6 md:p-8 space-y-6 overflow-hidden animate-in fade-in duration-200">
+      {/* Top Banner Skeleton */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-48 sm:w-64 rounded-xl" />
+          <Skeleton className="h-4 w-32 sm:w-44 rounded-lg" />
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <Skeleton className="h-10 w-28 sm:w-36 rounded-xl flex-1 sm:flex-initial" />
+          <Skeleton className="h-10 w-10 rounded-xl shrink-0" />
+        </div>
+      </div>
+
+      {/* 4 Metric Stat Cards Skeleton */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#141418] border border-zinc-200/80 dark:border-zinc-800 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-3.5 w-20 rounded-md" />
+              <Skeleton className="w-8 h-8 rounded-xl shrink-0" />
+            </div>
+            <Skeleton className="h-8 w-24 rounded-lg" />
+            <Skeleton className="h-3 w-28 rounded-md" />
+          </div>
+        ))}
+      </div>
+
+      {/* Main Workspace Skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 flex-1 min-h-0">
+        <div className="lg:col-span-2 p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#141418] border border-zinc-200/80 dark:border-zinc-800 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+            <Skeleton className="h-5 w-40 rounded-lg" />
+            <Skeleton className="h-8 w-24 rounded-xl" />
+          </div>
+          <div className="space-y-3 pt-1">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center justify-between p-3.5 rounded-2xl bg-zinc-50/70 dark:bg-zinc-900/50 border border-zinc-100/80 dark:border-zinc-800/80">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <Skeleton className="h-4 w-3/4 rounded-md" />
+                    <Skeleton className="h-3 w-1/2 rounded-md" />
+                  </div>
+                </div>
+                <Skeleton className="h-7 w-20 rounded-full shrink-0 ml-3" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#141418] border border-zinc-200/80 dark:border-zinc-800 shadow-2xs space-y-4 flex flex-col">
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+            <Skeleton className="h-5 w-32 rounded-lg" />
+            <Skeleton className="h-6 w-16 rounded-full" />
+          </div>
+          <div className="space-y-4 flex-1">
+            <Skeleton className="h-32 w-full rounded-2xl" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full rounded-md" />
+              <Skeleton className="h-4 w-5/6 rounded-md" />
+              <Skeleton className="h-4 w-2/3 rounded-md" />
+            </div>
+            <div className="pt-2 flex gap-2">
+              <Skeleton className="h-9 flex-1 rounded-xl" />
+              <Skeleton className="h-9 flex-1 rounded-xl" />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
