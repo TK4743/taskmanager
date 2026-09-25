@@ -45,6 +45,46 @@ const SkillGapAnalyzerView = lazyWithRetry(() => import('./SkillGapAnalyzerView'
 const StudentCodingAssessmentView = lazyWithRetry(() => import('./StudentCodingAssessmentView'));
 const InstitutionalSkillHeatmapView = lazyWithRetry(() => import('./InstitutionalSkillHeatmapView'));
 
+// Intelligent View Prefetcher - downloads chunks during browser idle time or on hover so tab clicks are instant (0ms)
+export const prefetchView = (viewName: string) => {
+  try {
+    switch (viewName) {
+      case 'live-teaching-hub':
+        import('./LiveTeachingHubView');
+        break;
+      case 'skill-assessment':
+        import('./SkillAssessmentView');
+        break;
+      case 'placement-readiness':
+        import('./PlacementReadinessView');
+        break;
+      case 'opportunities':
+        import('./StudentOpportunitiesView');
+        break;
+      case 'skill-gap-analyzer':
+        import('./SkillGapAnalyzerView');
+        break;
+      case 'student-coding-assessments':
+        import('./StudentCodingAssessmentView');
+        break;
+      case 'institutional-skill-heatmap':
+        import('./InstitutionalSkillHeatmapView');
+        break;
+      case 'industry-portal':
+      case 'industry-dashboard':
+      case 'industry-postings':
+      case 'industry-coding-assessments':
+      case 'industry-applications':
+      case 'industry-reports':
+      case 'industry-profile':
+        import('./IndustryPortalView');
+        break;
+      default:
+        break;
+    }
+  } catch {}
+};
+
 
 import { generateStudentResumePdf, downloadStudentResumePdf } from './studentProfilePdfGenerator';
 import { generateMergedProofsPdf, ProofPdfItem } from './proofPdfGenerator';
@@ -5215,6 +5255,32 @@ export default function App() {
   const [submissionSearchTerm, setSubmissionSearchTerm] = useState('');
   const [submissionPage, setSubmissionPage] = useState(1);
   const [itemsPerPage] = useState(15);
+
+  // Intelligent Background View Prefetcher - downloads lazy bundles during idle periods so view switches are instant
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const idleFn = (window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 1000));
+    const handle = idleFn(() => {
+      const loaders = [
+        () => import('./LiveTeachingHubView'),
+        () => import('./SkillAssessmentView'),
+        () => import('./PlacementReadinessView'),
+        () => import('./StudentOpportunitiesView'),
+        () => import('./SkillGapAnalyzerView'),
+        () => import('./StudentCodingAssessmentView'),
+        () => import('./InstitutionalSkillHeatmapView'),
+        () => import('./IndustryPortalView'),
+      ];
+      loaders.forEach((load, idx) => {
+        setTimeout(load, idx * 300);
+      });
+    });
+    return () => {
+      if ((window as any).cancelIdleCallback && handle) {
+        (window as any).cancelIdleCallback(handle);
+      }
+    };
+  }, []);
 
   // Browser History & URL Route Synchronization
   const isPopStateRef = useRef(false);
@@ -12242,6 +12308,7 @@ export default function App() {
             <SidebarItem
               icon={<Sparkles size={20} className="text-purple-500" />}
               label="Skill Assessment"
+              viewTarget="skill-assessment"
               active={view === 'skill-assessment'}
               onClick={() => { setView('skill-assessment'); setIsMobileSidebarOpen(false); }}
             />
@@ -12250,6 +12317,7 @@ export default function App() {
               <SidebarItem
                 icon={<Target size={20} className="text-cyan-500" />}
                 label="Placement Rating"
+                viewTarget="placement-readiness"
                 active={view === 'placement-readiness'}
                 onClick={() => { setView('placement-readiness'); setIsMobileSidebarOpen(false); }}
               />
@@ -12259,6 +12327,7 @@ export default function App() {
               <SidebarItem
                 icon={<Radio size={20} className="text-emerald-500 animate-pulse" />}
                 label="Live Teaching Hub"
+                viewTarget="live-teaching-hub"
                 active={view === 'live-teaching-hub'}
                 onClick={() => { setView('live-teaching-hub'); setIsMobileSidebarOpen(false); }}
               />
@@ -12271,6 +12340,7 @@ export default function App() {
                   <SidebarItem
                     icon={<Briefcase size={20} className="text-teal-400" />}
                     label="Opportunities"
+                    viewTarget="opportunities"
                     active={view === 'opportunities'}
                     onClick={() => { setView('opportunities'); setIsMobileSidebarOpen(false); }}
                   />
@@ -12279,6 +12349,7 @@ export default function App() {
                   <SidebarItem
                     icon={<Code size={20} className="text-indigo-500" />}
                     label="Coding Tests"
+                    viewTarget="student-coding-assessments"
                     active={view === 'student-coding-assessments'}
                     onClick={() => { setView('student-coding-assessments'); setIsMobileSidebarOpen(false); }}
                   />
@@ -12287,6 +12358,7 @@ export default function App() {
                   <SidebarItem
                     icon={<Zap size={20} className="text-amber-400" />}
                     label="Skill Gap AI"
+                    viewTarget="skill-gap-analyzer"
                     active={view === 'skill-gap-analyzer'}
                     onClick={() => { setView('skill-gap-analyzer'); setIsMobileSidebarOpen(false); }}
                   />
@@ -12298,6 +12370,7 @@ export default function App() {
               <SidebarItem
                 icon={<BarChart3 size={20} className="text-pink-400" />}
                 label="Skill Heatmap"
+                viewTarget="institutional-skill-heatmap"
                 active={view === 'institutional-skill-heatmap'}
                 onClick={() => { setView('institutional-skill-heatmap'); setIsMobileSidebarOpen(false); }}
               />
@@ -19334,12 +19407,35 @@ function ViewLoadingFallback() {
   );
 }
 
-function SidebarItem({ icon, label, active, onClick, badge }: { icon: React.ReactNode; label: string; active?: boolean; onClick: () => void; badge?: string }) {
+function SidebarItem({
+  icon,
+  label,
+  active,
+  onClick,
+  viewTarget,
+  badge
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+  viewTarget?: string;
+  badge?: string;
+}) {
+  const handlePrefetch = () => {
+    if (viewTarget) {
+      prefetchView(viewTarget);
+    }
+  };
+
   return (
     <button
       onClick={onClick}
+      onMouseEnter={handlePrefetch}
+      onTouchStart={handlePrefetch}
+      onFocus={handlePrefetch}
       className={cn(
-        "flex items-center gap-2.5 w-full px-3 py-2 rounded-xl transition-all font-semibold text-xs leading-normal text-left group",
+        "flex items-center gap-2.5 w-full px-3 py-2 rounded-xl transition-all font-semibold text-xs leading-normal text-left group cursor-pointer",
         active
           ? "bg-zinc-900 text-white shadow-md shadow-zinc-900/20"
           : "text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900"
