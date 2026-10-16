@@ -104,8 +104,6 @@ flowchart LR
 
 ---
 
-## 7. 👨‍💻 Author & Intellectual Property License
-
 <table border="0">
   <tr>
     <td width="120" align="center" valign="top">
