@@ -106,20 +106,29 @@ flowchart LR
 
 ## 7. 👨‍💻 Author & Intellectual Property License
 
-### Lead Architect & Author
-**Tharunkumar K** ([@Tharun4743](https://github.com/Tharun4743))
-* 🎓 B.Tech Information Technology • V.S.B. Engineering College, Karur
-* 🌐 [GitHub Profile](https://github.com/Tharun4743) • [LinkedIn](https://linkedin.com/in/tharunkumark4743) • [Personal Portfolio](https://tharunkumark4743.netlify.app)
-
-### 🔒 Proprietary License Notice (All Rights Reserved)
-> [!CAUTION]
-> **PROPRIETARY & CONFIDENTIAL INTELLECTUAL PROPERTY**
-> 
-> All rights reserved. This repository, its architecture, source code, workflows, firmware, and associated documentation are the exclusive intellectual property of **Tharunkumar K**.
-> 
-> **No entity, organization, or individual is permitted to copy, modify, distribute, publish, commercially exploit, reverse engineer, or deploy any portion of this project without express, prior written permission from the author.**
-> 
-> **Copyright © 2026 Tharunkumar K. All Rights Reserved.**
+<table border="0">
+  <tr>
+    <td width="120" align="center" valign="top">
+      <img src="https://github.com/Tharun4743.png" width="100" style="border-radius: 4px;" alt="Tharunkumar K" />
+    </td>
+    <td>
+      <h3>Tharunkumar K</h3>
+      <p>
+        <b>Full Stack Developer & AI Systems Engineer</b><br/>
+        🎓 B.Tech in Information Technology — <a href="https://vsbec.com"><b>V.S.B. Engineering College, Karur</b></a> (Batch 2024–2028)<br/>
+        🌟 Recognized for holding the <b>Best GitHub Profile & Top Student Developer</b> at V.S.B. Engineering College (VSBEC)<br/>
+        🥇 <b>Winner — Code Thugs 2K26</b> • 🚀 <b>Smart India Hackathon (SIH)</b> Top 50 National Finalist
+      </p>
+      <p>
+        <a href="https://tharunkumark4743.netlify.app/">🌐 Portfolio</a> •
+        <a href="https://github.com/Tharun4743">🐙 GitHub (@Tharun4743)</a> •
+        <a href="https://www.linkedin.com/in/tharunkumark4743">💼 LinkedIn</a> •
+        <a href="https://leetcode.com/u/Tharunkumar__K/">🧩 LeetCode</a> •
+        <a href="mailto:tharunkumark42007@gmail.com">📧 Email</a>
+      </p>
+    </td>
+  </tr>
+</table>
 
 <!-- =========================================================================
    SEO & SEARCH ENGINE RECRUITER METADATA (CRAWLER INDEXING)
