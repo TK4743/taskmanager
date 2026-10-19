@@ -306,117 +306,9 @@ let gitPushTimeout: NodeJS.Timeout | null = null;
 const pendingUpdateStudents = new Set<string>();
 const pendingUpdatedFiles = new Set<string>();
 
-/**
- * Updates a file directly on GitHub repository using GitHub Contents API.
- * Works seamlessly in cloud containers (e.g. Render) without needing local git credentials.
- */
-export async function updateGitHubFileViaAPI(filePath: string, commitMsg: string): Promise<boolean> {
-  const token = process.env.GITHUB_TOKEN;
-  if (!token || !fs.existsSync(filePath)) return false;
-
-  const repo = process.env.GITHUB_REPO || 'TK4743/taskmanager';
-  const relativePath = path.relative(process.cwd(), filePath).replace(/\\/g, '/');
-  const url = `https://api.github.com/repos/${repo}/contents/${relativePath}`;
-
-  try {
-    const fileContentUtf8 = fs.readFileSync(filePath, 'utf-8');
-
-    // 1. Get existing file SHA
-    const getRes = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-        'User-Agent': 'IT-TaskManager-App'
-      }
-    });
-
-    let sha: string | undefined;
-    if (getRes.ok) {
-      const json = await getRes.json() as { sha: string };
-      sha = json.sha;
-    }
-
-    // 2. Put updated content (base64)
-    const base64Content = Buffer.from(fileContentUtf8, 'utf-8').toString('base64');
-    const putRes = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-        'User-Agent': 'IT-TaskManager-App'
-      },
-      body: JSON.stringify({
-        message: commitMsg,
-        content: base64Content,
-        sha: sha,
-        branch: 'main'
-      })
-    });
-
-    if (putRes.ok) {
-      console.log(`[StudentDirectory] 🚀 Auto-updated ${relativePath} on GitHub via Contents API.`);
-      return true;
-    } else {
-      const errText = await putRes.text();
-      console.warn(`[StudentDirectory] GitHub API content update warning (${putRes.status}):`, errText);
-      return false;
-    }
-  } catch (err: any) {
-    console.warn('[StudentDirectory] GitHub API upload error:', err.message);
-    return false;
-  }
-}
-
-/**
- * Deletes a file directly on GitHub repository using GitHub Contents API.
- */
-export async function deleteGitHubFileViaAPI(relativePath: string, commitMsg: string): Promise<boolean> {
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) return false;
-
-  const repo = process.env.GITHUB_REPO || 'TK4743/taskmanager';
-  const cleanPath = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
-  const url = `https://api.github.com/repos/${repo}/contents/${cleanPath}`;
-
-  try {
-    const getRes = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-        'User-Agent': 'IT-TaskManager-App'
-      }
-    });
-
-    if (!getRes.ok) return false;
-    const json = await getRes.json() as { sha: string };
-    const sha = json.sha;
-
-    const delRes = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-        'User-Agent': 'IT-TaskManager-App'
-      },
-      body: JSON.stringify({
-        message: commitMsg,
-        sha: sha,
-        branch: 'main'
-      })
-    });
-
-    if (delRes.ok) {
-      console.log(`[GitHub Sync] 🗑️ Auto-deleted ${cleanPath} on GitHub via Contents API.`);
-      return true;
-    }
-    return false;
-  } catch (err: any) {
-    console.warn('[GitHub Sync] Error deleting file on GitHub:', err.message);
-    return false;
-  }
-}
+// Forward to githubSyncService for dual-repository sync and atomic Git Trees API
+export { updateGitHubFileViaAPI, deleteGitHubFileViaAPI } from './githubSyncService.js';
+import { commitFilesToGitHub, tryLocalGitPush } from './githubSyncService.js';
 
 export async function pushDirectoryChangesToGitHub() {
   try {
@@ -425,27 +317,19 @@ export async function pushDirectoryChangesToGitHub() {
     pendingUpdateStudents.clear();
     pendingUpdatedFiles.clear();
 
+    if (filesToSync.length === 0) return;
+
     const commitMsg = `chore(directory): auto-update student directory for ${studentList}`;
 
-    // 1. Try GitHub REST API if GITHUB_TOKEN is available (best for Render / cloud containers)
-    if (process.env.GITHUB_TOKEN && filesToSync.length > 0) {
-      for (const fPath of filesToSync) {
-        await updateGitHubFileViaAPI(fPath, commitMsg);
-      }
-    }
+    // 1. Dual GitHub push via Git Database API
+    const fileInputs = filesToSync.map(fPath => ({
+      path: path.relative(process.cwd(), fPath).replace(/\\/g, '/'),
+      localFilePath: fPath
+    }));
+    await commitFilesToGitHub(fileInputs, commitMsg);
 
     // 2. Also execute local git push if running in an environment with git CLI
-    try {
-      await execPromise('git add students_directory/');
-      const statusRes = await execPromise('git status --porcelain students_directory/');
-      if (statusRes.stdout.trim()) {
-        await execPromise(`git commit -m "${commitMsg}"`);
-        await execPromise('git push origin main');
-        console.log(`[StudentDirectory] 🚀 Auto-pushed directory changes to GitHub via Git CLI: ${commitMsg}`);
-      }
-    } catch {
-      // Ignored if local git CLI is not authenticated (GitHub API handled it above)
-    }
+    await tryLocalGitPush('students_directory/', commitMsg);
   } catch (err: any) {
     console.warn('[StudentDirectory] Note: Auto git push status/notice:', err.message);
   }

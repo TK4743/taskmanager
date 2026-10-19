@@ -1,11 +1,7 @@
 import { pool } from './db.js';
 import fs from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
-import util from 'util';
-import { updateGitHubFileViaAPI, deleteGitHubFileViaAPI } from './studentDirectoryService.js';
-
-const execPromise = util.promisify(exec);
+import { updateGitHubFileViaAPI, deleteGitHubFileViaAPI, safeWriteExportFile, tryLocalGitPush } from './githubSyncService.js';
 
 function getISTDateStr(): string {
   const now = new Date();
@@ -14,8 +10,8 @@ function getISTDateStr(): string {
 }
 
 /**
- * Creates a complete JSON data snapshot of all 29 tables in PostgreSQL
- * and automatically commits and pushes the backup snapshot to GitHub.
+ * Creates a complete JSON data snapshot of all tables in PostgreSQL
+ * and automatically commits and pushes the backup snapshot to both GitHub repositories.
  */
 export async function generateDatabaseSnapshot(force = false) {
   const todayStr = getISTDateStr();
@@ -73,7 +69,14 @@ export async function generateDatabaseSnapshot(force = false) {
 
     for (const table of tables) {
       try {
-        const res = await pool.query(`SELECT * FROM ${table}`);
+        let query = `SELECT * FROM ${table}`;
+        // For notifications table, backup most recent 2,500 records to prevent snapshot payload ballooning
+        if (table === 'notifications') {
+          query = `SELECT * FROM notifications ORDER BY created_at DESC LIMIT 2500`;
+        }
+
+        const res = await pool.query(query);
+
         // Omit sensitive password hashes & OTP codes from backup JSON for security
         if (table === 'users') {
           snapshotData[table] = res.rows.map(row => {
@@ -101,56 +104,48 @@ export async function generateDatabaseSnapshot(force = false) {
       data: snapshotData
     };
 
-    // Ensure backups directory exists
-    const backupDir = path.join(process.cwd(), 'backups');
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
-
+    // Compact minified JSON representation for optimal transfer speed and payload efficiency
+    const jsonString = JSON.stringify(backupPayload);
     const filename = `db_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-    const filePath = path.join(backupDir, filename);
+    const relBackupPath = `backups/${filename}`;
 
-    fs.writeFileSync(filePath, JSON.stringify(backupPayload, null, 2), 'utf-8');
-    console.log(`[DB Backup] Database snapshot created successfully at ${filePath}`);
+    // Safely write to disk (process.cwd() or /tmp fallback on serverless)
+    const { absPath: filePath, isTemp } = safeWriteExportFile(relBackupPath, jsonString);
+    console.log(`[DB Backup] Database snapshot created successfully at ${filePath} (temp: ${isTemp})`);
 
-    // Cleanup old backups keeping up to 30 days of backup files (rolling 30-day retention)
-    const existingBackups = fs.readdirSync(backupDir)
-      .filter(f => f.startsWith('db_backup_') && f.endsWith('.json'))
-      .sort();
-
+    // Cleanup old local backups if running in an environment with persistent backups folder
     const deletedFiles: string[] = [];
-    if (existingBackups.length > 30) {
-      const toDelete = existingBackups.slice(0, existingBackups.length - 30);
-      for (const oldFile of toDelete) {
-        fs.unlinkSync(path.join(backupDir, oldFile));
-        deletedFiles.push(`backups/${oldFile}`);
-      }
+    const localBackupDir = path.join(process.cwd(), 'backups');
+    if (fs.existsSync(localBackupDir)) {
+      try {
+        const existingBackups = fs.readdirSync(localBackupDir)
+          .filter(f => f.startsWith('db_backup_') && f.endsWith('.json'))
+          .sort();
+
+        if (existingBackups.length > 30) {
+          const toDelete = existingBackups.slice(0, existingBackups.length - 30);
+          for (const oldFile of toDelete) {
+            fs.unlinkSync(path.join(localBackupDir, oldFile));
+            deletedFiles.push(`backups/${oldFile}`);
+          }
+        }
+      } catch (_) {}
     }
 
-    // ── Auto-Push Database Snapshot to GitHub ───────────────────────────────
+    // ── Auto-Push Database Snapshot to Both GitHub Repositories ───────────────
     const commitMsg = `chore(backup): auto-snapshot database backup for ${filename}`;
 
-    // 1. Push new backup via GitHub Contents REST API
-    if (process.env.GITHUB_TOKEN) {
-      await updateGitHubFileViaAPI(filePath, commitMsg);
+    // 1. Dual GitHub push via API
+    await updateGitHubFileViaAPI(relBackupPath, commitMsg, jsonString);
 
-      // Also clean up removed backups on GitHub
-      for (const oldRelPath of deletedFiles) {
-        await deleteGitHubFileViaAPI(oldRelPath, `chore(backup): prune old snapshot ${oldRelPath}`).catch(() => {});
-      }
+    // Also clean up removed backups on GitHub
+    for (const oldRelPath of deletedFiles) {
+      await deleteGitHubFileViaAPI(oldRelPath, `chore(backup): prune old snapshot ${oldRelPath}`).catch(() => {});
     }
 
-    // 2. Also push via local Git CLI if available
-    try {
-      await execPromise('git add backups/');
-      const statusRes = await execPromise('git status --porcelain backups/');
-      if (statusRes.stdout.trim()) {
-        await execPromise(`git commit -m "${commitMsg}"`);
-        await execPromise('git push origin main');
-        console.log(`[DB Backup] 🚀 Auto-pushed database snapshot to GitHub via Git CLI: ${filename}`);
-      }
-    } catch {
-      // Handled via GitHub API above if CLI authentication is absent
+    // 2. Also push via local Git CLI if available in environment
+    if (!isTemp) {
+      await tryLocalGitPush('backups/', commitMsg);
     }
 
     // Record the backup date in system_settings

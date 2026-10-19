@@ -99,6 +99,7 @@ import { sendUnifiedNotification, getUserNotificationPreferences } from './notif
 import { fetchReportData, generateCSVReport, generateExcelReport, generateHTMLPDFReport, ReportType } from './hrReportService.js';
 import { evaluateCodeSandbox, STARTER_TEMPLATES, SupportedLanguage } from './codingSandboxService.js';
 import { cleanStudentName, syncAndGenerateStudentDirectory, updateStudentCodingProfileInDirectory, updateGitHubFileViaAPI } from './studentDirectoryService.js';
+import { commitFilesToGitHub, safeWriteExportFile, tryLocalGitPush, getGitHubSyncTargets } from './githubSyncService.js';
 
 function isValidStrictUrl(urlString: string | null | undefined): boolean {
   if (!urlString) return true;
@@ -8816,15 +8817,6 @@ async function startServer() {
   async function exportAndPushLeetcodeDailyProgress(dateStr: string) {
     try {
       console.log(`[LeetCode AutoSync] 🚀 Generating datewise & classwise CSV exports for date: ${dateStr}...`);
-      const leetcodeBaseDir = path.join(process.cwd(), 'leetcode');
-      const dateDir = path.join(leetcodeBaseDir, dateStr);
-      
-      if (!fs.existsSync(leetcodeBaseDir)) {
-        fs.mkdirSync(leetcodeBaseDir, { recursive: true });
-      }
-      if (!fs.existsSync(dateDir)) {
-        fs.mkdirSync(dateDir, { recursive: true });
-      }
 
       const studentRes = await pool.query(`
         SELECT u.id, COALESCE(u.register_number, u.username) AS register_number, u.full_name, u.class_id, u.email, c.year, c.name as class_name
@@ -8841,7 +8833,7 @@ async function startServer() {
       }
 
       const enrichedAll = await enrichStudentProgressBatch(allStudents, dateStr);
-      const filesToSync: string[] = [];
+      const filesToSync: Array<{ path: string; content: string }> = [];
 
       const csvHeader = [
         'Date',
@@ -8884,9 +8876,9 @@ async function startServer() {
 
       // 1. Master Department CSV (All classes datewise)
       const masterCsvContent = csvHeader + enrichedAll.map(mapToCsvRow).join('\n');
-      const masterCsvPath = path.join(leetcodeBaseDir, `LeetCode_Daily_Report_${dateStr}.csv`);
-      fs.writeFileSync(masterCsvPath, masterCsvContent, 'utf-8');
-      filesToSync.push(masterCsvPath);
+      const masterCsvRelPath = `leetcode/LeetCode_Daily_Report_${dateStr}.csv`;
+      safeWriteExportFile(masterCsvRelPath, masterCsvContent);
+      filesToSync.push({ path: masterCsvRelPath, content: masterCsvContent });
 
       // 2. Year-wise and Section-wise CSVs & JSONs inside leetcode/YYYY-MM-DD/
       const yearGroups: Record<string, any[]> = {};
@@ -8909,59 +8901,33 @@ async function startServer() {
         if (yearKey === '0') continue;
 
         const yearCsvContent = csvHeader + yearItems.map(mapToCsvRow).join('\n');
-        const yearCsvPath = path.join(dateDir, `Year_${yearKey}.csv`);
-        fs.writeFileSync(yearCsvPath, yearCsvContent, 'utf-8');
-        filesToSync.push(yearCsvPath);
+        const yearCsvRelPath = `leetcode/${dateStr}/Year_${yearKey}.csv`;
+        safeWriteExportFile(yearCsvRelPath, yearCsvContent);
+        filesToSync.push({ path: yearCsvRelPath, content: yearCsvContent });
 
-        const yearJsonPath = path.join(dateDir, `Year_${yearKey}.json`);
-        fs.writeFileSync(yearJsonPath, JSON.stringify(yearItems, null, 2), 'utf-8');
-        filesToSync.push(yearJsonPath);
+        const yearJsonContent = JSON.stringify(yearItems, null, 2);
+        const yearJsonRelPath = `leetcode/${dateStr}/Year_${yearKey}.json`;
+        safeWriteExportFile(yearJsonRelPath, yearJsonContent);
+        filesToSync.push({ path: yearJsonRelPath, content: yearJsonContent });
       }
 
       // Section-wise files
       for (const [sectionKey, sectionItems] of Object.entries(sectionGroups)) {
         const sectionCsvContent = csvHeader + sectionItems.map(mapToCsvRow).join('\n');
-        const sectionCsvPath = path.join(dateDir, `Section_${sectionKey}.csv`);
-        fs.writeFileSync(sectionCsvPath, sectionCsvContent, 'utf-8');
-        filesToSync.push(sectionCsvPath);
+        const sectionCsvRelPath = `leetcode/${dateStr}/Section_${sectionKey}.csv`;
+        safeWriteExportFile(sectionCsvRelPath, sectionCsvContent);
+        filesToSync.push({ path: sectionCsvRelPath, content: sectionCsvContent });
       }
 
-      console.log(`[LeetCode AutoSync] 📝 Generated ${filesToSync.length} CSV & JSON report files in leetcode/${dateStr}/`);
+      console.log(`[LeetCode AutoSync] 📝 Generated ${filesToSync.length} CSV & JSON report files for ${dateStr}`);
 
       const commitMsg = `chore(leetcode): daily progress reports for ${dateStr}`;
 
-      // 3. Push to GitHub via Contents REST API (for cloud containers / Render)
-      if (process.env.GITHUB_TOKEN && filesToSync.length > 0) {
-        console.log(`[LeetCode AutoSync] Uploading ${filesToSync.length} report files to GitHub via Contents API...`);
-        // Prioritize uploading master report first
-        const masterFile = filesToSync.find(f => f.includes('LeetCode_Daily_Report_'));
-        if (masterFile) {
-          await updateGitHubFileViaAPI(masterFile, commitMsg).catch(err => {
-            console.error('[LeetCode AutoSync] Master CSV upload error:', err);
-          });
-        }
+      // 3. Push to both GitHub repositories via Git Database Tree API
+      await commitFilesToGitHub(filesToSync, commitMsg);
 
-        // Upload remaining section/year files in parallel batches of 3
-        const otherFiles = filesToSync.filter(f => f !== masterFile);
-        const batchSize = 3;
-        for (let i = 0; i < otherFiles.length; i += batchSize) {
-          const batch = otherFiles.slice(i, i + batchSize);
-          await Promise.allSettled(batch.map(fPath => updateGitHubFileViaAPI(fPath, commitMsg)));
-        }
-      }
-
-      // 4. Push to GitHub via Git CLI (for local environments)
-      try {
-        await execPromise('git add leetcode/');
-        const statusRes = await execPromise('git status --porcelain leetcode/');
-        if (statusRes.stdout.trim()) {
-          await execPromise(`git commit -m "${commitMsg}"`);
-          await execPromise('git push origin main');
-          console.log(`[LeetCode AutoSync] 🚀 Auto-pushed leetcode reports to GitHub via Git CLI: ${commitMsg}`);
-        }
-      } catch (err: any) {
-        // Handled via Contents API above
-      }
+      // 4. Also push via local Git CLI if available in environment
+      await tryLocalGitPush('leetcode/', commitMsg);
 
     } catch (err: any) {
       console.error('[LeetCode AutoSync] Error executing daily CSV sync & export:', err);
@@ -8982,19 +8948,22 @@ async function startServer() {
   const verifyCronAuth = async (req: Request, res: Response): Promise<boolean> => {
     const cronSecret = process.env.CRON_SECRET;
     const authHeader = req.headers.authorization || (req.headers['x-cron-secret'] as string);
+    const querySecret = (req.query?.secret || req.query?.cron_secret) as string;
     if (cronSecret) {
-      if (authHeader !== cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-        res.status(401).json({ error: 'Unauthorized cron request: Invalid secret key' });
-        return false;
+      if (
+        authHeader === cronSecret || 
+        authHeader === `Bearer ${cronSecret}` || 
+        querySecret === cronSecret
+      ) {
+        return true;
       }
-      return true;
     }
-    // If CRON_SECRET is not configured, require SUPREME_ADMIN JWT token
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    // If CRON_SECRET is not configured or authHeader is Bearer JWT, require SUPREME_ADMIN JWT token
+    if (authHeader && authHeader.startsWith('Bearer ') && authHeader !== `Bearer ${cronSecret}`) {
       try {
         const decoded: any = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
         const userRes = await pool.query('SELECT role FROM users WHERE id = $1', [decoded.id]);
-        if (userRes.rows[0] && userRes.rows[0].role === 'SUPREME_ADMIN') {
+        if (userRes.rows[0] && (userRes.rows[0].role === 'SUPREME_ADMIN' || userRes.rows[0].role === 'HOD')) {
           return true;
         }
       } catch (_) {}
@@ -9007,7 +8976,7 @@ async function startServer() {
     return true;
   };
 
-  // 1. Morning 7:50 AM IST Pre-Sync (Previous Day LeetCode & GitHub Sync)
+  // 1. Morning 7:50 AM IST Pre-Sync (Previous Day LeetCode & GitHub Sync + Catchup Backup)
   app.all('/api/cron/morning-sync', asyncHandler(async (req: Request, res: Response) => {
     if (!(await verifyCronAuth(req, res))) return;
 
@@ -9024,12 +8993,30 @@ async function startServer() {
       githubRes = await syncGitHubProgressForScope({ date: prevDayStr });
     }
 
+    let exportSuccess = false;
+    let backupSuccess = false;
+    try {
+      await exportAndPushLeetcodeDailyProgress(prevDayStr);
+      exportSuccess = true;
+    } catch (e: any) {
+      console.error('[Morning Sync LeetCode Export Error]:', e.message);
+    }
+
+    try {
+      await generateDatabaseSnapshot();
+      backupSuccess = true;
+    } catch (e: any) {
+      console.error('[Morning Sync DB Backup Error]:', e.message);
+    }
+
     return res.json({
       success: true,
       timestamp: new Date().toISOString(),
       date: prevDayStr,
       leetcode: leetcodeRes,
-      github: githubRes
+      github: githubRes,
+      exportSuccess,
+      backupSuccess
     });
   }));
 
@@ -9198,6 +9185,66 @@ async function startServer() {
       github: githubRes,
       exportSuccess,
       backupSuccess
+    });
+  }));
+
+  // 7. On-Demand GitHub Auto-Backup & Progress Report Export Trigger (Admin / Cron Secret)
+  app.all('/api/admin/trigger-github-backup', asyncHandler(async (req: any, res: Response) => {
+    // Authenticate via cron secret or admin JWT
+    const cronSecret = process.env.CRON_SECRET;
+    const authHeader = req.headers.authorization || (req.headers['x-cron-secret'] as string);
+    const querySecret = (req.query?.secret || req.query?.cron_secret) as string;
+    let authorized = false;
+
+    if (cronSecret && (authHeader === cronSecret || authHeader === `Bearer ${cronSecret}` || querySecret === cronSecret)) {
+      authorized = true;
+    } else if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const decoded: any = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+        const userRes = await pool.query('SELECT role FROM users WHERE id = $1', [decoded.id]);
+        if (userRes.rows[0] && (userRes.rows[0].role === 'SUPREME_ADMIN' || userRes.rows[0].role === 'HOD')) {
+          authorized = true;
+        }
+      } catch (_) {}
+    }
+
+    if (!authorized && process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+      return res.status(401).json({ error: 'Unauthorized: Admin token or CRON_SECRET required' });
+    }
+
+    const targetDate = req.body?.date || req.query?.date || getISTDateStr();
+    console.log(`[Admin Trigger] Manual full GitHub backup export for ${targetDate}...`);
+    let exportSuccess = false;
+    let backupSuccess = false;
+    let exportErr: string | undefined;
+    let backupErr: string | undefined;
+
+    try {
+      await exportAndPushLeetcodeDailyProgress(targetDate);
+      exportSuccess = true;
+    } catch (err: any) {
+      exportErr = err.message;
+    }
+
+    try {
+      await generateDatabaseSnapshot(true);
+      backupSuccess = true;
+    } catch (err: any) {
+      backupErr = err.message;
+    }
+
+    const targets = getGitHubSyncTargets().map(t => t.repo);
+    return res.json({
+      success: exportSuccess && backupSuccess,
+      date: targetDate,
+      repositories: targets,
+      exportSuccess,
+      backupSuccess,
+      exportErr,
+      backupErr,
+      message: exportSuccess && backupSuccess
+        ? `Successfully exported LeetCode reports and database backup to GitHub repositories: ${targets.join(', ')}`
+        : `Export partially completed: export=${exportSuccess}, backup=${backupSuccess}`
     });
   }));
 

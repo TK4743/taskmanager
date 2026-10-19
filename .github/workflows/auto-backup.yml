@@ -1,0 +1,75 @@
+name: Automated Database & Report Backup
+
+on:
+  schedule:
+    # 02:20 UTC = 07:50 AM IST (Morning pre-sync & previous day report backup)
+    - cron: '20 2 * * *'
+    # 18:25 UTC = 11:55 PM IST (Nightly final daily report & database snapshot backup)
+    - cron: '25 18 * * *'
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: 'Target Date for Report Export (YYYY-MM-DD, defaults to current IST date)'
+        required: false
+        default: ''
+
+concurrency:
+  group: auto-backup-workflow
+  cancel-in-progress: false
+
+jobs:
+  backup-and-export:
+    name: Generate & Commit Backups
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Execute Backup & Export Script
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          npx tsx scripts/export-backup.ts "${{ github.event.inputs.target_date }}"
+
+      - name: Commit and Push Backups to GitHub
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add backups/ leetcode/
+          if git diff --staged --quiet; then
+            echo "No new backup changes to commit."
+          else
+            DATE_STR=$(date +'%Y-%m-%d')
+            git commit -m "chore(backup): auto-snapshot database and reports for ${DATE_STR} [skip ci]"
+            git push origin main
+            echo "Successfully pushed automated backup to main repository."
+          fi
+
+      - name: Sync to Secondary Repository (Dual-Repo Parity)
+        if: env.SYNC_PAT != ''
+        env:
+          SYNC_PAT: ${{ secrets.SYNC_PAT }}
+        run: |
+          if [[ "${{ github.repository }}" == "TK4743/taskmanager" ]]; then
+            TARGET_REPO="https://${SYNC_PAT}@github.com/Tharun4743/taskmanager.git"
+          else
+            TARGET_REPO="https://${SYNC_PAT}@github.com/TK4743/taskmanager.git"
+          fi
+          git remote add secondary "$TARGET_REPO" || git remote set-url secondary "$TARGET_REPO"
+          git push secondary main || echo "Notice: Secondary sync skipped or already up to date."

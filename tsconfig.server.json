@@ -18,6 +18,7 @@
     "studentDirectoryService.ts",
     "imageCleanupService.ts",
     "dbBackupService.ts",
+    "githubSyncService.ts",
     "sentryService.ts"
   ],
   "exclude": [

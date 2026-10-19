@@ -3,7 +3,10 @@ dotenv.config();
 
 import { pool } from './db.js';
 import ExcelJS from 'exceljs';
+import path from 'path';
 import { sendTaskStatusEmail } from './emailService.js';
+import { generateDatabaseSnapshot } from './dbBackupService.js';
+import { getGitHubSyncTargets } from './githubSyncService.js';
 
 let cachedBotUsername = process.env.TELEGRAM_BOT_USERNAME || 'IT_TaskManager_Alerts_bot';
 
@@ -751,6 +754,7 @@ export async function registerBotCommandsMenu(): Promise<void> {
       { command: 'stats', description: 'Your overall performance scorecard' },
       { command: 'defaulters', description: 'List students with pending targets (Staff)' },
       { command: 'unlinked', description: 'List students not linked with bot (Staff)' },
+      { command: 'backup', description: 'Trigger GitHub database backup (Staff/Admin)' },
       { command: 'status', description: 'Check linked student account' },
       { command: 'link', description: 'Connect account (/link <reg_no>)' },
       { command: 'help', description: 'Bot commands & help guide' }
@@ -4206,6 +4210,26 @@ export async function processTelegramUpdate(update: any): Promise<void> {
         await sendTelegramMessage(chatId, `⚠️ ${escapeHtml(res.message)}\n${getWatermarkHtml()}`);
       } else if (res.count === 0) {
         await sendTelegramMessage(chatId, `✅ <b>No assignments closing within the next 24 hours!</b>\n${getWatermarkHtml()}`);
+      }
+      return;
+    }
+
+    // Command: /backup (Staff & Admin GitHub auto-backup trigger)
+    if (text.startsWith('/backup')) {
+      if (user && user.role !== 'SUPREME_ADMIN' && user.role !== 'HOD' && user.role !== 'CLASS_ADVISOR') {
+        await sendTelegramMessage(chatId, `🚫 <b>Access Restricted:</b> Only Department Admins and Faculty can trigger GitHub database snapshots.\n${getWatermarkHtml()}`);
+        return;
+      }
+      await sendTelegramMessage(chatId, `⏳ <b>Starting GitHub Database Snapshot & Progress Export...</b>\nPlease wait while database tables and coding progress are snapshot and pushed to GitHub.`);
+      try {
+        const result = await generateDatabaseSnapshot(true);
+        const targets = getGitHubSyncTargets().map(t => t.repo);
+        await sendTelegramMessage(
+          chatId,
+          `✅ <b>GitHub Backup Completed Successfully!</b>\n\n• <b>Snapshot:</b> <code>${path.basename(result.filePath)}</code>\n• <b>Target Repositories:</b> ${targets.join(', ')}\n• <b>Status:</b> Auto-committed and synchronized with GitHub main branch.\n${getWatermarkHtml()}`
+        );
+      } catch (backupErr: any) {
+        await sendTelegramMessage(chatId, `❌ <b>GitHub Backup Failed:</b>\n<code>${escapeHtml(backupErr.message)}</code>\n${getWatermarkHtml()}`);
       }
       return;
     }
