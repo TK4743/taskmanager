@@ -3362,6 +3362,16 @@ export async function linkStudentTelegram(
     }
 
     const user = res.rows[0];
+
+    // Ensure any stale/previous user linked with this Telegram Chat ID is detached first
+    await pool.query(`
+      UPDATE users
+      SET telegram_chat_id = NULL,
+          telegram_username = NULL,
+          telegram_linked_at = NULL
+      WHERE TRIM(COALESCE(telegram_chat_id, '')) = TRIM($1) AND id != $2
+    `, [String(personalChatId), user.id]);
+
     await pool.query(`
       UPDATE users
       SET telegram_chat_id = $1,
@@ -3537,7 +3547,7 @@ export async function processTelegramUpdate(update: any): Promise<void> {
         SELECT u.id, u.full_name, u.register_number, u.role, u.class_id, u.leetcode_url, u.github_url, c.name as class_name
         FROM users u
         LEFT JOIN classes c ON u.class_id = c.id
-        WHERE u.telegram_chat_id = $1
+        WHERE TRIM(COALESCE(u.telegram_chat_id, '')) = TRIM($1)
         LIMIT 1
       `, [String(cbUserId)]);
 
@@ -3559,7 +3569,7 @@ export async function processTelegramUpdate(update: any): Promise<void> {
       }
 
       if (cbData === 'cb_tasks' || cbData === 'view_tasks') {
-        const card = await getTasksCard(user);
+        const card = (user && user.role !== 'STUDENT') ? await getFacultyTaskStatusCard() : await getTasksCard(user);
         await sendTelegramMessage(cbChatId, card.html, { reply_markup: card.keyboard });
       } else if (cbData === 'cb_leetcode') {
         const card = await getStudentLeetCodeCard(user);
@@ -3634,7 +3644,7 @@ export async function processTelegramUpdate(update: any): Promise<void> {
       SELECT u.id, u.full_name, u.register_number, u.role, u.class_id, u.leetcode_url, u.github_url, c.name as class_name
       FROM users u
       LEFT JOIN classes c ON u.class_id = c.id
-      WHERE u.telegram_chat_id = $1
+      WHERE TRIM(COALESCE(u.telegram_chat_id, '')) = TRIM($1)
       LIMIT 1
     `, [String(senderUserId)]);
     const user = userRes.rows[0];
@@ -4137,6 +4147,9 @@ export async function processTelegramUpdate(update: any): Promise<void> {
       }
       if (!user) {
         await sendTelegramMessage(chatId, `ℹ Please link your student account first: <code>/link &lt;Register_Number&gt;</code>\n${getWatermarkHtml()}`);
+      } else if (user.role !== 'STUDENT') {
+        const card = await getFacultyTaskStatusCard();
+        await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
       } else {
         const card = await getTasksCard(user);
         await sendTelegramMessage(chatId, card.html, { reply_markup: card.keyboard });
@@ -4236,6 +4249,11 @@ export function startTelegramPoller(): void {
 
   isPolling = true;
   console.log('[Telegram Bot] Poller initialized for interactive commands...');
+
+  // If local polling is explicitly forced, delete active webhook so getUpdates works immediately
+  if (process.env.FORCE_POLLING === 'true' || process.env.TELEGRAM_MODE === 'polling') {
+    deleteTelegramWebhook(false).catch(err => console.warn('[Telegram Bot] Webhook clear note:', err?.message || err));
+  }
 
   // Automatically register native Telegram command menu
   registerBotCommandsMenu().catch(err => console.warn('[Telegram Bot] Menu registration warning:', err));

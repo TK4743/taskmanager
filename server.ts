@@ -466,8 +466,10 @@ async function startServer() {
       checkAndTriggerScheduledAutomations().catch(err => console.error('[In-Server Scheduler] Startup tick error:', err));
     }, 5000);
 
-    // Auto-ensure Telegram Webhook is active if configured
-    setTelegramWebhook().catch(err => console.error('[Telegram Webhook Init Warning]:', err));
+    // Auto-ensure Telegram Webhook is active if configured (unless local polling is explicitly forced)
+    if (process.env.TELEGRAM_MODE !== 'polling' && process.env.FORCE_POLLING !== 'true') {
+      setTelegramWebhook().catch(err => console.error('[Telegram Webhook Init Warning]:', err));
+    }
   }
 
   const app = express();
@@ -1129,13 +1131,19 @@ async function startServer() {
       }
     }
 
-    // Immediately acknowledge receipt with 200 OK so Telegram server never retries
-    res.status(200).json({ ok: true });
-
-    // Process update asynchronously in background
-    processTelegramUpdate(update).catch((err: any) => {
+    // CRITICAL (Vercel Serverless): Await processing before sending HTTP response!
+    // In serverless environments, sending res.json() immediately terminates or freezes
+    // the container runtime, killing background async promises mid-flight.
+    try {
+      await Promise.race([
+        processTelegramUpdate(update),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Telegram webhook update processing timeout')), 25000))
+      ]);
+    } catch (err: any) {
       console.error('[Telegram Webhook Error]:', err?.message || err);
-    });
+    }
+
+    return res.status(200).json({ ok: true });
   }));
 
   // 7. Get Webhook Info & Diagnostic Status
@@ -1222,7 +1230,9 @@ async function startServer() {
 
     // Send a confirmation ping to the linked Telegram Chat
     const confirmMsg = `🎉 <b>TELEGRAM ACCOUNT LINKED SUCCESSFULLY!</b>\n\nHello <b>${user.full_name}</b> (<code>${user.register_number || user.username}</code>),\nYour Telegram account has been linked to the IT TaskManager portal!\nYou will now receive instant task updates, verification notices, and deadline alerts directly here. 🚀`;
-    sendTelegramMessage(strChatId, confirmMsg).catch(() => {});
+    await sendTelegramMessage(strChatId, confirmMsg).catch((tgErr: any) => {
+      console.warn('[Telegram Link Confirm Warning]:', tgErr?.message || tgErr);
+    });
     invalidateApiCache(`me_${req.user.id}`);
 
     res.json({ success: true, message: 'Telegram account linked successfully!', studentName: user.full_name });
@@ -1263,9 +1273,14 @@ async function startServer() {
     const broadcastHtml = `📢 <b>DEPARTMENT ANNOUNCEMENT</b>\n\n${message.trim()}\n\n— <i>Sent by ${req.user.username} (${req.user.role})</i>`;
 
     let sentCount = 0;
-    for (const cid of chatIds) {
-      sendTelegramMessage(cid, broadcastHtml).catch(() => {});
-      sentCount++;
+    const BATCH_SIZE = 15;
+    for (let i = 0; i < chatIds.length; i += BATCH_SIZE) {
+      const batch = chatIds.slice(i, i + BATCH_SIZE);
+      await Promise.allSettled(batch.map(cid => sendTelegramMessage(cid, broadcastHtml)));
+      sentCount += batch.length;
+      if (i + BATCH_SIZE < chatIds.length) {
+        await new Promise(r => setTimeout(r, 40));
+      }
     }
 
     res.json({ success: true, sentCount, totalTargeted: chatIds.length });
