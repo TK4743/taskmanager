@@ -34,7 +34,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install Dependencies
@@ -57,6 +57,7 @@ jobs:
           else
             DATE_STR=$(date +'%Y-%m-%d')
             git commit -m "chore(backup): auto-snapshot database and reports for ${DATE_STR} [skip ci]"
+            git pull --rebase origin main || true
             git push origin main
             echo "Successfully pushed automated backup to main repository."
           fi

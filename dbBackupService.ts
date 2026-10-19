@@ -13,7 +13,7 @@ function getISTDateStr(): string {
  * Creates a complete JSON data snapshot of all tables in PostgreSQL
  * and automatically commits and pushes the backup snapshot to both GitHub repositories.
  */
-export async function generateDatabaseSnapshot(force = false) {
+export async function generateDatabaseSnapshot(force = false, skipApiPush = false) {
   const todayStr = getISTDateStr();
 
   if (!force) {
@@ -135,17 +135,19 @@ export async function generateDatabaseSnapshot(force = false) {
     // ── Auto-Push Database Snapshot to Both GitHub Repositories ───────────────
     const commitMsg = `chore(backup): auto-snapshot database backup for ${filename}`;
 
-    // 1. Dual GitHub push via API
-    await updateGitHubFileViaAPI(relBackupPath, commitMsg, jsonString);
+    if (!skipApiPush) {
+      // 1. Dual GitHub push via API
+      await updateGitHubFileViaAPI(relBackupPath, commitMsg, jsonString);
 
-    // Also clean up removed backups on GitHub
-    for (const oldRelPath of deletedFiles) {
-      await deleteGitHubFileViaAPI(oldRelPath, `chore(backup): prune old snapshot ${oldRelPath}`).catch(() => {});
-    }
+      // Also clean up removed backups on GitHub
+      for (const oldRelPath of deletedFiles) {
+        await deleteGitHubFileViaAPI(oldRelPath, `chore(backup): prune old snapshot ${oldRelPath}`).catch(() => {});
+      }
 
-    // 2. Also push via local Git CLI if available in environment
-    if (!isTemp) {
-      await tryLocalGitPush('backups/', commitMsg);
+      // 2. Also push via local Git CLI if available in environment
+      if (!isTemp) {
+        await tryLocalGitPush('backups/', commitMsg);
+      }
     }
 
     // Record the backup date in system_settings

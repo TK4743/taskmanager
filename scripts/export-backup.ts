@@ -47,33 +47,25 @@ async function enrichStudentProgressBatch(students: any[], dateStr: string) {
       END ASC
   `, [dateStr]);
 
-  const [dailyProgressRes, weeklyProgressRes, profilesRes] = await Promise.all([
+  const [dailyProgressRes, weeklyProgressRes] = await Promise.all([
     pool.query(`
-      SELECT student_id, solved_count 
+      SELECT user_id, solved_today, solved_yesterday, status, total_solved 
       FROM leetcode_daily_progress 
-      WHERE date = $1 AND student_id = ANY($2::int[])
+      WHERE date = $1 AND user_id = ANY($2)
     `, [dateStr, studentIds]),
     pool.query(`
-      SELECT student_id, COALESCE(SUM(solved_count), 0) AS solved_week 
+      SELECT user_id, COALESCE(SUM(solved_today), 0) AS solved_week 
       FROM leetcode_daily_progress 
-      WHERE date >= $1 AND date <= $2 AND student_id = ANY($3::int[])
-      GROUP BY student_id
-    `, [week.start, week.end, studentIds]),
-    pool.query(`
-      SELECT student_id, leetcode_id, ranking, easy_solved, medium_solved, hard_solved, total_solved 
-      FROM student_coding_profiles 
-      WHERE student_id = ANY($1::int[])
-    `, [studentIds])
+      WHERE date >= $1 AND date <= $2 AND user_id = ANY($3)
+      GROUP BY user_id
+    `, [week.start, week.end, studentIds])
   ]);
 
-  const dailyMap = new Map<number, number>();
-  for (const r of dailyProgressRes.rows) dailyMap.set(r.student_id, r.solved_count);
+  const dailyMap = new Map<string, any>();
+  for (const r of dailyProgressRes.rows) dailyMap.set(String(r.user_id), r);
 
-  const weeklyMap = new Map<number, number>();
-  for (const r of weeklyProgressRes.rows) weeklyMap.set(r.student_id, parseInt(r.solved_week, 10));
-
-  const profileMap = new Map<number, any>();
-  for (const r of profilesRes.rows) profileMap.set(r.student_id, r);
+  const weeklyMap = new Map<string, number>();
+  for (const r of weeklyProgressRes.rows) weeklyMap.set(String(r.user_id), parseInt(r.solved_week, 10));
 
   return students.map(student => {
     let effectiveTarget = targetsRes.rows.find(t => t.user_id === student.id);
@@ -84,11 +76,11 @@ async function enrichStudentProgressBatch(students: any[], dateStr: string) {
       effectiveTarget = targetsRes.rows.find(t => !t.user_id && !t.class_id);
     }
 
-    const solvedToday = dailyMap.get(student.id) || 0;
+    const dailyRow = dailyMap.get(student.id);
+    const solvedToday = Number(dailyRow?.solved_today) || 0;
     const solvedThisWeek = weeklyMap.get(student.id) || 0;
     const dailyTarget = effectiveTarget ? effectiveTarget.daily_target : 0;
     const weeklyTarget = effectiveTarget ? effectiveTarget.weekly_target : 0;
-    const profile = profileMap.get(student.id);
 
     return {
       studentId: student.id,
@@ -102,7 +94,7 @@ async function enrichStudentProgressBatch(students: any[], dateStr: string) {
       solvedThisWeek,
       weeklyTarget,
       weeklyStatus: weeklyTarget > 0 ? (solvedThisWeek >= weeklyTarget ? 'TARGET_MET' : 'TARGET_MISSED') : 'NO_TARGET',
-      totalSolved: profile?.total_solved || 0
+      totalSolved: dailyRow?.total_solved || 0
     };
   });
 }
@@ -209,7 +201,7 @@ async function main() {
 
     // 2. Export Database Snapshot
     console.log('[Workflow Backup] Generating database snapshot JSON...');
-    const snapshot = await generateDatabaseSnapshot(true);
+    const snapshot = await generateDatabaseSnapshot(true, true);
     console.log(`[Workflow Backup] ✅ Database snapshot generated: ${snapshot.filePath}`);
 
     console.log('[Workflow Backup] 🎉 All backups successfully generated.');
