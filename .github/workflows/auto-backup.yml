@@ -65,7 +65,8 @@ jobs:
         env:
           SYNC_PAT: ${{ secrets.SYNC_PAT }}
         run: |
-          if [[ "${{ github.repository }}" == "TK4743/taskmanager" ]]; then
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          if [[ "$REPO_LOWER" == *"tk4743"* ]]; then
             TARGET_REPO="https://${SYNC_PAT}@github.com/Tharun4743/taskmanager.git"
           else
             TARGET_REPO="https://${SYNC_PAT}@github.com/TK4743/taskmanager.git"
