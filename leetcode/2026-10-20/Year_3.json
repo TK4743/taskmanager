@@ -890,7 +890,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 0,
+    "solvedThisWeek": 1,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 360
@@ -1254,7 +1254,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 0,
+    "solvedThisWeek": 1,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 681
@@ -1503,13 +1503,13 @@
     "fullName": "NITHISH RAJAN P",
     "className": "III IT B",
     "leetcodeUrl": "https://leetcode.com/u/nithish-pnr/",
-    "solvedToday": 0,
+    "solvedToday": 3,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 2,
+    "solvedThisWeek": 5,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
-    "totalSolved": 164
+    "totalSolved": 167
   },
   {
     "studentId": "551c4eda-98d6-4fb4-9209-5255b9ad9597",
@@ -2315,10 +2315,10 @@
     "fullName": "THARUNKUMAR K",
     "className": "III IT C",
     "leetcodeUrl": "https://leetcode.com/u/Tharunkumar__K/",
-    "solvedToday": 0,
+    "solvedToday": 1,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 0,
+    "solvedThisWeek": 1,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 173
@@ -2486,7 +2486,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 0,
+    "solvedThisWeek": 1,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 758

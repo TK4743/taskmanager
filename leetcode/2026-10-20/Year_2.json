@@ -1268,7 +1268,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 0,
+    "solvedThisWeek": 1,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 103
@@ -1436,7 +1436,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 0,
+    "solvedThisWeek": 1,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 381
@@ -1464,7 +1464,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 0,
+    "solvedThisWeek": 1,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 133
@@ -1562,7 +1562,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 0,
+    "solvedThisWeek": 1,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 88
@@ -2206,7 +2206,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 0,
+    "solvedThisWeek": 1,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 134
