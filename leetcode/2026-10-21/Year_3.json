@@ -1254,7 +1254,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 1,
+    "solvedThisWeek": 2,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 682
@@ -2318,7 +2318,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 1,
+    "solvedThisWeek": 2,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 173
@@ -2486,7 +2486,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 1,
+    "solvedThisWeek": 2,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 758
