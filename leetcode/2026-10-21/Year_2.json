@@ -1100,7 +1100,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 0,
+    "solvedThisWeek": 5,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 150
@@ -1181,13 +1181,13 @@
     "fullName": "LOGESHWARAN S S",
     "className": "II IT B",
     "leetcodeUrl": "https://leetcode.com/u/Logesh_0781/",
-    "solvedToday": 0,
+    "solvedToday": 1,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 2,
+    "solvedThisWeek": 3,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
-    "totalSolved": 149
+    "totalSolved": 150
   },
   {
     "studentId": "39cf2cb8-8581-49b2-b475-33b9dfe28360",
@@ -1380,7 +1380,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 1,
+    "solvedThisWeek": 3,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 122
@@ -1436,7 +1436,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 1,
+    "solvedThisWeek": 3,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 383
@@ -1562,7 +1562,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 1,
+    "solvedThisWeek": 2,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 89
@@ -2203,10 +2203,10 @@
     "fullName": "SATYA JOTHI V",
     "className": "II IT C",
     "leetcodeUrl": "https://leetcode.com/u/_Satya_Jothi_V/",
-    "solvedToday": 0,
+    "solvedToday": 1,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 1,
+    "solvedThisWeek": 3,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 134
