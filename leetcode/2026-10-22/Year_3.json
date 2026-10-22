@@ -78,7 +78,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 1,
+    "solvedThisWeek": 3,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 84
@@ -120,7 +120,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 2,
+    "solvedThisWeek": 4,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 80
@@ -862,7 +862,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 1,
+    "solvedThisWeek": 3,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 83
@@ -876,7 +876,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 0,
+    "solvedThisWeek": 1,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 52
@@ -1013,13 +1013,13 @@
     "fullName": "KAVIN R",
     "className": "III IT B",
     "leetcodeUrl": "https://leetcode.com/u/Kavin_vsb/",
-    "solvedToday": 0,
+    "solvedToday": 1,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 2,
+    "solvedThisWeek": 3,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
-    "totalSolved": 328
+    "totalSolved": 329
   },
   {
     "studentId": "9d9cf6ec-e29a-48c5-9c2b-e3fecabf5ddf",
@@ -1125,13 +1125,13 @@
     "fullName": "KESHAV AT",
     "className": "III IT B",
     "leetcodeUrl": "https://leetcode.com/u/itz_kshvx_7",
-    "solvedToday": 0,
+    "solvedToday": 2,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 3,
+    "solvedThisWeek": 5,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
-    "totalSolved": 286
+    "totalSolved": 288
   },
   {
     "studentId": "ecaecd1a-7a9c-4d6b-b070-e16c59817b0c",
@@ -1643,13 +1643,13 @@
     "fullName": "PRIYA V",
     "className": "III IT B",
     "leetcodeUrl": "https://leetcode.com/u/prxya___003/",
-    "solvedToday": 0,
+    "solvedToday": 1,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 1,
+    "solvedThisWeek": 2,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
-    "totalSolved": 333
+    "totalSolved": 334
   },
   {
     "studentId": "8bf55e93-93af-454f-8f93-72dd10ececdb",
@@ -2262,7 +2262,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 0,
+    "solvedThisWeek": 1,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 181
@@ -2483,10 +2483,10 @@
     "fullName": "YUVANESH P",
     "className": "III IT C",
     "leetcodeUrl": "https://leetcode.com/u/yuvnex/",
-    "solvedToday": 0,
+    "solvedToday": 1,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 2,
+    "solvedThisWeek": 4,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 758
