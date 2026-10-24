@@ -89,6 +89,7 @@ export const prefetchView = (viewName: string) => {
 import { generateStudentResumePdf, downloadStudentResumePdf } from './studentProfilePdfGenerator';
 import { generateMergedProofsPdf, ProofPdfItem } from './proofPdfGenerator';
 import ThemeToggle from './ThemeToggle';
+import ProofPreviewModal, { ProofPreviewData } from './ProofPreviewModal';
 import {
   isPushSupported,
   getNotificationPermissionState,
@@ -5106,6 +5107,7 @@ export default function App() {
   const [selectedClassmateIds, setSelectedClassmateIds] = useState<string[]>([]);
   const [classmateSearchTerm, setClassmateSearchTerm] = useState('');
   const [teamProofFile, setTeamProofFile] = useState<File | null>(null);
+  const [proofPreviewData, setProofPreviewData] = useState<ProofPreviewData | null>(null);
   const [teamRemarks, setTeamRemarks] = useState('');
   const [isSubmittingTeam, setIsSubmittingTeam] = useState(false);
   const [teamSubmissions, setTeamSubmissions] = useState<TeamSubmission[]>([]);
@@ -16329,12 +16331,30 @@ export default function App() {
                                                       {selectedFiles[task.id] ? (
                                                         <div className="relative w-full border-2 border-emerald-400 bg-emerald-50/80 rounded-xl p-3 md:p-4 flex flex-col md:flex-row items-center justify-between gap-3 shadow-xs">
                                                           <div className="flex items-center gap-3 min-w-0 flex-1 w-full">
-                                                            <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-emerald-300 bg-white shrink-0 shadow-sm flex items-center justify-center">
+                                                            <div
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setProofPreviewData({
+                                                                  url: URL.createObjectURL(selectedFiles[task.id]),
+                                                                  title: task.title,
+                                                                  filename: selectedFiles[task.id].name,
+                                                                  size: `${(selectedFiles[task.id].size / (1024 * 1024)).toFixed(2)} MB`,
+                                                                  isDraft: true,
+                                                                  onChangeFile: () => document.getElementById(`file-${task.id}`)?.click(),
+                                                                  onDeleteFile: () => handleDeleteScreenshot(task.id)
+                                                                });
+                                                              }}
+                                                              className="relative w-14 h-14 rounded-lg overflow-hidden border border-emerald-300 bg-white shrink-0 shadow-sm flex items-center justify-center cursor-pointer group/thumb transition-transform hover:scale-105"
+                                                              title="Click to preview full screenshot"
+                                                            >
                                                               <img
                                                                 src={URL.createObjectURL(selectedFiles[task.id])}
                                                                 alt="Screenshot preview"
                                                                 className="w-full h-full object-cover"
                                                               />
+                                                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                                                <Eye size={16} />
+                                                              </div>
                                                             </div>
                                                             <div className="min-w-0 flex-1">
                                                               <div className="flex items-center gap-1 text-emerald-700 font-bold text-xs md:text-sm">
@@ -16350,6 +16370,25 @@ export default function App() {
                                                             </div>
                                                           </div>
                                                           <div className="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end">
+                                                            <button
+                                                              type="button"
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setProofPreviewData({
+                                                                  url: URL.createObjectURL(selectedFiles[task.id]),
+                                                                  title: task.title,
+                                                                  filename: selectedFiles[task.id].name,
+                                                                  size: `${(selectedFiles[task.id].size / (1024 * 1024)).toFixed(2)} MB`,
+                                                                  isDraft: true,
+                                                                  onChangeFile: () => document.getElementById(`file-${task.id}`)?.click(),
+                                                                  onDeleteFile: () => handleDeleteScreenshot(task.id)
+                                                                });
+                                                              }}
+                                                              className="text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-white hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-200 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                                                              title="Preview screenshot in high resolution before submitting"
+                                                            >
+                                                              <Eye size={13} /> Preview
+                                                            </button>
                                                             <button
                                                               type="button"
                                                               onClick={(e) => {
@@ -16433,14 +16472,19 @@ export default function App() {
                                           </div>
                                         </div>
                                         {submission.screenshot_url && !submission.screenshot_url.startsWith('PURGED') ? (
-                                          <a
-                                            href={submission.screenshot_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs font-medium text-blue-600 hover:underline flex items-center gap-1"
+                                          <button
+                                            type="button"
+                                            onClick={() => setProofPreviewData({
+                                              url: submission.screenshot_url,
+                                              title: task.title,
+                                              filename: submission.original_filename || `Proof_${submission.register_number || 'Student'}_${task.title}`,
+                                              isDraft: false
+                                            })}
+                                            className="text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg border border-indigo-200 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                                            title="Inspect submitted proof in full resolution"
                                           >
-                                            <ImageIcon size={14} /> View Screenshot
-                                          </a>
+                                            <Eye size={13} /> View Proof
+                                          </button>
                                         ) : submission.screenshot_url?.startsWith('PURGED') ? (
                                           <span className="text-xs text-zinc-400 font-medium italic flex items-center gap-1">
                                             <ImageIcon size={14} /> Purged (30d+)
@@ -19012,12 +19056,24 @@ export default function App() {
                             )}
 
                             {currentTaskTeam.submission.proof_url && (
-                              <img
-                                src={currentTaskTeam.submission.proof_url}
-                                alt="Team Proof"
-                                className="max-h-48 rounded-xl object-contain border border-zinc-200 cursor-pointer"
-                                onClick={() => window.open(currentTaskTeam.submission?.proof_url, '_blank')}
-                              />
+                              <div
+                                onClick={() => setProofPreviewData({
+                                  url: currentTaskTeam.submission!.proof_url,
+                                  title: currentTaskTeam?.task_title ? `${currentTaskTeam.task_title} (Team Proof)` : 'Team Task Proof',
+                                  isDraft: false
+                                })}
+                                className="relative group/teamproof cursor-pointer inline-block"
+                                title="Click to inspect team proof in full resolution"
+                              >
+                                <img
+                                  src={currentTaskTeam.submission.proof_url}
+                                  alt="Team Proof"
+                                  className="max-h-48 rounded-xl object-contain border border-zinc-200 group-hover/teamproof:brightness-95 transition-all"
+                                />
+                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/teamproof:opacity-100 flex items-center justify-center rounded-xl transition-opacity text-white text-xs font-bold gap-1.5">
+                                  <Eye size={16} /> Inspect Proof
+                                </div>
+                              </div>
                             )}
 
                             {currentTaskTeam.submission.remarks && currentTaskTeam.submission.status !== 'REJECTED' && (
@@ -19039,31 +19095,72 @@ export default function App() {
                               {teamProofFile ? (
                                 <div className="bg-white p-3 rounded-xl border border-indigo-200 flex items-center justify-between gap-3 shadow-xs">
                                   <div className="flex items-center gap-3 overflow-hidden min-w-0">
-                                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-indigo-100 bg-zinc-50 shrink-0 flex items-center justify-center">
+                                    <div
+                                      onClick={() => setProofPreviewData({
+                                        url: URL.createObjectURL(teamProofFile),
+                                        title: currentTaskTeam?.task_title ? `${currentTaskTeam.task_title} (Team Proof Draft)` : 'Team Proof Draft',
+                                        filename: teamProofFile.name,
+                                        size: `${(teamProofFile.size / (1024 * 1024)).toFixed(2)} MB`,
+                                        isDraft: true,
+                                        onDeleteFile: () => {
+                                          setTeamProofFile(null);
+                                          const teamInput = document.getElementById('team-proof-file-input') as HTMLInputElement | null;
+                                          if (teamInput) teamInput.value = '';
+                                          addToast('Team proof screenshot removed', 'info');
+                                        }
+                                      })}
+                                      className="w-12 h-12 rounded-lg overflow-hidden border border-indigo-100 bg-zinc-50 shrink-0 flex items-center justify-center cursor-pointer group/thumb hover:scale-105 transition-transform relative"
+                                      title="Click to preview full team proof"
+                                    >
                                       <img
                                         src={URL.createObjectURL(teamProofFile)}
                                         alt="Team proof preview"
                                         className="w-full h-full object-cover"
                                       />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                        <Eye size={14} />
+                                      </div>
                                     </div>
                                     <div className="min-w-0">
                                       <p className="text-xs font-semibold text-zinc-800 truncate" title={teamProofFile.name}>{teamProofFile.name}</p>
                                       <p className="text-[10px] text-zinc-400 font-medium">{(teamProofFile.size / (1024 * 1024)).toFixed(2)} MB</p>
                                     </div>
                                   </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setTeamProofFile(null);
-                                      const teamInput = document.getElementById('team-proof-file-input') as HTMLInputElement | null;
-                                      if (teamInput) teamInput.value = '';
-                                      addToast('Team proof screenshot removed', 'info');
-                                    }}
-                                    className="text-xs font-bold text-red-600 hover:text-red-800 flex items-center gap-1 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-lg border border-red-200 shrink-0 ml-2 transition-colors"
-                                    title="Delete screenshot before submission"
-                                  >
-                                    <Trash2 size={13} /> Delete / Change
-                                  </button>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => setProofPreviewData({
+                                        url: URL.createObjectURL(teamProofFile),
+                                        title: currentTaskTeam?.task_title ? `${currentTaskTeam.task_title} (Team Proof Draft)` : 'Team Proof Draft',
+                                        filename: teamProofFile.name,
+                                        size: `${(teamProofFile.size / (1024 * 1024)).toFixed(2)} MB`,
+                                        isDraft: true,
+                                        onDeleteFile: () => {
+                                          setTeamProofFile(null);
+                                          const teamInput = document.getElementById('team-proof-file-input') as HTMLInputElement | null;
+                                          if (teamInput) teamInput.value = '';
+                                          addToast('Team proof screenshot removed', 'info');
+                                        }
+                                      })}
+                                      className="text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg border border-indigo-200 transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
+                                      title="Preview team proof before submitting"
+                                    >
+                                      <Eye size={13} /> Preview
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setTeamProofFile(null);
+                                        const teamInput = document.getElementById('team-proof-file-input') as HTMLInputElement | null;
+                                        if (teamInput) teamInput.value = '';
+                                        addToast('Team proof screenshot removed', 'info');
+                                      }}
+                                      className="text-xs font-bold text-red-600 hover:text-red-800 flex items-center gap-1 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-lg border border-red-200 shrink-0 ml-1 transition-colors"
+                                      title="Delete screenshot before submission"
+                                    >
+                                      <Trash2 size={13} /> Delete / Change
+                                    </button>
+                                  </div>
                                 </div>
                               ) : (
                                 <input
@@ -19325,6 +19422,11 @@ export default function App() {
           {renderHistoryDetailsModal()}
 
         </AnimatePresence>
+
+        <ProofPreviewModal
+          data={proofPreviewData}
+          onClose={() => setProofPreviewData(null)}
+        />
       </div>
     </FooterContext.Provider>
   );

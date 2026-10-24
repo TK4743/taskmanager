@@ -1,0 +1,149 @@
+% --- PAGE 56: HALF-TITLE APPENDIX ---
+\vspace*{\fill}
+\begin{center}
+  {\fontsize{18pt}{24pt}\selectfont\bfseries APPENDIX\par}
+\end{center}
+\vspace*{\fill}
+\newpage
+
+% --- PAGE 57: APPENDIX SOURCE CODE PART 1 ---
+\begin{center}
+  {\fontsize{15pt}{19pt}\selectfont\bfseries APPENDIX\par}
+  \vspace{0.2cm}
+  {\fontsize{13pt}{17pt}\selectfont\bfseries SOURCE CODE LISTING 1: SANDBOX EXECUTION ENGINE\par}
+\end{center}
+\vspace{0.2cm}
+
+\begin{lstlisting}[language=Java,basicstyle=\footnotesize\ttfamily]
+// codingSandboxService.ts - Process Isolation and Timeout Traps
+async function runProcess(command: string, args: string[], cwd: string,
+  inputData: string = '', timeoutMs: number = 3000): Promise<ExecutionOutput> {
+  const startTime = Date.now();
+  return new Promise((resolve) => {
+    let stdout = '', stderr = '', killed = false, finished = false;
+    const child = spawn(command, args, { cwd, env: SANITIZED_ENV, stdio: 'pipe' });
+    const timer = setTimeout(() => {
+      if (!finished) {
+        killed = true; finished = true;
+        try { child.kill('SIGKILL'); } catch {}
+        resolve({ stdout, stderr: 'Time Limit Exceeded (3000ms)', code: null, killed: true });
+      }
+    }, timeoutMs);
+    child.stdout.on('data', (d) => { stdout += d.toString(); });
+    child.stderr.on('data', (d) => { stderr += d.toString(); });
+    if (inputData) { child.stdin.write(inputData); child.stdin.end(); }
+    child.on('close', (code) => {
+      if (!finished) {
+        finished = true; clearTimeout(timer);
+        resolve({ stdout, stderr, code, killed, durationMs: Date.now() - startTime });
+      }
+    });
+  });
+}
+\end{lstlisting}
+\newpage
+
+% --- PAGE 58: APPENDIX SOURCE CODE PART 2 ---
+\begin{center}
+  {\fontsize{15pt}{19pt}\selectfont\bfseries SOURCE CODE LISTING 2: JUDGE0 CLOUD FAILOVER\par}
+\end{center}
+\vspace{0.2cm}
+
+\begin{lstlisting}[language=Java,basicstyle=\footnotesize\ttfamily]
+// codingSandboxService.ts - Serverless Cloud Failover Runtime
+async function evaluateViaJudge0(language: SupportedLanguage,
+  sourceCode: string, testCases: TestCaseInput[]): Promise<BatchResult> {
+  const langId = JUDGE0_LANGUAGE_IDS[language];
+  let preparedCode = sourceCode;
+  if (language === 'java' && !/public class Main/.test(preparedCode)) {
+    preparedCode = preparedCode.replace(/class Solution/, 'public class Main');
+  }
+  const endpoint = 'https://ce.judge0.com/submissions?wait=true';
+  const runTest = async (tc: TestCaseInput): Promise<JudgeOutput> => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const resp = await fetch(endpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source_code: preparedCode, language_id: langId, stdin: tc.input_data })
+      });
+      if (resp.status === 429) { await new Promise(r => setTimeout(r, 1000)); continue; }
+      return await resp.json();
+    }
+    throw new Error('Judge0 cloud execution timeout after 3 retries');
+  };
+  return batchProcessTestResults(testCases, runTest);
+}
+\end{lstlisting}
+\newpage
+
+% --- PAGE 59: APPENDIX SOURCE CODE PART 3 ---
+\begin{center}
+  {\fontsize{15pt}{19pt}\selectfont\bfseries SOURCE CODE LISTING 3: LEETCODE \& GITHUB SYNC\par}
+\end{center}
+\vspace{0.2cm}
+
+\begin{lstlisting}[language=Java,basicstyle=\footnotesize\ttfamily]
+// githubSyncService.ts & server.ts - Algorithmic Telemetry Daemons
+export async function syncLeetCodeAndGitHub(userId: string, leetcodeUser: string) {
+  const query = `query ($u: String!) { matchedUser(username: $u) {
+    submitStatsGlobal { acSubmissionNum { difficulty count } } } }`;
+  const res = await fetch('https://leetcode.com/graphql', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, variables: { u: leetcodeUser } })
+  });
+  const data = await res.json();
+  const totalSolved = data?.data?.matchedUser?.submitStatsGlobal?.acSubmissionNum[0]?.count || 0;
+  const today = new Date().toISOString().split('T')[0];
+
+  await pool.query(`
+    INSERT INTO leetcode_daily_progress (user_id, date, total_solved, status)
+    VALUES ($1, $2, $3, CASE WHEN $3 > 0 THEN 'COMPLETED' ELSE 'INCOMPLETE' END)
+    ON CONFLICT (user_id, date) DO UPDATE SET total_solved = EXCLUDED.total_solved;
+  `, [userId, today, totalSolved]);
+
+  const ghRes = await fetch(`https://api.github.com/users/${leetcodeUser}/events/public`);
+  const events = await ghRes.json();
+  const commits = events.filter((e: any) => e.type === 'PushEvent').length;
+  await pool.query(`INSERT INTO github_daily_commits (student_id, date, daily_commit_count)
+    VALUES ($1, $2, $3) ON CONFLICT (student_id, date) DO UPDATE SET daily_commit_count = $3;`,
+    [userId, today, commits]);
+}
+\end{lstlisting}
+\newpage
+
+% --- PAGE 60: APPENDIX SOURCE CODE PART 4 ---
+\begin{center}
+  {\fontsize{15pt}{19pt}\selectfont\bfseries SOURCE CODE LISTING 4: MULTI-TIER REVIEW \& ALERTS\par}
+\end{center}
+\vspace{0.2cm}
+
+\begin{lstlisting}[language=Java,basicstyle=\footnotesize\ttfamily]
+// server.ts - 3-Tier Submission Review Controller & Alerts
+app.post('/api/tasks/submissions/:id/review', requireRole(['COORDINATOR', 'CLASS_ADVISOR', 'HOD']),
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { status, feedback } = req.body;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const sub = await client.query('SELECT * FROM task_submissions WHERE id = $1 FOR UPDATE;', [id]);
+      if (sub.rowCount === 0) return res.status(404).json({ error: 'Not Found' });
+
+      await client.query(`
+        UPDATE task_submissions SET status = $1, verification_note = $2, verified_by_id = $3,
+        verified_at = CASE WHEN $1 = 'VERIFIED' THEN NOW() ELSE verified_at END WHERE id = $4;
+      `, [status, feedback, req.user.id, id]);
+
+      await client.query(`INSERT INTO submission_reviews (submission_id, reviewer_id,
+        previous_status, new_status, feedback) VALUES ($1, $2, $3, $4, $5);`,
+        [id, req.user.id, sub.rows[0].status, status, feedback]);
+
+      await client.query('COMMIT');
+      await notifySubmissionVerifiedOrRejected(sub.rows[0].user_id, sub.rows[0].task_id, status, feedback);
+      return res.json({ success: true, status });
+    } catch (err: any) {
+      await client.query('ROLLBACK');
+      return res.status(500).json({ error: err.message });
+    } finally { client.release(); }
+});
+\end{lstlisting}
+\newpage

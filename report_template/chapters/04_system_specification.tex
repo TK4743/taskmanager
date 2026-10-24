@@ -1,0 +1,111 @@
+% --- PAGE 25: HALF-TITLE SYSTEM SPECIFICATION ---
+\vspace*{\fill}
+\begin{center}
+  {\fontsize{18pt}{24pt}\selectfont\bfseries SYSTEM SPECIFICATION\par}
+\end{center}
+\vspace*{\fill}
+\newpage
+
+% --- PAGE 26: CHAPTER 4 SYSTEM SPECIFICATION ---
+% --- CHAPTER 4 SYSTEM SPECIFICATION ---
+\begin{center}
+  {\fontsize{16pt}{20pt}\selectfont\bfseries CHAPTER 4\par}
+  \vspace{0.3cm}
+  {\fontsize{16pt}{20pt}\selectfont\bfseries SYSTEM SPECIFICATION\par}
+\end{center}
+\vspace{0.4cm}
+
+{\fontsize{14pt}{18pt}\selectfont\bfseries 4.1 HARDWARE REQUIREMENTS\par}
+\vspace{0.3cm}
+
+{\fontsize{12pt}{17.5pt}\selectfont
+The \textbf{VSBEC IT Vault} platform is architected for lightweight, high-speed execution across diverse client devices while taking full advantage of serverless edge compute and elastic cloud infrastructure on the backend.
+
+\noindent\textbf{Client Side (Student / Faculty Workstation / Mobile Device):}
+\begin{table}[H]
+  \centering
+  \fontsize{11pt}{15.5pt}\selectfont
+  \begin{tabularx}{\textwidth}{@{}p{5.5cm} L@{}}
+    \textbf{Component} & \textbf{Specification / Threshold} \\
+    \midrule
+    Device Architecture & Laptop / Desktop PC / Android or iOS Smartphone \\
+    Processor & Dual-Core 2.0 GHz or higher (x86\_64 or ARM64) \\
+    System Memory (RAM) & Minimum 4 GB RAM (8 GB recommended for Monaco IDE) \\
+    Available Storage & Minimum 250 MB free disk space for browser caching \\
+    Peripheral Hardware & Standard Web Camera and Microphone (for Proctored Tests) \\
+    Display Resolution & $1366 \times 768$ minimum ($1920 \times 1080$ recommended) \\
+    Network Interface & Stable 4G/5G mobile connection or Wi-Fi (minimum 1 Mbps) \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\vspace{0.2cm}
+\noindent\textbf{Server Side (Production Cloud Infrastructure \& Database Host):}
+\begin{table}[H]
+  \centering
+  \fontsize{11pt}{15.5pt}\selectfont
+  \begin{tabularx}{\textwidth}{@{}p{5.5cm} L@{}}
+    \textbf{Infrastructure Layer} & \textbf{Deployment Specification} \\
+    \midrule
+    Server Compute & Vercel Serverless Edge Runtime / Node.js 20 LTS Host \\
+    Processor (Virtual CPU) & Minimum 2 vCPUs @ 2.4 GHz \\
+    Memory (RAM) & 2 GB Dedicated RAM (Dynamically Scalable to 8 GB) \\
+    Persistent Storage & Cloud-hosted SSD (Supabase PostgreSQL Enterprise Tier) \\
+    Network Throughput & Gigabit Ethernet Interface (1 Gbps symmetric) \\
+    External Media Storage & Cloudinary Secure Object Storage (Global CDN) \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\vspace{0.4cm}
+{\fontsize{14pt}{18pt}\selectfont\bfseries 4.2 SOFTWARE REQUIREMENTS AND EXACT DEPENDENCY MANIFEST\par}
+\vspace{0.3cm}
+
+All software libraries and execution environments were audited directly against the project's dependency manifest in \texttt{package.json}:
+
+\noindent\textbf{Frontend Client Environment:}
+\begin{table}[H]
+  \centering
+  \fontsize{11pt}{15.5pt}\selectfont
+  \begin{tabularx}{\textwidth}{@{}p{5.5cm} L@{}}
+    \textbf{Subsystem / Library} & \textbf{Verified Codebase Version / Specification} \\
+    \midrule
+    Web Browser Compatibility & Google Chrome 110+, Firefox 115+, Edge 110+, Safari 16+ \\
+    Single-Page Framework & React 19.0.0 with React DOM 19.0.0 \\
+    Build Tool \& Bundler & Vite 6.2.0 (ESM mode with Hot Module Replacement) \\
+    Language Standard & TypeScript 5.8 (Strict type checking enabled) \\
+    UI Styling \& Design System & Tailwind CSS 4.1.14 with @tailwindcss/vite \\
+    Iconography \& Animations & Lucide React 1.16.0, Motion 12.23.24, Canvas Confetti 1.9.4 \\
+    In-Browser Code Editor & Monaco Editor (@monaco-editor/react 4.7.0) \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\vspace{0.2cm}
+\noindent\textbf{Backend Application \& Data Layer:}
+\begin{table}[H]
+  \centering
+  \fontsize{11pt}{15.5pt}\selectfont
+  \begin{tabularx}{\textwidth}{@{}p{5.5cm} L@{}}
+    \textbf{Service / Component} & \textbf{Verified Codebase Version / Specification} \\
+    \midrule
+    Runtime Engine & Node.js 20.x / 22.x LTS (ES Modules runtime mode) \\
+    Web Application Framework & Express.js 4.21.2 with CORS 2.8.5 and Gzip Compression \\
+    Relational Database Driver & PostgreSQL (pg 8.22.0) with custom type parsers \\
+    Authentication \& Hashing & JSON Web Tokens (jsonwebtoken 9.0.2), Bcrypt.js 3.0.2 \\
+    Media Asset Pipeline & Multer 1.4.5-lts.1, Cloudinary SDK 1.41.3 \\
+    Transactional Mailer & Brevo REST API v3, Nodemailer 9.0.5, Resend API fallback \\
+    Push Notification Engine & Web-Push 3.6.7 (VAPID Elliptic Curve P-256 keys) \\
+    Application Monitoring & Sentry Node SDK (@sentry/node 10.69.0) \\
+    Schema Validation & Zod 4.3.6 for robust request body sanitization \\
+    Report Compilation & SheetJS (xlsx 0.18.5) for departmental Excel exports \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\vspace{0.4cm}
+{\fontsize{14pt}{18pt}\selectfont\bfseries 4.3 ARCHITECTURAL INTEGRATION AND RUNTIME GUARDS\par}
+\vspace{0.3cm}
+
+The system architecture implements critical runtime guards: the PostgreSQL pooler dynamically rewrites port 5432 to port 6543 (transaction mode) to avoid client connection exhaustion; Libuv worker pools are scaled to 128 threads for non-blocking bcrypt hashing; and Sentry 10.69 provides distributed transaction tracing and error monitoring.\par}
+\newpage
