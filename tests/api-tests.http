@@ -1,0 +1,37 @@
+### Academic Task Manager & Backup Circuit REST Tests
+### Pre-configured for VS Code REST Client extension (humao.rest-client)
+### SECURITY PROTOCOL: All secrets must be loaded from local environment. Zero hardcoded secrets.
+
+@baseUrl = http://localhost:5000
+@authToken = {{$dotenv AUTH_BEARER_TOKEN}}
+@dateStr = 2026-10-24
+
+### 1. Health & Server Status Check
+GET {{baseUrl}}/api/health
+Accept: application/json
+
+### 2. LeetCode Target & Daily Progress Snapshot
+GET {{baseUrl}}/api/leetcode/daily-progress?date={{dateStr}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 3. Student Submissions & Task Verification Listing
+GET {{baseUrl}}/api/submissions
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 4. Tasks Summary & Distribution
+GET {{baseUrl}}/api/tasks
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 5. Automated Database & Report Backup Trigger
+POST {{baseUrl}}/api/admin/trigger-backup
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "target_date": "{{dateStr}}",
+  "export_tasks": true,
+  "export_leetcode": true
+}
