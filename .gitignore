@@ -16,6 +16,10 @@ scratch_*
 !report_template/*.pdf
 *.tex
 *.bib
+report_template/chapters/
+report_template/images/
+report_template/*.zip
+report_template/README.md
 .idea/
 .vscode/
 *.iml
