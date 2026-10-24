@@ -47,8 +47,8 @@ jobs:
 
       - name: Commit and Push Backups to GitHub
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "Tharun4743"
+          git config --global user.email "tharunkumark42007@gmail.com"
 
           git add backups/ leetcode/ tasks/
           if git diff --staged --quiet; then
