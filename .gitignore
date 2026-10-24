@@ -14,12 +14,8 @@ sih-prep/
 scratch_*
 *.pdf
 !report_template/*.pdf
-!latex/*.pdf
 *.tex
 *.bib
-report_template/chapters/
-report_template/images/
-report_template/*.zip
 .idea/
 .vscode/
 *.iml
