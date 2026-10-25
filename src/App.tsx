@@ -122,6 +122,7 @@ import {
   Check,
   CheckCheck,
   CheckCircle2,
+  CheckSquare,
   ExternalLink,
   Camera,
   Upload,
@@ -16643,15 +16644,47 @@ export default function App() {
                             </>
                           )}
                         </Button>
-                        {selectedSubmissions.length > 0 && (
-                          <Button
-                            variant="success"
-                            onClick={handleBatchVerify}
-                            className="flex items-center gap-1.5 text-xs py-2 px-3.5 rounded-full font-bold shadow-sm"
-                          >
-                            <CheckCheck size={14} /> Bulk Verify ({selectedSubmissions.length})
-                          </Button>
-                        )}
+                        {(() => {
+                          const currentFiltered = getFilteredVerificationSubmissions();
+                          const allPending = currentFiltered.filter(s => s.status === 'SUBMITTED');
+                          const allPendingIds = allPending.map(s => s.id);
+                          const isAllPendingSelected = allPendingIds.length > 0 && allPendingIds.every(id => selectedSubmissions.includes(id));
+
+                          return (
+                            <>
+                              {allPendingIds.length > 0 && (
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    if (isAllPendingSelected) {
+                                      const pendingSet = new Set(allPendingIds);
+                                      setSelectedSubmissions(prev => prev.filter(id => !pendingSet.has(id)));
+                                    } else {
+                                      setSelectedSubmissions(prev => Array.from(new Set([...prev, ...allPendingIds])));
+                                    }
+                                  }}
+                                  className="flex items-center gap-1.5 text-xs py-2 px-3.5 rounded-full font-bold border-zinc-200 dark:border-zinc-700 hover:border-zinc-900 dark:hover:border-zinc-100 transition-colors shadow-2xs"
+                                >
+                                  <CheckSquare size={14} className={isAllPendingSelected ? "text-blue-600 dark:text-blue-400" : "text-zinc-500"} />
+                                  <span>
+                                    {isAllPendingSelected
+                                      ? `Deselect All (${selectedSubmissions.length})`
+                                      : `Select All Pending (${allPendingIds.length})`}
+                                  </span>
+                                </Button>
+                              )}
+                              {selectedSubmissions.length > 0 && (
+                                <Button
+                                  variant="success"
+                                  onClick={handleBatchVerify}
+                                  className="flex items-center gap-1.5 text-xs py-2 px-3.5 rounded-full font-bold shadow-sm"
+                                >
+                                  <CheckCheck size={14} /> Bulk Verify ({selectedSubmissions.length})
+                                </Button>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -16935,6 +16968,37 @@ export default function App() {
                         <>
                           {/* ── Mobile Touch Cards Layout (< md) ─────────────── */}
                           <div className="block md:hidden space-y-3">
+                            {(() => {
+                              const pagePending = paginated.filter(s => s.status === 'SUBMITTED').map(s => s.id);
+                              const isPageSelected = pagePending.length > 0 && pagePending.every(id => selectedSubmissions.includes(id));
+                              if (pagePending.length === 0) return null;
+
+                              return (
+                                <div className="flex items-center justify-between p-3 bg-white dark:bg-[#141418] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs">
+                                  <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                    <input
+                                      type="checkbox"
+                                      className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 accent-blue-600 cursor-pointer"
+                                      checked={isPageSelected}
+                                      onChange={e => {
+                                        if (e.target.checked) {
+                                          setSelectedSubmissions(prev => Array.from(new Set([...prev, ...pagePending])));
+                                        } else {
+                                          const pendingSet = new Set(pagePending);
+                                          setSelectedSubmissions(prev => prev.filter(id => !pendingSet.has(id)));
+                                        }
+                                      }}
+                                    />
+                                    <span>Select All on Page ({pagePending.length})</span>
+                                  </label>
+                                  {selectedSubmissions.length > 0 && (
+                                    <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-full">
+                                      {selectedSubmissions.length} Selected
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                             {filtered.length === 0 ? (
                               <Card className="text-center py-10 p-4">
                                 <Users size={40} className="mx-auto text-zinc-300 dark:text-zinc-600 mb-2" />
@@ -17182,22 +17246,28 @@ export default function App() {
                       <THead>
                         <TR>
                           <TH className="w-12">
-                            <input
-                              type="checkbox"
-                              className="w-4 h-4 rounded border-zinc-300 cursor-pointer"
-                              title="Select all pending on this page"
-                              onChange={e => {
-                                const currentFiltered = getFilteredVerificationSubmissions();
-                                const paginated = currentFiltered.slice((submissionPage - 1) * itemsPerPage, submissionPage * itemsPerPage);
-                                const pendingIds = paginated.filter(sub => sub.status === 'SUBMITTED').map(sub => sub.id);
-                                if (e.target.checked) {
-                                  setSelectedSubmissions(prev => Array.from(new Set([...prev, ...pendingIds])));
-                                } else {
-                                  const pendingSet = new Set(pendingIds);
-                                  setSelectedSubmissions(prev => prev.filter(id => !pendingSet.has(id)));
-                                }
-                              }}
-                            />
+                            {(() => {
+                              const pagePending = paginated.filter(sub => sub.status === 'SUBMITTED').map(sub => sub.id);
+                              const isPageSelected = pagePending.length > 0 && pagePending.every(id => selectedSubmissions.includes(id));
+
+                              return (
+                                <input
+                                  type="checkbox"
+                                  className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 accent-blue-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                                  title="Select all pending on this page"
+                                  checked={isPageSelected}
+                                  disabled={pagePending.length === 0}
+                                  onChange={e => {
+                                    if (e.target.checked) {
+                                      setSelectedSubmissions(prev => Array.from(new Set([...prev, ...pagePending])));
+                                    } else {
+                                      const pendingSet = new Set(pagePending);
+                                      setSelectedSubmissions(prev => prev.filter(id => !pendingSet.has(id)));
+                                    }
+                                  }}
+                                />
+                              );
+                            })()}
                           </TH>
                           <TH>Student Details</TH>
                           <TH>Task</TH>
