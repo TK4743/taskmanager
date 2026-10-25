@@ -4,6 +4,7 @@ dotenv.config();
 import { pool } from '../db.js';
 import { generateDatabaseSnapshot } from '../dbBackupService.js';
 import { safeWriteExportFile } from '../githubSyncService.js';
+import { checkAndRunPreDeadlineBackups } from '../taskDeadlineBackupService.js';
 
 function getISTDateStr(): string {
   const now = new Date();
@@ -435,8 +436,9 @@ async function main() {
     // 1. Export LeetCode Reports
     await exportLeetcodeReports(dateStr);
 
-    // 2. Export Task Progress Reports
-    await exportTaskProgressReports(dateStr);
+    // 2. Pre-Deadline Task Backups (5-Minute Window ZIP Archive)
+    console.log('[Workflow Backup] Checking and executing pre-deadline task backups...');
+    await checkAndRunPreDeadlineBackups(5);
 
     // 3. Export Database Snapshot
     console.log('[Workflow Backup] Generating database snapshot JSON...');

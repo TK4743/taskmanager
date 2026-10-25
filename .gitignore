@@ -7,9 +7,12 @@ coverage/
 .env*
 !.env.example
 *.sql
+!db/schema.sql
 scratch_*.js
 !backups/
 !backups/*.json
+backups/tasks/*.zip
+!backups/tasks/.gitkeep
 sih-prep/
 scratch_*
 *.pdf

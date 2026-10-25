@@ -100,6 +100,11 @@ import { fetchReportData, generateCSVReport, generateExcelReport, generateHTMLPD
 import { evaluateCodeSandbox, STARTER_TEMPLATES, SupportedLanguage } from './codingSandboxService.js';
 import { cleanStudentName, syncAndGenerateStudentDirectory, updateStudentCodingProfileInDirectory, updateGitHubFileViaAPI } from './studentDirectoryService.js';
 import { commitFilesToGitHub, safeWriteExportFile, tryLocalGitPush, getGitHubSyncTargets } from './githubSyncService.js';
+import { 
+  checkAndRunPreDeadlineBackups, 
+  cleanupTaskBackup, 
+  generateTaskDeadlineBackup 
+} from './taskDeadlineBackupService.js';
 
 function isValidStrictUrl(urlString: string | null | undefined): boolean {
   if (!urlString) return true;
@@ -617,6 +622,16 @@ async function startServer() {
     const triggered: string[] = [];
     try {
       const { todayStr, prevDayStr, hours, minutes } = getISTTimeParts();
+
+      // 0. Pre-Deadline Task Backups (Automatic 5-Minute Pre-Deadline ZIP Capture)
+      try {
+        const deadlineBackups = await checkAndRunPreDeadlineBackups(5);
+        if (deadlineBackups && deadlineBackups.length > 0) {
+          triggered.push(`task_deadline_backups:${deadlineBackups.length}`);
+        }
+      } catch (backupErr) {
+        console.error('[Pre-Deadline Backup Scheduler Error]:', backupErr);
+      }
 
       // 1. Morning Pre-Sync Window (7:50 AM IST onwards) -> Pre-Sync Previous Day LeetCode & GitHub Progress
       if (hours >= 7 && hours < 20) {
@@ -2843,8 +2858,11 @@ async function startServer() {
 
     if (!isAuthorized) return res.status(403).json({ error: 'Forbidden: You do not have permission to reopen this task' });
 
+    // Clean up old backup ZIP file and reset backup state so a new backup can trigger 5 minutes before the new deadline
+    await cleanupTaskBackup(req.params.id);
+
     await pool.query(
-      'UPDATE tasks SET status = \'OPEN\', deadline = $1, updated_at = NOW() WHERE id = $2',
+      'UPDATE tasks SET status = \'OPEN\', deadline = $1, backed_up_deadline = NULL, backup_file_path = NULL, backup_taken_at = NULL, updated_at = NOW() WHERE id = $2',
       [newDeadline.toISOString(), req.params.id]
     );
 
@@ -3101,11 +3119,32 @@ async function startServer() {
       console.error('Failed to retrieve task submissions for Cloudinary cleanup:', err);
     }
 
+    await cleanupTaskBackup(req.params.id);
     await pool.query('DELETE FROM task_submissions WHERE task_id = $1', [req.params.id]);
     await pool.query('DELETE FROM tasks WHERE id = $1', [req.params.id]);
     invalidateApiCache('tasks_');
     res.json({ success: true });
   });
+
+  // Manual Task Deadline Backup Trigger
+  app.post('/api/tasks/:id/backup', authenticate, authorize(['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR']), asyncHandler(async (req: any, res: Response) => {
+    const result = await generateTaskDeadlineBackup(req.params.id, { force: true });
+    res.json(result);
+  }));
+
+  // Download Task Backup ZIP
+  app.get('/api/tasks/:id/backup/download', authenticate, authorize(['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR']), asyncHandler(async (req: any, res: Response) => {
+    const taskRes = await pool.query('SELECT title, backup_file_path FROM tasks WHERE id = $1', [req.params.id]);
+    const task = taskRes.rows[0];
+    if (!task || !task.backup_file_path) {
+      return res.status(404).json({ error: 'No backup archive found for this task' });
+    }
+    const absPath = path.resolve(process.cwd(), task.backup_file_path);
+    if (!fs.existsSync(absPath)) {
+      return res.status(404).json({ error: 'Backup archive file is missing on server' });
+    }
+    res.download(absPath, path.basename(absPath));
+  }));
 
   // ── Team Tasks Management APIs ─────────────────────────────────────────────
 

@@ -606,6 +606,9 @@ export async function initDB(forceMigration: boolean = false) {
     `);
     await client.query(`
       ALTER TABLE tasks ADD COLUMN IF NOT EXISTS max_team_size INT DEFAULT 5;
+      ALTER TABLE tasks ADD COLUMN IF NOT EXISTS backed_up_deadline TIMESTAMP;
+      ALTER TABLE tasks ADD COLUMN IF NOT EXISTS backup_file_path VARCHAR(1000);
+      ALTER TABLE tasks ADD COLUMN IF NOT EXISTS backup_taken_at TIMESTAMP;
     `);
     await client.query(`
       ALTER TABLE leetcode_daily_progress ADD COLUMN IF NOT EXISTS solved_yesterday INT NOT NULL DEFAULT 0;
