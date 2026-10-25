@@ -11,7 +11,8 @@ coverage/
 scratch_*.js
 !backups/
 !backups/*.json
-backups/tasks/*.zip
+!backups/tasks/
+!backups/tasks/*.zip
 !backups/tasks/.gitkeep
 sih-prep/
 scratch_*

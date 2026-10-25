@@ -108,30 +108,45 @@ describe('Task Deadline Backup: Excel Workbook Generation', () => {
     const buffer = await buildTaskExcelBuffer(mockTask, mockClasses, mockSubmissions);
     assert.ok(Buffer.isBuffer(buffer));
     assert.ok(buffer.length > 2000, 'Excel buffer size should be substantial');
+
+    // Load workbook to verify tab structure
+    const ExcelJS = (await import('exceljs')).default;
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buffer as any);
+
+    const sheetNames = wb.worksheets.map(w => w.name);
+    assert.ok(sheetNames.includes('Task Summary'), 'Should have Task Summary sheet');
+    assert.ok(sheetNames.includes('All Allocated Submissions'), 'Should have All Allocated Submissions sheet');
+    assert.ok(sheetNames.includes('Class - 3-IT-A'), 'Should have allocated Class 3-IT-A sheet');
+    assert.ok(sheetNames.includes('Class - 3-IT-B'), 'Should have allocated Class 3-IT-B sheet');
+    assert.strictEqual(sheetNames.includes('Class - 3-IT-C'), false, 'Unallocated class 3-IT-C must NOT exist');
   });
 });
 
-describe('Task Deadline Backup: ZIP Archive Construction', () => {
-  it('should assemble a complete ZIP archive containing Excel and proofs directory', async () => {
+describe('Task Deadline Backup: ZIP Archive Construction & Class Scoping', () => {
+  it('should assemble a complete ZIP archive with proofs organized strictly by allocated class folder', async () => {
     const zip = new JSZip();
 
     // Add mock Excel file
     zip.file('Test_Task_Submissions.xlsx', Buffer.from('mock excel content'));
 
-    // Add proofs folder and mock proof
+    // Add proofs organized by allocated class
     const proofsFolder = zip.folder('proofs');
     assert.ok(proofsFolder);
-    proofsFolder.file('927622BIT001_Aravind_Kumar_proof.png', Buffer.from('mock image bytes'));
+    proofsFolder.file('3-IT-A/927622BIT001_Aravind_Kumar_proof.png', Buffer.from('mock image bytes'));
+    proofsFolder.file('3-IT-B/927622BIT045_Priya_Dharshini_proof.jpg', Buffer.from('mock image bytes 2'));
     proofsFolder.file('MANIFEST.txt', 'Manifest log content');
 
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
     assert.ok(Buffer.isBuffer(zipBuffer));
     assert.ok(zipBuffer.length > 100);
 
-    // Re-read zip and verify internal files
+    // Re-read zip and verify internal files and class-level folders
     const unzipped = await JSZip.loadAsync(zipBuffer);
     assert.ok(unzipped.file('Test_Task_Submissions.xlsx'));
-    assert.ok(unzipped.file('proofs/927622BIT001_Aravind_Kumar_proof.png'));
+    assert.ok(unzipped.file('proofs/3-IT-A/927622BIT001_Aravind_Kumar_proof.png'));
+    assert.ok(unzipped.file('proofs/3-IT-B/927622BIT045_Priya_Dharshini_proof.jpg'));
     assert.ok(unzipped.file('proofs/MANIFEST.txt'));
+    assert.strictEqual(unzipped.file('proofs/3-IT-C/unallocated_proof.png'), null, 'Unallocated class proof must not exist');
   });
 });

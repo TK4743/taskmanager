@@ -3,14 +3,16 @@
  * Automatically captures a comprehensive backup ZIP archive for tasks
  * exactly 5 minutes before their deadline.
  *
- * Archive Contents:
- * - `<Task_Name>_Submissions.xlsx`: Full student roster, completion metrics, and submission records
- * - `proofs/`: Real student proof files (screenshots, PDFs, images) named by register number & student name
- * - `proofs/MANIFEST.txt`: Complete inventory of downloaded proofs and audit log
+ * Strict Class Allocation Rules:
+ * - Backs up ONLY the explicitly allocated classes for the task.
+ * - Any class that is not allocated is completely excluded.
+ * - Rows and proofs are organized strictly by allocated class, then student register number.
+ * - Generates separate tabs per allocated class in Excel and subfolders per class in proofs/.
+ * - Auto-pushes the backup archive to GitHub.
  *
  * Lifecycle Features:
  * - Atomic DB locks (backed_up_deadline, backup_file_path, backup_taken_at)
- * - Auto-cleanup on task reopen or deadline extension (deletes old zip, resets lock)
+ * - Auto-cleanup on task reopen or deadline extension (deletes old zip, cleans up git, resets lock)
  * - Safe filename sanitization
  */
 
@@ -19,6 +21,7 @@ import path from 'path';
 import JSZip from 'jszip';
 import ExcelJS from 'exceljs';
 import { pool } from './db.js';
+import { tryLocalGitPush, deleteGitHubFileViaAPI } from './githubSyncService.js';
 
 export function sanitizeArchiveName(str: string): string {
   if (!str) return 'Task';
@@ -114,61 +117,8 @@ export function determineProofExtension(originalFilename?: string, contentType?:
   return '.png';
 }
 
-/**
- * Builds the comprehensive Task Submission Excel Workbook
- */
-export async function buildTaskExcelBuffer(task: any, assignedClasses: any[], submissions: any[]): Promise<Buffer> {
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'VSBEC IT Task Manager';
-  workbook.created = new Date();
-
-  // ── Sheet 1: Summary ────────────────────────────────────────────────────────
-  const summarySheet = workbook.addWorksheet('Task Summary', {
-    views: [{ showGridLines: true }]
-  });
-
-  summarySheet.columns = [
-    { header: 'Property', key: 'prop', width: 26 },
-    { header: 'Value', key: 'val', width: 50 }
-  ];
-
-  const totalAssigned = submissions.length;
-  const verifiedCount = submissions.filter(s => s.status === 'VERIFIED').length;
-  const submittedCount = submissions.filter(s => s.status === 'SUBMITTED').length;
-  const rejectedCount = submissions.filter(s => s.status === 'REJECTED').length;
-  const pendingCount = submissions.filter(s => s.status === 'PENDING' || !s.status).length;
-  const completionRate = totalAssigned > 0 ? Math.round(((verifiedCount + submittedCount) / totalAssigned) * 100) : 0;
-
-  const summaryData = [
-    { prop: 'Task Title', val: task.title },
-    { prop: 'Category', val: task.category || 'General' },
-    { prop: 'Task Status', val: task.status || 'OPEN' },
-    { prop: 'Task Deadline', val: formatISTDateTime(task.deadline) },
-    { prop: 'Assigned Classes', val: assignedClasses.map(c => c.name).join(', ') || 'All Department Classes' },
-    { prop: 'Archive Generated At', val: formatISTDateTime(new Date()) },
-    { prop: '', val: '' },
-    { prop: 'METRICS & PROGRESS', val: '' },
-    { prop: 'Total Assigned Students', val: totalAssigned },
-    { prop: 'Verified Submissions', val: verifiedCount },
-    { prop: 'Submitted (Pending Review)', val: submittedCount },
-    { prop: 'Rejected Submissions', val: rejectedCount },
-    { prop: 'Pending (Not Submitted)', val: pendingCount },
-    { prop: 'Overall Completion Rate', val: `${completionRate}%` }
-  ];
-
-  summaryData.forEach(row => summarySheet.addRow(row));
-
-  // Style Header
-  summarySheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-  summarySheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
-  summarySheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
-
-  // ── Sheet 2: Student Submissions Detail ─────────────────────────────────────
-  const detailSheet = workbook.addWorksheet('Student Submissions', {
-    views: [{ showGridLines: true }]
-  });
-
-  detailSheet.columns = [
+function populateSubmissionsSheet(sheet: ExcelJS.Worksheet, rows: any[]) {
+  sheet.columns = [
     { header: 'S.No', key: 'sno', width: 8 },
     { header: 'Register Number', key: 'regNo', width: 18 },
     { header: 'Student Name', key: 'name', width: 28 },
@@ -180,21 +130,20 @@ export async function buildTaskExcelBuffer(task: any, assignedClasses: any[], su
     { header: 'Verified At', key: 'verifiedAt', width: 24 },
     { header: 'Custom Value / Link', key: 'customValue', width: 35 },
     { header: 'Proof Attached', key: 'proofAttached', width: 16 },
-    { header: 'Proof Filename in ZIP', key: 'proofFile', width: 35 },
+    { header: 'Proof Path in ZIP', key: 'proofFile', width: 45 },
     { header: 'Proof URL', key: 'proofUrl', width: 45 },
     { header: 'Verification Remarks', key: 'remarks', width: 30 },
     { header: 'Rejection Reason', key: 'rejectionReason', width: 30 }
   ];
 
-  // Header styling
-  const headerRow = detailSheet.getRow(1);
+  const headerRow = sheet.getRow(1);
   headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
   headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
   headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-  submissions.forEach((s, idx) => {
+  rows.forEach((s, idx) => {
     const hasProof = Boolean(s.screenshot_url);
-    const row = detailSheet.addRow({
+    const row = sheet.addRow({
       sno: idx + 1,
       regNo: s.register_number || 'N/A',
       name: s.full_name || 'N/A',
@@ -212,12 +161,10 @@ export async function buildTaskExcelBuffer(task: any, assignedClasses: any[], su
       rejectionReason: s.rejection_reason || ''
     });
 
-    // Zebra striping
     if (idx % 2 === 1) {
       row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
     }
 
-    // Colorize status cell
     const statusCell = row.getCell('status');
     statusCell.alignment = { horizontal: 'center' };
     if (s.status === 'VERIFIED') {
@@ -230,6 +177,90 @@ export async function buildTaskExcelBuffer(task: any, assignedClasses: any[], su
       statusCell.font = { color: { argb: 'FF64748B' } };
     }
   });
+}
+
+/**
+ * Builds the comprehensive Task Submission Excel Workbook
+ * Organized strictly by allocated class
+ */
+export async function buildTaskExcelBuffer(task: any, assignedClasses: any[], submissions: any[]): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'VSBEC IT Task Manager';
+  workbook.created = new Date();
+
+  // ── Sheet 1: Task Summary ──────────────────────────────────────────────────
+  const summarySheet = workbook.addWorksheet('Task Summary', {
+    views: [{ showGridLines: true }]
+  });
+
+  summarySheet.columns = [
+    { header: 'Property', key: 'prop', width: 28 },
+    { header: 'Value', key: 'val', width: 50 }
+  ];
+
+  const totalAssigned = submissions.length;
+  const verifiedCount = submissions.filter(s => s.status === 'VERIFIED').length;
+  const submittedCount = submissions.filter(s => s.status === 'SUBMITTED').length;
+  const rejectedCount = submissions.filter(s => s.status === 'REJECTED').length;
+  const pendingCount = submissions.filter(s => s.status === 'PENDING' || !s.status).length;
+  const completionRate = totalAssigned > 0 ? Math.round(((verifiedCount + submittedCount) / totalAssigned) * 100) : 0;
+
+  const summaryData = [
+    { prop: 'Task Title', val: task.title },
+    { prop: 'Category', val: task.category || 'General' },
+    { prop: 'Task Status', val: task.status || 'OPEN' },
+    { prop: 'Task Deadline', val: formatISTDateTime(task.deadline) },
+    { prop: 'Allocated Classes', val: assignedClasses.map(c => c.name).join(', ') },
+    { prop: 'Archive Generated At', val: formatISTDateTime(new Date()) },
+    { prop: '', val: '' },
+    { prop: 'OVERALL PROGRESS', val: '' },
+    { prop: 'Total Allocated Students', val: totalAssigned },
+    { prop: 'Verified Submissions', val: verifiedCount },
+    { prop: 'Submitted (Pending Review)', val: submittedCount },
+    { prop: 'Rejected Submissions', val: rejectedCount },
+    { prop: 'Pending (Not Submitted)', val: pendingCount },
+    { prop: 'Overall Completion Rate', val: `${completionRate}%` }
+  ];
+
+  summaryData.forEach(row => summarySheet.addRow(row));
+
+  // Style Header
+  summarySheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  summarySheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+  summarySheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+  // Append Class-by-Class Breakdown Table in Summary
+  summarySheet.addRow({ prop: '', val: '' });
+  summarySheet.addRow({ prop: 'ALLOCATED CLASS BREAKDOWN', val: '' });
+  const classBreakdownHeader = summarySheet.addRow({ prop: 'Class Name', val: 'Students / Submissions / Completion Rate' });
+  classBreakdownHeader.font = { bold: true };
+
+  assignedClasses.forEach(cls => {
+    const classSubs = submissions.filter(s => s.class_name === cls.name);
+    const cTotal = classSubs.length;
+    const cDone = classSubs.filter(s => s.status === 'VERIFIED' || s.status === 'SUBMITTED').length;
+    const cRate = cTotal > 0 ? Math.round((cDone / cTotal) * 100) : 0;
+    summarySheet.addRow({
+      prop: cls.name,
+      val: `${cDone} / ${cTotal} submitted (${cRate}%)`
+    });
+  });
+
+  // ── Sheet 2: All Allocated Submissions ─────────────────────────────────────
+  const masterSheet = workbook.addWorksheet('All Allocated Submissions', {
+    views: [{ showGridLines: true }]
+  });
+  populateSubmissionsSheet(masterSheet, submissions);
+
+  // ── Sheets 3+: Dedicated Tab Per Allocated Class ────────────────────────────
+  assignedClasses.forEach(cls => {
+    const classRows = submissions.filter(s => s.class_name === cls.name);
+    const cleanSheetTitle = `Class - ${cls.name}`.slice(0, 31);
+    const classSheet = workbook.addWorksheet(cleanSheetTitle, {
+      views: [{ showGridLines: true }]
+    });
+    populateSubmissionsSheet(classSheet, classRows);
+  });
 
   const arrayBuffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(arrayBuffer);
@@ -237,6 +268,7 @@ export async function buildTaskExcelBuffer(task: any, assignedClasses: any[], su
 
 /**
  * Generates the complete Task Deadline Backup ZIP
+ * Filtered STRICTLY by allocated classes only
  */
 export async function generateTaskDeadlineBackup(
   taskId: string, 
@@ -249,6 +281,7 @@ export async function generateTaskDeadlineBackup(
   fileSize?: number;
   totalSubmissions?: number;
   totalProofs?: number;
+  allocatedClasses?: string[];
 }> {
   try {
     // 1. Fetch Task Details
@@ -268,7 +301,7 @@ export async function generateTaskDeadlineBackup(
       return { success: false, message: `Task "${task.title}" has no deadline set.` };
     }
 
-    // 2. Fetch Assigned Classes
+    // 2. Fetch Assigned Classes (STRICT: only classes explicitly allocated to this task)
     const tcRes = await pool.query(`
       SELECT c.id, c.name, c.year, c.section 
       FROM task_classes tc
@@ -278,10 +311,18 @@ export async function generateTaskDeadlineBackup(
     `, [taskId]);
 
     const assignedClasses = tcRes.rows;
-    const classIds = assignedClasses.map(c => c.id);
+    if (assignedClasses.length === 0) {
+      return { 
+        success: false, 
+        message: `Task "${task.title}" has no allocated classes. Skipping backup (allocated classes only rule).` 
+      };
+    }
 
-    // 3. Fetch all assigned students & their submission for this task
-    let studentsQuery = `
+    const classIds = assignedClasses.map(c => c.id);
+    const allocatedClassNames = assignedClasses.map(c => c.name);
+
+    // 3. Fetch all assigned students & their submission for this task (STRICT: only allocated classes)
+    const studentsQuery = `
       SELECT 
         u.id as user_id,
         u.register_number,
@@ -299,26 +340,17 @@ export async function generateTaskDeadlineBackup(
         ts.verification_note,
         ts.rejection_reason
       FROM users u
-      LEFT JOIN classes c ON u.class_id = c.id
+      JOIN classes c ON u.class_id = c.id
       LEFT JOIN task_submissions ts ON ts.task_id = $1 AND ts.user_id = u.id
       WHERE u.role = 'STUDENT'
+        AND u.class_id = ANY($2::uuid[])
+      ORDER BY c.year ASC, c.name ASC, u.register_number ASC
     `;
-    const params: any[] = [taskId];
 
-    if (classIds.length > 0) {
-      params.push(classIds);
-      studentsQuery += ` AND u.class_id = ANY($2::uuid[])`;
-    } else if (task.department_id) {
-      params.push(task.department_id);
-      studentsQuery += ` AND u.department_id = $2`;
-    }
-
-    studentsQuery += ` ORDER BY c.year ASC, c.name ASC, u.register_number ASC`;
-
-    const submissionsRes = await pool.query(studentsQuery, params);
+    const submissionsRes = await pool.query(studentsQuery, [taskId, classIds]);
     const submissions = submissionsRes.rows;
 
-    console.log(`[Task Deadline Backup] 📦 Creating archive for "${task.title}" (${submissions.length} students, deadline: ${task.deadline})...`);
+    console.log(`[Task Deadline Backup] 📦 Creating archive for "${task.title}" (Allocated classes: ${allocatedClassNames.join(', ')} | ${submissions.length} students)...`);
 
     // 4. Initialize ZIP Archive
     const zip = new JSZip();
@@ -328,48 +360,52 @@ export async function generateTaskDeadlineBackup(
       `================================================================================`,
       `VSBEC IT TASK MANAGER - TASK DEADLINE PROOF MANIFEST`,
       `================================================================================`,
-      `Task Title:       ${task.title}`,
-      `Category:         ${task.category || 'General'}`,
-      `Deadline:         ${formatISTDateTime(task.deadline)}`,
-      `Generated At:     ${formatISTDateTime(new Date())}`,
-      `Total Students:   ${submissions.length}`,
-      `================================================================================\n`,
-      `REGISTER NO.     | STUDENT NAME                   | STATUS     | PROOF FILE / STATUS`,
-      `--------------------------------------------------------------------------------`
+      `Task Title:         ${task.title}`,
+      `Category:           ${task.category || 'General'}`,
+      `Deadline:           ${formatISTDateTime(task.deadline)}`,
+      `Allocated Classes:  ${allocatedClassNames.join(', ')}`,
+      `Generated At:       ${formatISTDateTime(new Date())}`,
+      `Total Students:     ${submissions.length}`,
+      `================================================================================\n`
     ];
 
     let downloadedProofsCount = 0;
-    const proofDownloads: Array<{ submission: any; zipFileName: string }> = [];
+    const proofDownloads: Array<{ submission: any; zipPath: string; classFolder: string; zipFileName: string }> = [];
 
-    // Assign proof filenames in advance so Excel matches ZIP contents
+    // Assign proof filenames and class folders in advance so Excel matches ZIP contents
     for (const sub of submissions) {
+      const cleanClassFolder = sanitizeArchiveName(sub.class_name || 'General');
       if (sub.screenshot_url) {
         const cleanReg = sanitizeArchiveName(sub.register_number || 'REG');
         const cleanName = sanitizeArchiveName(sub.full_name || 'Student');
         const ext = determineProofExtension(sub.original_filename, undefined, sub.screenshot_url);
-        const zipProofName = `${cleanReg}_${cleanName}_proof${ext}`;
-        sub.zipProofFilename = zipProofName;
-        proofDownloads.push({ submission: sub, zipFileName: zipProofName });
+        const zipFileName = `${cleanReg}_${cleanName}_proof${ext}`;
+        const relativeProofPath = `proofs/${cleanClassFolder}/${zipFileName}`;
+        sub.zipProofFilename = relativeProofPath;
+        proofDownloads.push({ submission: sub, zipPath: relativeProofPath, classFolder: cleanClassFolder, zipFileName });
       } else {
         sub.zipProofFilename = '';
       }
     }
 
-    // 5. Download Proofs in Batches of 5
+    // 5. Download Proofs organized strictly by allocated class folder
     const BATCH_SIZE = 5;
     for (let i = 0; i < proofDownloads.length; i += BATCH_SIZE) {
       const batch = proofDownloads.slice(i, i + BATCH_SIZE);
-      await Promise.all(batch.map(async ({ submission, zipFileName }) => {
+      await Promise.all(batch.map(async ({ submission, classFolder, zipFileName }) => {
         const result = await downloadProofFile(submission.screenshot_url);
         if (result && proofsFolder) {
-          proofsFolder.file(zipFileName, result.buffer);
-          downloadedProofsCount++;
-          manifestLines.push(
-            `${(submission.register_number || 'N/A').padEnd(16)} | ${(submission.full_name || 'N/A').slice(0, 30).padEnd(30)} | ${(submission.status || 'SUBMITTED').padEnd(10)} | proofs/${zipFileName}`
-          );
+          const classZipFolder = proofsFolder.folder(classFolder);
+          if (classZipFolder) {
+            classZipFolder.file(zipFileName, result.buffer);
+            downloadedProofsCount++;
+            manifestLines.push(
+              `[${(submission.class_name || 'CLASS').padEnd(10)}] ${(submission.register_number || 'N/A').padEnd(16)} | ${(submission.full_name || 'N/A').slice(0, 26).padEnd(26)} | ${(submission.status || 'SUBMITTED').padEnd(10)} | proofs/${classFolder}/${zipFileName}`
+            );
+          }
         } else {
           manifestLines.push(
-            `${(submission.register_number || 'N/A').padEnd(16)} | ${(submission.full_name || 'N/A').slice(0, 30).padEnd(30)} | ${(submission.status || 'SUBMITTED').padEnd(10)} | [DOWNLOAD_FAILED: ${submission.screenshot_url}]`
+            `[${(submission.class_name || 'CLASS').padEnd(10)}] ${(submission.register_number || 'N/A').padEnd(16)} | ${(submission.full_name || 'N/A').slice(0, 26).padEnd(26)} | ${(submission.status || 'SUBMITTED').padEnd(10)} | [DOWNLOAD_FAILED: ${submission.screenshot_url}]`
           );
         }
       }));
@@ -380,7 +416,7 @@ export async function generateTaskDeadlineBackup(
       proofsFolder.file('MANIFEST.txt', manifestLines.join('\n'));
     }
 
-    // 6. Generate Excel Report
+    // 6. Generate Excel Report with allocated-class tabs
     const excelBuffer = await buildTaskExcelBuffer(task, assignedClasses, submissions);
     const cleanTaskTitle = sanitizeArchiveName(task.title);
     zip.file(`${cleanTaskTitle}_Submissions.xlsx`, excelBuffer);
@@ -425,14 +461,23 @@ export async function generateTaskDeadlineBackup(
 
     console.log(`[Task Deadline Backup] ✅ Backup ZIP generated successfully: ${relativeZipPath} (${(zipBuffer.length / 1024).toFixed(1)} KB, ${downloadedProofsCount} proofs)`);
 
+    // 9. 🚀 Auto-push backup to GitHub
+    try {
+      const commitMsg = `chore(backup): archive task "${task.title}" for deadline ${formatDeadlineDateStr(task.deadline)} [skip ci]`;
+      await tryLocalGitPush('backups/tasks', commitMsg);
+    } catch (gitErr: any) {
+      console.warn('[Task Deadline Backup] Auto git push warning:', gitErr.message);
+    }
+
     return {
       success: true,
-      message: `Backup archive successfully created for task "${task.title}".`,
+      message: `Backup archive successfully created and committed for task "${task.title}".`,
       filePath: relativeZipPath,
       fileName: zipFileName,
       fileSize: zipBuffer.length,
       totalSubmissions: submissions.length,
-      totalProofs: downloadedProofsCount
+      totalProofs: downloadedProofsCount,
+      allocatedClasses: allocatedClassNames
     };
   } catch (err: any) {
     console.error(`[Task Deadline Backup] Error backing up task ${taskId}:`, err);
@@ -442,6 +487,7 @@ export async function generateTaskDeadlineBackup(
 
 /**
  * 🗑️ Cleans up old backup ZIP file from disk and database when a task is reopened or deadline extended
+ * Also commits deletion to GitHub
  */
 export async function cleanupTaskBackup(taskId: string): Promise<{ success: boolean; message: string }> {
   try {
@@ -461,6 +507,15 @@ export async function cleanupTaskBackup(taskId: string): Promise<{ success: bool
         } catch (delErr: any) {
           console.warn('[Task Deadline Backup] Failed to delete backup file:', delErr.message);
         }
+      }
+
+      // Commit deletion to GitHub
+      try {
+        const commitMsg = `chore(backup): remove superseded backup for reopened task "${task.title}" [skip ci]`;
+        await tryLocalGitPush('backups/tasks', commitMsg);
+        await deleteGitHubFileViaAPI(task.backup_file_path, commitMsg).catch(() => {});
+      } catch (gitErr: any) {
+        console.warn('[Task Deadline Backup] Git cleanup warning:', gitErr.message);
       }
     }
 
@@ -486,10 +541,6 @@ export async function checkAndRunPreDeadlineBackups(windowMinutes = 5): Promise<
   const results: Array<{ taskId: string; result: any }> = [];
 
   try {
-    // Select open tasks where:
-    // 1. Deadline is strictly in the future (deadline > CURRENT_TIMESTAMP)
-    // 2. Deadline is within windowMinutes (e.g. deadline <= CURRENT_TIMESTAMP + 5 minutes)
-    // 3. Backup has not already been taken for THIS exact deadline (backed_up_deadline IS NULL OR backed_up_deadline != deadline)
     const candidatesRes = await pool.query(`
       SELECT id, title, deadline, backed_up_deadline, backup_file_path
       FROM tasks
