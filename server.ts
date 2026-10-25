@@ -609,6 +609,9 @@ async function startServer() {
     return { todayStr, prevDayStr, hours, minutes };
   }
 
+  let isMorningSummaryRunning = false;
+  let isEveningSummaryRunning = false;
+
   // ── Unified Scheduled Automation Checker (Triggered by Ping / In-Server Interval / Requests) ──
   async function checkAndTriggerScheduledAutomations(): Promise<{ triggered: string[]; time: string }> {
     const triggered: string[] = [];
@@ -641,23 +644,55 @@ async function startServer() {
         }
       }
 
-      // 2. Morning Group Summary Window (8:00 AM IST onwards) -> Send Morning Group Summary & 24h Deadline Alerts
-      if (hours >= 8 && hours < 20) {
-        const claimed = await claimDailySlot('telegram_last_group_summary_morning_date', todayStr);
-        if (claimed) {
-          console.log(`[Scheduler] 📊 Triggering Morning Group Summary (${prevDayStr})...`);
+      // 2. Morning Group Summary Window (7:55 AM IST onwards to 18:00) -> Send Morning Group Summary & 24h Deadline Alerts
+      if (hours >= 7 && hours < 18) {
+        const morningCheck = await pool.query(
+          "SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_morning_date' AND value = $1",
+          [todayStr]
+        );
+        if (morningCheck.rows.length === 0 && !isMorningSummaryRunning) {
+          isMorningSummaryRunning = true;
+          try {
+            console.log(`[Scheduler] 🔄 Syncing fresh telemetry for ${prevDayStr} before Morning Group Summary...`);
+            try {
+              await syncLeetcodeProgressForScope({ date: prevDayStr } as any);
+              if (process.env.GITHUB_TOKEN) {
+                await syncGitHubProgressForScope({ date: prevDayStr });
+              }
+            } catch (syncErr) {
+              console.error('[Pre-Summary Sync Error]:', syncErr);
+            }
 
-          const summaryRes = await sendGroupSummary(undefined, prevDayStr).catch(err => {
-            console.error('[Morning Summary Error]:', err);
-            return { success: false, message: err?.message || 'Error' };
-          });
+            console.log(`[Scheduler] 📊 Triggering Morning Group Summary (${prevDayStr})...`);
 
-          if (summaryRes && summaryRes.success) {
-            triggered.push('morning_summary');
-            await sendGroupDeadlineAlert().catch(err => console.error('[Morning Deadline Alert Error]:', err));
-          } else {
-            console.warn(`[Morning Summary Warning] Delivery failed: ${summaryRes?.message || 'Unknown'}. Releasing slot lock to allow retry.`);
-            await releaseDailySlot('telegram_last_group_summary_morning_date', todayStr);
+            const summaryRes = await sendGroupSummary(undefined, prevDayStr).catch(err => {
+              console.error('[Morning Summary Error]:', err);
+              return { success: false, message: err?.message || 'Error', skipped: false };
+            });
+
+            if (summaryRes && summaryRes.success) {
+              await pool.query(`
+                INSERT INTO system_settings (key, value, updated_at)
+                VALUES ('telegram_last_group_summary_morning_date', $1, CURRENT_TIMESTAMP)
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+              `, [todayStr]).catch(() => {});
+              triggered.push('morning_summary');
+              await sendGroupDeadlineAlert().catch(err => console.error('[Morning Deadline Alert Error]:', err));
+            } else if (summaryRes && summaryRes.skipped) {
+              const sentAtRes = await pool.query("SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_sent_at'");
+              const lastTs = parseInt(sentAtRes.rows[0]?.value || '0', 10);
+              if (Date.now() - lastTs < 24 * 60 * 60 * 1000) {
+                await pool.query(`
+                  INSERT INTO system_settings (key, value, updated_at)
+                  VALUES ('telegram_last_group_summary_morning_date', $1, CURRENT_TIMESTAMP)
+                  ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+                `, [todayStr]).catch(() => {});
+              }
+            } else {
+              console.warn(`[Morning Summary Warning] Delivery did not succeed: ${summaryRes?.message || 'Unknown'}. Will retry on next interval.`);
+            }
+          } finally {
+            isMorningSummaryRunning = false;
           }
         }
       }
@@ -689,22 +724,54 @@ async function startServer() {
         }
       }
 
-      // 5. Evening Group Summary Window (9:00 PM IST onwards / 21:00+) -> Send Evening Department Progress Summary
-      if (hours >= 21) {
-        const claimed = await claimDailySlot('telegram_last_group_summary_evening_date', todayStr);
-        if (claimed) {
-          console.log(`[Scheduler] 📊 Triggering Evening Group Summary for ${todayStr}...`);
+      // 5. Evening Group Summary Window (8:45 PM IST onwards / 20:45+) -> Send Evening Department Progress Summary
+      if ((hours === 20 && minutes >= 45) || hours >= 21) {
+        const eveningCheck = await pool.query(
+          "SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_evening_date' AND value = $1",
+          [todayStr]
+        );
+        if (eveningCheck.rows.length === 0 && !isEveningSummaryRunning) {
+          isEveningSummaryRunning = true;
+          try {
+            console.log(`[Scheduler] 🔄 Syncing fresh telemetry for ${todayStr} before Evening Group Summary...`);
+            try {
+              await syncLeetcodeProgressForScope({ date: todayStr } as any);
+              if (process.env.GITHUB_TOKEN) {
+                await syncGitHubProgressForScope({ date: todayStr });
+              }
+            } catch (syncErr) {
+              console.error('[Pre-Summary Sync Error]:', syncErr);
+            }
 
-          const summaryRes = await sendGroupSummary().catch(err => {
-            console.error('[Evening Summary Error]:', err);
-            return { success: false, message: err?.message || 'Error' };
-          });
+            console.log(`[Scheduler] 📊 Triggering Evening Group Summary for ${todayStr}...`);
 
-          if (summaryRes && summaryRes.success) {
-            triggered.push('evening_summary');
-          } else {
-            console.warn(`[Evening Summary Warning] Delivery failed: ${summaryRes?.message || 'Unknown'}. Releasing slot lock to allow retry.`);
-            await releaseDailySlot('telegram_last_group_summary_evening_date', todayStr);
+            const summaryRes = await sendGroupSummary(undefined, todayStr).catch(err => {
+              console.error('[Evening Summary Error]:', err);
+              return { success: false, message: err?.message || 'Error', skipped: false };
+            });
+
+            if (summaryRes && summaryRes.success) {
+              await pool.query(`
+                INSERT INTO system_settings (key, value, updated_at)
+                VALUES ('telegram_last_group_summary_evening_date', $1, CURRENT_TIMESTAMP)
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+              `, [todayStr]).catch(() => {});
+              triggered.push('evening_summary');
+            } else if (summaryRes && summaryRes.skipped) {
+              const sentAtRes = await pool.query("SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_sent_at'");
+              const lastTs = parseInt(sentAtRes.rows[0]?.value || '0', 10);
+              if (Date.now() - lastTs < 24 * 60 * 60 * 1000) {
+                await pool.query(`
+                  INSERT INTO system_settings (key, value, updated_at)
+                  VALUES ('telegram_last_group_summary_evening_date', $1, CURRENT_TIMESTAMP)
+                  ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+                `, [todayStr]).catch(() => {});
+              }
+            } else {
+              console.warn(`[Evening Summary Warning] Delivery did not succeed: ${summaryRes?.message || 'Unknown'}. Will retry on next interval.`);
+            }
+          } finally {
+            isEveningSummaryRunning = false;
           }
         }
       }
@@ -9036,31 +9103,31 @@ async function startServer() {
 
     const { todayStr, prevDayStr } = getISTTimeParts();
 
-    // Prevent duplicate cron execution on same day
+    // Prevent duplicate execution on same day
     const isForced = req.query.force === 'true';
     if (!isForced) {
-      const claimed = await claimDailySlot('telegram_last_group_summary_morning_date', todayStr);
-      if (!claimed) {
+      const checkRes = await pool.query(
+        "SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_morning_date' AND value = $1",
+        [todayStr]
+      );
+      if (checkRes.rows.length > 0) {
         return res.json({
           success: true,
-          message: `Morning group summary for ${todayStr} has already been claimed/delivered. Skipping duplicate run.`,
+          message: `Morning group summary for ${todayStr} has already been delivered. Skipping duplicate run.`,
           skipped: true
         });
       }
     }
 
-    console.log(`[Cron Webhook] 📊 Running automated morning group summary (for previous day: ${prevDayStr})...`);
-    // Ensure previous day data is freshly synced before generating summary
-    try {
-      await syncLeetcodeProgressForScope({ date: prevDayStr } as any);
-      if (process.env.GITHUB_TOKEN) {
-        await syncGitHubProgressForScope({ date: prevDayStr });
-      }
-    } catch (e) {}
+    console.log(`[Webhook] 📊 Running automated morning group summary (for previous day: ${prevDayStr})...`);
 
-    const summaryRes = await sendGroupSummary(undefined, prevDayStr, { force: isForced }).catch(err => ({ success: false, message: err.message }));
-    if ((!summaryRes || !summaryRes.success) && !isForced) {
-      await releaseDailySlot('telegram_last_group_summary_morning_date', todayStr);
+    const summaryRes = await sendGroupSummary(undefined, prevDayStr, { force: isForced }).catch(err => ({ success: false, message: err.message, skipped: false }));
+    if (summaryRes && summaryRes.success) {
+      await pool.query(`
+        INSERT INTO system_settings (key, value, updated_at)
+        VALUES ('telegram_last_group_summary_morning_date', $1, CURRENT_TIMESTAMP)
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+      `, [todayStr]).catch(() => {});
     }
 
     const deadlineAlertRes = await sendGroupDeadlineAlert().catch(err => ({ success: false, message: err.message }));
@@ -9114,31 +9181,31 @@ async function startServer() {
 
     const todayStr = getISTDateStr();
 
-    // Prevent duplicate cron execution on same day
+    // Prevent duplicate execution on same day
     const isForced = req.query.force === 'true';
     if (!isForced) {
-      const claimed = await claimDailySlot('telegram_last_group_summary_evening_date', todayStr);
-      if (!claimed) {
+      const checkRes = await pool.query(
+        "SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_evening_date' AND value = $1",
+        [todayStr]
+      );
+      if (checkRes.rows.length > 0) {
         return res.json({
           success: true,
-          message: `Evening group summary for ${todayStr} has already been claimed/delivered. Skipping duplicate run.`,
+          message: `Evening group summary for ${todayStr} has already been delivered. Skipping duplicate run.`,
           skipped: true
         });
       }
     }
 
-    console.log(`[Cron Webhook] 📊 Running automated 9:00 PM IST daily group summary for ${todayStr}...`);
-    // Ensure today's data is freshly synced before generating summary
-    try {
-      await syncLeetcodeProgressForScope({ date: todayStr } as any);
-      if (process.env.GITHUB_TOKEN) {
-        await syncGitHubProgressForScope({ date: todayStr });
-      }
-    } catch (e) {}
+    console.log(`[Webhook] 📊 Running automated 9:00 PM IST daily group summary for ${todayStr}...`);
 
-    const summaryRes = await sendGroupSummary(undefined, undefined, { force: isForced }).catch(err => ({ success: false, message: err.message }));
-    if ((!summaryRes || !summaryRes.success) && !isForced) {
-      await releaseDailySlot('telegram_last_group_summary_evening_date', todayStr);
+    const summaryRes = await sendGroupSummary(undefined, todayStr, { force: isForced }).catch(err => ({ success: false, message: err.message, skipped: false }));
+    if (summaryRes && summaryRes.success) {
+      await pool.query(`
+        INSERT INTO system_settings (key, value, updated_at)
+        VALUES ('telegram_last_group_summary_evening_date', $1, CURRENT_TIMESTAMP)
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+      `, [todayStr]).catch(() => {});
     }
 
     return res.json({

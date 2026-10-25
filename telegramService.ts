@@ -7,6 +7,7 @@ import path from 'path';
 import { sendTaskStatusEmail } from './emailService.js';
 import { generateDatabaseSnapshot } from './dbBackupService.js';
 import { getGitHubSyncTargets } from './githubSyncService.js';
+import { syncAllCodingProgress } from './codingTelemetryService.js';
 
 let cachedBotUsername = process.env.TELEGRAM_BOT_USERNAME || 'IT_TaskManager_Alerts_bot';
 
@@ -26,11 +27,57 @@ export async function fetchBotUsername(): Promise<string> {
   return cachedBotUsername;
 }
 
+let _cachedBotToken: string | null = null;
+let _cachedAdminChatId: string | null = null;
+
+export async function ensureBotTokenLoaded(): Promise<string> {
+  const envToken = (process.env.TELEGRAM_BOT_TOKEN || '').trim().replace(/^["']|["']$/g, '');
+  if (envToken) {
+    _cachedBotToken = envToken;
+    return envToken;
+  }
+  if (_cachedBotToken) return _cachedBotToken;
+  try {
+    const res = await pool.query(`SELECT value FROM system_settings WHERE key = 'telegram_bot_token' LIMIT 1`);
+    if (res.rows[0]?.value) {
+      const val = String(res.rows[0].value).trim();
+      _cachedBotToken = val;
+      return val;
+    }
+  } catch {}
+  return '';
+}
+
 export function getBotToken(): string {
-  return (process.env.TELEGRAM_BOT_TOKEN || '').trim().replace(/^["']|["']$/g, '');
+  if (_cachedBotToken) return _cachedBotToken;
+  const envToken = (process.env.TELEGRAM_BOT_TOKEN || '').trim().replace(/^["']|["']$/g, '');
+  if (envToken) {
+    _cachedBotToken = envToken;
+    return envToken;
+  }
+  return '';
+}
+
+export async function ensureAdminChatIdLoaded(): Promise<string> {
+  const envAdmin = (process.env.TELEGRAM_ADMIN_CHAT_ID || '').trim().replace(/^["']|["']$/g, '');
+  if (envAdmin) {
+    _cachedAdminChatId = envAdmin;
+    return envAdmin;
+  }
+  if (_cachedAdminChatId) return _cachedAdminChatId;
+  try {
+    const res = await pool.query(`SELECT value FROM system_settings WHERE key = 'telegram_admin_chat_id' LIMIT 1`);
+    if (res.rows[0]?.value) {
+      const val = String(res.rows[0].value).trim();
+      _cachedAdminChatId = val;
+      return val;
+    }
+  } catch {}
+  return '';
 }
 
 export function getAdminChatId(): string {
+  if (_cachedAdminChatId) return _cachedAdminChatId;
   return (process.env.TELEGRAM_ADMIN_CHAT_ID || '').trim().replace(/^["']|["']$/g, '');
 }
 
@@ -297,9 +344,12 @@ export async function sendTelegramMessage(
   htmlText: string,
   options: { parse_mode?: 'Markdown' | 'HTML'; reply_markup?: any; disable_web_page_preview?: boolean } = {}
 ): Promise<{ ok: boolean; description?: string; result?: any }> {
-  const token = getBotToken();
+  let token = getBotToken();
   if (!token) {
-    return { ok: false, description: 'No bot token configured in environment variables.' };
+    token = await ensureBotTokenLoaded();
+  }
+  if (!token) {
+    return { ok: false, description: 'No bot token configured in environment variables or database.' };
   }
 
   const chunks = splitTelegramHtml(htmlText, 3900);
@@ -330,7 +380,13 @@ async function sendSingleTelegramMessage(
   text: string,
   options: { parse_mode?: 'Markdown' | 'HTML'; reply_markup?: any; disable_web_page_preview?: boolean } = {}
 ): Promise<{ ok: boolean; description?: string; result?: any }> {
-  const token = getBotToken();
+  let token = getBotToken();
+  if (!token) {
+    token = await ensureBotTokenLoaded();
+  }
+  if (!token) {
+    return { ok: false, description: 'No bot token configured.' };
+  }
   try {
     // Sanitize any invalid inline keyboard URLs (Telegram strictly requires valid public https URLs)
     let sanitizedMarkup = options.reply_markup;
@@ -380,7 +436,10 @@ export async function sendTelegramDocument(
   fileName: string,
   caption?: string
 ): Promise<{ ok: boolean; description?: string; result?: any }> {
-  const token = getBotToken();
+  let token = getBotToken();
+  if (!token) {
+    token = await ensureBotTokenLoaded();
+  }
   if (!token) {
     return { ok: false, description: 'No bot token configured.' };
   }
@@ -2663,12 +2722,12 @@ let lastGroupSummarySentAt = 0;
 export async function sendGroupSummary(
   targetChatId?: string, 
   dateOverride?: string, 
-  options: { force?: boolean } = {}
-): Promise<{ success: boolean; message: string; data?: any }> {
+  options: { force?: boolean; syncBeforeSend?: boolean } = {}
+): Promise<{ success: boolean; message: string; data?: any; skipped?: boolean }> {
   // 1. Prevent concurrent overlapping executions
   if (isGroupSummarySending) {
     console.warn('[Telegram Summary] A group summary is already currently in progress. Skipping concurrent request.');
-    return { success: false, message: 'A group summary is currently already being generated and dispatched. Concurrency blocked.' };
+    return { success: false, skipped: true, message: 'A group summary is currently already being generated and dispatched. Concurrency blocked.' };
   }
 
   // 2. Cooldown check (unless forced by explicit admin action)
@@ -2676,7 +2735,7 @@ export async function sendGroupSummary(
   if (!options.force) {
     if (now - lastGroupSummarySentAt < 15 * 60 * 1000) {
       console.warn(`[Telegram Summary] In-memory cooldown active (${Math.round((now - lastGroupSummarySentAt) / 1000)}s ago). Skipping duplicate send.`);
-      return { success: true, message: 'Group summary was already delivered recently. Cooldown active to prevent duplicate spam.' };
+      return { success: false, skipped: true, message: 'Group summary was already delivered recently. Cooldown active to prevent duplicate spam.' };
     }
 
     // Check database-backed timestamp for cross-instance / serverless protection
@@ -2688,7 +2747,7 @@ export async function sendGroupSummary(
         const lastDbTimestamp = parseInt(lockRes.rows[0].value, 10);
         if (!isNaN(lastDbTimestamp) && (now - lastDbTimestamp) < 15 * 60 * 1000) {
           console.warn(`[Telegram Summary] Database cooldown active (${Math.round((now - lastDbTimestamp) / 1000)}s ago). Skipping duplicate send.`);
-          return { success: true, message: 'Group summary was already delivered recently (DB lock active). Skipped duplicate.' };
+          return { success: false, skipped: true, message: 'Group summary was already delivered recently (DB lock active). Skipped duplicate.' };
         }
       }
     } catch (dbErr) {
@@ -2696,6 +2755,8 @@ export async function sendGroupSummary(
     }
   }
 
+  await ensureBotTokenLoaded();
+  await ensureAdminChatIdLoaded();
   const destChatId = targetChatId || await getGroupChatId() || getAdminChatId();
   if (!destChatId) {
     return { success: false, message: 'No destination Telegram Chat ID configured for Group Summary.' };
@@ -2704,6 +2765,17 @@ export async function sendGroupSummary(
   isGroupSummarySending = true;
   try {
     const dateStr = dateOverride || getISTDateStr();
+
+    // 0. Ensure fresh telemetry (LeetCode + GitHub) sync before compiling summary
+    if (options.syncBeforeSend !== false) {
+      try {
+        console.log(`[Telegram Summary] 🔄 Ensuring coding telemetry is freshly synced for ${dateStr} before sending summary...`);
+        await syncAllCodingProgress(dateStr, { force: options.force });
+      } catch (syncErr) {
+        console.error('[Telegram Summary] Pre-send telemetry sync failed, continuing with available DB data:', syncErr);
+      }
+    }
+
     const pendingTasksData: any[] = [];
 
     // Query 1: Active assignments
@@ -3101,6 +3173,8 @@ export async function sendGroupSummary(
  * ⏰ Notify Group Chat about tasks with deadlines within the next 24 hours
  */
 export async function sendGroupDeadlineAlert(targetChatId?: string): Promise<{ success: boolean; count: number; message: string }> {
+  await ensureBotTokenLoaded();
+  await ensureAdminChatIdLoaded();
   const destChatId = targetChatId || await getGroupChatId() || getAdminChatId();
   if (!destChatId) {
     return { success: false, count: 0, message: 'No destination Telegram Chat ID configured.' };
