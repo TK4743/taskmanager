@@ -64,7 +64,9 @@ export async function generateMergedProofsPdf(
   onProgress?: (progress: ProofPdfProgress) => void,
   isAborted?: () => boolean
 ): Promise<Blob | null> {
-  if (!items || items.length === 0) return null;
+  // Strictly filter out any rejected proofs so they are never added into the PDF document
+  const validItems = (items || []).filter(it => (it.status || '').toUpperCase() !== 'REJECTED');
+  if (validItems.length === 0) return null;
 
   // Preload college IT logo
   let logoDataUrl: string | null = null;
@@ -84,7 +86,7 @@ export async function generateMergedProofsPdf(
   // ── Parallel Pre-fetching of image blobs (concurrency: 6) ───────────────────
   const blobMap = new Map<string, Blob | null>();
   const BATCH_SIZE = 6;
-  const uniqueUrls = Array.from(new Set(items.map(it => it.url).filter(Boolean)));
+  const uniqueUrls = Array.from(new Set(validItems.map(it => it.url).filter(Boolean)));
   
   for (let b = 0; b < uniqueUrls.length; b += BATCH_SIZE) {
     if (isAborted && isAborted()) return null;
@@ -118,14 +120,14 @@ export async function generateMergedProofsPdf(
   const pageWidth = 210;
   const pageHeight = 297;
   const margin = 10;
-  const total = items.length;
+  const total = validItems.length;
 
   for (let i = 0; i < total; i++) {
     if (isAborted && isAborted()) {
       return null;
     }
 
-    const item = items[i];
+    const item = validItems[i];
     const pageNum = i + 1;
 
     if (i > 0) {

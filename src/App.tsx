@@ -8674,6 +8674,8 @@ export default function App() {
     let count = 0;
     submissions.forEach(sub => {
       if (!sub.screenshot_url || sub.screenshot_url.startsWith('PURGED')) return;
+      if ((sub.status || '').toUpperCase() === 'REJECTED') return; // Exclude rejected proofs from download
+      if (selectedStatus === 'REJECTED') return; // Cannot download rejected proofs
       if (reportFilters.taskId && sub.task_id?.toString() !== reportFilters.taskId) return;
       if (selectedStatus !== 'ALL' && sub.status !== selectedStatus) return;
 
@@ -8724,6 +8726,7 @@ export default function App() {
     if (explicitSubmissions && explicitSubmissions.length > 0) {
       explicitSubmissions.forEach(s => {
         if (!s.screenshot_url || s.screenshot_url.startsWith('PURGED')) return;
+        if ((s.status || '').toUpperCase() === 'REJECTED') return; // Strictly skip rejected proofs
         const sClass = classes.find(c => c.id?.toString() === s.class_id?.toString());
         const yrNum = sClass?.year || s.class_year;
         const safeYear = yrNum ? (romanYearMap[yrNum] ? `${romanYearMap[yrNum]}_Year` : `Year_${yrNum}`) : 'Other_Year';
@@ -8797,12 +8800,13 @@ export default function App() {
           }
           const sub = getSub(student.id, student.register_number, task.id);
           if (!sub || !sub.screenshot_url || sub.screenshot_url.startsWith('PURGED')) return;
+          if ((sub.status || '').toUpperCase() === 'REJECTED') return; // Strictly skip rejected proofs
 
           let include = false;
           if (selectedStatus === 'ALL') include = true;
           else if (selectedStatus === 'VERIFIED') include = sub.status === 'VERIFIED';
           else if (selectedStatus === 'SUBMITTED') include = sub.status === 'SUBMITTED';
-          else if (selectedStatus === 'REJECTED') include = sub.status === 'REJECTED';
+          else if (selectedStatus === 'REJECTED') include = false; // Never include rejected proofs
 
           if (include) {
             const studentClass = classes.find(c => c.id?.toString() === student.class_id?.toString());
@@ -8828,6 +8832,7 @@ export default function App() {
         // Resilient fallback: extract proof screenshots directly from submissions
         submissions.forEach(sub => {
           if (!sub.screenshot_url || sub.screenshot_url.startsWith('PURGED')) return;
+          if ((sub.status || '').toUpperCase() === 'REJECTED') return; // Strictly skip rejected proofs
           if (filters?.taskId && sub.task_id?.toString() !== filters.taskId) return;
           if (!isStudentGenderMatch(sub, selectedGender)) return;
 
@@ -8835,7 +8840,6 @@ export default function App() {
           if (selectedStatus === 'ALL') include = true;
           else if (selectedStatus === 'VERIFIED') include = sub.status === 'VERIFIED';
           else if (selectedStatus === 'SUBMITTED') include = sub.status === 'SUBMITTED';
-          else if (selectedStatus === 'REJECTED') include = sub.status === 'REJECTED';
           if (!include) return;
 
           const studentClass = classes.find(c => c.id?.toString() === sub.class_id?.toString());
@@ -8876,6 +8880,10 @@ export default function App() {
             if (filters?.taskId && t.task_id?.toString() !== filters.taskId.toString()) return;
             if (!t.proof_url || t.proof_url.startsWith('PURGED')) return;
 
+            const subStat = (t.submission_status || '').toUpperCase();
+            const teamStat = (t.team_status || '').toUpperCase();
+            if (subStat === 'REJECTED' || teamStat === 'REJECTED') return; // Strictly skip rejected team proofs
+
             if (selectedGender !== 'ALL') {
               const leaderStd = users.find(u => u.register_number === t.leader_regno);
               if (leaderStd && !isStudentGenderMatch(leaderStd, selectedGender)) return;
@@ -8886,18 +8894,14 @@ export default function App() {
               if (!teamClass || String(teamClass.year) !== String(selectedYear)) return;
             }
 
-            const subStat = (t.submission_status || '').toUpperCase();
-            const teamStat = (t.team_status || '').toUpperCase();
             let mappedStatus = 'NOT_SUBMITTED';
             if (subStat === 'APPROVED' || subStat === 'VERIFIED' || teamStat === 'APPROVED') mappedStatus = 'VERIFIED';
             else if (subStat === 'PENDING' || subStat === 'SUBMITTED' || teamStat === 'SUBMITTED') mappedStatus = 'SUBMITTED';
-            else if (subStat === 'REJECTED' || teamStat === 'REJECTED') mappedStatus = 'REJECTED';
 
             let includeTeam = false;
             if (selectedStatus === 'ALL') includeTeam = true;
             else if (selectedStatus === 'VERIFIED') includeTeam = mappedStatus === 'VERIFIED';
             else if (selectedStatus === 'SUBMITTED') includeTeam = mappedStatus === 'SUBMITTED';
-            else if (selectedStatus === 'REJECTED') includeTeam = mappedStatus === 'REJECTED';
 
             if (includeTeam) {
               const teamYrNum = teamClass?.year;
@@ -9064,6 +9068,7 @@ export default function App() {
     if (explicitSubmissions && explicitSubmissions.length > 0) {
       explicitSubmissions.forEach(s => {
         if (!s.screenshot_url || s.screenshot_url.startsWith('PURGED')) return;
+        if ((s.status || '').toUpperCase() === 'REJECTED') return; // Strictly skip rejected proofs
         const sClass = classes.find(c => c.id?.toString() === s.class_id?.toString());
         const std = users.find(u => u.id === s.user_id);
         const yrNum = sClass?.year || s.class_year || std?.year;
@@ -9143,12 +9148,13 @@ export default function App() {
           }
           const sub = getSub(student.id, student.register_number, task.id);
           if (!sub || !sub.screenshot_url || sub.screenshot_url.startsWith('PURGED')) return;
+          if ((sub.status || '').toUpperCase() === 'REJECTED') return; // Strictly skip rejected proofs
 
           let include = false;
           if (selectedStatus === 'ALL') include = true;
           else if (selectedStatus === 'VERIFIED') include = sub.status === 'VERIFIED';
           else if (selectedStatus === 'SUBMITTED') include = sub.status === 'SUBMITTED';
-          else if (selectedStatus === 'REJECTED') include = sub.status === 'REJECTED';
+          else if (selectedStatus === 'REJECTED') include = false; // Never include rejected proofs
 
           if (include) {
             const studentClass = classes.find(c => c.id?.toString() === student.class_id?.toString());
@@ -9176,6 +9182,7 @@ export default function App() {
         // Resilient fallback: extract proof screenshots directly from submissions
         submissions.forEach(sub => {
           if (!sub.screenshot_url || sub.screenshot_url.startsWith('PURGED')) return;
+          if ((sub.status || '').toUpperCase() === 'REJECTED') return; // Strictly skip rejected proofs
           if (filters?.taskId && sub.task_id?.toString() !== filters.taskId) return;
           if (!isStudentGenderMatch(sub, selectedGender)) return;
 
@@ -9183,7 +9190,6 @@ export default function App() {
           if (selectedStatus === 'ALL') include = true;
           else if (selectedStatus === 'VERIFIED') include = sub.status === 'VERIFIED';
           else if (selectedStatus === 'SUBMITTED') include = sub.status === 'SUBMITTED';
-          else if (selectedStatus === 'REJECTED') include = sub.status === 'REJECTED';
           if (!include) return;
 
           const studentClass = classes.find(c => c.id?.toString() === sub.class_id?.toString());
@@ -9226,6 +9232,10 @@ export default function App() {
             if (filters?.taskId && t.task_id?.toString() !== filters.taskId.toString()) return;
             if (!t.proof_url || t.proof_url.startsWith('PURGED')) return;
 
+            const subStat = (t.submission_status || '').toUpperCase();
+            const teamStat = (t.team_status || '').toUpperCase();
+            if (subStat === 'REJECTED' || teamStat === 'REJECTED') return; // Strictly skip rejected team proofs
+
             if (selectedGender !== 'ALL') {
               const leaderStd = users.find(u => u.register_number === t.leader_regno);
               if (leaderStd && !isStudentGenderMatch(leaderStd, selectedGender)) return;
@@ -9236,18 +9246,14 @@ export default function App() {
               if (!teamClass || String(teamClass.year) !== String(selectedYear)) return;
             }
 
-            const subStat = (t.submission_status || '').toUpperCase();
-            const teamStat = (t.team_status || '').toUpperCase();
             let mappedStatus = 'NOT_SUBMITTED';
             if (subStat === 'APPROVED' || subStat === 'VERIFIED' || teamStat === 'APPROVED') mappedStatus = 'VERIFIED';
             else if (subStat === 'PENDING' || subStat === 'SUBMITTED' || teamStat === 'SUBMITTED') mappedStatus = 'SUBMITTED';
-            else if (subStat === 'REJECTED' || teamStat === 'REJECTED') mappedStatus = 'REJECTED';
 
             let includeTeam = false;
             if (selectedStatus === 'ALL') includeTeam = true;
             else if (selectedStatus === 'VERIFIED') includeTeam = mappedStatus === 'VERIFIED';
             else if (selectedStatus === 'SUBMITTED') includeTeam = mappedStatus === 'SUBMITTED';
-            else if (selectedStatus === 'REJECTED') includeTeam = mappedStatus === 'REJECTED';
 
             if (includeTeam) {
               const teamYrNum = teamClass?.year;

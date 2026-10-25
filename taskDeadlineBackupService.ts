@@ -142,7 +142,8 @@ function populateSubmissionsSheet(sheet: ExcelJS.Worksheet, rows: any[]) {
   headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
   rows.forEach((s, idx) => {
-    const hasProof = Boolean(s.screenshot_url);
+    const isRejected = (s.status || '').toUpperCase() === 'REJECTED';
+    const hasProof = Boolean(s.screenshot_url) && !isRejected;
     const row = sheet.addRow({
       sno: idx + 1,
       regNo: s.register_number || 'N/A',
@@ -154,9 +155,9 @@ function populateSubmissionsSheet(sheet: ExcelJS.Worksheet, rows: any[]) {
       submittedAt: formatISTDateTime(s.submitted_at),
       verifiedAt: formatISTDateTime(s.verified_at),
       customValue: s.custom_field_value || '',
-      proofAttached: hasProof ? 'YES' : 'NO',
-      proofFile: s.zipProofFilename || (hasProof ? 'Attached in proofs/' : 'None'),
-      proofUrl: s.screenshot_url || '',
+      proofAttached: hasProof ? 'YES' : (isRejected && s.screenshot_url ? 'NO (REJECTED)' : 'NO'),
+      proofFile: s.zipProofFilename || (isRejected && s.screenshot_url ? 'Excluded (Proof Rejected)' : (hasProof ? 'Attached in proofs/' : 'None')),
+      proofUrl: isRejected ? '' : (s.screenshot_url || ''),
       remarks: s.verification_note || '',
       rejectionReason: s.rejection_reason || ''
     });
@@ -374,8 +375,9 @@ export async function generateTaskDeadlineBackup(
 
     // Assign proof filenames and class folders in advance so Excel matches ZIP contents
     for (const sub of submissions) {
+      const isRejected = (sub.status || '').toUpperCase() === 'REJECTED';
       const cleanClassFolder = sanitizeArchiveName(sub.class_name || 'General');
-      if (sub.screenshot_url) {
+      if (sub.screenshot_url && !isRejected) {
         const cleanReg = sanitizeArchiveName(sub.register_number || 'REG');
         const cleanName = sanitizeArchiveName(sub.full_name || 'Student');
         const ext = determineProofExtension(sub.original_filename, undefined, sub.screenshot_url);
@@ -385,6 +387,11 @@ export async function generateTaskDeadlineBackup(
         proofDownloads.push({ submission: sub, zipPath: relativeProofPath, classFolder: cleanClassFolder, zipFileName });
       } else {
         sub.zipProofFilename = '';
+        if (isRejected && sub.screenshot_url) {
+          manifestLines.push(
+            `[${(sub.class_name || 'CLASS').padEnd(10)}] ${(sub.register_number || 'N/A').padEnd(16)} | ${(sub.full_name || 'N/A').slice(0, 26).padEnd(26)} | ${(sub.status || 'REJECTED').padEnd(10)} | [EXCLUDED_PROOF: Submission Rejected]`
+          );
+        }
       }
     }
 
