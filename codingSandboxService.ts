@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { spawn } from 'child_process';
+import { spawn, exec, ChildProcess } from 'child_process';
 import crypto from 'crypto';
 import vm from 'vm';
 
@@ -118,41 +118,96 @@ async function runProcess(
     let stderr = '';
     let killed = false;
     let finished = false;
+    let bufferExceeded = false;
+    let killRequested = false;
 
+    // On POSIX, detach to establish an isolated process group for clean tree signal propagation
     const child = spawn(command, args, {
       cwd,
       env: SANITIZED_ENV,
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
+      detached: process.platform !== 'win32',
     });
+
+    const terminateTree = (proc: ChildProcess) => {
+      if (proc.pid && !killRequested) {
+        killRequested = true;
+        if (process.platform === 'win32') {
+          // Forcefully terminate process and all child descendants on Windows
+          exec(`taskkill /pid ${proc.pid} /T /F`, () => {});
+          try { proc.kill('SIGKILL'); } catch {}
+        } else {
+          // Broadcast SIGKILL to process group on POSIX
+          try {
+            process.kill(-proc.pid, 'SIGKILL');
+          } catch {
+            try { proc.kill('SIGKILL'); } catch {}
+          }
+        }
+      }
+    };
+
+    const cleanupStreams = () => {
+      try { child.stdout?.removeAllListeners(); } catch {}
+      try { child.stderr?.removeAllListeners(); } catch {}
+      try { child.stdin?.removeAllListeners(); } catch {}
+    };
 
     const timer = setTimeout(() => {
       if (!finished) {
         killed = true;
-        finished = true;
-        try {
-          child.kill('SIGKILL');
-        } catch {}
-        resolve({
-          stdout,
-          stderr: 'Time Limit Exceeded (Execution timed out)',
-          code: null,
-          killed: true,
-          durationMs: Date.now() - startTime,
+        terminateTree(child);
+        // Wait for child process exit or close event, with a bounded 500ms safety grace
+        const graceTimer = setTimeout(() => {
+          if (!finished) {
+            finished = true;
+            cleanupStreams();
+            resolve({
+              stdout,
+              stderr: 'Time Limit Exceeded (Execution timed out)',
+              code: null,
+              killed: true,
+              durationMs: Date.now() - startTime,
+            });
+          }
+        }, 500);
+
+        child.once('close', () => {
+          clearTimeout(graceTimer);
+          if (!finished) {
+            finished = true;
+            cleanupStreams();
+            resolve({
+              stdout,
+              stderr: 'Time Limit Exceeded (Execution timed out)',
+              code: null,
+              killed: true,
+              durationMs: Date.now() - startTime,
+            });
+          }
         });
       }
     }, timeoutMs);
 
     child.stdout.on('data', (data) => {
-      if (stdout.length < maxOutputBytes) {
-        stdout += data.toString();
+      if (finished || bufferExceeded) return;
+      if (stdout.length + data.length > maxOutputBytes) {
+        bufferExceeded = true;
+        terminateTree(child);
+        return;
       }
+      stdout += data.toString();
     });
 
     child.stderr.on('data', (data) => {
-      if (stderr.length < maxOutputBytes) {
-        stderr += data.toString();
+      if (finished || bufferExceeded) return;
+      if (stderr.length + data.length > maxOutputBytes) {
+        bufferExceeded = true;
+        terminateTree(child);
+        return;
       }
+      stderr += data.toString();
     });
 
     if (inputData) {
@@ -170,13 +225,32 @@ async function runProcess(
       if (!finished) {
         finished = true;
         clearTimeout(timer);
-        resolve({
-          stdout,
-          stderr,
-          code,
-          killed,
-          durationMs: Date.now() - startTime,
-        });
+        cleanupStreams();
+        if (bufferExceeded) {
+          resolve({
+            stdout,
+            stderr: 'Output Cap Exceeded (Stream bound 64 KB exceeded)',
+            code: -1,
+            killed: true,
+            durationMs: Date.now() - startTime,
+          });
+        } else if (killRequested) {
+          resolve({
+            stdout,
+            stderr: 'Time Limit Exceeded (Execution timed out)',
+            code: null,
+            killed: true,
+            durationMs: Date.now() - startTime,
+          });
+        } else {
+          resolve({
+            stdout,
+            stderr,
+            code,
+            killed,
+            durationMs: Date.now() - startTime,
+          });
+        }
       }
     });
 
@@ -184,9 +258,10 @@ async function runProcess(
       if (!finished) {
         finished = true;
         clearTimeout(timer);
+        cleanupStreams();
         resolve({
           stdout,
-          stderr: err.message,
+          stderr: `Process spawn error: ${err.message}`,
           code: 1,
           killed: false,
           durationMs: Date.now() - startTime,
@@ -254,6 +329,10 @@ async function evaluateViaJudge0(
         }
 
         if (!resp.ok) {
+          if (resp.status >= 400 && resp.status < 500) {
+            console.error(`[Judge0] Permanent client error HTTP ${resp.status}; aborting retry.`);
+            return null;
+          }
           throw new Error(`Judge0 responded with HTTP ${resp.status}`);
         }
 
@@ -508,6 +587,13 @@ async function evaluateLocallyInSandbox(
     if (compileCommand) {
       const compileRes = await runProcess(compileCommand, compileArgs, sandboxDir, '', 6000);
       if (compileRes.code !== 0 || compileRes.killed) {
+        // If local compiler executable is missing (e.g. gcc/javac ENOENT), fail over to Judge0 cloud API
+        if (compileRes.stderr?.includes('ENOENT') || compileRes.stderr?.includes('not recognized') || compileRes.stderr?.includes('spawn')) {
+          console.log(`[Sandbox] Local ${compileCommand} compiler unavailable (${compileRes.stderr.trim()}). Failing over to Judge0 API.`);
+          const judge0Res = await evaluateViaJudge0(language, sourceCode, testCases);
+          if (judge0Res) return judge0Res;
+        }
+
         return {
           status: 'COMPILATION_ERROR',
           score_percentage: 0,

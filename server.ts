@@ -4689,41 +4689,51 @@ async function startServer() {
     if (req.user.role === 'STUDENT' && !req.user.is_coordinator)
       return res.status(403).json({ error: 'Only coordinators can verify' });
 
-    const subRes = await pool.query(`
-      SELECT ts.*, u.class_id, u.department_id
-      FROM task_submissions ts
-      JOIN users u ON ts.user_id = u.id
-      WHERE ts.id = $1 LIMIT 1
-    `, [req.params.id]);
-    const sub = subRes.rows[0];
-    if (!sub) return res.status(404).json({ error: 'Submission not found' });
-
-    if (sub.status === 'VERIFIED') {
-      return res.status(400).json({ error: 'This submission has already been verified and cannot be modified.' });
-    }
-
-    // Role-based scope verification
-    if (req.user.role === 'STUDENT' && req.user.is_coordinator) {
-      if (sub.class_id?.toString() !== req.user.class_id?.toString()) {
-        return res.status(403).json({ error: 'Forbidden: You can only verify submissions from your own class.' });
-      }
-    } else if (req.user.role === 'CLASS_ADVISOR') {
-      if (sub.class_id?.toString() !== req.user.class_id?.toString()) {
-        return res.status(403).json({ error: 'Forbidden: You can only verify submissions from your assigned class.' });
-      }
-    } else if (req.user.role === 'HOD') {
-      if (sub.department_id?.toString() !== req.user.department_id?.toString()) {
-        return res.status(403).json({ error: 'Forbidden: You can only verify submissions from your department.' });
-      }
-    }
-
-    if (status === 'REJECTED' && (!rejection_reason || !rejection_reason.trim())) {
-      return res.status(400).json({ error: 'Rejection reason is required' });
-    }
-
     const client = await pool.connect();
+    let sub: any;
     try {
       await client.query('BEGIN');
+
+      const subRes = await client.query(`
+        SELECT ts.*, u.class_id, u.department_id
+        FROM task_submissions ts
+        JOIN users u ON ts.user_id = u.id
+        WHERE ts.id = $1 LIMIT 1
+        FOR UPDATE OF ts
+      `, [req.params.id]);
+      sub = subRes.rows[0];
+      if (!sub) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Submission not found' });
+      }
+
+      if (sub.status === 'VERIFIED') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'This submission has already been verified and cannot be modified.' });
+      }
+
+      // Role-based scope verification
+      if (req.user.role === 'STUDENT' && req.user.is_coordinator) {
+        if (sub.class_id?.toString() !== req.user.class_id?.toString()) {
+          await client.query('ROLLBACK');
+          return res.status(403).json({ error: 'Forbidden: You can only verify submissions from your own class.' });
+        }
+      } else if (req.user.role === 'CLASS_ADVISOR') {
+        if (sub.class_id?.toString() !== req.user.class_id?.toString()) {
+          await client.query('ROLLBACK');
+          return res.status(403).json({ error: 'Forbidden: You can only verify submissions from your assigned class.' });
+        }
+      } else if (req.user.role === 'HOD') {
+        if (sub.department_id?.toString() !== req.user.department_id?.toString()) {
+          await client.query('ROLLBACK');
+          return res.status(403).json({ error: 'Forbidden: You can only verify submissions from your department.' });
+        }
+      }
+
+      if (status === 'REJECTED' && (!rejection_reason || !rejection_reason.trim())) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Rejection reason is required' });
+      }
 
       await client.query(`
         UPDATE task_submissions

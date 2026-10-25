@@ -4,8 +4,10 @@ on:
   schedule:
     # 02:20 UTC = 07:50 AM IST (Morning pre-sync & previous day report backup)
     - cron: '20 2 * * *'
-    # 18:25 UTC = 11:55 PM IST (Nightly final daily report & database snapshot backup)
-    - cron: '25 18 * * *'
+    # 10:20 UTC = 03:50 PM IST (Midday laboratory session sync & submission snapshot)
+    - cron: '20 10 * * *'
+    # 18:20 UTC = 11:50 PM IST (Nightly final daily report & database snapshot backup)
+    - cron: '20 18 * * *'
   workflow_dispatch:
     inputs:
       target_date:
