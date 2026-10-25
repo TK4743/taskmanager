@@ -890,7 +890,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 1,
+    "solvedThisWeek": 2,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 116
@@ -1265,13 +1265,13 @@
     "fullName": "MAHASAKTHI MANIKANDAN",
     "className": "II IT B",
     "leetcodeUrl": "https://leetcode.com/u/Mahasakthi_Manikandan/",
-    "solvedToday": 0,
+    "solvedToday": 1,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 6,
+    "solvedThisWeek": 7,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
-    "totalSolved": 108
+    "totalSolved": 109
   },
   {
     "studentId": "7a29f772-b747-4bd3-a80d-70fca5f2ecde",
@@ -1562,7 +1562,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 4,
+    "solvedThisWeek": 5,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 92
@@ -1590,7 +1590,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 2,
+    "solvedThisWeek": 3,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 155
@@ -2206,7 +2206,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 8,
+    "solvedThisWeek": 9,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 135
@@ -2486,7 +2486,7 @@
     "solvedToday": 0,
     "dailyTarget": 0,
     "dailyStatus": "NO_TARGET",
-    "solvedThisWeek": 8,
+    "solvedThisWeek": 9,
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 420
