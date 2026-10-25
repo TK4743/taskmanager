@@ -8,6 +8,7 @@ import { sendTaskStatusEmail } from './emailService.js';
 import { generateDatabaseSnapshot } from './dbBackupService.js';
 import { getGitHubSyncTargets } from './githubSyncService.js';
 import { syncAllCodingProgress } from './codingTelemetryService.js';
+import { sendPushToUser } from './pushNotificationService.js';
 
 let cachedBotUsername = process.env.TELEGRAM_BOT_USERNAME || 'IT_TaskManager_Alerts_bot';
 
@@ -3333,7 +3334,15 @@ export async function triggerPendingTaskReminders(): Promise<{
     let unlinkedCount = 0;
     const portalUrl = getPortalUrl();
 
-    for (const [, info] of studentTasksMap.entries()) {
+    for (const [studentId, info] of studentTasksMap.entries()) {
+      // Dispatch real-time mobile push notification to student's lock-screen
+      sendPushToUser(studentId, {
+        title: '⏰ Pending Task Reminder',
+        body: `You have ${info.tasks.length} pending task(s) awaiting submission. Check deadlines on IT Vault!`,
+        url: '/',
+        tag: `evening-reminder-${studentId}`
+      }).catch((e: any) => console.warn('[Evening Reminder] Mobile Push warning:', e.message));
+
       const chatIdStr = info.telegramChatId ? String(info.telegramChatId).trim() : '';
       if (!chatIdStr || chatIdStr.startsWith('-')) {
         unlinkedCount++;

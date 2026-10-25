@@ -86,6 +86,7 @@ import {
   initPushNotifications,
   getVapidPublicKey,
   savePushSubscription,
+  renewPushSubscription,
   removePushSubscription,
   sendPushToUser,
   sendPushToUsers,
@@ -1263,6 +1264,20 @@ async function startServer() {
     }
     await savePushSubscription(req.user.id, subscription, userAgent);
     res.json({ success: true, message: 'Push subscription registered successfully' });
+  }));
+
+  app.post('/api/push/renew', asyncHandler(async (req: Request, res: Response) => {
+    const { oldEndpoint, newSubscription, userAgent } = req.body;
+    if (!newSubscription || !newSubscription.endpoint || !newSubscription.keys) {
+      return res.status(400).json({ error: 'Valid PushSubscription required' });
+    }
+    const ua = userAgent || req.headers['user-agent'] as string | undefined;
+    const renewed = await renewPushSubscription(oldEndpoint, newSubscription, ua);
+    if (renewed) {
+      res.json({ success: true, message: 'Push subscription renewed successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Could not match previous subscription for renewal' });
+    }
   }));
 
   app.post('/api/push/unsubscribe', authenticate, asyncHandler(async (req: any, res: Response) => {
@@ -6390,20 +6405,20 @@ async function startServer() {
       const pushTitle = `📢 Notice: ${nRow.title}`;
       const pushBody = nRow.description ? (nRow.description.length > 100 ? nRow.description.slice(0, 97) + '...' : nRow.description) : 'New announcement posted on the Notice Board.';
       if (nRow.scope === 'ALL') {
-        sendPushToAll({ title: pushTitle, body: pushBody, url: '/?view=notice-board', icon: '/icon-192.png', badge: '/badge.png', tag: `notice-${nRow.id}` }).catch(() => {});
+        sendPushToAll({ title: pushTitle, body: pushBody, url: '/?view=notice-board', icon: '/logo.png', badge: '/badge.png', tag: `notice-${nRow.id}` }).catch(() => {});
       } else if (nRow.class_id) {
-        sendPushToClasses([nRow.class_id], { title: pushTitle, body: pushBody, url: '/?view=notice-board', icon: '/icon-192.png', badge: '/badge.png', tag: `notice-${nRow.id}` }).catch(() => {});
+        sendPushToClasses([nRow.class_id], { title: pushTitle, body: pushBody, url: '/?view=notice-board', icon: '/logo.png', badge: '/badge.png', tag: `notice-${nRow.id}` }).catch(() => {});
       } else if (nRow.year) {
         pool.query('SELECT id FROM classes WHERE year = $1 AND department_id = $2', [nRow.year, nRow.department_id])
           .then(cr => {
             const cids = cr.rows.map((x: any) => x.id);
-            if (cids.length > 0) sendPushToClasses(cids, { title: pushTitle, body: pushBody, url: '/?view=notice-board', icon: '/icon-192.png', badge: '/badge.png', tag: `notice-${nRow.id}` }).catch(() => {});
+            if (cids.length > 0) sendPushToClasses(cids, { title: pushTitle, body: pushBody, url: '/?view=notice-board', icon: '/logo.png', badge: '/badge.png', tag: `notice-${nRow.id}` }).catch(() => {});
           }).catch(() => {});
       } else if (nRow.department_id) {
         pool.query('SELECT id FROM classes WHERE department_id = $1', [nRow.department_id])
           .then(cr => {
             const cids = cr.rows.map((x: any) => x.id);
-            if (cids.length > 0) sendPushToClasses(cids, { title: pushTitle, body: pushBody, url: '/?view=notice-board', icon: '/icon-192.png', badge: '/badge.png', tag: `notice-${nRow.id}` }).catch(() => {});
+            if (cids.length > 0) sendPushToClasses(cids, { title: pushTitle, body: pushBody, url: '/?view=notice-board', icon: '/logo.png', badge: '/badge.png', tag: `notice-${nRow.id}` }).catch(() => {});
           }).catch(() => {});
       }
     }

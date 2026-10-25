@@ -1,6 +1,7 @@
 import { pool } from './db.js';
 import { dispatchEmailThroughPool, getCanonicalPortalUrl } from './emailService.js';
 import { sendTelegramMessage } from './telegramService.js';
+import { sendPushToUser } from './pushNotificationService.js';
 
 export type NotificationEventType =
   | 'APPLICATION_RECEIVED'
@@ -148,6 +149,14 @@ export async function sendUnifiedNotification(options: SendNotificationOptions):
             'VSBEC IT Department'
           ).catch((e: any) => console.warn('[Notification] Email dispatch warning:', e.message));
         }
+
+        // 4. Web Push Notification (Mobile Lock Screen & Desktop PWA)
+        sendPushToUser(uid, {
+          title: title,
+          body: message,
+          url: portalUrl,
+          tag: `notif-${referenceType || 'general'}-${referenceId || Date.now()}`
+        }).catch((e: any) => console.warn('[Notification] WebPush dispatch warning:', e.message));
       }
     } catch (err: any) {
       console.error('[NotificationService Error]:', err.message);

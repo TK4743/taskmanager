@@ -67,12 +67,12 @@ jobs:
           git config --global user.name "Tharun4743"
           git config --global user.email "tharunkumark42007@gmail.com"
 
-          git add backups/ leetcode/ tasks/
+          git add backups/ leetcode/
           if git diff --staged --quiet; then
             echo "No new backup changes to commit."
           else
             DATE_STR=$(date +'%Y-%m-%d')
-            git commit --author="Tharun4743 <tharunkumark42007@gmail.com>" -m "chore(backup): auto-snapshot database, leetcode, and task progress reports for ${DATE_STR} [skip ci]"
+            git commit --author="Tharun4743 <tharunkumark42007@gmail.com>" -m "chore(backup): auto-snapshot database and leetcode reports for ${DATE_STR} [skip ci]"
             if [ -n "$SYNC_PAT" ]; then
               git push https://${SYNC_PAT}@github.com/${{ github.repository }}.git HEAD:main
             else

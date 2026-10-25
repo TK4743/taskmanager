@@ -14,6 +14,7 @@ export interface PushPayload {
   badge?: string;
   url?: string;
   tag?: string;
+  topic?: string;
   data?: Record<string, any>;
 }
 
@@ -110,6 +111,81 @@ export async function savePushSubscription(
 }
 
 /**
+ * Renews an existing push subscription when a client or service worker triggers pushsubscriptionchange.
+ * Matches oldEndpoint to existing user record and migrates endpoint & keys without requiring JWT session.
+ */
+export async function renewPushSubscription(
+  oldEndpoint: string | null | undefined,
+  newSubscription: { endpoint: string; keys: { p256dh: string; auth: string } },
+  userAgent?: string
+): Promise<boolean> {
+  if (!newSubscription || !newSubscription.endpoint || !newSubscription.keys?.p256dh || !newSubscription.keys?.auth) {
+    throw new Error('Invalid PushSubscription payload for renewal');
+  }
+
+  try {
+    // 1. If oldEndpoint is provided, match existing subscription
+    if (oldEndpoint) {
+      const match = await pool.query(
+        'SELECT id, user_id FROM push_subscriptions WHERE endpoint = $1 LIMIT 1',
+        [oldEndpoint]
+      );
+
+      if (match.rows.length > 0) {
+        const userId = match.rows[0].user_id;
+
+        if (oldEndpoint === newSubscription.endpoint) {
+          await pool.query(
+            `UPDATE push_subscriptions 
+             SET p256dh = $1, auth = $2, user_agent = COALESCE($3, user_agent), updated_at = CURRENT_TIMESTAMP
+             WHERE endpoint = $4`,
+            [newSubscription.keys.p256dh, newSubscription.keys.auth, userAgent || null, oldEndpoint]
+          );
+        } else {
+          await pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [oldEndpoint]);
+          await pool.query(
+            `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, user_agent, updated_at)
+             VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+             ON CONFLICT (user_id, endpoint)
+             DO UPDATE SET 
+               p256dh = EXCLUDED.p256dh,
+               auth = EXCLUDED.auth,
+               user_agent = EXCLUDED.user_agent,
+               updated_at = CURRENT_TIMESTAMP`,
+            [userId, newSubscription.endpoint, newSubscription.keys.p256dh, newSubscription.keys.auth, userAgent || null]
+          );
+        }
+
+        console.log(`[WebPush] 🔄 Successfully renewed push subscription for user ${userId}`);
+        return true;
+      }
+    }
+
+    // 2. If oldEndpoint missing or not found, check if newSubscription endpoint is already registered
+    const existing = await pool.query(
+      'SELECT id, user_id FROM push_subscriptions WHERE endpoint = $1 LIMIT 1',
+      [newSubscription.endpoint]
+    );
+
+    if (existing.rows.length > 0) {
+      await pool.query(
+        `UPDATE push_subscriptions
+         SET p256dh = $1, auth = $2, user_agent = COALESCE($3, user_agent), updated_at = CURRENT_TIMESTAMP
+         WHERE endpoint = $4`,
+        [newSubscription.keys.p256dh, newSubscription.keys.auth, userAgent || null, newSubscription.endpoint]
+      );
+      console.log(`[WebPush] 🔄 Updated keys for existing subscription endpoint: ${newSubscription.endpoint.slice(0, 30)}...`);
+      return true;
+    }
+
+    return false;
+  } catch (err: any) {
+    console.error('[WebPush] Error during renewPushSubscription:', err.message);
+    throw err;
+  }
+}
+
+/**
  * Removes a push subscription for a user (e.g. on logout or permission revoke)
  */
 export async function removePushSubscription(userId: string, endpoint: string): Promise<boolean> {
@@ -145,6 +221,19 @@ async function dispatchPushToSubscriptions(subs: any[], payload: PushPayload): P
 
   const expiredEndpoints: string[] = [];
 
+  const pushOptions: webpush.RequestOptions = {
+    urgency: 'high',
+    TTL: 86400
+  };
+
+  // Only set topic header if explicitly requested, sanitized to max 32 URL-safe chars (RFC 8030)
+  if (payload.topic) {
+    const sanitizedTopic = payload.topic.replace(/[^a-zA-Z0-9\-_]/g, '').slice(0, 32);
+    if (sanitizedTopic) {
+      pushOptions.topic = sanitizedTopic;
+    }
+  }
+
   await Promise.allSettled(
     subs.map(async (sub) => {
       const pushConfig = {
@@ -156,11 +245,7 @@ async function dispatchPushToSubscriptions(subs: any[], payload: PushPayload): P
       };
 
       try {
-        await webpush.sendNotification(pushConfig, formattedPayload, {
-          urgency: 'high',
-          TTL: 86400,
-          topic: 'taskmanager-alerts'
-        });
+        await webpush.sendNotification(pushConfig, formattedPayload, pushOptions);
         sent++;
       } catch (err: any) {
         failed++;

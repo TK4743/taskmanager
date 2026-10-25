@@ -15,6 +15,7 @@ scratch_*.js
 !backups/tasks/*.zip
 !backups/tasks/.gitkeep
 sih-prep/
+tasks/
 scratch_*
 *.pdf
 !report_template/*.pdf

@@ -1,6 +1,6 @@
 // VSBEC IT TaskManager - Service Worker (Web Push & Caching)
 
-const CACHE_NAME = 'vsbec-it-cache-v4.0.0-kill-popups';
+const CACHE_NAME = 'vsbec-it-cache-v4.1.0-mobile-push';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -66,7 +66,7 @@ self.addEventListener('push', (event) => {
     badge: notificationData.badge || defaultBadge,
     tag: notificationData.tag || `taskmanager-${Date.now()}`,
     renotify: true,
-    requireInteraction: true,
+    requireInteraction: false,
     silent: false,
     vibrate: [200, 100, 200],
     data: {
@@ -84,13 +84,21 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/';
+  const rawUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/';
+  let targetUrl = rawUrl;
+  try {
+    targetUrl = new URL(rawUrl, self.location.origin).href;
+  } catch (e) {
+    targetUrl = `${self.location.origin}/`;
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(targetUrl).catch(() => {});
+        if (client.url && client.url.includes(self.location.origin) && 'focus' in client) {
+          if ('navigate' in client) {
+            client.navigate(targetUrl).catch(() => {});
+          }
           return client.focus();
         }
       }
@@ -101,19 +109,59 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// ── Push Subscription Change / Refresh ────────────────────────────────────────
+// ── Push Subscription Change / Auto-Renewal (Zero Drop on Token Rotation) ────
 self.addEventListener('pushsubscriptionchange', (event) => {
   event.waitUntil(
-    self.registration.pushManager.subscribe(event.oldSubscription.options)
-      .then((newSubscription) => {
-        return fetch('/api/push/subscribe', {
+    (async () => {
+      try {
+        let subOptions = event.oldSubscription ? event.oldSubscription.options : null;
+
+        // If old options are missing or expired, fetch current VAPID public key from backend
+        if (!subOptions || !subOptions.applicationServerKey) {
+          const keyRes = await fetch('/api/push/public-key');
+          if (keyRes.ok) {
+            const data = await keyRes.json();
+            if (data.publicKey) {
+              const padding = '='.repeat((4 - (data.publicKey.length % 4)) % 4);
+              const base64 = (data.publicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+              const rawData = atob(base64);
+              const outputArray = new Uint8Array(rawData.length);
+              for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+              }
+              subOptions = {
+                userVisibleOnly: true,
+                applicationServerKey: outputArray
+              };
+            }
+          }
+        }
+
+        if (!subOptions) {
+          console.warn('[SW] Cannot renew push subscription: no valid VAPID options available.');
+          return;
+        }
+
+        const newSubscription = await self.registration.pushManager.subscribe(subOptions);
+        const oldEndpoint = event.oldSubscription ? event.oldSubscription.endpoint : null;
+
+        const renewRes = await fetch('/api/push/renew', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subscription: newSubscription })
+          body: JSON.stringify({
+            oldEndpoint,
+            newSubscription: newSubscription.toJSON ? newSubscription.toJSON() : newSubscription
+          })
         });
-      })
-      .catch((err) => {
-        console.error('[SW] Failed to renew push subscription:', err);
-      })
+
+        if (!renewRes.ok) {
+          console.warn('[SW] Push subscription renewal responded with status:', renewRes.status);
+        } else {
+          console.log('[SW] ✅ Push subscription renewed seamlessly in background.');
+        }
+      } catch (err) {
+        console.error('[SW] ❌ Error renewing push subscription in background:', err);
+      }
+    })()
   );
 });
