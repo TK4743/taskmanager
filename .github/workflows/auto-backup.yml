@@ -48,6 +48,8 @@ jobs:
           npx tsx scripts/export-backup.ts "${{ github.event.inputs.target_date }}"
 
       - name: Commit and Push Backups to GitHub
+        env:
+          SYNC_PAT: ${{ secrets.SYNC_PAT }}
         run: |
           git config --global user.name "Tharun4743"
           git config --global user.email "tharunkumark42007@gmail.com"
@@ -57,8 +59,12 @@ jobs:
             echo "No new backup changes to commit."
           else
             DATE_STR=$(date +'%Y-%m-%d')
-            git commit -m "chore(backup): auto-snapshot database, leetcode, and task progress reports for ${DATE_STR} [skip ci]"
-            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+            git commit --author="Tharun4743 <tharunkumark42007@gmail.com>" -m "chore(backup): auto-snapshot database, leetcode, and task progress reports for ${DATE_STR} [skip ci]"
+            if [ -n "$SYNC_PAT" ]; then
+              git push https://${SYNC_PAT}@github.com/${{ github.repository }}.git HEAD:main
+            else
+              git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+            fi
             echo "Successfully pushed automated backup to main repository."
           fi
 
