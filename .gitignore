@@ -18,13 +18,6 @@ sih-prep/
 tasks/
 scratch_*
 *.pdf
-!report_template/*.pdf
-*.tex
-*.bib
-report_template/chapters/
-report_template/images/
-report_template/*.zip
-report_template/README.md
 .idea/
 .vscode/
 *.iml
@@ -34,11 +27,3 @@ dist-electron/
 dist-apk/
 *.apk
 *.exe
-*.aux
-*.nav
-*.out
-*.snm
-*.toc
-*.synctex*
-*.fls
-*.fdb_latexmk
