@@ -3,7 +3,7 @@
 # 🏛️ VSBEC IT VAULT — ACADEMIA–INDUSTRY INTEGRATED PLATFORM
 ### *Enterprise Institutional Task Governance, LeetCode/GitHub Daemon Sync & Sandboxed Assessment Engine*
 
-[![Recognition](https://img.shields.io/badge/Recognition-SIH%202026%20Top%2050-10b981?style=for-the-badge&logo=checkmarx&logoColor=white)](#) [![Deployment](https://img.shields.io/badge/Deployment-Production%20Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](#) [![Role](https://img.shields.io/badge/Role-Lead%20Architect-4f46e5?style=for-the-badge&logo=codeforces&logoColor=white)](#) [![Frontend](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite%206-61DAFB?style=for-the-badge&logo=react&logoColor=white)](#) [![Backend](https://img.shields.io/badge/Backend-Node.js%2020%20%2B%20Express-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](#) [![Database](https://img.shields.io/badge/Database-PostgreSQL%2014%20(13%20Tables)-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](#) [![License](https://img.shields.io/badge/License-Strict%20Proprietary-dc2626?style=for-the-badge&logo=lock&logoColor=white)](#)
+[![Status](https://img.shields.io/badge/Status-Departmental%20Production%20Active-10b981?style=for-the-badge&logo=checkmarx&logoColor=white)](#) [![Deployment](https://img.shields.io/badge/Deployment-Production%20Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](#) [![Role](https://img.shields.io/badge/Role-Lead%20Architect-4f46e5?style=for-the-badge&logo=codeforces&logoColor=white)](#) [![Frontend](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite%206-61DAFB?style=for-the-badge&logo=react&logoColor=white)](#) [![Backend](https://img.shields.io/badge/Backend-Node.js%2020%20%2B%20Express-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](#) [![Database](https://img.shields.io/badge/Database-PostgreSQL%2014%20(13%20Tables)-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](#) [![License](https://img.shields.io/badge/License-Strict%20Proprietary-dc2626?style=for-the-badge&logo=lock&logoColor=white)](#)
 
 <p align="center">
   <a href="https://github.com/Tharun4743/taskmanager">📦 <b>Official GitHub Repository</b></a>
@@ -44,7 +44,7 @@ In engineering institutions, departmental task tracking and algorithmic prep fac
 ## 3. 💡 Proposed Solution & Architectural Innovation
 **VSBEC IT Vault** is an institutional task governance, real-time coding competency tracking, and corporate recruitment ecosystem engineered for the **Department of IT, VSB Engineering College**:
 
-* 🏆 **SIH 2026 Internal Hackathon Top 50 (Official SIH Portal Nominee):** Shortlisted in the SIH 2026 Internal Hackathon (Top 50 out of 300+ teams) with official SIH portal submission.
+* 🏛️ **Institutional Production System:** Engineered and deployed specifically for the Department of Information Technology at V.S.B. Engineering College.
 * 👥 **Real-World Implementation:** Actively adopted by **365+ enrolled students** in the Department of Information Technology for centralized academic governance, LeetCode habit tracking, and corporate coding assessments.
 * 🛡️ **3-Tier Verification Pipeline:** Enforces an audit trail where tasks are peer-reviewed by Coordinators, validated by Advisors, and authorized by HOD.
 * ⚡ **Algorithmic Momentum Daemons:** Schedulers poll LeetCode GraphQL and GitHub REST APIs daily, computing solve velocity and commit streaks.
@@ -89,7 +89,7 @@ flowchart LR
 
 ## 5. 📈 Quantifiable Impact & Measurable Benefits
 * 👥 **365+ Active Students Governed:** Adopted across 6 sections at VSBEC with daily operational utilization.
-* 🏆 **SIH 2026 Top 50 Finalist:** Shortlisted Top 50 out of 300+ campus teams with central SIH portal nomination.
+* 🏆 **Institutional Academic Excellence:** Recognized departmental project serving 365+ active students across 6 sections.
 * 📜 **100% Digitized Submissions:** Eradicated paper logs, saving 15+ faculty hours weekly.
 * 🤖 **100+ Telegram Community:** Morning briefs and deadline alerts delivered with 99.9% reliability.
 * ⚡ **Optimized Low-Latency Lookups:** Indexed relational queries enable instantaneous student record retrieval.

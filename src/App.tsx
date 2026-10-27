@@ -1025,12 +1025,12 @@ const FeatureComparisonView = () => {
       impact: "100% repository parity and zero deployment drift"
     },
     {
-      category: "Institutional Impact & SIH 2026 Recognition",
-      oldRepo: "Unranked academic prototype project with zero external nominations or scale metrics.",
-      newRepo: "SIH 2026 Top 50 Finalist (out of 300+ campus teams) with official SIH portal submission, actively deployed for 365+ enrolled students at VSB Engineering College.",
+      category: "Institutional Impact & Production Deployment",
+      oldRepo: "Unranked academic prototype project with manual submissions and no automated verification.",
+      newRepo: "Production-grade institutional governance actively deployed for 365+ enrolled students at VSB Engineering College across 6 sections with automated backups.",
       tag: "Workflow & Governance",
       badge: "Enterprise Grade",
-      impact: "Officially recognized national-tier academic innovation"
+      impact: "Enterprise-grade institutional task governance ecosystem"
     }
   ], []);
 
@@ -1262,7 +1262,7 @@ const FeatureComparisonView = () => {
                 <CheckCircle2 size={11} className="text-emerald-400" /> Production Release
               </span>
               <span className="bg-amber-950/80 text-amber-300 border border-amber-800/80 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
-                <Trophy size={11} className="text-amber-400" /> SIH 2026 Top 50
+                <Trophy size={11} className="text-amber-400" /> VSBEC Institutional Deployment
               </span>
             </div>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">
@@ -1632,7 +1632,7 @@ const FeatureComparisonView = () => {
                   <span className="font-bold text-zinc-900">Scope:</span> Academia–Industry Integrated Governance, LeetCode/GitHub Daemon Sync, Sandboxed Assessment & Corporate Recruitment Platform.
                 </div>
                 <div>
-                  <span className="font-bold text-zinc-900">Recognition:</span> 🏆 <strong className="text-zinc-900">SIH 2026 Internal Hackathon Top 50 Finalist</strong> (out of 300+ teams) with official SIH portal submission.
+                  <span className="font-bold text-zinc-900">Deployment Status:</span> 🚀 <strong className="text-zinc-900">Institutional Production Deployment</strong> across 6 departmental sections.
                 </div>
                 <div>
                   <span className="font-bold text-zinc-900">Active Adoption:</span> 👥 <strong className="text-zinc-900">365+ enrolled students</strong> in Department of IT, VSBEC across 6 sections with daily operational utilization.
