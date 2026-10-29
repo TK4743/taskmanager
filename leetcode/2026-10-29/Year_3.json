@@ -1254,7 +1254,7 @@
     "solvedToday": 0,
     "dailyTarget": 1,
     "dailyStatus": "TARGET_MISSED",
-    "solvedThisWeek": 2,
+    "solvedThisWeek": 3,
     "weeklyTarget": 7,
     "weeklyStatus": "TARGET_MISSED",
     "totalSolved": 692
@@ -2486,7 +2486,7 @@
     "solvedToday": 0,
     "dailyTarget": 1,
     "dailyStatus": "TARGET_MISSED",
-    "solvedThisWeek": 2,
+    "solvedThisWeek": 4,
     "weeklyTarget": 7,
     "weeklyStatus": "TARGET_MISSED",
     "totalSolved": 759
