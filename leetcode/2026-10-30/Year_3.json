@@ -75,10 +75,10 @@
     "fullName": "ABIRUBHA P",
     "className": "III IT A",
     "leetcodeUrl": "https://leetcode.com/u/ABIRUBHA_P",
-    "solvedToday": 0,
+    "solvedToday": 1,
     "dailyTarget": 1,
-    "dailyStatus": "TARGET_MISSED",
-    "solvedThisWeek": 5,
+    "dailyStatus": "TARGET_MET",
+    "solvedThisWeek": 6,
     "weeklyTarget": 7,
     "weeklyStatus": "TARGET_MISSED",
     "totalSolved": 87
@@ -887,13 +887,13 @@
     "fullName": "KABILESH M",
     "className": "III IT B",
     "leetcodeUrl": "https://leetcode.com/u/kabi_lesh_678/",
-    "solvedToday": 0,
+    "solvedToday": 1,
     "dailyTarget": 1,
-    "dailyStatus": "TARGET_MISSED",
-    "solvedThisWeek": 4,
+    "dailyStatus": "TARGET_MET",
+    "solvedThisWeek": 5,
     "weeklyTarget": 7,
     "weeklyStatus": "TARGET_MISSED",
-    "totalSolved": 369
+    "totalSolved": 370
   },
   {
     "studentId": "07e17591-f618-4fa8-9ea4-f5819fe810f1",
