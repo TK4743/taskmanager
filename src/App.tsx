@@ -182,6 +182,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
+import { FloatingModal } from './FloatingModal';
+import { MobileBottomNav } from './MobileBottomNav';
 
 // Helper to render Lucide vector icons for task categories
 const renderCategoryIcon = (category: string, size = 14) => {
@@ -220,7 +222,7 @@ interface YearStats {
 interface User {
   id: string | number;
   username: string;
-  role: 'SUPREME_ADMIN' | 'HOD' | 'CLASS_ADVISOR' | 'STUDENT' | 'INDUSTRY';
+  role: 'SUPREME_ADMIN' | 'HOD' | 'CLASS_ADVISOR' | 'STUDENT' | 'INDUSTRY' | 'FACULTY' | 'STAFF';
   full_name: string;
   department_id: string | number | null;
   department_name?: string;
@@ -656,8 +658,8 @@ function CategoryDropdown({ value, onChange }: { value: string; onChange: (val: 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const selectedOpt = CATEGORY_OPTIONS.find(o => o.value === value) || CATEGORY_OPTIONS[0];
-  const IconComp = selectedOpt.icon;
+  const selectedOpt = CATEGORY_OPTIONS.find(o => o.value === value);
+  const IconComp = selectedOpt ? selectedOpt.icon : Layers;
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
@@ -667,8 +669,8 @@ function CategoryDropdown({ value, onChange }: { value: string; onChange: (val: 
         className="w-full h-11 px-3.5 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all text-sm bg-white font-medium flex items-center justify-between shadow-sm hover:border-zinc-300"
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          <IconComp size={18} className={cn("shrink-0", selectedOpt.color)} />
-          <span className="truncate text-zinc-900 font-bold">{selectedOpt.label}</span>
+          <IconComp size={18} className={cn("shrink-0", selectedOpt ? selectedOpt.color : "text-zinc-400")} />
+          <span className={cn("truncate", selectedOpt ? "text-zinc-900 font-bold" : "text-zinc-400 font-medium")}>{selectedOpt ? selectedOpt.label : "Select Category (Required)"}</span>
         </div>
         <ChevronRight size={16} className={cn("text-zinc-400 transition-transform duration-200 shrink-0", isOpen ? "rotate-90" : "")} />
       </button>
@@ -1747,7 +1749,7 @@ const Footer = ({ onShowModal }: { onShowModal: (type: 'PRIVACY' | 'TERMS' | 'SU
 const PageLayout = ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const onShowModal = React.useContext(FooterContext);
   return (
-    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-3.5 sm:p-5 md:p-8 bg-[#F5F5F4] dark:bg-[#0f0f12] flex flex-col min-h-0 custom-scrollbar">
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-3.5 sm:p-5 md:p-8 pb-24 sm:pb-24 lg:pb-8 pb-[max(6rem,calc(env(safe-area-inset-bottom)+5rem))] lg:pb-8 bg-[#F5F5F4] dark:bg-[#0f0f12] flex flex-col min-h-0 custom-scrollbar">
       <div className="w-full max-w-full flex flex-col min-h-full">
         <div className={cn("flex-1 flex flex-col space-y-4 md:space-y-6 w-full max-w-full", className)} {...props}>
           {children}
@@ -1972,8 +1974,8 @@ function StudentProfileView({
 
   // Form states for Skills
   const [newSkillName, setNewSkillName] = useState('');
-  const [newSkillCategory, setNewSkillCategory] = useState('Technical');
-  const [newSkillLevel, setNewSkillLevel] = useState('Intermediate');
+  const [newSkillCategory, setNewSkillCategory] = useState('');
+  const [newSkillLevel, setNewSkillLevel] = useState('');
   const [addingSkill, setAddingSkill] = useState(false);
 
   // Form states for Projects
@@ -1988,7 +1990,7 @@ function StudentProfileView({
   const [newInternCompany, setNewInternCompany] = useState('');
   const [newInternRole, setNewInternRole] = useState('');
   const [newInternDuration, setNewInternDuration] = useState('');
-  const [newInternMode, setNewInternMode] = useState('Offline');
+  const [newInternMode, setNewInternMode] = useState('');
   const [newInternCertUrl, setNewInternCertUrl] = useState('');
   const [addingInternship, setAddingInternship] = useState(false);
 
@@ -2010,7 +2012,7 @@ function StudentProfileView({
 
   // Form states for Achievements
   const [newAchTitle, setNewAchTitle] = useState('');
-  const [newAchCategory, setNewAchCategory] = useState('Hackathons');
+  const [newAchCategory, setNewAchCategory] = useState('');
   const [newAchDesc, setNewAchDesc] = useState('');
   const [newAchDate, setNewAchDate] = useState('');
   const [addingAch, setAddingAch] = useState(false);
@@ -2158,6 +2160,14 @@ function StudentProfileView({
   const handleAddSkill = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSkillName.trim()) return;
+    if (!newSkillCategory) {
+      addToast('Please select a skill category', 'error');
+      return;
+    }
+    if (!newSkillLevel) {
+      addToast('Please select a proficiency level', 'error');
+      return;
+    }
     setAddingSkill(true);
     try {
       const res = await fetch(`${API_URL}/api/student/profile/skills`, {
@@ -2232,6 +2242,10 @@ function StudentProfileView({
   const handleAddInternship = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newInternCompany.trim()) return;
+    if (!newInternMode) {
+      addToast('Please select a work mode (Offline, Online, or Hybrid)', 'error');
+      return;
+    }
     setAddingInternship(true);
     try {
       const res = await fetch(`${API_URL}/api/student/profile/internships`, {
@@ -2336,6 +2350,10 @@ function StudentProfileView({
   const handleAddAchievement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAchTitle.trim()) return;
+    if (!newAchCategory) {
+      addToast('Please select an achievement category', 'error');
+      return;
+    }
     setAddingAch(true);
     try {
       const res = await fetch(`${API_URL}/api/student/profile/achievements`, {
@@ -2790,13 +2808,15 @@ function StudentProfileView({
                 required
                 className="flex-1"
               />
-              <Select value={newSkillCategory} onChange={e => setNewSkillCategory(e.target.value)} className="sm:w-40">
+              <Select value={newSkillCategory} onChange={e => setNewSkillCategory(e.target.value)} className="sm:w-44" required>
+                <option value="" disabled>Select Category</option>
                 <option value="Technical">Technical</option>
                 <option value="Soft Skill">Soft Skill</option>
                 <option value="Tool">Tool</option>
                 <option value="Domain">Domain</option>
               </Select>
-              <Select value={newSkillLevel} onChange={e => setNewSkillLevel(e.target.value)} className="sm:w-40">
+              <Select value={newSkillLevel} onChange={e => setNewSkillLevel(e.target.value)} className="sm:w-44" required>
+                <option value="" disabled>Select Level</option>
                 <option value="Beginner">Beginner</option>
                 <option value="Intermediate">Intermediate</option>
                 <option value="Advanced">Advanced</option>
@@ -2886,7 +2906,8 @@ function StudentProfileView({
                 <Input placeholder="Company / Organization *" value={newInternCompany} onChange={e => setNewInternCompany(e.target.value)} required />
                 <Input placeholder="Role (e.g. Web Dev Intern)" value={newInternRole} onChange={e => setNewInternRole(e.target.value)} />
                 <Input placeholder="Duration (e.g. 3 Months, Jun-Aug 2025)" value={newInternDuration} onChange={e => setNewInternDuration(e.target.value)} />
-                <Select value={newInternMode} onChange={e => setNewInternMode(e.target.value)}>
+                <Select value={newInternMode} onChange={e => setNewInternMode(e.target.value)} required>
+                  <option value="" disabled>Select Work Mode</option>
                   <option value="Offline">Offline / On-site</option>
                   <option value="Online">Online / Remote</option>
                   <option value="Hybrid">Hybrid</option>
@@ -3026,7 +3047,8 @@ function StudentProfileView({
             <form onSubmit={handleAddAchievement} className="space-y-3 p-4 bg-zinc-50 rounded-xl border border-zinc-200">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Input placeholder="Achievement / Event Title *" value={newAchTitle} onChange={e => setNewAchTitle(e.target.value)} required className="sm:col-span-2" />
-                <Select value={newAchCategory} onChange={e => setNewAchCategory(e.target.value)}>
+                <Select value={newAchCategory} onChange={e => setNewAchCategory(e.target.value)} required>
+                  <option value="" disabled>Select Category</option>
                   <option value="Hackathons">Hackathons</option>
                   <option value="National Hackathons">National Hackathons</option>
                   <option value="Coding Competitions">Coding Competitions</option>
@@ -5221,7 +5243,7 @@ export default function App() {
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
-    category: 'Competition',
+    category: '',
     external_link: '',
     deadline: '',
     screenshot_instruction: '',
@@ -5801,9 +5823,41 @@ export default function App() {
   const isAdmin = user?.role === 'SUPREME_ADMIN';
   const isHOD = user?.role === 'HOD';
   const isAdvisor = user?.role === 'CLASS_ADVISOR';
-  const isStudent = user?.role === 'STUDENT';
+  const isStudent = user?.role === 'STUDENT' && !user?.is_coordinator;
   const isIndustry = user?.role === 'INDUSTRY';
   const isCoordinator = Boolean(user?.role === 'STUDENT' && user?.is_coordinator);
+  const isFaculty = user?.role === 'FACULTY' || user?.role === 'STAFF';
+
+
+  // Dynamic Role-Scoped Pending Verification Count for Badges
+  const pendingVerificationCount = useMemo(() => {
+    if (!user) return 0;
+    const regularPending = submissions.filter(s => {
+      if (s.status !== 'SUBMITTED') return false;
+      if (isAdmin) return true;
+      if (isHOD || isFaculty) {
+        return !user.department_id || String(s.department_id) === String(user.department_id);
+      }
+      if (isAdvisor || isCoordinator) {
+        return Boolean(user.class_id && String(s.class_id) === String(user.class_id));
+      }
+      return false;
+    }).length;
+
+    const teamPending = teamSubmissions.filter(ts => {
+      if (ts.status !== 'PENDING') return false;
+      if (isAdmin) return true;
+      if (isHOD || isFaculty) {
+        return !user.department_id || !ts.department_id || String(ts.department_id) === String(user.department_id);
+      }
+      if (isAdvisor || isCoordinator) {
+        return Boolean(user.class_id && String(ts.class_id) === String(user.class_id));
+      }
+      return false;
+    }).length;
+
+    return regularPending + teamPending;
+  }, [submissions, teamSubmissions, user, isAdmin, isHOD, isFaculty, isAdvisor, isCoordinator]);
 
   // Deep Link Handling for Shared Tasks (?taskId=... or ?task=...)
   useEffect(() => {
@@ -7254,6 +7308,10 @@ export default function App() {
 
   const handleTaskPreview = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newTask.category || !newTask.category.trim()) {
+      addToast('Please select a category for the task.', 'error');
+      return;
+    }
     if (isHOD && (!newTask.class_ids || newTask.class_ids.length === 0)) {
       addToast('Please select at least one class for the task.', 'error');
       return;
@@ -7262,6 +7320,10 @@ export default function App() {
   };
 
   const createTask = async () => {
+    if (!newTask.category || !newTask.category.trim()) {
+      addToast('Please select a category for the task.', 'error');
+      return;
+    }
     if (isHOD && (!newTask.class_ids || newTask.class_ids.length === 0)) {
       addToast('Please select at least one class for the task.', 'error');
       return;
@@ -7549,9 +7611,14 @@ export default function App() {
 
       // 3. Role / Scope filter
       const subClassId = s.class_id ? String(s.class_id) : '';
-      if (!isAdmin && !isHOD) {
-        const userClassId = user?.class_id ? String(user?.class_id) : '';
+      const subDeptId = s.department_id ? String(s.department_id) : '';
+      const userClassId = user?.class_id ? String(user?.class_id) : '';
+      const userDeptId = user?.department_id ? String(user?.department_id) : '';
+
+      if (isAdvisor || isCoordinator) {
         if (userClassId && subClassId && subClassId !== userClassId) return false;
+      } else if (isHOD || isFaculty) {
+        if (userDeptId && subDeptId && subDeptId !== userDeptId) return false;
       }
 
       // 4. Department filter
@@ -10603,6 +10670,10 @@ export default function App() {
 
   const handleCreateTarget = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!assignTargetForm.scopeType || !assignTargetForm.targetValue) {
+      addToast('Please select both a target scope and target option.', 'error');
+      return;
+    }
     if (submittingTarget) return;
     setSubmittingTarget(true);
     try {
@@ -11856,62 +11927,57 @@ export default function App() {
   };
 
   const renderAssignTargetModal = () => {
-    if (!showAssignTargetModal) return null;
-    const isAdvisor = user?.role === 'CLASS_ADVISOR' || (user?.role === 'STUDENT' && user?.is_coordinator);
+    const isAdv = user?.role === 'CLASS_ADVISOR' || (user?.role === 'STUDENT' && user?.is_coordinator);
 
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-[200] animate-fade-in">
-        <Card className="w-full max-w-md bg-white shadow-xl rounded-2xl overflow-hidden p-6 border border-zinc-200">
-          <div className="flex items-center justify-between mb-4 border-b border-zinc-100 pb-3">
-            <h3 className="text-lg font-black text-zinc-900 flex items-center gap-1.5">
-              <Code size={20} className="text-orange-500" /> Assign LeetCode Target
-            </h3>
-            <button
-              onClick={() => setShowAssignTargetModal(false)}
-              className="text-zinc-400 hover:text-zinc-600 font-bold p-1 rounded-lg"
+      <FloatingModal
+        isOpen={showAssignTargetModal}
+        onClose={() => setShowAssignTargetModal(false)}
+        title="Assign Coding Target"
+        description="Configure structured weekly LeetCode and GitHub goals"
+        icon={<Code size={20} className="text-orange-500" />}
+        maxWidth="md"
+      >
+        <form onSubmit={handleCreateTarget} className="space-y-4">
+          {/* Target Scope */}
+          <div>
+            <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">
+              Target Scope
+            </label>
+            <select
+              value={assignTargetForm.scopeType}
+              onChange={(e) => {
+                const val = e.target.value;
+                setAssignTargetForm(prev => ({
+                  ...prev,
+                  scopeType: val,
+                  targetValue: '' // Reset child selection on parent change
+                }));
+              }}
+              className="w-full p-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none bg-white dark:bg-[#181820] cursor-pointer"
             >
-              <X size={20} />
-            </button>
+              <option value="">Select Target Scope</option>
+              {!isAdv && <option value="DEPARTMENT">Department-wide</option>}
+              {!isAdv && <option value="YEAR">Batch / Year-wide</option>}
+              <option value="CLASS">Class Section-wide</option>
+              <option value="STUDENT">Individual Student</option>
+            </select>
           </div>
 
-          <form onSubmit={handleCreateTarget} className="space-y-4">
-            {/* Target Scope */}
+          {/* Scope Value */}
+          {assignTargetForm.scopeType && (
             <div>
-              <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Target Scope</label>
-              <select
-                value={assignTargetForm.scopeType}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  let defVal = '';
-                  if (val === 'CLASS') defVal = classes[0]?.id || '';
-                  if (val === 'STUDENT') defVal = users.filter(u => u.role === 'STUDENT')[0]?.id || '';
-                  if (val === 'YEAR') defVal = '3';
-                  if (val === 'DEPARTMENT') defVal = departments[0]?.id || '';
-
-                  setAssignTargetForm(prev => ({
-                    ...prev,
-                    scopeType: val,
-                    targetValue: defVal
-                  }));
-                }}
-                className="w-full p-2.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 focus:outline-none bg-white cursor-pointer"
-              >
-                {!isAdvisor && <option value="DEPARTMENT">Department-wide</option>}
-                {!isAdvisor && <option value="YEAR">Batch / Year-wide</option>}
-                <option value="CLASS">Class Section-wide</option>
-                <option value="STUDENT">Individual Student</option>
-              </select>
-            </div>
-
-            {/* Scope Value */}
-            <div>
-              <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Select Option</label>
+              <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">
+                Select Option (Required)
+              </label>
               {assignTargetForm.scopeType === 'DEPARTMENT' && (
                 <select
                   value={assignTargetForm.targetValue}
                   onChange={(e) => setAssignTargetForm(prev => ({ ...prev, targetValue: e.target.value }))}
-                  className="w-full p-2.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 focus:outline-none bg-white cursor-pointer"
+                  className="w-full p-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none bg-white dark:bg-[#181820] cursor-pointer"
+                  required
                 >
+                  <option value="">Select Department</option>
                   {departments.map(d => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
@@ -11922,8 +11988,10 @@ export default function App() {
                 <select
                   value={assignTargetForm.targetValue}
                   onChange={(e) => setAssignTargetForm(prev => ({ ...prev, targetValue: e.target.value }))}
-                  className="w-full p-2.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 focus:outline-none bg-white cursor-pointer"
+                  className="w-full p-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none bg-white dark:bg-[#181820] cursor-pointer"
+                  required
                 >
+                  <option value="">Select Year / Batch</option>
                   <option value="1">1st Year</option>
                   <option value="2">2nd Year</option>
                   <option value="3">3rd Year</option>
@@ -11935,8 +12003,10 @@ export default function App() {
                 <select
                   value={assignTargetForm.targetValue}
                   onChange={(e) => setAssignTargetForm(prev => ({ ...prev, targetValue: e.target.value }))}
-                  className="w-full p-2.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 focus:outline-none bg-white cursor-pointer"
+                  className="w-full p-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none bg-white dark:bg-[#181820] cursor-pointer"
+                  required
                 >
+                  <option value="">Select Class Section</option>
                   {classes.map(c => (
                     <option key={c.id} value={c.id}>{c.name} (Year {c.year})</option>
                   ))}
@@ -11947,101 +12017,101 @@ export default function App() {
                 <select
                   value={assignTargetForm.targetValue}
                   onChange={(e) => setAssignTargetForm(prev => ({ ...prev, targetValue: e.target.value }))}
-                  className="w-full p-2.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 focus:outline-none bg-white cursor-pointer"
+                  className="w-full p-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none bg-white dark:bg-[#181820] cursor-pointer"
+                  required
                 >
+                  <option value="">Select Individual Student</option>
                   {users.filter(u => u.role === 'STUDENT').map(u => (
                     <option key={u.id} value={u.id}>{u.full_name} ({u.register_number})</option>
                   ))}
                 </select>
               )}
             </div>
+          )}
 
-            {/* Targets */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Daily Target</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={assignTargetForm.dailyTarget}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    const parsed = parseInt(val, 10) || 0;
-                    setAssignTargetForm(prev => ({
-                      ...prev,
-                      dailyTarget: val,
-                      weeklyTarget: String(parsed * 7)
-                    }));
-                  }}
-                  className="w-full p-2.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 focus:outline-none bg-white"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Weekly Target</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={assignTargetForm.weeklyTarget}
-                  onChange={(e) => setAssignTargetForm(prev => ({ ...prev, weeklyTarget: e.target.value }))}
-                  className="w-full p-2.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 focus:outline-none bg-white"
-                />
-              </div>
+          {/* Targets */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Daily Target</label>
+              <input
+                type="number"
+                min="0"
+                value={assignTargetForm.dailyTarget}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const parsed = parseInt(val, 10) || 0;
+                  setAssignTargetForm(prev => ({
+                    ...prev,
+                    dailyTarget: val,
+                    weeklyTarget: String(parsed * 7)
+                  }));
+                }}
+                className="w-full p-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none bg-white dark:bg-[#181820]"
+              />
             </div>
-
-            {/* Dates */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Start Date</label>
-                <input
-                  type="date"
-                  value={assignTargetForm.startDate}
-                  onChange={(e) => {
-                    const startVal = e.target.value;
-                    const parts = startVal.split('-');
-                    const yr = parseInt(parts[0], 10);
-                    const mo = parseInt(parts[1], 10) - 1;
-                    const dy = parseInt(parts[2], 10);
-
-                    const localDate = new Date(yr, mo, dy);
-                    localDate.setDate(localDate.getDate() + 6);
-
-                    const endVal = localDate.getFullYear() + '-' +
-                      String(localDate.getMonth() + 1).padStart(2, '0') + '-' +
-                      String(localDate.getDate()).padStart(2, '0');
-
-                    setAssignTargetForm(prev => ({
-                      ...prev,
-                      startDate: startVal,
-                      endDate: endVal
-                    }));
-                  }}
-                  className="w-full p-2.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 focus:outline-none bg-white cursor-pointer"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">End Date</label>
-                <input
-                  type="date"
-                  value={assignTargetForm.endDate}
-                  onChange={(e) => setAssignTargetForm(prev => ({ ...prev, endDate: e.target.value }))}
-                  className="w-full p-2.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 focus:outline-none bg-white cursor-pointer"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Weekly Target</label>
+              <input
+                type="number"
+                min="0"
+                value={assignTargetForm.weeklyTarget}
+                onChange={(e) => setAssignTargetForm(prev => ({ ...prev, weeklyTarget: e.target.value }))}
+                className="w-full p-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none bg-white dark:bg-[#181820]"
+              />
             </div>
+          </div>
 
-            {/* Submit */}
-            <div className="pt-2">
-              <Button type="submit" disabled={submittingTarget} className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold p-3 rounded-xl transition-all disabled:opacity-50">
-                {submittingTarget ? 'Creating...' : 'Create Target'}
-              </Button>
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Start Date</label>
+              <input
+                type="date"
+                value={assignTargetForm.startDate}
+                onChange={(e) => {
+                  const startVal = e.target.value;
+                  const parts = startVal.split('-');
+                  const yr = parseInt(parts[0], 10);
+                  const mo = parseInt(parts[1], 10) - 1;
+                  const dy = parseInt(parts[2], 10);
+
+                  const localDate = new Date(yr, mo, dy);
+                  localDate.setDate(localDate.getDate() + 6);
+
+                  const endVal = localDate.getFullYear() + '-' +
+                    String(localDate.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(localDate.getDate()).padStart(2, '0');
+
+                  setAssignTargetForm(prev => ({
+                    ...prev,
+                    startDate: startVal,
+                    endDate: endVal
+                  }));
+                }}
+                className="w-full p-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none bg-white dark:bg-[#181820] cursor-pointer"
+              />
             </div>
-          </form>
-        </Card>
-      </div>
+            <div>
+              <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">End Date</label>
+              <input
+                type="date"
+                value={assignTargetForm.endDate}
+                onChange={(e) => setAssignTargetForm(prev => ({ ...prev, endDate: e.target.value }))}
+                className="w-full p-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none bg-white dark:bg-[#181820] cursor-pointer"
+              />
+            </div>
+          </div>
+
+          {/* Submit */}
+          <div className="pt-2">
+            <Button type="submit" disabled={submittingTarget} className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold p-3 rounded-xl transition-all disabled:opacity-50">
+              {submittingTarget ? 'Creating...' : 'Create Target'}
+            </Button>
+          </div>
+        </form>
+      </FloatingModal>
     );
   };
-
-
 
   const renderHistoryDetailsModal = () => {
     if (!showHistoryModal || !selectedStudentHistory) return null;
@@ -12055,39 +12125,15 @@ export default function App() {
     );
 
     return (
-      <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-[200] animate-fade-in"
-        onClick={() => setShowHistoryModal(false)}
+      <FloatingModal
+        isOpen={showHistoryModal && !!selectedStudentHistory}
+        onClose={() => setShowHistoryModal(false)}
+        title={isGithub ? 'GitHub Commit History' : 'LeetCode Progress History'}
+        subtitle={`${student.fullName || student.full_name || ''} (${student.registerNumber || student.register_number || ''}) • ${student.className || 'IT'}`}
+        icon={isGithub ? <Github size={20} className="text-indigo-600" /> : <Code size={20} className="text-orange-500" />}
+        maxWidth="max-w-2xl"
       >
-        <Card
-          className="w-full max-w-2xl bg-white shadow-2xl rounded-2xl overflow-hidden border border-zinc-200 flex flex-col max-h-[85vh]"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Modal Header */}
-          <div className="p-6 border-b border-zinc-100 flex items-center justify-between shrink-0">
-            <div>
-              <h3 className="text-lg font-black text-zinc-900 flex items-center gap-2">
-                {isGithub ? (
-                  <Github size={20} className="text-indigo-600" />
-                ) : (
-                  <Code size={20} className="text-orange-500" />
-                )}
-                <span>{isGithub ? 'GitHub Commit History' : 'LeetCode Progress History'}</span>
-              </h3>
-              <p className="text-xs text-zinc-500 font-bold mt-1">
-                {student.fullName || student.full_name || ''} ({student.registerNumber || student.register_number || ''}) • {student.className || 'IT'}
-              </p>
-            </div>
-            <button
-              onClick={() => setShowHistoryModal(false)}
-              className="text-zinc-400 hover:text-zinc-600 font-bold p-1 rounded-lg transition-colors cursor-pointer"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          {/* Modal Body */}
-          <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
+        <div className="space-y-6 custom-scrollbar">
             {/* Student Profile Info */}
             <div className="bg-zinc-50 border border-zinc-200/80 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -12200,8 +12246,7 @@ export default function App() {
               )}
             </div>
           </div>
-        </Card>
-      </div>
+      </FloatingModal>
     );
   };
 
@@ -12451,10 +12496,11 @@ export default function App() {
               </>
             )}
 
-            {(isAdvisor || isHOD || isAdmin || isCoordinator) && (
+            {(isAdvisor || isHOD || isAdmin || isCoordinator || isFaculty) && (
               <SidebarItem
                 icon={<ShieldCheck size={20} className="text-emerald-600" />}
                 label="Verifications"
+                badge={pendingVerificationCount > 0 ? `${pendingVerificationCount} Pending` : undefined}
                 active={view === 'verifications'}
                 onClick={() => { setView('verifications'); setIsMobileSidebarOpen(false); }}
               />
@@ -12954,60 +13000,15 @@ export default function App() {
   const renderTeamReviewModal = () => {
     if (!teamReviewModal) return null;
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4"
-        >
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-            <h3 className="text-base font-extrabold text-zinc-900 flex items-center gap-2">
-              <Users size={18} className="text-indigo-600" />
-              {teamReviewModal.status === 'APPROVED' ? 'Approve Team Submission' : 'Reject Team Submission'}
-            </h3>
-            <Button variant="ghost" className="p-1 h-7 w-7 text-zinc-400 hover:text-black rounded-lg" onClick={() => setTeamReviewModal(null)}>
-              <X size={16} />
-            </Button>
-          </div>
-
-          <p className="text-xs text-zinc-600">
-            Team: <strong className="text-zinc-900">{teamReviewModal.name}</strong>
-          </p>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-zinc-700">
-              {teamReviewModal.status === 'APPROVED' ? 'Approval Note (Optional)' : 'Reason for Rejection *'}
-            </label>
-            <Textarea
-              placeholder={teamReviewModal.status === 'APPROVED' ? 'Optional feedback or note...' : 'Please specify why this team submission is rejected...'}
-              value={teamRejectionReason}
-              onChange={e => setTeamRejectionReason(e.target.value)}
-              className="text-xs min-h-[90px]"
-            />
-          </div>
-
-          {teamReviewModal.status === 'REJECTED' && (
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                "Proof does not show all team members",
-                "Project repository is incomplete or private",
-                "Deliverables do not match task requirements",
-                "Duplicate or unverified submission proof"
-              ].map((chip, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setTeamRejectionReason(chip)}
-                  className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
-                >
-                  + {chip}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-2">
+      <FloatingModal
+        isOpen={Boolean(teamReviewModal)}
+        onClose={() => setTeamReviewModal(null)}
+        title={teamReviewModal.status === 'APPROVED' ? 'Approve Team Submission' : 'Reject Team Submission'}
+        description={`Team: ${teamReviewModal.name}`}
+        icon={<Users size={18} className="text-indigo-600" />}
+        maxWidth="md"
+        footer={
+          <div className="flex items-center gap-3 w-full">
             <Button variant="ghost" className="flex-1 text-xs" onClick={() => setTeamReviewModal(null)}>
               Cancel
             </Button>
@@ -13024,8 +13025,45 @@ export default function App() {
               {teamReviewModal.status === 'APPROVED' ? 'Confirm Approval' : 'Confirm Rejection'}
             </Button>
           </div>
-        </motion.div>
-      </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+              {teamReviewModal.status === 'APPROVED' ? 'Approval Note (Optional)' : 'Reason for Rejection *'}
+            </label>
+            <Textarea
+              placeholder={teamReviewModal.status === 'APPROVED' ? 'Optional feedback or note...' : 'Please specify why this team submission is rejected...'}
+              value={teamRejectionReason}
+              onChange={e => setTeamRejectionReason(e.target.value)}
+              className="text-xs min-h-[90px]"
+            />
+          </div>
+
+          {teamReviewModal.status === 'REJECTED' && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Quick Suggestions:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "Proof does not show all team members",
+                  "Project repository is incomplete or private",
+                  "Deliverables do not match task requirements",
+                  "Duplicate or unverified submission proof"
+                ].map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setTeamRejectionReason(chip)}
+                    className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                  >
+                    + {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </FloatingModal>
     );
   };
 
@@ -13567,83 +13605,70 @@ export default function App() {
         {renderTaskPendingEmailModal()}
         {renderTeamReviewModal()}
         {renderSubmissionInspectorModal()}
-        {/* Rejection Modal */}
-        <AnimatePresence>
-          {showRejectionModal && (() => {
-            const targetSub = submissions.find(s => String(s.id) === String(showRejectionModal));
-            return (
-              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  className="bg-white rounded-2xl p-6 md:p-7 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto space-y-4"
-                >
-                  <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-                    <div>
-                      <h2 className="text-lg font-extrabold text-zinc-900 flex items-center gap-2">
-                        <XCircle className="text-red-600" size={20} /> Reject Submission
-                      </h2>
-                      {targetSub && (
-                        <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                          {targetSub.student_name} ({targetSub.register_number || 'Student'}) • {targetSub.task_title}
-                        </p>
-                      )}
-                    </div>
-                    <Button variant="ghost" className="p-1 h-7 w-7 text-zinc-400 hover:text-black rounded-lg" onClick={() => setShowRejectionModal(null)}>
-                      <X size={16} />
-                    </Button>
-                  </div>
+        {/* Rejection Modal with FloatingModal */}
+        {showRejectionModal && (() => {
+          const targetSub = submissions.find(s => String(s.id) === String(showRejectionModal));
+          return (
+            <FloatingModal
+              isOpen={Boolean(showRejectionModal)}
+              onClose={() => setShowRejectionModal(null)}
+              title="Reject Submission"
+              description={targetSub ? `${targetSub.student_name} (${targetSub.register_number || 'Student'}) • ${targetSub.task_title}` : 'Provide constructive feedback for student resubmission'}
+              icon={<XCircle className="text-red-600" size={20} />}
+              maxWidth="md"
+              footer={
+                <div className="flex items-center gap-3 w-full">
+                  <Button variant="ghost" className="flex-1 text-xs" onClick={() => setShowRejectionModal(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="danger"
+                    className="flex-1 text-xs font-bold"
+                    disabled={!rejectionReason.trim()}
+                    onClick={() => verifySubmission(showRejectionModal, 'REJECTED', undefined, rejectionReason)}
+                  >
+                    Confirm Rejection
+                  </Button>
+                </div>
+              }
+            >
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Reason for Rejection *</label>
+                  <Textarea
+                    placeholder="Explain what needs to be corrected for the student to resubmit..."
+                    value={rejectionReason}
+                    onChange={e => setRejectionReason(e.target.value)}
+                    required
+                    className="text-xs min-h-[90px]"
+                  />
+                </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-zinc-700">Reason for Rejection *</label>
-                    <Textarea
-                      placeholder="Explain what needs to be corrected for the student to resubmit..."
-                      value={rejectionReason}
-                      onChange={e => setRejectionReason(e.target.value)}
-                      required
-                      className="text-xs min-h-[90px]"
-                    />
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Quick Suggestions:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      "Screenshot is blurry / illegible",
+                      "Incorrect proof for this task",
+                      "Submitted link is private or inaccessible",
+                      "Does not meet task requirements",
+                      "Student name/register number mismatch"
+                    ].map((chip, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setRejectionReason(chip)}
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                      >
+                        + {chip}
+                      </button>
+                    ))}
                   </div>
-
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Quick Suggestions:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        "Screenshot is blurry / illegible",
-                        "Incorrect proof for this task",
-                        "Submitted link is private or inaccessible",
-                        "Does not meet task requirements",
-                        "Student name/register number mismatch"
-                      ].map((chip, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setRejectionReason(chip)}
-                          className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
-                        >
-                          + {chip}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 pt-2">
-                    <Button variant="ghost" className="flex-1 text-xs" onClick={() => setShowRejectionModal(null)}>Cancel</Button>
-                    <Button
-                      variant="danger"
-                      className="flex-1 text-xs font-bold"
-                      disabled={!rejectionReason.trim()}
-                      onClick={() => verifySubmission(showRejectionModal, 'REJECTED', undefined, rejectionReason)}
-                    >
-                      Confirm Rejection
-                    </Button>
-                  </div>
-                </motion.div>
+                </div>
               </div>
-            );
-          })()}
-        </AnimatePresence>
+            </FloatingModal>
+          );
+        })()}
         <AnimatePresence>
           {viewingStudentProfileId && (
             <StaffStudentProfileModal
@@ -14858,7 +14883,7 @@ export default function App() {
                 </motion.div>
               )}
 
-              {view === 'classes' && isHOD && (
+              {view === 'classes' && (isHOD || isAdmin) && (
                 <motion.div
                   key="classes"
                   initial={{ opacity: 0, y: 10 }}
@@ -14866,7 +14891,69 @@ export default function App() {
                   className="w-full h-full flex flex-col min-h-0"
                 >
                   <PageLayout>
-
+                    <ContentCard className="mb-6">
+                      <h3 className="text-base font-extrabold mb-4 flex items-center gap-2 text-zinc-900">
+                        <Plus size={18} className="text-indigo-600" /> Create New Class Section
+                      </h3>
+                      <form onSubmit={createClass} className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Class Name</label>
+                            <Input
+                              placeholder="e.g. IT-A"
+                              value={newClass.name}
+                              onChange={e => setNewClass(prev => ({ ...prev, name: e.target.value }))}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Year</label>
+                            <select
+                              value={newClass.year}
+                              onChange={e => setNewClass(prev => ({ ...prev, year: e.target.value }))}
+                              className="w-full h-11 px-3 border border-zinc-200 rounded-xl text-sm font-semibold bg-white text-zinc-700"
+                              required
+                            >
+                              <option value="">Select Year</option>
+                              <option value="1">1st Year</option>
+                              <option value="2">2nd Year</option>
+                              <option value="3">3rd Year</option>
+                              <option value="4">4th Year</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Batch</label>
+                            <Input
+                              placeholder="e.g. 2023-2027"
+                              value={newClass.batch}
+                              onChange={e => setNewClass(prev => ({ ...prev, batch: e.target.value }))}
+                              required
+                            />
+                          </div>
+                          {isAdmin && (
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Department</label>
+                              <select
+                                value={newClass.department_id}
+                                onChange={e => setNewClass(prev => ({ ...prev, department_id: e.target.value }))}
+                                className="w-full h-11 px-3 border border-zinc-200 rounded-xl text-sm font-semibold bg-white text-zinc-700"
+                                required
+                              >
+                                <option value="">Select Department</option>
+                                {departments.map(d => (
+                                  <option key={d.id} value={d.id}>{d.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex justify-end">
+                          <Button type="submit" className="flex items-center gap-2">
+                            <Plus size={18} /> Add Class Section
+                          </Button>
+                        </div>
+                      </form>
+                    </ContentCard>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {classes.slice().sort((a, b) => (a.year || 0) - (b.year || 0) || (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })).map(c => (
@@ -16723,7 +16810,7 @@ export default function App() {
                               ))}
                             </Select>
                           )}
-                          {(isHOD || isAdmin) && (
+                          {(isHOD || isAdmin || isFaculty) && (
                             <Select
                               value={verificationYearFilter}
                               onChange={e => {
@@ -16748,7 +16835,7 @@ export default function App() {
                               if (verificationDeptFilter && c.department_id?.toString() !== verificationDeptFilter) return false;
                               if (verificationYearFilter && String(c.year) !== verificationYearFilter) return false;
                               if (isAdmin) return true;
-                              if (isHOD) return c.department_id?.toString() === user?.department_id?.toString();
+                              if (isHOD || isFaculty) return c.department_id?.toString() === user?.department_id?.toString();
                               if (isAdvisor || (user?.role === 'STUDENT' && user?.is_coordinator)) return String(c.id) === String(user?.class_id);
                               return c.department_id?.toString() === user?.department_id?.toString();
                             }).sort((a, b) => (a.year || 0) - (b.year || 0) || (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })).map(c => (
@@ -16802,7 +16889,7 @@ export default function App() {
                         }
 
                         // 3. Filter by Class
-                        if (!isAdmin && !isHOD) {
+                        if (!isAdmin && !isHOD && !isFaculty) {
                           const userClassId = user?.class_id?.toString();
                           const matchesTeamClass = sub.class_id?.toString() === userClassId;
                           const leaderUser = users.find(u => u.id === sub.leader_id || u.register_number === sub.leader_regno);
@@ -18155,7 +18242,7 @@ export default function App() {
 
               {/* Fallback for role-restricted routes accessed without required role */}
               {((view === 'departments' && !isAdmin) ||
-                (view === 'classes' && !isHOD) ||
+                (view === 'classes' && !isHOD && !isAdmin) ||
                 (view === 'my-class' && !isAdvisor) ||
                 (view === 'industry-approvals' && !isAdmin && !isHOD)) && (
                 <motion.div
@@ -19316,6 +19403,17 @@ export default function App() {
             )}
           </AnimatePresence>
         </main >
+        {/* Role-Based Mobile Bottom Navigation (Visible on Mobile / Tablet < 1024px) */}
+        <MobileBottomNav
+          currentView={view}
+          onSelectView={(v) => {
+            setView(v);
+            setIsMobileSidebarOpen(false);
+          }}
+          user={user}
+          pendingVerificationCount={pendingVerificationCount}
+          onLogout={handleLogout}
+        />
         {/* HOD Extend Deadline & Reopen Modal */}
         <AnimatePresence>
           {extendingTask && (
@@ -19366,23 +19464,15 @@ export default function App() {
 
           {/* Publish Notice Modal */}
           {showCreateNoticeModal && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white rounded-2xl shadow-2xl border border-zinc-200 max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto"
-              >
-                <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-                  <h3 className="text-lg font-black text-zinc-900 flex items-center gap-2">
-                    <Megaphone className="text-indigo-600" size={20} /> Publish New Notice
-                  </h3>
-                  <button onClick={() => setShowCreateNoticeModal(false)} className="text-zinc-400 hover:text-zinc-600">
-                    <X size={18} />
-                  </button>
-                </div>
-
-                <form onSubmit={handleCreateNotice} className="space-y-4">
+            <FloatingModal
+              isOpen={showCreateNoticeModal}
+              onClose={() => setShowCreateNoticeModal(false)}
+              title="Publish New Notice"
+              subtitle="Broadcast announcements, schedules, and alerts to students"
+              icon={<Megaphone className="text-indigo-600" size={20} />}
+              maxWidth="max-w-lg"
+            >
+              <form onSubmit={handleCreateNotice} className="space-y-4">
                   <div>
                     <label className="text-xs font-bold text-zinc-700 block mb-1">Notice Title <span className="text-red-500">*</span></label>
                     <Input
@@ -19524,8 +19614,7 @@ export default function App() {
                     </Button>
                   </div>
                 </form>
-              </motion.div>
-            </div>
+            </FloatingModal>
           )}
 
           {renderAssignTargetModal()}

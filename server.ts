@@ -2009,6 +2009,14 @@ async function startServer() {
         WHERE u.class_id = $1 AND u.role = 'STUDENT'
         ORDER BY u.register_number ASC, u.full_name ASC
       `, [req.user.class_id]);
+    } else if (req.user.role === 'FACULTY' || req.user.role === 'STAFF') {
+      usersRes = await pool.query(`
+        SELECT u.*, c.name as class_name, c.year as class_year
+        FROM users u
+        LEFT JOIN classes c ON u.class_id = c.id
+        WHERE u.department_id = $1 AND u.role = 'STUDENT'
+        ORDER BY c.year ASC NULLS LAST, c.name ASC NULLS LAST, u.register_number ASC NULLS LAST, u.full_name ASC
+      `, [req.user.department_id]);
     } else if (req.user.role === 'INDUSTRY') {
       usersRes = await pool.query(`
         SELECT u.*, d.name as department_name, c.name as class_name, c.year as class_year
@@ -2745,7 +2753,7 @@ async function startServer() {
     let isAuthorized = false;
     if (req.user.role === 'SUPREME_ADMIN') {
       isAuthorized = true;
-    } else if (req.user.role === 'HOD') {
+    } else if (req.user.role === 'HOD' || req.user.role === 'FACULTY' || req.user.role === 'STAFF') {
       if (task.department_id?.toString() === req.user.department_id?.toString()) {
         isAuthorized = true;
       } else if (taskClassIds.length > 0) {
@@ -2851,7 +2859,7 @@ async function startServer() {
     let isAuthorized = false;
     if (req.user.role === 'SUPREME_ADMIN') {
       isAuthorized = true;
-    } else if (req.user.role === 'HOD') {
+    } else if (req.user.role === 'HOD' || req.user.role === 'FACULTY' || req.user.role === 'STAFF') {
       if (task.department_id?.toString() === req.user.department_id?.toString()) {
         isAuthorized = true;
       } else if (taskClassIds.length > 0) {
@@ -4953,6 +4961,7 @@ async function startServer() {
     const isOwner = sub.user_id.toString() === req.user.id.toString();
     const isAdmin = req.user.role === 'SUPREME_ADMIN';
     const isHOD = req.user.role === 'HOD' && sub.department_id?.toString() === req.user.department_id?.toString();
+    const isFaculty = (req.user.role === 'FACULTY' || req.user.role === 'STAFF') && sub.department_id?.toString() === req.user.department_id?.toString();
     const isCoordinator = req.user.role === 'STUDENT' && req.user.is_coordinator && sub.class_id?.toString() === req.user.class_id?.toString();
 
     let isClassAdvisor = false;
@@ -4962,7 +4971,7 @@ async function startServer() {
       }
     }
 
-    if (!isOwner && !isAdmin && !isHOD && !isClassAdvisor && !isCoordinator) {
+    if (!isOwner && !isAdmin && !isHOD && !isFaculty && !isClassAdvisor && !isCoordinator) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -5263,7 +5272,7 @@ async function startServer() {
     // Authorization checks
     let isAuthorized = false;
     if (req.user.role === 'SUPREME_ADMIN') isAuthorized = true;
-    else if (req.user.role === 'HOD' && sub.department_id?.toString() === req.user.department_id?.toString()) isAuthorized = true;
+    else if ((req.user.role === 'HOD' || req.user.role === 'FACULTY' || req.user.role === 'STAFF') && sub.department_id?.toString() === req.user.department_id?.toString()) isAuthorized = true;
     else if (req.user.role === 'CLASS_ADVISOR') {
       if (sub.class_id?.toString() === req.user.class_id?.toString()) {
         isAuthorized = true;
