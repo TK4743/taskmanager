@@ -1313,6 +1313,24 @@ export async function triggerDeadlineUrgentEmailReminders(): Promise<{ dispatche
         AND u.email IS NOT NULL AND u.email != ''
         AND t.status = 'OPEN'
         AND (ts.id IS NULL OR ts.status = 'REJECTED')
+        AND NOT EXISTS (
+          SELECT 1 FROM teams tm_team
+          WHERE tm_team.task_id = t.id
+            AND (
+              tm_team.leader_id = u.id
+              OR EXISTS (
+                SELECT 1 FROM team_members tm
+                WHERE tm.team_id = tm_team.id AND tm.student_id = u.id AND tm.status = 'ACCEPTED'
+              )
+            )
+            AND (
+              tm_team.status IN ('SUBMITTED', 'APPROVED', 'VERIFIED')
+              OR EXISTS (
+                SELECT 1 FROM team_submissions ts2
+                WHERE ts2.team_id = tm_team.id AND ts2.status IN ('PENDING', 'APPROVED', 'VERIFIED')
+              )
+            )
+        )
         AND t.deadline IS NOT NULL
         AND t.deadline > CURRENT_TIMESTAMP
         AND t.deadline <= CURRENT_TIMESTAMP + INTERVAL '2 hours 15 minutes'
@@ -1751,25 +1769,30 @@ export async function triggerManualTaskPendingReminders(
       return { success: true, totalStudents: 0, sentCount: 0, failedCount: 0, errors: [] };
     }
 
-    // 2. Query incomplete students depending on submission_type (TEAM vs INDIVIDUAL)
-    let studentsRes;
-    if (task.submission_type === 'TEAM') {
-      studentsRes = await pool.query(`
-        SELECT DISTINCT 
-          u.id, 
-          u.full_name, 
-          u.register_number, 
-          u.email, 
-          c.name as class_name
-        FROM users u
-        JOIN classes c ON c.id = u.class_id
-        WHERE u.role = 'STUDENT'
-          AND u.class_id = ANY($1::uuid[])
-          AND u.email IS NOT NULL 
-          AND TRIM(u.email) != ''
-          AND NOT EXISTS (
+    // 2. Query incomplete students using Universal Submission Evaluation (Individual & Team)
+    const studentsRes = await pool.query(`
+      SELECT DISTINCT 
+        u.id, 
+        u.full_name, 
+        u.register_number, 
+        u.email, 
+        c.name as class_name
+      FROM users u
+      JOIN classes c ON c.id = u.class_id
+      WHERE u.role = 'STUDENT'
+        AND u.class_id = ANY($1::uuid[])
+        AND u.email IS NOT NULL 
+        AND TRIM(u.email) != ''
+        AND NOT (
+          EXISTS (
+            SELECT 1 FROM task_submissions ts
+            WHERE ts.task_id = $2
+              AND ts.user_id = u.id
+              AND ts.status IN ('SUBMITTED', 'PENDING', 'VERIFIED', 'NOT_PARTICIPATING')
+          )
+          OR
+          EXISTS (
             SELECT 1 FROM teams t
-            LEFT JOIN team_submissions ts ON ts.team_id = t.id
             WHERE t.task_id = $2
               AND (
                 t.leader_id = u.id 
@@ -1778,33 +1801,17 @@ export async function triggerManualTaskPendingReminders(
                   WHERE tm.team_id = t.id AND tm.student_id = u.id AND tm.status = 'ACCEPTED'
                 )
               )
-              AND (t.status = 'SUBMITTED' OR ts.status IN ('PENDING', 'VERIFIED'))
+              AND (
+                t.status IN ('SUBMITTED', 'APPROVED', 'VERIFIED')
+                OR EXISTS (
+                  SELECT 1 FROM team_submissions ts2
+                  WHERE ts2.team_id = t.id AND ts2.status IN ('PENDING', 'APPROVED', 'VERIFIED')
+                )
+              )
           )
-        ORDER BY c.name ASC, u.register_number ASC
-      `, [targetClassIds, taskId]);
-    } else {
-      studentsRes = await pool.query(`
-        SELECT DISTINCT 
-          u.id, 
-          u.full_name, 
-          u.register_number, 
-          u.email, 
-          c.name as class_name
-        FROM users u
-        JOIN classes c ON c.id = u.class_id
-        WHERE u.role = 'STUDENT'
-          AND u.class_id = ANY($1::uuid[])
-          AND u.email IS NOT NULL 
-          AND TRIM(u.email) != ''
-          AND NOT EXISTS (
-            SELECT 1 FROM task_submissions ts
-            WHERE ts.task_id = $2
-              AND ts.user_id = u.id
-              AND ts.status IN ('SUBMITTED', 'PENDING', 'VERIFIED', 'NOT_PARTICIPATING')
-          )
-        ORDER BY c.name ASC, u.register_number ASC
-      `, [targetClassIds, taskId]);
-    }
+        )
+      ORDER BY c.name ASC, u.register_number ASC
+    `, [targetClassIds, taskId]);
 
     const students = studentsRes.rows;
     if (students.length === 0) {

@@ -12557,53 +12557,54 @@ export default function App() {
     const senderRoleName = isAdmin ? 'Supreme Administrator' : isHOD ? 'Head of the Department (HOD)' : isAdvisor ? `${user?.full_name || 'Class Advisor'} (Class Advisor)` : 'Department Coordinator';
 
     return (
-      <AnimatePresence>
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-2xl shadow-2xl relative max-h-[92vh] flex flex-col border border-zinc-200"
-          >
-            <button
+      <FloatingModal
+        isOpen={Boolean(emailAlertTask)}
+        onClose={() => {
+          setEmailAlertTask(null);
+          setEmailAlertPendingData(null);
+          setEmailAlertSuccessStats(null);
+        }}
+        title="Send Pending Submission Alert"
+        subtitle={`Dispatches official academic reminder emails to incomplete students across ${assignedClassNames}.`}
+        icon={<Mail size={22} className="text-amber-600" />}
+        maxWidth="max-w-2xl"
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button
+              variant="ghost"
               onClick={() => {
                 setEmailAlertTask(null);
                 setEmailAlertPendingData(null);
                 setEmailAlertSuccessStats(null);
               }}
-              className="absolute top-6 right-6 p-2 hover:bg-zinc-100 rounded-full transition-colors"
+              disabled={emailAlertSending}
             >
-              <XCircle size={24} className="text-zinc-400" />
-            </button>
+              {emailAlertSuccessStats ? 'Done' : 'Cancel'}
+            </Button>
 
-            {/* Header */}
-            <div className="flex items-start gap-4 mb-5 pb-4 border-b border-zinc-100 pr-8">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
-                <Mail size={24} />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                    📧 Multi-Node Email Dispatcher
-                  </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center gap-1">
-                    <Sparkles size={10} /> Load Balanced
-                  </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200">
-                    From: {senderRoleName}
-                  </span>
-                </div>
-                <h3 className="text-lg md:text-xl font-black text-zinc-900 truncate">
-                  Send Pending Submission Alert
-                </h3>
-                <p className="text-xs text-zinc-500 font-medium">
-                  Dispatches official academic reminder emails to incomplete students across all assigned classes.
-                </p>
-              </div>
-            </div>
-
-            {/* Content Body */}
-            <div className="flex-1 overflow-y-auto space-y-5 pr-1 custom-scrollbar min-h-0">
+            {!emailAlertSuccessStats && (
+              <Button
+                onClick={handleDispatchTaskPendingEmails}
+                disabled={emailAlertSending || emailAlertLoading || !pendingStudents.length}
+                className="bg-gradient-to-r from-amber-600 via-orange-600 to-red-600 text-white hover:from-amber-700 hover:to-red-700 font-extrabold text-xs px-6 py-2.5 rounded-xl shadow-md flex items-center gap-2"
+              >
+                {emailAlertSending ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Dispatching via Nodes...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={15} />
+                    <span>Send Alert to {pendingStudents.length} Incomplete Students</span>
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        }
+      >
+        <div className="space-y-5">
 
               {/* Task Summary Banner */}
               <div className="bg-gradient-to-r from-zinc-900 to-indigo-950 rounded-2xl p-5 text-white shadow-sm border border-zinc-800">
@@ -12839,29 +12840,8 @@ export default function App() {
                 {emailAlertSuccessStats ? 'Done' : 'Cancel'}
               </Button>
 
-              {!emailAlertSuccessStats && (
-                <Button
-                  onClick={handleDispatchTaskPendingEmails}
-                  disabled={emailAlertSending || emailAlertLoading || !pendingStudents.length}
-                  className="bg-gradient-to-r from-amber-600 via-orange-600 to-red-600 text-white hover:from-amber-700 hover:to-red-700 font-extrabold text-xs px-6 py-2.5 rounded-xl shadow-md flex items-center gap-2"
-                >
-                  {emailAlertSending ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Dispatching via Nodes...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send size={15} />
-                      <span>Send Alert to {pendingStudents.length} Incomplete Students</span>
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-          </motion.div>
         </div>
-      </AnimatePresence>
+      </FloatingModal>
     );
   };
 

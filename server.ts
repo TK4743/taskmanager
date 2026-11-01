@@ -2392,38 +2392,56 @@ async function startServer() {
 
     let countsMap: Record<string, number> = {};
     if (taskIds.length > 0 && dbUser.role !== 'STUDENT') {
-      let countsRes;
-      if (dbUser.role === 'CLASS_ADVISOR') {
-        countsRes = await pool.query(`
-          SELECT ts.task_id, count(*) as count
+      const countCte = `
+        WITH all_active_submissions AS (
+          SELECT ts.task_id, ts.user_id, u.class_id, u.department_id
           FROM task_submissions ts
           JOIN users u ON ts.user_id = u.id
           WHERE ts.task_id = ANY($1) 
             AND ts.status IN ('SUBMITTED', 'VERIFIED')
-            AND u.class_id = $2
-          GROUP BY ts.task_id
+          UNION
+          SELECT t.task_id, tm.student_id as user_id, u.class_id, u.department_id
+          FROM teams t
+          JOIN team_members tm ON tm.team_id = t.id AND tm.status = 'ACCEPTED'
+          JOIN users u ON tm.student_id = u.id
+          WHERE t.task_id = ANY($1)
+            AND (
+              t.status IN ('SUBMITTED', 'APPROVED', 'VERIFIED')
+              OR EXISTS (
+                SELECT 1 FROM team_submissions ts2
+                WHERE ts2.team_id = t.id AND ts2.status IN ('PENDING', 'APPROVED', 'VERIFIED')
+              )
+            )
+        )
+      `;
+      let countsRes;
+      if (dbUser.role === 'CLASS_ADVISOR') {
+        countsRes = await pool.query(`
+          ${countCte}
+          SELECT task_id, count(DISTINCT user_id) as count
+          FROM all_active_submissions
+          WHERE class_id = $2
+          GROUP BY task_id
         `, [taskIds, dbUser.class_id]);
         countsRes.rows.forEach((c: any) => {
           countsMap[c.task_id] = parseInt(c.count);
         });
-      } else if (dbUser.role === 'HOD') {
+      } else if (dbUser.role === 'HOD' || dbUser.role === 'FACULTY' || dbUser.role === 'STAFF') {
         countsRes = await pool.query(`
-          SELECT ts.task_id, count(*) as count
-          FROM task_submissions ts
-          JOIN users u ON ts.user_id = u.id
-          WHERE ts.task_id = ANY($1) 
-            AND ts.status IN ('SUBMITTED', 'VERIFIED')
-            AND u.department_id = $2
-          GROUP BY ts.task_id
+          ${countCte}
+          SELECT task_id, count(DISTINCT user_id) as count
+          FROM all_active_submissions
+          WHERE department_id = $2
+          GROUP BY task_id
         `, [taskIds, dbUser.department_id]);
         countsRes.rows.forEach((c: any) => {
           countsMap[c.task_id] = parseInt(c.count);
         });
       } else {
         countsRes = await pool.query(`
-          SELECT task_id, count(*) as count
-          FROM task_submissions ts
-          WHERE task_id = ANY($1) AND status IN ('SUBMITTED', 'VERIFIED')
+          ${countCte}
+          SELECT task_id, count(DISTINCT user_id) as count
+          FROM all_active_submissions
           GROUP BY task_id
         `, [taskIds]);
         countsRes.rows.forEach((c: any) => {
@@ -2432,13 +2450,30 @@ async function startServer() {
       }
     } else if (taskIds.length > 0 && dbUser.role === 'STUDENT' && dbUser.is_coordinator) {
       const countsRes = await pool.query(`
-        SELECT ts.task_id, count(*) as count
-        FROM task_submissions ts
-        JOIN users u ON ts.user_id = u.id
-        WHERE ts.task_id = ANY($1) 
-          AND ts.status IN ('SUBMITTED', 'VERIFIED')
-          AND u.class_id = $2
-        GROUP BY ts.task_id
+        WITH all_active_submissions AS (
+          SELECT ts.task_id, ts.user_id, u.class_id, u.department_id
+          FROM task_submissions ts
+          JOIN users u ON ts.user_id = u.id
+          WHERE ts.task_id = ANY($1) 
+            AND ts.status IN ('SUBMITTED', 'VERIFIED')
+          UNION
+          SELECT t.task_id, tm.student_id as user_id, u.class_id, u.department_id
+          FROM teams t
+          JOIN team_members tm ON tm.team_id = t.id AND tm.status = 'ACCEPTED'
+          JOIN users u ON tm.student_id = u.id
+          WHERE t.task_id = ANY($1)
+            AND (
+              t.status IN ('SUBMITTED', 'APPROVED', 'VERIFIED')
+              OR EXISTS (
+                SELECT 1 FROM team_submissions ts2
+                WHERE ts2.team_id = t.id AND ts2.status IN ('PENDING', 'APPROVED', 'VERIFIED')
+              )
+            )
+        )
+        SELECT task_id, count(DISTINCT user_id) as count
+        FROM all_active_submissions
+        WHERE class_id = $2
+        GROUP BY task_id
       `, [taskIds, dbUser.class_id]);
       countsRes.rows.forEach((c: any) => {
         countsMap[c.task_id] = parseInt(c.count);
@@ -2980,24 +3015,29 @@ async function startServer() {
         });
       }
 
-      // Query incomplete students depending on submission type
-      let studentsRes;
-      if (task.submission_type === 'TEAM') {
-        studentsRes = await pool.query(`
-          SELECT DISTINCT 
-            u.id, 
-            u.full_name, 
-            u.register_number, 
-            u.email, 
-            c.id as class_id,
-            c.name as class_name
-          FROM users u
-          JOIN classes c ON c.id = u.class_id
-          WHERE u.role = 'STUDENT'
-            AND u.class_id = ANY($1::uuid[])
-            AND NOT EXISTS (
+      // Query incomplete students using Universal Submission Evaluation
+      const studentsRes = await pool.query(`
+        SELECT DISTINCT 
+          u.id, 
+          u.full_name, 
+          u.register_number, 
+          u.email, 
+          c.id as class_id,
+          c.name as class_name
+        FROM users u
+        JOIN classes c ON c.id = u.class_id
+        WHERE u.role = 'STUDENT'
+          AND u.class_id = ANY($1::uuid[])
+          AND NOT (
+            EXISTS (
+              SELECT 1 FROM task_submissions ts
+              WHERE ts.task_id = $2
+                AND ts.user_id = u.id
+                AND ts.status IN ('SUBMITTED', 'PENDING', 'VERIFIED', 'NOT_PARTICIPATING')
+            )
+            OR
+            EXISTS (
               SELECT 1 FROM teams t
-              LEFT JOIN team_submissions ts ON ts.team_id = t.id
               WHERE t.task_id = $2
                 AND (
                   t.leader_id = u.id 
@@ -3006,32 +3046,17 @@ async function startServer() {
                     WHERE tm.team_id = t.id AND tm.student_id = u.id AND tm.status = 'ACCEPTED'
                   )
                 )
-                AND (t.status = 'SUBMITTED' OR ts.status IN ('PENDING', 'VERIFIED'))
+                AND (
+                  t.status IN ('SUBMITTED', 'APPROVED', 'VERIFIED')
+                  OR EXISTS (
+                    SELECT 1 FROM team_submissions ts2
+                    WHERE ts2.team_id = t.id AND ts2.status IN ('PENDING', 'APPROVED', 'VERIFIED')
+                  )
+                )
             )
-          ORDER BY c.name ASC, u.register_number ASC
-        `, [targetClassIds, taskId]);
-      } else {
-        studentsRes = await pool.query(`
-          SELECT DISTINCT 
-            u.id, 
-            u.full_name, 
-            u.register_number, 
-            u.email, 
-            c.id as class_id,
-            c.name as class_name
-          FROM users u
-          JOIN classes c ON c.id = u.class_id
-          WHERE u.role = 'STUDENT'
-            AND u.class_id = ANY($1::uuid[])
-            AND NOT EXISTS (
-              SELECT 1 FROM task_submissions ts
-              WHERE ts.task_id = $2
-                AND ts.user_id = u.id
-                AND ts.status IN ('SUBMITTED', 'PENDING', 'VERIFIED', 'NOT_PARTICIPATING')
-            )
-          ORDER BY c.name ASC, u.register_number ASC
-        `, [targetClassIds, taskId]);
-      }
+          )
+        ORDER BY c.name ASC, u.register_number ASC
+      `, [targetClassIds, taskId]);
 
       res.json({
         task: {
@@ -3738,6 +3763,20 @@ async function startServer() {
 
       const acceptedMembersRes = await client.query('SELECT student_id FROM team_members WHERE team_id = $1 AND status = \'ACCEPTED\'', [teamId]);
       for (const m of acceptedMembersRes.rows) {
+        const existingSub = await client.query('SELECT id FROM task_submissions WHERE task_id = $1 AND user_id = $2 LIMIT 1', [team.task_id, m.student_id]);
+        if (existingSub.rows.length > 0) {
+          await client.query(`
+            UPDATE task_submissions
+            SET status = 'SUBMITTED', screenshot_url = $1, cloudinary_public_id = $2, submitted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $3
+          `, [req.file.path, req.file.filename, existingSub.rows[0].id]);
+        } else {
+          await client.query(`
+            INSERT INTO task_submissions (task_id, user_id, status, screenshot_url, cloudinary_public_id, submitted_at)
+            VALUES ($1, $2, 'SUBMITTED', $3, $4, CURRENT_TIMESTAMP)
+          `, [team.task_id, m.student_id, req.file.path, req.file.filename]);
+        }
+
         await client.query(`
           INSERT INTO notifications (user_id, message, type)
           VALUES ($1, $2, 'TEAM_SUBMITTED')
@@ -3912,6 +3951,12 @@ async function startServer() {
         const acceptedMembersRes = await client.query('SELECT student_id FROM team_members WHERE team_id = $1 AND status = \'ACCEPTED\'', [team.id]);
         for (const m of acceptedMembersRes.rows) {
           await client.query(`
+            UPDATE task_submissions
+            SET status = 'REJECTED', rejection_reason = $1, updated_at = CURRENT_TIMESTAMP
+            WHERE task_id = $2 AND user_id = $3
+          `, [feedback || 'Team submission rejected', task.id, m.student_id]);
+
+          await client.query(`
             INSERT INTO notifications (user_id, message, type, title, status, is_read, sent_at, created_at)
             VALUES ($1, $2, 'TEAM_REVIEW', 'Team Submission Rejected', 'SENT', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           `, [m.student_id, `Your team submission for task "${task.title}" was REJECTED: ${feedback || 'Please resubmit'}`]);
@@ -4022,7 +4067,26 @@ async function startServer() {
 
     const [allSubsRes, allTcRes] = await Promise.all([
       taskIds.length > 0
-        ? pool.query('SELECT task_id, user_id, status FROM task_submissions WHERE task_id = ANY($1)', [taskIds])
+        ? pool.query(`
+            SELECT task_id, user_id, status FROM task_submissions WHERE task_id = ANY($1)
+            UNION
+            SELECT t.task_id, tm.student_id as user_id, 
+                   CASE 
+                     WHEN t.status IN ('APPROVED', 'VERIFIED') OR EXISTS (SELECT 1 FROM team_submissions ts WHERE ts.team_id = t.id AND ts.status IN ('APPROVED', 'VERIFIED')) THEN 'VERIFIED'
+                     WHEN t.status = 'REJECTED' OR EXISTS (SELECT 1 FROM team_submissions ts WHERE ts.team_id = t.id AND ts.status = 'REJECTED') THEN 'REJECTED'
+                     ELSE 'SUBMITTED'
+                   END as status
+            FROM teams t
+            JOIN team_members tm ON tm.team_id = t.id AND tm.status = 'ACCEPTED'
+            WHERE t.task_id = ANY($1)
+              AND (
+                t.status IN ('SUBMITTED', 'APPROVED', 'VERIFIED', 'REJECTED')
+                OR EXISTS (
+                  SELECT 1 FROM team_submissions ts2
+                  WHERE ts2.team_id = t.id AND ts2.status IN ('PENDING', 'APPROVED', 'VERIFIED', 'REJECTED')
+                )
+              )
+          `, [taskIds])
         : Promise.resolve({ rows: [] }),
       taskIds.length > 0
         ? pool.query('SELECT task_id, class_id FROM task_classes WHERE task_id = ANY($1)', [taskIds])
@@ -4173,7 +4237,26 @@ async function startServer() {
 
     const [allSubsRes, countsRes] = await Promise.all([
       (taskIds.length > 0 && studentIds.length > 0)
-        ? pool.query('SELECT task_id, user_id, status FROM task_submissions WHERE task_id = ANY($1) AND user_id = ANY($2)', [taskIds, studentIds])
+        ? pool.query(`
+            SELECT task_id, user_id, status FROM task_submissions WHERE task_id = ANY($1) AND user_id = ANY($2)
+            UNION
+            SELECT t.task_id, tm.student_id as user_id, 
+                   CASE 
+                     WHEN t.status IN ('APPROVED', 'VERIFIED') OR EXISTS (SELECT 1 FROM team_submissions ts WHERE ts.team_id = t.id AND ts.status IN ('APPROVED', 'VERIFIED')) THEN 'VERIFIED'
+                     WHEN t.status = 'REJECTED' OR EXISTS (SELECT 1 FROM team_submissions ts WHERE ts.team_id = t.id AND ts.status = 'REJECTED') THEN 'REJECTED'
+                     ELSE 'SUBMITTED'
+                   END as status
+            FROM teams t
+            JOIN team_members tm ON tm.team_id = t.id AND tm.status = 'ACCEPTED'
+            WHERE t.task_id = ANY($1) AND tm.student_id = ANY($2)
+              AND (
+                t.status IN ('SUBMITTED', 'APPROVED', 'VERIFIED', 'REJECTED')
+                OR EXISTS (
+                  SELECT 1 FROM team_submissions ts2
+                  WHERE ts2.team_id = t.id AND ts2.status IN ('PENDING', 'APPROVED', 'VERIFIED', 'REJECTED')
+                )
+              )
+          `, [taskIds, studentIds])
         : Promise.resolve({ rows: [] }),
       pool.query(`
         SELECT 
@@ -5454,7 +5537,26 @@ async function startServer() {
 
     const [allAdvisorSubsRes, countsRes] = await Promise.all([
       (taskIds.length > 0 && studentIds.length > 0)
-        ? pool.query('SELECT task_id, user_id, status FROM task_submissions WHERE task_id = ANY($1) AND user_id = ANY($2)', [taskIds, studentIds])
+        ? pool.query(`
+            SELECT task_id, user_id, status FROM task_submissions WHERE task_id = ANY($1) AND user_id = ANY($2)
+            UNION
+            SELECT t.task_id, tm.student_id as user_id, 
+                   CASE 
+                     WHEN t.status IN ('APPROVED', 'VERIFIED') OR EXISTS (SELECT 1 FROM team_submissions ts WHERE ts.team_id = t.id AND ts.status IN ('APPROVED', 'VERIFIED')) THEN 'VERIFIED'
+                     WHEN t.status = 'REJECTED' OR EXISTS (SELECT 1 FROM team_submissions ts WHERE ts.team_id = t.id AND ts.status = 'REJECTED') THEN 'REJECTED'
+                     ELSE 'SUBMITTED'
+                   END as status
+            FROM teams t
+            JOIN team_members tm ON tm.team_id = t.id AND tm.status = 'ACCEPTED'
+            WHERE t.task_id = ANY($1) AND tm.student_id = ANY($2)
+              AND (
+                t.status IN ('SUBMITTED', 'APPROVED', 'VERIFIED', 'REJECTED')
+                OR EXISTS (
+                  SELECT 1 FROM team_submissions ts2
+                  WHERE ts2.team_id = t.id AND ts2.status IN ('PENDING', 'APPROVED', 'VERIFIED', 'REJECTED')
+                )
+              )
+          `, [taskIds, studentIds])
         : Promise.resolve({ rows: [] }),
       pool.query(`
         SELECT 
@@ -5552,7 +5654,27 @@ async function startServer() {
            OR (t.department_id = $2 AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
            OR (t.department_id IS NULL AND NOT EXISTS (SELECT 1 FROM task_classes WHERE task_id = t.id))
       `, [classId, deptId]),
-      pool.query('SELECT status FROM task_submissions WHERE user_id = $1', [userId])
+      pool.query(`
+        SELECT status FROM task_submissions WHERE user_id = $1
+        UNION ALL
+        SELECT 
+          CASE 
+            WHEN t.status IN ('APPROVED', 'VERIFIED') OR EXISTS (SELECT 1 FROM team_submissions ts WHERE ts.team_id = t.id AND ts.status IN ('APPROVED', 'VERIFIED')) THEN 'VERIFIED'
+            WHEN t.status = 'REJECTED' OR EXISTS (SELECT 1 FROM team_submissions ts WHERE ts.team_id = t.id AND ts.status = 'REJECTED') THEN 'REJECTED'
+            ELSE 'SUBMITTED'
+          END as status
+        FROM teams t
+        JOIN team_members tm ON tm.team_id = t.id AND tm.status = 'ACCEPTED'
+        WHERE tm.student_id = $1
+          AND NOT EXISTS (SELECT 1 FROM task_submissions WHERE task_id = t.task_id AND user_id = $1)
+          AND (
+            t.status IN ('SUBMITTED', 'APPROVED', 'VERIFIED', 'REJECTED')
+            OR EXISTS (
+              SELECT 1 FROM team_submissions ts2
+              WHERE ts2.team_id = t.id AND ts2.status IN ('PENDING', 'APPROVED', 'VERIFIED', 'REJECTED')
+            )
+          )
+      `, [userId])
     ]);
     const totalTasks = parseInt(tasksRes.rows[0]?.count || '0');
     const subs = subsRes.rows;
