@@ -623,7 +623,11 @@ const Button = ({ className, variant = 'primary', ...props }: React.ButtonHTMLAt
 
 const Input = ({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
-    className={cn('w-full h-11 px-4 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all text-sm bg-white text-zinc-900 placeholder:text-zinc-400 truncate', className)}
+    autoComplete="off"
+    autoCorrect="off"
+    spellCheck={false}
+    translate="no"
+    className={cn('w-full h-11 px-4 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all text-sm bg-white text-zinc-900 placeholder:text-zinc-400 truncate notranslate', className)}
     {...props}
   />
 );
@@ -792,7 +796,11 @@ function StatusDropdown({ value, onChange }: { value: string; onChange: (val: st
 
 const Textarea = ({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
-    className={cn('w-full px-4 py-2.5 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all text-sm min-h-[100px] resize-y bg-white', className)}
+    autoComplete="off"
+    autoCorrect="off"
+    spellCheck={false}
+    translate="no"
+    className={cn('w-full px-4 py-2.5 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all text-sm min-h-[100px] resize-y bg-white notranslate', className)}
     {...props}
   />
 );
@@ -13717,7 +13725,7 @@ export default function App() {
                               {renderCategoryIcon(newTask.category, 12)}
                               <span>{newTask.category || 'General'}</span>
                             </span>
-                            <h4 className="font-bold text-zinc-900 text-lg md:text-xl break-words">{newTask.title || "Untitled Task"}</h4>
+                            <h4 translate="no" className="font-bold text-zinc-900 text-lg md:text-xl break-words notranslate">{newTask.title || "Untitled Task"}</h4>
                           </div>
                           <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                             <span className="font-medium text-zinc-700">{user?.name || "Task Creator"}</span>
@@ -14476,7 +14484,7 @@ export default function App() {
                           return (
                             <div key={task.id} className="flex items-center justify-between p-4 bg-zinc-50 rounded-xl gap-3">
                               <div className="min-w-0 flex-1">
-                                <p className="font-medium text-zinc-900 truncate">{task.title}</p>
+                                <p translate="no" className="font-medium text-zinc-900 truncate notranslate">{task.title}</p>
                                 <p className="text-xs text-zinc-500 flex flex-wrap items-center gap-1.5 mt-0.5">
                                   <span>
                                     {Array.isArray(task.class_ids) && task.class_ids.length > 0
@@ -16091,7 +16099,7 @@ export default function App() {
                                       <Users size={12} /> Team (Min {task.min_team_size || 2} - Max {task.max_team_size || 5})
                                     </span>
                                   )}
-                                  <h4 className="font-bold text-zinc-900 text-lg md:text-xl break-words">{task.title}</h4>
+                                  <h4 translate="no" className="font-bold text-zinc-900 text-lg md:text-xl break-words notranslate">{task.title}</h4>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                                   <span className="font-medium text-zinc-700">{task.creator_name}</span>
@@ -18819,7 +18827,7 @@ export default function App() {
 
                   <div className="space-y-1">
                     <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Task Title</p>
-                    <p className="text-base font-bold text-zinc-900">{sharedTaskModal.title}</p>
+                    <p translate="no" className="text-base font-bold text-zinc-900 notranslate">{sharedTaskModal.title}</p>
                   </div>
 
                   <div className="space-y-2 bg-zinc-50 p-4 rounded-xl border border-zinc-200">
