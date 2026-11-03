@@ -5823,9 +5823,10 @@ export default function App() {
   const isAdmin = user?.role === 'SUPREME_ADMIN';
   const isHOD = user?.role === 'HOD';
   const isAdvisor = user?.role === 'CLASS_ADVISOR';
-  const isStudent = user?.role === 'STUDENT' && !user?.is_coordinator;
+  const isStudent = user?.role === 'STUDENT';
   const isIndustry = user?.role === 'INDUSTRY';
   const isCoordinator = Boolean(user?.role === 'STUDENT' && user?.is_coordinator);
+  const isRegularStudent = Boolean(user?.role === 'STUDENT' && !user?.is_coordinator);
   const isFaculty = user?.role === 'FACULTY' || user?.role === 'STAFF';
 
 
@@ -6330,7 +6331,11 @@ export default function App() {
               fetchIndustryData(activeToken);
             } else if (curUser.role === 'CLASS_ADVISOR' || (curUser.role === 'STUDENT' && curUser.is_coordinator)) {
               if (curUser.role === 'CLASS_ADVISOR') fetchAdvisorStats(activeToken);
-              if (curUser.role === 'STUDENT' && curUser.is_coordinator) fetchCoordinatorStats(activeToken);
+              if (curUser.role === 'STUDENT' && curUser.is_coordinator) {
+                fetchCoordinatorStats(activeToken);
+                fetchStudentStats(activeToken);
+                fetchMyTeamsAndInvitations();
+              }
               fetchMyClass(activeToken);
             } else if (curUser.role === 'STUDENT') {
               fetchStudentStats(activeToken);
@@ -6437,10 +6442,14 @@ export default function App() {
             }
             if (freshUser.role === 'CLASS_ADVISOR' || (freshUser.role === 'STUDENT' && freshUser.is_coordinator)) {
               if (freshUser.role === 'CLASS_ADVISOR') fetchAdvisorStats(activeToken);
-              if (freshUser.role === 'STUDENT' && freshUser.is_coordinator) fetchCoordinatorStats(activeToken);
+              if (freshUser.role === 'STUDENT' && freshUser.is_coordinator) {
+                fetchCoordinatorStats(activeToken);
+                fetchStudentStats(activeToken);
+                fetchMyTeamsAndInvitations();
+              }
               fetchMyClass(activeToken);
             }
-            if (freshUser.role === 'STUDENT') {
+            if (freshUser.role === 'STUDENT' && !freshUser.is_coordinator) {
               fetchStudentStats(activeToken);
               fetchMyTeamsAndInvitations();
             }
@@ -6457,10 +6466,14 @@ export default function App() {
             }
             if (savedUser.role === 'CLASS_ADVISOR' || (savedUser.role === 'STUDENT' && savedUser.is_coordinator)) {
               if (savedUser.role === 'CLASS_ADVISOR') fetchAdvisorStats(activeToken);
-              if (savedUser.role === 'STUDENT' && savedUser.is_coordinator) fetchCoordinatorStats(activeToken);
+              if (savedUser.role === 'STUDENT' && savedUser.is_coordinator) {
+                fetchCoordinatorStats(activeToken);
+                fetchStudentStats(activeToken);
+                fetchMyTeamsAndInvitations();
+              }
               fetchMyClass(activeToken);
             }
-            if (savedUser.role === 'STUDENT') {
+            if (savedUser.role === 'STUDENT' && !savedUser.is_coordinator) {
               fetchStudentStats(activeToken);
               fetchMyTeamsAndInvitations();
             }
@@ -16719,7 +16732,7 @@ export default function App() {
                         </Button>
                         {(() => {
                           const currentFiltered = getFilteredVerificationSubmissions();
-                          const allPending = currentFiltered.filter(s => s.status === 'SUBMITTED');
+                          const allPending = currentFiltered.filter(s => s.status === 'SUBMITTED' && !(isCoordinator && String(s.user_id) === String(user?.id)));
                           const allPendingIds = allPending.map(s => s.id);
                           const isAllPendingSelected = allPendingIds.length > 0 && allPendingIds.every(id => selectedSubmissions.includes(id));
 
@@ -17602,24 +17615,30 @@ export default function App() {
                                       </Button>
 
                                       {s.status === 'SUBMITTED' && (
-                                        <>
-                                          <Button
-                                            variant="success"
-                                            className="px-2.5 py-1.5 flex items-center gap-1 text-xs font-bold"
-                                            onClick={() => verifySubmission(s.id, 'VERIFIED')}
-                                            title="Approve & Verify"
-                                          >
-                                            <CheckCircle2 size={13} /> Verify
-                                          </Button>
-                                          <Button
-                                            variant="danger"
-                                            className="px-2.5 py-1.5 flex items-center gap-1 text-xs font-bold"
-                                            onClick={() => setShowRejectionModal(s.id)}
-                                            title="Reject submission with feedback"
-                                          >
-                                            <XCircle size={13} /> Reject
-                                          </Button>
-                                        </>
+                                        isCoordinator && String(s.user_id) === String(user?.id) ? (
+                                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-2xs" title="Your own submission must be verified by Class Advisor or HOD">
+                                            <Clock size={12} className="text-amber-600" /> Own Submission (Advisor Review)
+                                          </span>
+                                        ) : (
+                                          <>
+                                            <Button
+                                              variant="success"
+                                              className="px-2.5 py-1.5 flex items-center gap-1 text-xs font-bold"
+                                              onClick={() => verifySubmission(s.id, 'VERIFIED')}
+                                              title="Approve & Verify"
+                                            >
+                                              <CheckCircle2 size={13} /> Verify
+                                            </Button>
+                                            <Button
+                                              variant="danger"
+                                              className="px-2.5 py-1.5 flex items-center gap-1 text-xs font-bold"
+                                              onClick={() => setShowRejectionModal(s.id)}
+                                              title="Reject submission with feedback"
+                                            >
+                                              <XCircle size={13} /> Reject
+                                            </Button>
+                                          </>
+                                        )
                                       )}
                                       {s.status === 'REJECTED' && (
                                         <span className="text-xs text-red-500 font-semibold px-2 py-1 bg-red-50 rounded-lg border border-red-200">

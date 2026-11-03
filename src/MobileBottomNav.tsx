@@ -205,6 +205,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     if (isCoordinator) {
       return [
         { id: 'notices', label: 'Notice Board', description: 'Department announcements and alerts', view: 'notice-board', icon: <Bell className="text-amber-500" size={20} /> },
+        { id: 'opportunities', label: 'Student Opportunities', description: 'External hackathons, hiring events, internships', view: 'opportunities', icon: <Briefcase className="text-emerald-500" size={20} /> },
+        { id: 'coding-tests', label: 'Coding Assessments', description: 'Live coding challenges and Monaco sandbox tests', view: 'student-coding-assessments', icon: <Code2 className="text-indigo-500" size={20} /> },
         { id: 'coding-progress', label: 'Coding Progress', description: 'Track classmate LeetCode and GitHub activity', view: 'leetcode-targets', icon: <Code2 className="text-indigo-500" size={20} /> },
         { id: 'skill-gap', label: 'Progress Analyzer', description: 'Class-wide task completion metrics', view: 'skill-gap-analyzer', icon: <Zap className="text-amber-500" size={20} /> },
         { id: 'teaching-hub', label: 'Live Teaching Hub', description: 'Interactive classroom sessions', view: 'live-teaching-hub', icon: <Radio className="text-rose-500" size={20} /> },

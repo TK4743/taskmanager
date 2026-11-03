@@ -4825,7 +4825,7 @@ async function startServer() {
     // Role-based scope verification for batch-verify
     if (req.user.role === 'STUDENT' || req.user.role === 'CLASS_ADVISOR' || req.user.role === 'HOD') {
       const scopeCheckRes = await pool.query(`
-        SELECT ts.id, u.class_id, u.department_id, c.year
+        SELECT ts.id, ts.user_id, u.class_id, u.department_id, c.year
         FROM task_submissions ts
         JOIN users u ON ts.user_id = u.id
         LEFT JOIN classes c ON u.class_id = c.id
@@ -4836,6 +4836,9 @@ async function startServer() {
         if (req.user.role === 'STUDENT' && req.user.is_coordinator) {
           if (row.class_id?.toString() !== req.user.class_id?.toString()) {
             return res.status(403).json({ error: 'Forbidden: One or more submissions do not belong to your class.' });
+          }
+          if (row.user_id?.toString() === req.user.id?.toString()) {
+            return res.status(403).json({ error: 'Forbidden: Coordinators cannot verify their own submission. It must be verified by your Class Advisor or HOD.' });
           }
         } else if (req.user.role === 'CLASS_ADVISOR') {
           if (row.class_id?.toString() !== req.user.class_id?.toString()) {
@@ -4929,6 +4932,10 @@ async function startServer() {
         if (sub.class_id?.toString() !== req.user.class_id?.toString()) {
           await client.query('ROLLBACK');
           return res.status(403).json({ error: 'Forbidden: You can only verify submissions from your own class.' });
+        }
+        if (sub.user_id?.toString() === req.user.id?.toString()) {
+          await client.query('ROLLBACK');
+          return res.status(403).json({ error: 'Forbidden: Coordinators cannot verify their own submission. It must be verified by your Class Advisor or HOD.' });
         }
       } else if (req.user.role === 'CLASS_ADVISOR') {
         if (sub.class_id?.toString() !== req.user.class_id?.toString()) {
