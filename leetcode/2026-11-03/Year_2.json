@@ -1097,13 +1097,13 @@
     "fullName": "KOWSHIK M",
     "className": "II IT B",
     "leetcodeUrl": "https://leetcode.com/u/_kowshik/",
-    "solvedToday": 0,
+    "solvedToday": 1,
     "dailyTarget": 1,
-    "dailyStatus": "TARGET_MISSED",
-    "solvedThisWeek": 0,
+    "dailyStatus": "TARGET_MET",
+    "solvedThisWeek": 1,
     "weeklyTarget": 7,
     "weeklyStatus": "TARGET_MISSED",
-    "totalSolved": 164
+    "totalSolved": 165
   },
   {
     "studentId": "166320cd-3ba0-49e4-a21e-8cd724df48d2",
