@@ -1181,13 +1181,13 @@
     "fullName": "LOGESHWARAN S S",
     "className": "II IT B",
     "leetcodeUrl": "https://leetcode.com/u/Logesh_0781/",
-    "solvedToday": 0,
+    "solvedToday": 1,
     "dailyTarget": 1,
-    "dailyStatus": "TARGET_MISSED",
-    "solvedThisWeek": 2,
+    "dailyStatus": "TARGET_MET",
+    "solvedThisWeek": 3,
     "weeklyTarget": 7,
     "weeklyStatus": "TARGET_MISSED",
-    "totalSolved": 163
+    "totalSolved": 164
   },
   {
     "studentId": "39cf2cb8-8581-49b2-b475-33b9dfe28360",
@@ -1265,13 +1265,13 @@
     "fullName": "MAHASAKTHI MANIKANDAN",
     "className": "II IT B",
     "leetcodeUrl": "https://leetcode.com/u/Mahasakthi_Manikandan/",
-    "solvedToday": 0,
+    "solvedToday": 1,
     "dailyTarget": 1,
-    "dailyStatus": "TARGET_MISSED",
-    "solvedThisWeek": 2,
+    "dailyStatus": "TARGET_MET",
+    "solvedThisWeek": 3,
     "weeklyTarget": 7,
     "weeklyStatus": "TARGET_MISSED",
-    "totalSolved": 118
+    "totalSolved": 119
   },
   {
     "studentId": "7a29f772-b747-4bd3-a80d-70fca5f2ecde",
@@ -1587,10 +1587,10 @@
     "fullName": "NITHANISWATHI S",
     "className": "II IT B",
     "leetcodeUrl": "https://leetcode.com/u/Nithani_Swathi/",
-    "solvedToday": 0,
+    "solvedToday": 1,
     "dailyTarget": 1,
-    "dailyStatus": "TARGET_MISSED",
-    "solvedThisWeek": 1,
+    "dailyStatus": "TARGET_MET",
+    "solvedThisWeek": 2,
     "weeklyTarget": 7,
     "weeklyStatus": "TARGET_MISSED",
     "totalSolved": 155
