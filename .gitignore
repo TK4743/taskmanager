@@ -18,6 +18,7 @@ sih-prep/
 tasks/
 scratch_*
 *.pdf
+!docs/report/*.pdf
 .idea/
 .vscode/
 *.iml
