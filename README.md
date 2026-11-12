@@ -91,32 +91,6 @@ flowchart TD
 
 ---
 
-## Project Architecture & Quickstart
-### Prerequisites
-- Node.js >= 18.17.0
-- npm or pnpm
-- Supabase Project URL & Anon Key
-
-### Installation
-```bash
-# Clone the repository
-git clone https://github.com/Tharun4743/Taskmanager.git
-cd Taskmanager
-
-# Install production dependencies
-npm install
-
-# Configure environment variables
-cp .env.example .env.local
-# Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-# Apply database schema
-# Execute supabase/schema.sql in your Supabase SQL Editor
-
-# Launch development server
-npm run dev
-```
-
 ---
 
 ## Author & Engineering Credentials
