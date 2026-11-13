@@ -328,13 +328,13 @@ export async function generateMergedProofsPdf(
     doc.text(' • Built by ', margin + portalWidth, footerY);
     const separatorWidth = doc.getTextWidth(' • Built by ');
 
-    // TechSquad Team Portfolio link (Clickable)
+    // Tharunkumar K Portfolio link (Clickable)
     doc.setTextColor(37, 99, 235);
-    doc.textWithLink('TechSquad Portfolio', margin + portalWidth + separatorWidth, footerY, { url: 'https://techsquadsih.netlify.app/' });
-    const techSquadWidth = doc.getTextWidth('TechSquad Portfolio');
+    doc.textWithLink('Tharunkumar K', margin + portalWidth + separatorWidth, footerY, { url: 'https://tharunkumark4743.netlify.app/' });
+    const authorWidth = doc.getTextWidth('Tharunkumar K');
 
     doc.setTextColor(148, 163, 184);
-    doc.text(' • Official Academic Record', margin + portalWidth + separatorWidth + techSquadWidth, footerY);
+    doc.text(' • Official Academic Record', margin + portalWidth + separatorWidth + authorWidth, footerY);
 
     // Right side: Generation date
     doc.setTextColor(148, 163, 184);

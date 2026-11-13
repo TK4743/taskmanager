@@ -629,7 +629,7 @@ export async function sendNewTaskPostedEmail(payload: NewTaskEmailPayload): Prom
     <tr>
       <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 24px; text-align: center; font-size: 11px; color: #64748b; line-height: 1.6;">
         <p style="margin: 0 0 6px 0; font-size: 12px; color: #334155; font-weight: 600; letter-spacing: 0.02em;">
-          Developed and Maintained by <a href="https://techsquadsih.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Techsquad</a>
+          Developed and Maintained by <a href="https://tharunkumark4743.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Tharunkumar K</a>
         </p>
         <p style="margin: 6px 0 0 0; font-size: 10px; color: #94a3b8;">
           🔒 <i>CONFIDENTIALITY NOTICE: This transmission is intended solely for the registered student. Generated automatically by VSBEC IT DEPARTMENT.</i>
@@ -836,7 +836,7 @@ export async function sendTaskReopenedEmail(payload: TaskReopenedEmailPayload): 
     <tr>
       <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 24px; text-align: center; font-size: 11px; color: #64748b; line-height: 1.6;">
         <p style="margin: 0 0 6px 0; font-size: 12px; color: #334155; font-weight: 600; letter-spacing: 0.02em;">
-          Developed and Maintained by <a href="https://techsquadsih.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Techsquad</a>
+          Developed and Maintained by <a href="https://tharunkumark4743.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Tharunkumar K</a>
         </p>
         <p style="margin: 6px 0 0 0; font-size: 10px; color: #94a3b8;">
           🔒 <i>CONFIDENTIALITY NOTICE: This transmission is intended solely for the registered student. Generated automatically by VSBEC IT DEPARTMENT.</i>
@@ -1098,7 +1098,7 @@ export async function sendTaskStatusEmail(payload: EmailNotificationPayload): Pr
     <tr>
       <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 24px; text-align: center; font-size: 11px; color: #64748b; line-height: 1.6;">
         <p style="margin: 0 0 6px 0; font-size: 12px; color: #334155; font-weight: 600; letter-spacing: 0.02em;">
-          Developed and Maintained by <a href="https://techsquadsih.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Techsquad</a>
+          Developed and Maintained by <a href="https://tharunkumark4743.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Tharunkumar K</a>
         </p>
         <p style="margin: 6px 0 0 0; font-size: 10px; color: #94a3b8;">
           🔒 <i>CONFIDENTIALITY NOTICE: This transmission is intended solely for the registered student. Generated automatically by VSBEC IT DEPARTMENT.</i>
@@ -1273,7 +1273,7 @@ export async function sendDeadlineAlertEmail(payload: DeadlineAlertEmailPayload)
     <tr>
       <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 24px; text-align: center; font-size: 11px; color: #64748b; line-height: 1.6;">
         <p style="margin: 0 0 6px 0; font-size: 12px; color: #334155; font-weight: 600; letter-spacing: 0.02em;">
-          Developed and Maintained by <a href="https://techsquadsih.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Techsquad</a>
+          Developed and Maintained by <a href="https://tharunkumark4743.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Tharunkumar K</a>
         </p>
         <p style="margin: 6px 0 0 0; font-size: 10px; color: #94a3b8;">
           🔒 <i>CONFIDENTIALITY NOTICE: This transmission is intended solely for the registered student. Generated automatically by VSBEC IT DEPARTMENT.</i>
@@ -1513,7 +1513,7 @@ export async function sendPasswordResetOtpEmail(payload: PasswordResetOtpPayload
     <tr>
       <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 24px; text-align: center; font-size: 11px; color: #64748b; line-height: 1.6;">
         <p style="margin: 0 0 6px 0; font-size: 12px; color: #334155; font-weight: 600; letter-spacing: 0.02em;">
-          Developed and Maintained by <a href="https://techsquadsih.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Techsquad</a>
+          Developed and Maintained by <a href="https://tharunkumark4743.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Tharunkumar K</a>
         </p>
         <p style="margin: 6px 0 0 0; font-size: 10px; color: #94a3b8;">
           🔒 <i>CONFIDENTIALITY NOTICE: This transmission is intended solely for the registered student. Generated automatically by VSBEC IT DEPARTMENT.</i>
@@ -1719,7 +1719,7 @@ export async function sendTaskPendingReminderEmail(
     <tr>
       <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 24px; text-align: center; font-size: 11px; color: #64748b; line-height: 1.6;">
         <p style="margin: 0 0 6px 0; font-size: 12px; color: #334155; font-weight: 600; letter-spacing: 0.02em;">
-          Developed and Maintained by <a href="https://techsquadsih.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Techsquad</a>
+          Developed and Maintained by <a href="https://tharunkumark4743.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Tharunkumar K</a>
         </p>
         <p style="margin: 6px 0 0 0; font-size: 10px; color: #94a3b8;">
           🔒 <i>CONFIDENTIALITY NOTICE: This transmission is intended solely for the registered student. Generated automatically by VSBEC IT DEPARTMENT.</i>
@@ -2098,7 +2098,7 @@ export async function sendNoticeAnnouncementEmail(payload: NoticeEmailPayload): 
           <tr>
             <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 22px 24px; text-align: center; font-size: 11px; color: #64748b; line-height: 1.6;">
               <p style="margin: 0 0 6px 0; font-size: 12px; color: #334155; font-weight: 600; letter-spacing: 0.02em;">
-                Developed and Maintained by <a href="https://techsquadsih.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Techsquad</a>
+                Developed and Maintained by <a href="https://tharunkumark4743.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Tharunkumar K</a>
               </p>
               <p style="margin: 6px 0 0 0; font-size: 10px; color: #94a3b8;">
                 🔒 <i>CONFIDENTIALITY NOTICE: This transmission is intended solely for registered students of the Department of Information Technology, VSB Engineering College.</i>
@@ -2413,7 +2413,7 @@ export async function sendAssessmentInvitationEmail(
           Department of Information Technology, VSB Engineering College (Autonomous), Karur - 639111
         </p>
         <p style="font-size: 10.5px; color: #94a3b8; margin: 0;">
-          Developed and Maintained by Techsquad.
+          Developed and Maintained by <a href="https://tharunkumark4743.netlify.app/" style="color: #64748b; text-decoration: underline; font-weight: 700;">Tharunkumar K</a>.
         </p>
       </div>
 
