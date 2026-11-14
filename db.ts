@@ -106,6 +106,15 @@ export async function initDB(forceMigration: boolean = false) {
           console.log(`[initDB] Schema verified (${count} core tables active). Skipping redundant DDL roundtrips for instant startup.`);
           // Ensure essential recent column migrations exist even on fast path
           const fastMigrations = [
+            `CREATE TABLE IF NOT EXISTS sync_job_state (
+              job_name VARCHAR(100) PRIMARY KEY,
+              status VARCHAR(50) DEFAULT 'IDLE',
+              locked_at TIMESTAMP,
+              lease_until TIMESTAMP,
+              last_completed_date VARCHAR(20),
+              last_processed_index INT DEFAULT 0,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );`,
             `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS verified_by_id UUID REFERENCES users(id) ON DELETE SET NULL;`,
             `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS proof_file_hash VARCHAR(64);`,
             `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS is_duplicate BOOLEAN DEFAULT FALSE;`,
@@ -1475,6 +1484,36 @@ export async function acquireSyncLock(jobName: string, leaseSeconds: number = 30
 
     return res.rowCount !== null && res.rowCount > 0;
   } catch (err: any) {
+    if (err.code === '42P01') {
+      try {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS sync_job_state (
+            job_name VARCHAR(100) PRIMARY KEY,
+            status VARCHAR(50) DEFAULT 'IDLE',
+            locked_at TIMESTAMP,
+            lease_until TIMESTAMP,
+            last_completed_date VARCHAR(20),
+            last_processed_index INT DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+        const retryRes = await pool.query(`
+          INSERT INTO sync_job_state (job_name, status, locked_at, lease_until, updated_at)
+          VALUES ($1, 'RUNNING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($2 || ' seconds')::interval, CURRENT_TIMESTAMP)
+          ON CONFLICT (job_name) DO UPDATE
+          SET status = 'RUNNING',
+              locked_at = CURRENT_TIMESTAMP,
+              lease_until = CURRENT_TIMESTAMP + ($2 || ' seconds')::interval,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE sync_job_state.status != 'RUNNING' OR sync_job_state.lease_until < CURRENT_TIMESTAMP
+          RETURNING job_name;
+        `, [jobName, leaseSeconds]);
+        return retryRes.rowCount !== null && retryRes.rowCount > 0;
+      } catch (innerErr: any) {
+        console.warn(`[SyncLock] Auto-creation failed for ${jobName}:`, innerErr.message);
+        return false;
+      }
+    }
     console.warn(`[SyncLock] Failed to acquire lock for ${jobName}:`, err.message);
     return false;
   }
