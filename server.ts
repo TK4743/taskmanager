@@ -5360,7 +5360,6 @@ async function startServer() {
         dispatchBatchNotifications().catch(e => console.error('[Batch Notification Error]:', e));
       });
     }
-    });
   });
 
   app.patch('/api/submissions/:id/verify', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'STUDENT', 'CLASS_ADVISOR']), async (req: any, res) => {
@@ -7767,7 +7766,6 @@ async function startServer() {
         await releaseSyncLock('leetcode_daily_sync', completedAll ? todayStr : undefined);
       }
     }
-  }
   }
 
   // Recalculate Statuses

@@ -27,7 +27,10 @@
     "types": []
   },
   "include": [
-    "src"
+    "src",
+    "server.ts",
+    "db.ts",
+    "codingSandboxService.ts"
   ],
   "exclude": [
     "node_modules",
