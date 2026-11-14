@@ -116,6 +116,15 @@ export default function PublicStudentPortfolioView({ regNo, onBackToApp }: Publi
 
   const { academic, personal, skills = [], projects = [], internships = [], certifications = [], coding_profiles = {}, achievements = [] } = data;
 
+  const hasAnyCodingProfile = Boolean(
+    coding_profiles && (
+      coding_profiles.github ||
+      coding_profiles.leetcode ||
+      coding_profiles.linkedin ||
+      coding_profiles.portfolio
+    )
+  );
+
   return (
     <div className="min-h-screen h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-slate-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 selection:bg-emerald-500/30 selection:text-emerald-950 dark:selection:text-emerald-200 pb-20 custom-scrollbar">
       {/* Top Navbar */}
@@ -243,7 +252,7 @@ export default function PublicStudentPortfolioView({ regNo, onBackToApp }: Publi
           )}
 
           {/* Coding Profile Badges */}
-          {coding_profiles && (
+          {hasAnyCodingProfile && (
             <div className="mt-6 pt-5 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-wrap items-center gap-3">
               {coding_profiles.github && (
                 <a

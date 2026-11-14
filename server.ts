@@ -4069,6 +4069,9 @@ async function startServer() {
       const lockedTeamRes = await client.query('SELECT status FROM teams WHERE id = $1 FOR UPDATE', [teamId]);
       if (lockedTeamRes.rows[0]?.status === 'SUBMITTED' || lockedTeamRes.rows[0]?.status === 'APPROVED') {
         await client.query('ROLLBACK');
+        if (cloudinaryId) {
+          try { await cloudinary.uploader.destroy(cloudinaryId); } catch (_) {}
+        }
         return res.status(400).json({ error: 'Team submission has already been recorded.' });
       }
 
@@ -4109,6 +4112,9 @@ async function startServer() {
       res.json({ success: true, submission: subInsert.rows[0] });
     } catch (err: any) {
       await client.query('ROLLBACK');
+      if (cloudinaryId) {
+        try { await cloudinary.uploader.destroy(cloudinaryId); } catch (_) {}
+      }
       console.error('Submit team task error:', err);
       res.status(500).json({ error: err.message || 'Failed to submit team task' });
     } finally {
@@ -10349,12 +10355,20 @@ async function startServer() {
     });
   }));
 
-  // 4. Proctor Photo Capture & Upload to Cloudinary
+  // 4. Proctor Photo Capture & Upload to Cloudinary (Debounced to prevent API abuse & CPU spikes)
+  const lastProctorUploadMap = new Map<string, number>();
   app.post('/api/assessment/capture-photo', authenticate, asyncHandler(async (req: any, res: any) => {
     const { imageBase64 } = req.body;
     if (!imageBase64) {
       return res.status(400).json({ success: false, error: 'No image data provided' });
     }
+
+    const now = Date.now();
+    const lastUpload = lastProctorUploadMap.get(req.user.id) || 0;
+    if (now - lastUpload < 8000) {
+      return res.status(429).json({ success: false, error: 'Too many photo capture requests. Please wait a few seconds between captures.' });
+    }
+    lastProctorUploadMap.set(req.user.id, now);
 
     if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
       try {

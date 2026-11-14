@@ -5833,6 +5833,14 @@ export default function App() {
   const [adminDeptFilter, setAdminDeptFilter] = useState('');
   const [customFieldValue, setCustomFieldValue] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<Record<number, File>>({});
+
+  // Reset modal inspection and bulk selection states when switching views
+  useEffect(() => {
+    setSelectedSubmissions([]);
+    setInspectingSubmission(null);
+    setShowRejectionModal(null);
+    setTeamReviewModal(null);
+  }, [view]);
   const [isDraggingScreenshot, setIsDraggingScreenshot] = useState<number | null>(null);
   const [notParticipating, setNotParticipating] = useState<Record<number, boolean>>({});
   const [notParticipatingReason, setNotParticipatingReason] = useState<Record<number, string>>({});

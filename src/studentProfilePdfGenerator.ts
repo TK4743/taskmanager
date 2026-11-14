@@ -203,31 +203,37 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
     });
 
     Object.keys(categories).forEach(cat => {
-      checkPageBreak(6);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8.5);
-      doc.setTextColor(30, 41, 59);
       const catLabel = `${cat}: `;
       const catWidth = doc.getTextWidth(catLabel);
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
-      doc.setTextColor(71, 85, 105);
       const skillLine = categories[cat].join(', ');
       
-      if (catWidth + 35 <= contentWidth) {
+      const isInline = catWidth + 35 <= contentWidth;
+      const splitSkills = isInline
+        ? doc.splitTextToSize(skillLine, contentWidth - catWidth)
+        : doc.splitTextToSize(skillLine, contentWidth);
+      const neededH = (isInline ? 0 : 3.8) + (splitSkills.length * 3.8 + 1);
+      checkPageBreak(neededH);
+
+      if (isInline) {
         doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59);
         doc.text(catLabel, margin, y);
         doc.setFont('helvetica', 'normal');
-        const splitSkills = doc.splitTextToSize(skillLine, contentWidth - catWidth);
+        doc.setTextColor(71, 85, 105);
         doc.text(splitSkills, margin + catWidth, y);
         y += splitSkills.length * 3.8 + 1;
       } else {
         doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59);
         doc.text(catLabel, margin, y);
         y += 3.8;
         doc.setFont('helvetica', 'normal');
-        const splitSkills = doc.splitTextToSize(skillLine, contentWidth);
+        doc.setTextColor(71, 85, 105);
         doc.text(splitSkills, margin, y);
         y += splitSkills.length * 3.8 + 1;
       }
@@ -239,7 +245,6 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
   if (projects.length > 0) {
     drawSectionHeader('Technical Projects');
     projects.forEach(p => {
-      checkPageBreak(14);
       const projTitle = p.project_name || 'Project';
       const techStr = p.tech_stack ? `[${p.tech_stack}]` : '';
 
@@ -247,13 +252,50 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
       doc.setFontSize(9);
       const projWidth = doc.getTextWidth(projTitle);
 
+      let titleHeight = 3.8;
+      let techLines: string[] = [];
+      let isSingleLineTitle = false;
+
       if (techStr) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(7.5);
         const techWidth = doc.getTextWidth(techStr);
 
-        // If project name + tech stack fit on one line with safe clearance
         if (projWidth + techWidth + 6 <= contentWidth) {
+          isSingleLineTitle = true;
+          titleHeight = 3.8;
+        } else {
+          techLines = doc.splitTextToSize(techStr, contentWidth);
+          titleHeight = 3.8 + (techLines.length * 3.3 + 0.8);
+        }
+      }
+
+      let splitDesc: string[] = [];
+      if (p.description) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        splitDesc = doc.splitTextToSize(p.description, contentWidth);
+      }
+
+      let splitProjLinks: string[] = [];
+      if (p.github_url || p.live_demo_url) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        const projectLinks = [];
+        if (p.github_url) projectLinks.push(`Code: ${p.github_url}`);
+        if (p.live_demo_url) projectLinks.push(`Live: ${p.live_demo_url}`);
+        splitProjLinks = doc.splitTextToSize(projectLinks.join('  •  '), contentWidth);
+      }
+
+      const totalItemHeight = titleHeight +
+        (splitDesc.length > 0 ? splitDesc.length * 3.5 + 1 : 0) +
+        (splitProjLinks.length > 0 ? splitProjLinks.length * 3.4 : 0) +
+        2.5;
+
+      checkPageBreak(totalItemHeight);
+
+      if (techStr) {
+        if (isSingleLineTitle) {
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(9);
           doc.setTextColor(15, 23, 42);
@@ -265,7 +307,6 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
           doc.text(techStr, margin + contentWidth, y, { align: 'right' });
           y += 3.8;
         } else {
-          // If too wide: print title on first line, and tech stack badges wrapped on next line
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(9);
           doc.setTextColor(15, 23, 42);
@@ -275,9 +316,8 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(7.5);
           doc.setTextColor(79, 70, 229);
-          const splitTech = doc.splitTextToSize(techStr, contentWidth);
-          doc.text(splitTech, margin, y);
-          y += splitTech.length * 3.3 + 0.8;
+          doc.text(techLines, margin, y);
+          y += techLines.length * 3.3 + 0.8;
         }
       } else {
         doc.setFont('helvetica', 'bold');
@@ -287,24 +327,18 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
         y += 3.8;
       }
 
-      if (p.description) {
+      if (splitDesc.length > 0) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(71, 85, 105);
-        const splitDesc = doc.splitTextToSize(p.description, contentWidth);
         doc.text(splitDesc, margin, y);
         y += splitDesc.length * 3.5 + 1;
       }
 
-      if (p.github_url || p.live_demo_url) {
+      if (splitProjLinks.length > 0) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
         doc.setTextColor(99, 102, 241);
-        const projectLinks = [];
-        if (p.github_url) projectLinks.push(`Code: ${p.github_url}`);
-        if (p.live_demo_url) projectLinks.push(`Live: ${p.live_demo_url}`);
-        const linkLine = projectLinks.join('  •  ');
-        const splitProjLinks = doc.splitTextToSize(linkLine, contentWidth);
         doc.text(splitProjLinks, margin, y);
         y += splitProjLinks.length * 3.4;
       }
@@ -316,7 +350,6 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
   if (internships.length > 0) {
     drawSectionHeader('Internships & Work Experience');
     internships.forEach(item => {
-      checkPageBreak(12);
       const roleCompany = `${item.role || 'Intern'} - ${item.company || 'Company'}`;
       const durationStr = `${item.duration || ''}${item.mode ? ` (${item.mode})` : ''}`;
 
@@ -328,7 +361,26 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
       doc.setFontSize(8);
       const metaWidth = durationStr ? doc.getTextWidth(durationStr) : 0;
 
-      if (durationStr && (titleWidth + metaWidth + 6 <= contentWidth)) {
+      const isSingleLine = Boolean(durationStr && (titleWidth + metaWidth + 6 <= contentWidth));
+      let titleHeight = 4;
+      let splitTitle: string[] = [];
+
+      if (!isSingleLine) {
+        splitTitle = doc.splitTextToSize(roleCompany, contentWidth);
+        titleHeight = splitTitle.length * 3.8 + (durationStr ? 3.8 : 0);
+      }
+
+      let splitCert: string[] = [];
+      let certHeight = 0;
+      if (item.certificate_url) {
+        doc.setFontSize(7.5);
+        splitCert = doc.splitTextToSize(`Certificate: ${item.certificate_url}`, contentWidth);
+        certHeight = splitCert.length * 3.4;
+      }
+
+      checkPageBreak(titleHeight + certHeight + 2.5);
+
+      if (isSingleLine) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(9);
         doc.setTextColor(15, 23, 42);
@@ -343,7 +395,6 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(9);
         doc.setTextColor(15, 23, 42);
-        const splitTitle = doc.splitTextToSize(roleCompany, contentWidth);
         doc.text(splitTitle, margin, y);
         y += splitTitle.length * 3.8;
 
@@ -356,11 +407,9 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
         }
       }
 
-      if (item.certificate_url) {
+      if (splitCert.length > 0) {
         doc.setFontSize(7.5);
         doc.setTextColor(79, 70, 229);
-        const certLine = `Certificate: ${item.certificate_url}`;
-        const splitCert = doc.splitTextToSize(certLine, contentWidth);
         doc.text(splitCert, margin, y);
         y += splitCert.length * 3.4;
       }
@@ -372,7 +421,6 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
   if (certs.length > 0) {
     drawSectionHeader('Certifications');
     certs.forEach(c => {
-      checkPageBreak(8);
       const certTitle = `•  ${c.certificate_name}`;
       const provInfo = `${c.provider || 'Provider'}${c.issue_date ? ` (${c.issue_date})` : ''}`;
 
@@ -384,7 +432,18 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
       doc.setFontSize(8);
       const provWidth = provInfo ? doc.getTextWidth(provInfo) : 0;
 
-      if (provInfo && (titleWidth + provWidth + 6 <= contentWidth)) {
+      const isSingleLine = Boolean(provInfo && (titleWidth + provWidth + 6 <= contentWidth));
+      let certHeight = 4;
+      let splitTitle: string[] = [];
+
+      if (!isSingleLine) {
+        splitTitle = doc.splitTextToSize(certTitle, contentWidth);
+        certHeight = splitTitle.length * 3.6 + (provInfo ? 3.6 : 0);
+      }
+
+      checkPageBreak(certHeight + 1.5);
+
+      if (isSingleLine) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.5);
         doc.setTextColor(15, 23, 42);
@@ -399,7 +458,6 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.5);
         doc.setTextColor(15, 23, 42);
-        const splitTitle = doc.splitTextToSize(certTitle, contentWidth);
         doc.text(splitTitle, margin, y);
         y += splitTitle.length * 3.6;
 
@@ -419,7 +477,6 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
   if (achievements.length > 0) {
     drawSectionHeader('Achievements & Awards');
     achievements.forEach(a => {
-      checkPageBreak(8);
       const achTitle = `•  ${a.title}${a.category ? ` [${a.category}]` : ''}`;
       const dateStr = a.event_date || '';
 
@@ -431,7 +488,27 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
       doc.setFontSize(8);
       const dateWidth = dateStr ? doc.getTextWidth(dateStr) : 0;
 
-      if (dateStr && (titleWidth + dateWidth + 6 <= contentWidth)) {
+      const isSingleLine = Boolean(dateStr && (titleWidth + dateWidth + 6 <= contentWidth));
+      let titleHeight = 3.8;
+      let splitTitle: string[] = [];
+
+      if (!isSingleLine) {
+        splitTitle = doc.splitTextToSize(achTitle, contentWidth);
+        titleHeight = splitTitle.length * 3.6 + (dateStr ? 3.6 : 0);
+      }
+
+      let splitAchDesc: string[] = [];
+      let descHeight = 0;
+      if (a.description) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        splitAchDesc = doc.splitTextToSize(a.description, contentWidth - 4);
+        descHeight = splitAchDesc.length * 3.5 + 1;
+      }
+
+      checkPageBreak(titleHeight + descHeight + 1.5);
+
+      if (isSingleLine) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.5);
         doc.setTextColor(15, 23, 42);
@@ -446,7 +523,6 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.5);
         doc.setTextColor(15, 23, 42);
-        const splitTitle = doc.splitTextToSize(achTitle, contentWidth);
         doc.text(splitTitle, margin, y);
         y += splitTitle.length * 3.6;
 
@@ -459,11 +535,10 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
         }
       }
 
-      if (a.description) {
+      if (splitAchDesc.length > 0) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(71, 85, 105);
-        const splitAchDesc = doc.splitTextToSize(a.description, contentWidth - 4);
         doc.text(splitAchDesc, margin + 4, y);
         y += splitAchDesc.length * 3.5 + 1;
       }
