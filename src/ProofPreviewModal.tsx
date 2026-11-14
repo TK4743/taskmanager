@@ -101,7 +101,7 @@ export const ProofPreviewModal: React.FC<ProofPreviewModalProps> = ({ data, onCl
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex flex-col animate-in fade-in duration-150 select-none"
+      className="fixed inset-0 z-[130] bg-black/90 backdrop-blur-md flex flex-col animate-in fade-in duration-150 select-none"
       onClick={onClose}
     >
       {/* Top HUD Navigation Bar */}

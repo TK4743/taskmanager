@@ -75,7 +75,7 @@ export const FloatingModal: React.FC<FloatingModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center">
           {/* Dimmed and slightly blurred backdrop */}
           <motion.div
             initial={{ opacity: 0 }}

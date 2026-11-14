@@ -178,7 +178,11 @@ import {
   Terminal,
   Radio,
   Menu,
-  History
+  History,
+  Bold,
+  Italic,
+  List,
+  ListOrdered
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -804,6 +808,345 @@ const Textarea = ({ className, ...props }: React.TextareaHTMLAttributes<HTMLText
     {...props}
   />
 );
+
+function FormattedTaskDescription({ content, className = '' }: { content?: string; className?: string }) {
+  if (!content || !content.trim()) {
+    return <span className="text-zinc-400 italic">No description provided.</span>;
+  }
+
+  // Tokenize inline bold (**...** / <b>...</b> / <strong>...</strong>) and italic (*...* / <i>...</i> / <em>...</em>)
+  const renderInline = (text: string) => {
+    if (!text) return null;
+    const tokenRegex = /(\*\*(?!\s)[^*]+(?<!\s)\*\*|\*(?!\s)[^*]+(?<!\s)\*|<(?:b|strong)>[\s\S]*?<\/(?:b|strong)>|<(?:i|em)>[\s\S]*?<\/(?:i|em)>)/g;
+    const parts = text.split(tokenRegex);
+    return parts.map((part, pIdx) => {
+      if (!part) return null;
+      if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+        return <strong key={pIdx} className="font-bold text-zinc-900">{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
+        return <em key={pIdx} className="italic text-zinc-800">{part.slice(1, -1)}</em>;
+      }
+      const bMatch = part.match(/^<(?:b|strong)>([\s\S]*?)<\/(?:b|strong)>$/i);
+      if (bMatch) {
+        return <strong key={pIdx} className="font-bold text-zinc-900">{bMatch[1]}</strong>;
+      }
+      const iMatch = part.match(/^<(?:i|em)>([\s\S]*?)<\/(?:i|em)>$/i);
+      if (iMatch) {
+        return <em key={pIdx} className="italic text-zinc-800">{iMatch[1]}</em>;
+      }
+      return part;
+    });
+  };
+
+  const lines = content.replace(/\r\n/g, '\n').split('\n');
+  const elements: React.ReactNode[] = [];
+  let currentBullets: string[] = [];
+  let currentNumbers: string[] = [];
+  let currentParagraph: string[] = [];
+
+  const flushParagraph = () => {
+    if (currentParagraph.length > 0) {
+      const pLines = [...currentParagraph];
+      elements.push(
+        <p key={`p-${elements.length}`} className="mb-2.5 last:mb-0 leading-relaxed text-zinc-600">
+          {pLines.map((line, lIdx) => (
+            <React.Fragment key={lIdx}>
+              {renderInline(line)}
+              {lIdx < pLines.length - 1 && <br />}
+            </React.Fragment>
+          ))}
+        </p>
+      );
+      currentParagraph = [];
+    }
+  };
+
+  const flushBullets = () => {
+    if (currentBullets.length > 0) {
+      const items = [...currentBullets];
+      elements.push(
+        <ul key={`ul-${elements.length}`} className="list-disc pl-5 my-2 space-y-1 text-zinc-600">
+          {items.map((item, idx) => (
+            <li key={idx} className="leading-relaxed">
+              {renderInline(item)}
+            </li>
+          ))}
+        </ul>
+      );
+      currentBullets = [];
+    }
+  };
+
+  const flushNumbers = () => {
+    if (currentNumbers.length > 0) {
+      const items = [...currentNumbers];
+      elements.push(
+        <ol key={`ol-${elements.length}`} className="list-decimal pl-5 my-2 space-y-1 text-zinc-600">
+          {items.map((item, idx) => (
+            <li key={idx} className="leading-relaxed">
+              {renderInline(item)}
+            </li>
+          ))}
+        </ol>
+      );
+      currentNumbers = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      flushBullets();
+      flushNumbers();
+      flushParagraph();
+      continue;
+    }
+
+    const bulletMatch = line.match(/^(\s*)(?:[-*•])\s+(.+)$/);
+    if (bulletMatch) {
+      flushNumbers();
+      flushParagraph();
+      currentBullets.push(bulletMatch[2]);
+      continue;
+    }
+
+    const numberMatch = line.match(/^(\s*)\d+\.\s+(.+)$/);
+    if (numberMatch) {
+      flushBullets();
+      flushParagraph();
+      currentNumbers.push(numberMatch[2]);
+      continue;
+    }
+
+    flushBullets();
+    flushNumbers();
+    currentParagraph.push(line);
+  }
+
+  flushBullets();
+  flushNumbers();
+  flushParagraph();
+
+  return (
+    <div className={cn("formatted-task-description whitespace-normal break-words", className)}>
+      {elements}
+    </div>
+  );
+}
+
+function TaskDescriptionEditor({
+  value,
+  onChange,
+  required = false,
+  placeholder = "Task Description..."
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  const [isPreview, setIsPreview] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const applyFormatting = (type: 'bold' | 'italic' | 'bullet' | 'number') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const val = textarea.value;
+    const selectedText = val.substring(start, end);
+
+    let replacement = '';
+    let selectStart = start;
+    let selectEnd = start;
+
+    if (type === 'bold') {
+      if (selectedText) {
+        if (selectedText.startsWith('**') && selectedText.endsWith('**') && selectedText.length >= 4) {
+          replacement = selectedText.slice(2, -2);
+          selectStart = start;
+          selectEnd = start + replacement.length;
+        } else {
+          replacement = `**${selectedText}**`;
+          selectStart = start;
+          selectEnd = start + replacement.length;
+        }
+      } else {
+        replacement = '**bold text**';
+        selectStart = start + 2;
+        selectEnd = start + 11;
+      }
+    } else if (type === 'italic') {
+      if (selectedText) {
+        if (selectedText.startsWith('*') && selectedText.endsWith('*') && selectedText.length >= 2) {
+          replacement = selectedText.slice(1, -1);
+          selectStart = start;
+          selectEnd = start + replacement.length;
+        } else {
+          replacement = `*${selectedText}*`;
+          selectStart = start;
+          selectEnd = start + replacement.length;
+        }
+      } else {
+        replacement = '*italic text*';
+        selectStart = start + 1;
+        selectEnd = start + 12;
+      }
+    } else if (type === 'bullet') {
+      if (selectedText) {
+        const lines = selectedText.split('\n');
+        const allBulleted = lines.every(l => l.startsWith('- '));
+        replacement = lines.map(line => allBulleted ? (line.startsWith('- ') ? line.slice(2) : line) : (line.startsWith('- ') ? line : `- ${line}`)).join('\n');
+        selectStart = start;
+        selectEnd = start + replacement.length;
+      } else {
+        const before = val.substring(0, start);
+        const needsNewline = before.length > 0 && !before.endsWith('\n');
+        replacement = (needsNewline ? '\n' : '') + '- List item';
+        selectStart = start + (needsNewline ? 3 : 2);
+        selectEnd = start + replacement.length;
+      }
+    } else if (type === 'number') {
+      if (selectedText) {
+        const lines = selectedText.split('\n');
+        const allNumbered = lines.every(l => /^\d+\.\s/.test(l));
+        let count = 1;
+        replacement = lines.map(line => {
+          if (allNumbered) {
+            return line.replace(/^\d+\.\s/, '');
+          }
+          const stripped = line.replace(/^\d+\.\s/, '');
+          const res = `${count}. ${stripped}`;
+          count++;
+          return res;
+        }).join('\n');
+        selectStart = start;
+        selectEnd = start + replacement.length;
+      } else {
+        const before = val.substring(0, start);
+        const needsNewline = before.length > 0 && !before.endsWith('\n');
+        replacement = (needsNewline ? '\n' : '') + '1. List item';
+        selectStart = start + (needsNewline ? 4 : 3);
+        selectEnd = start + replacement.length;
+      }
+    }
+
+    const updated = val.substring(0, start) + replacement + val.substring(end);
+    onChange(updated);
+
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(selectStart, selectEnd);
+      }
+    }, 0);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+      e.preventDefault();
+      applyFormatting('bold');
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') {
+      e.preventDefault();
+      applyFormatting('italic');
+    }
+  };
+
+  return (
+    <div className="w-full rounded-xl border border-zinc-200 bg-white focus-within:ring-2 focus-within:ring-black/5 focus-within:border-black transition-all overflow-hidden shadow-xs">
+      {/* Formatting Toolbar */}
+      <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-50 border-b border-zinc-200 text-zinc-600 select-none">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => applyFormatting('bold')}
+            className="p-1.5 rounded-lg hover:bg-zinc-200 hover:text-zinc-900 active:scale-95 transition-all text-zinc-700 cursor-pointer"
+            title="Bold (Ctrl+B)"
+            aria-label="Bold"
+          >
+            <Bold size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => applyFormatting('italic')}
+            className="p-1.5 rounded-lg hover:bg-zinc-200 hover:text-zinc-900 active:scale-95 transition-all text-zinc-700 cursor-pointer"
+            title="Italic (Ctrl+I)"
+            aria-label="Italic"
+          >
+            <Italic size={15} />
+          </button>
+          <div className="h-4 w-[1px] bg-zinc-300 mx-1" />
+          <button
+            type="button"
+            onClick={() => applyFormatting('bullet')}
+            className="p-1.5 rounded-lg hover:bg-zinc-200 hover:text-zinc-900 active:scale-95 transition-all text-zinc-700 cursor-pointer"
+            title="Bullet list"
+            aria-label="Bullet list"
+          >
+            <List size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => applyFormatting('number')}
+            className="p-1.5 rounded-lg hover:bg-zinc-200 hover:text-zinc-900 active:scale-95 transition-all text-zinc-700 cursor-pointer"
+            title="Numbered list"
+            aria-label="Numbered list"
+          >
+            <ListOrdered size={15} />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1 bg-zinc-200/70 p-0.5 rounded-lg text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => setIsPreview(false)}
+            className={cn(
+              "px-2.5 py-0.5 rounded-md transition-all cursor-pointer text-[11px]",
+              !isPreview ? "bg-white text-zinc-900 shadow-xs font-bold" : "text-zinc-500 hover:text-zinc-900"
+            )}
+          >
+            Write
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsPreview(true)}
+            className={cn(
+              "px-2.5 py-0.5 rounded-md transition-all cursor-pointer text-[11px]",
+              isPreview ? "bg-white text-zinc-900 shadow-xs font-bold" : "text-zinc-500 hover:text-zinc-900"
+            )}
+          >
+            Preview
+          </button>
+        </div>
+      </div>
+
+      {/* Editor Content Area */}
+      {!isPreview ? (
+        <textarea
+          ref={textareaRef}
+          placeholder={placeholder}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          required={required}
+          className="w-full px-4 py-3 text-sm min-h-[120px] resize-y bg-white text-zinc-900 focus:outline-none border-0 block"
+        />
+      ) : (
+        <div className="p-4 min-h-[120px] text-sm bg-white overflow-y-auto">
+          {value ? (
+            <FormattedTaskDescription content={value} />
+          ) : (
+            <span className="text-zinc-400 italic">No description entered yet. Switch to Write to enter text.</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const Card = ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn('bg-white border border-zinc-200 rounded-xl p-4 md:p-6 shadow-sm', className)} {...props}>
@@ -3883,6 +4226,14 @@ function StaffStudentProfileModal({
     if (studentId) fetchProfile();
   }, [studentId, token]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const acad = profile?.academic || {};
 
   const sections = [
@@ -3896,17 +4247,18 @@ function StaffStudentProfileModal({
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] flex items-center justify-center p-3 sm:p-4 md:p-6" onClick={onClose}>
       <motion.div
+        onClick={e => e.stopPropagation()}
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-4xl shadow-2xl relative max-h-[90vh] flex flex-col overflow-hidden border border-zinc-100"
+        className="bg-white rounded-3xl p-5 sm:p-6 md:p-8 w-full max-w-[94vw] h-[92vh] max-h-[94vh] shadow-2xl relative flex flex-col overflow-hidden border border-zinc-100"
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-200 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-zinc-900 overflow-hidden flex items-center justify-center text-white font-bold shrink-0">
+        <div className="flex items-center justify-between pb-4 md:pb-5 border-b border-zinc-200 shrink-0">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-zinc-900 overflow-hidden flex items-center justify-center text-white font-bold shrink-0">
               {acad.avatar_url ? (
                 <img src={acad.avatar_url} alt={acad.full_name} className="w-full h-full object-cover" />
               ) : (
@@ -3914,16 +4266,16 @@ function StaffStudentProfileModal({
               )}
             </div>
             <div>
-              <h2 className="text-xl font-extrabold text-zinc-900 flex items-center gap-2">
+              <h2 className="text-xl md:text-2xl font-extrabold text-zinc-900 flex items-center gap-2">
                 {acad.full_name || 'Student Profile'}
               </h2>
-              <p className="text-xs text-zinc-500 font-semibold">
+              <p className="text-xs md:text-sm text-zinc-500 font-semibold">
                 Reg No: {acad.register_number} • Section: {acad.class_name || 'N/A'} • Dept: {acad.department_name || 'IT'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={() => {
@@ -3931,19 +4283,19 @@ function StaffStudentProfileModal({
                   downloadStudentResumePdf(profile);
                 }
               }}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0"
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0"
               title="Download this student's profile as a formatted Resume PDF"
             >
-              <Download size={13} /> <span>Download Resume (PDF)</span>
+              <Download size={14} /> <span>Download Resume (PDF)</span>
             </button>
-            <button onClick={onClose} className="p-1.5 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-zinc-800 transition-colors border border-transparent hover:border-zinc-200 cursor-pointer">
+            <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-zinc-800 transition-colors border border-transparent hover:border-zinc-200 cursor-pointer">
               <X size={18} />
             </button>
           </div>
         </div>
 
         {/* Section Pill Selectors */}
-        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full py-3 custom-scrollbar shrink-0 border-b border-zinc-200">
+        <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto max-w-full py-3 md:py-3.5 custom-scrollbar shrink-0 border-b border-zinc-200">
           {sections.map(s => {
             const SIcon = s.icon;
             const isActive = activeSection === s.id;
@@ -3953,13 +4305,13 @@ function StaffStudentProfileModal({
                 type="button"
                 onClick={() => setActiveSection(s.id)}
                 className={cn(
-                  "px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0 border cursor-pointer",
+                  "px-3.5 sm:px-4 py-2 md:py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 shrink-0 border cursor-pointer",
                   isActive
                     ? "bg-zinc-900 text-white border-zinc-900 shadow-sm scale-[1.01]"
                     : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50 hover:text-zinc-900"
                 )}
               >
-                <SIcon size={13} className={cn(isActive ? "text-white" : "text-zinc-400")} />
+                <SIcon size={14} className={cn(isActive ? "text-white" : "text-zinc-400")} />
                 <span>{s.label}</span>
               </button>
             );
@@ -3967,12 +4319,12 @@ function StaffStudentProfileModal({
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto pt-4 space-y-4 pr-1">
+        <div className="flex-1 overflow-y-auto pt-4 md:pt-5 space-y-4 md:space-y-5 pr-1 md:pr-2 custom-scrollbar">
           {loading ? (
             <div className="py-6 space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="p-3 bg-zinc-50/50 rounded-xl border border-zinc-200/60 space-y-2">
+                  <div key={i} className="p-3.5 md:p-4 bg-zinc-50/50 rounded-xl border border-zinc-200/60 space-y-2">
                     <Skeleton className="h-3 w-16" />
                     <Skeleton className="h-4 w-full" />
                   </div>
@@ -3991,64 +4343,64 @@ function StaffStudentProfileModal({
           ) : (
             <>
               {activeSection === 'personal' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-3 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-2.5 items-center">
-                      <Mail size={16} className="text-zinc-400 shrink-0" />
+                <div className="space-y-4 md:space-y-5">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
+                    <div className="p-3.5 md:p-4 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-3 items-center">
+                      <Mail size={18} className="text-zinc-400 shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">College Email</p>
-                        <p className="text-xs font-bold text-zinc-900 truncate" title={acad.email}>{acad.email || 'N/A'}</p>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">College Email</p>
+                        <p className="text-xs md:text-sm font-bold text-zinc-900 truncate" title={acad.email}>{acad.email || 'N/A'}</p>
                       </div>
                     </div>
-                    <div className="p-3 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-2.5 items-center">
-                      <User size={16} className="text-zinc-400 shrink-0" />
+                    <div className="p-3.5 md:p-4 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-3 items-center">
+                      <User size={18} className="text-zinc-400 shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Gender</p>
-                        <p className="text-xs font-bold text-zinc-900 truncate">{acad.gender || 'N/A'}</p>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Gender</p>
+                        <p className="text-xs md:text-sm font-bold text-zinc-900 truncate">{acad.gender || 'N/A'}</p>
                       </div>
                     </div>
-                    <div className="p-3 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-2.5 items-center">
-                      <Phone size={16} className="text-zinc-400 shrink-0" />
+                    <div className="p-3.5 md:p-4 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-3 items-center">
+                      <Phone size={18} className="text-zinc-400 shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Mobile Number</p>
-                        <p className="text-xs font-bold text-zinc-900 truncate">{profile.personal?.mobile_number || 'N/A'}</p>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Mobile Number</p>
+                        <p className="text-xs md:text-sm font-bold text-zinc-900 truncate">{profile.personal?.mobile_number || 'N/A'}</p>
                       </div>
                     </div>
-                    <div className="p-3 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-2.5 items-center">
-                      <Calendar size={16} className="text-zinc-400 shrink-0" />
+                    <div className="p-3.5 md:p-4 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-3 items-center">
+                      <Calendar size={18} className="text-zinc-400 shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Date of Birth</p>
-                        <p className="text-xs font-bold text-zinc-900 truncate">{profile.personal?.date_of_birth || 'N/A'}</p>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Date of Birth</p>
+                        <p className="text-xs md:text-sm font-bold text-zinc-900 truncate">{profile.personal?.date_of_birth || 'N/A'}</p>
                       </div>
                     </div>
-                    <div className="p-3 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-2.5 items-center">
-                      <BookOpen size={16} className="text-zinc-400 shrink-0" />
+                    <div className="p-3.5 md:p-4 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-3 items-center">
+                      <BookOpen size={18} className="text-zinc-400 shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Semester</p>
-                        <p className="text-xs font-bold text-zinc-900 truncate">{profile.personal?.semester ? `Semester ${profile.personal.semester}` : 'N/A'}</p>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Semester</p>
+                        <p className="text-xs md:text-sm font-bold text-zinc-900 truncate">{profile.personal?.semester ? `Semester ${profile.personal.semester}` : 'N/A'}</p>
                       </div>
                     </div>
-                    <div className="p-3 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-2.5 items-center">
-                      <GraduationCap size={16} className="text-emerald-500 shrink-0" />
+                    <div className="p-3.5 md:p-4 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-3 items-center">
+                      <GraduationCap size={18} className="text-emerald-500 shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">CGPA</p>
-                        <p className="text-xs font-bold text-emerald-600 truncate">{profile.personal?.cgpa || 'N/A'}</p>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">CGPA</p>
+                        <p className="text-xs md:text-sm font-bold text-emerald-600 truncate">{profile.personal?.cgpa || 'N/A'}</p>
                       </div>
                     </div>
-                    <div className="p-3 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-2.5 items-center">
-                      <AlertTriangle size={16} className={cn("shrink-0", (profile.personal?.current_arrears > 0) ? "text-rose-500" : "text-emerald-500")} />
+                    <div className="p-3.5 md:p-4 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-3 items-center">
+                      <AlertTriangle size={18} className={cn("shrink-0", (profile.personal?.current_arrears > 0) ? "text-rose-500" : "text-emerald-500")} />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Current Arrears</p>
-                        <p className={cn("text-xs font-bold truncate", (profile.personal?.current_arrears > 0) ? "text-rose-600" : "text-emerald-600")}>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Current Arrears</p>
+                        <p className={cn("text-xs md:text-sm font-bold truncate", (profile.personal?.current_arrears > 0) ? "text-rose-600" : "text-emerald-600")}>
                           {profile.personal?.current_arrears ?? 0}
                         </p>
                       </div>
                     </div>
-                    <div className="p-3 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-2.5 items-center">
-                      <RotateCcw size={16} className={cn("shrink-0", (profile.personal?.history_of_arrears > 0) ? "text-amber-500" : "text-zinc-400")} />
+                    <div className="p-3.5 md:p-4 bg-zinc-50/50 rounded-xl border border-zinc-200/60 flex gap-3 items-center">
+                      <RotateCcw size={18} className={cn("shrink-0", (profile.personal?.history_of_arrears > 0) ? "text-amber-500" : "text-zinc-400")} />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">History of Arrears</p>
-                        <p className={cn("text-xs font-bold truncate", (profile.personal?.history_of_arrears > 0) ? "text-amber-600" : "text-zinc-600")}>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">History of Arrears</p>
+                        <p className={cn("text-xs md:text-sm font-bold truncate", (profile.personal?.history_of_arrears > 0) ? "text-amber-600" : "text-zinc-600")}>
                           {profile.personal?.history_of_arrears ?? 0}
                         </p>
                       </div>
@@ -4056,16 +4408,16 @@ function StaffStudentProfileModal({
                   </div>
 
                   {profile.personal?.about_me && (
-                    <div className="p-4 bg-zinc-50/50 rounded-2xl border border-zinc-200/60">
-                      <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1.5 tracking-wider">About Student</p>
-                      <p className="text-xs text-zinc-700 leading-relaxed">{profile.personal.about_me}</p>
+                    <div className="p-4 md:p-5 bg-zinc-50/50 rounded-2xl border border-zinc-200/60">
+                      <p className="text-[10px] md:text-xs font-bold text-zinc-400 uppercase mb-1.5 tracking-wider">About Student</p>
+                      <p className="text-xs md:text-sm text-zinc-700 leading-relaxed">{profile.personal.about_me}</p>
                     </div>
                   )}
                 </div>
               )}
 
               {activeSection === 'skills' && (
-                <div className="space-y-4">
+                <div className="space-y-4 md:space-y-5">
                   {(() => {
                     const grouped: Record<string, any[]> = {};
                     (profile.skills || []).forEach((sk: any) => {
@@ -4078,16 +4430,16 @@ function StaffStudentProfileModal({
                       return <p className="text-xs text-zinc-400 py-8 text-center">No skills recorded.</p>;
                     }
                     return categories.map(cat => (
-                      <div key={cat} className="p-4 bg-zinc-50/50 rounded-2xl border border-zinc-200/60 shadow-2xs">
+                      <div key={cat} className="p-4 md:p-5 bg-zinc-50/50 rounded-2xl border border-zinc-200/60 shadow-2xs">
                         <h4 className="text-xs font-black text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                           <Code size={13} className="text-zinc-500" /> {cat}
                         </h4>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 md:gap-2.5">
                           {grouped[cat].map((sk: any) => {
                             const isLvlAdvanced = sk.level?.toLowerCase() === 'advanced';
                             const isLvlIntermediate = sk.level?.toLowerCase() === 'intermediate';
                             return (
-                              <div key={sk.id} className="px-3 py-1.5 bg-white rounded-xl border border-zinc-200/80 text-xs font-semibold flex items-center gap-2 hover:border-zinc-400 transition-colors">
+                              <div key={sk.id} className="px-3.5 py-2 bg-white rounded-xl border border-zinc-200/80 text-xs font-semibold flex items-center gap-2 hover:border-zinc-400 transition-colors">
                                 <span className="text-zinc-800">{sk.skill_name}</span>
                                 <span className={cn(
                                   "text-[9px] px-1.5 py-0.5 rounded font-bold uppercase",
@@ -4107,16 +4459,16 @@ function StaffStudentProfileModal({
               )}
 
               {activeSection === 'projects' && (
-                <div className="space-y-4">
+                <div className="space-y-4 md:space-y-5">
                   {(profile.projects || []).length === 0 ? (
                     <p className="text-xs text-zinc-400 py-8 text-center">No projects recorded.</p>
                   ) : (
                     profile.projects.map((p: any) => (
-                      <div key={p.id} className="p-5 bg-zinc-50/50 border border-zinc-200/60 rounded-2xl shadow-2xs hover:shadow-xs transition-shadow space-y-3">
+                      <div key={p.id} className="p-5 md:p-6 bg-zinc-50/50 border border-zinc-200/60 rounded-2xl shadow-2xs hover:shadow-xs transition-shadow space-y-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="space-y-1">
-                            <h4 className="text-sm font-bold text-zinc-900 flex items-center gap-1.5">
-                              <Layers size={14} className="text-zinc-500" /> {p.project_name}
+                            <h4 className="text-sm md:text-base font-bold text-zinc-900 flex items-center gap-1.5">
+                              <Layers size={15} className="text-zinc-500" /> {p.project_name}
                             </h4>
                             {p.tech_stack && (
                               <div className="flex flex-wrap gap-1.5 pt-1">
@@ -4129,15 +4481,15 @@ function StaffStudentProfileModal({
                             )}
                           </div>
                         </div>
-                        {p.description && <p className="text-xs text-zinc-600 leading-relaxed">{p.description}</p>}
+                        {p.description && <p className="text-xs md:text-sm text-zinc-600 leading-relaxed">{p.description}</p>}
                         <div className="flex gap-3 pt-1 text-xs">
                           {p.github_url && (
-                            <a href={p.github_url} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-400 text-zinc-700 font-bold rounded-xl flex items-center gap-1.5 transition-colors">
+                            <a href={p.github_url} target="_blank" rel="noreferrer" className="px-3.5 py-1.5 bg-white border border-zinc-200 hover:border-zinc-400 text-zinc-700 font-bold rounded-xl flex items-center gap-1.5 transition-colors">
                               <Github size={13} /> Code Repository
                             </a>
                           )}
                           {p.live_demo_url && (
-                            <a href={p.live_demo_url} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 hover:border-emerald-300 text-emerald-700 font-bold rounded-xl flex items-center gap-1.5 transition-colors">
+                            <a href={p.live_demo_url} target="_blank" rel="noreferrer" className="px-3.5 py-1.5 bg-emerald-50 border border-emerald-200 hover:border-emerald-300 text-emerald-700 font-bold rounded-xl flex items-center gap-1.5 transition-colors">
                               <Globe size={13} /> Live Preview
                             </a>
                           )}
@@ -4149,25 +4501,25 @@ function StaffStudentProfileModal({
               )}
 
               {activeSection === 'internships' && (
-                <div className="space-y-4">
+                <div className="space-y-4 md:space-y-5">
                   {(profile.internships || []).length === 0 ? (
                     <p className="text-xs text-zinc-400 py-8 text-center">No internships recorded.</p>
                   ) : (
                     profile.internships.map((intern: any) => (
-                      <div key={intern.id} className="p-5 bg-zinc-50/50 border border-zinc-200/60 rounded-2xl shadow-2xs hover:shadow-xs transition-shadow flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div key={intern.id} className="p-5 md:p-6 bg-zinc-50/50 border border-zinc-200/60 rounded-2xl shadow-2xs hover:shadow-xs transition-shadow flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="space-y-1">
-                          <h4 className="text-sm font-bold text-zinc-900 flex items-center gap-1.5">
-                            <Briefcase size={14} className="text-zinc-500" /> {intern.company}
+                          <h4 className="text-sm md:text-base font-bold text-zinc-900 flex items-center gap-1.5">
+                            <Briefcase size={15} className="text-zinc-500" /> {intern.company}
                           </h4>
-                          <p className="text-xs font-bold text-zinc-600">
+                          <p className="text-xs md:text-sm font-bold text-zinc-600">
                             {intern.role}
                           </p>
-                          <p className="text-[11px] text-zinc-400 font-semibold">
+                          <p className="text-[11px] md:text-xs text-zinc-400 font-semibold">
                             {intern.duration} • <span className="uppercase text-[10px] bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 rounded text-zinc-500 font-bold">{intern.mode}</span>
                           </p>
                         </div>
                         {intern.certificate_url && (
-                          <a href={intern.certificate_url} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-400 text-indigo-600 hover:text-indigo-800 font-bold rounded-xl flex items-center gap-1.5 transition-colors shrink-0 text-xs shadow-2xs">
+                          <a href={intern.certificate_url} target="_blank" rel="noreferrer" className="px-3.5 py-2 bg-white border border-zinc-200 hover:border-zinc-400 text-indigo-600 hover:text-indigo-800 font-bold rounded-xl flex items-center gap-1.5 transition-colors shrink-0 text-xs shadow-2xs">
                             <ExternalLink size={13} /> View Certificate
                           </a>
                         )}
@@ -4178,22 +4530,22 @@ function StaffStudentProfileModal({
               )}
 
               {activeSection === 'certifications' && (
-                <div className="space-y-4">
+                <div className="space-y-4 md:space-y-5">
                   {(profile.certifications || []).length === 0 ? (
                     <p className="text-xs text-zinc-400 py-8 text-center">No certifications recorded.</p>
                   ) : (
                     profile.certifications.map((c: any) => (
-                      <div key={c.id} className="p-5 bg-zinc-50/50 border border-zinc-200/60 rounded-2xl shadow-2xs hover:shadow-xs transition-shadow flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div key={c.id} className="p-5 md:p-6 bg-zinc-50/50 border border-zinc-200/60 rounded-2xl shadow-2xs hover:shadow-xs transition-shadow flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="space-y-1">
-                          <h4 className="text-sm font-bold text-zinc-900 flex items-center gap-1.5">
-                            <Award size={14} className="text-zinc-500" /> {c.certificate_name}
+                          <h4 className="text-sm md:text-base font-bold text-zinc-900 flex items-center gap-1.5">
+                            <Award size={15} className="text-zinc-500" /> {c.certificate_name}
                           </h4>
-                          <p className="text-xs font-semibold text-zinc-600">
+                          <p className="text-xs md:text-sm font-semibold text-zinc-600">
                             {c.provider} {c.issue_date ? `• Issued ${c.issue_date}` : ''}
                           </p>
                         </div>
                         {c.certificate_url && (
-                          <a href={c.certificate_url} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-400 text-indigo-600 hover:text-indigo-800 font-bold rounded-xl flex items-center gap-1.5 transition-colors shrink-0 text-xs shadow-2xs">
+                          <a href={c.certificate_url} target="_blank" rel="noreferrer" className="px-3.5 py-2 bg-white border border-zinc-200 hover:border-zinc-400 text-indigo-600 hover:text-indigo-800 font-bold rounded-xl flex items-center gap-1.5 transition-colors shrink-0 text-xs shadow-2xs">
                             <ExternalLink size={13} /> View Credential
                           </a>
                         )}
@@ -4204,9 +4556,9 @@ function StaffStudentProfileModal({
               )}
 
               {activeSection === 'coding' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                   {profile.coding_profiles?.github && (
-                    <a href={profile.coding_profiles.github} target="_blank" rel="noreferrer" className="p-4 bg-zinc-900 border border-zinc-950 text-xs font-bold text-white rounded-2xl flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] transition-all group">
+                    <a href={profile.coding_profiles.github} target="_blank" rel="noreferrer" className="p-4 md:p-5 bg-zinc-900 border border-zinc-950 text-xs md:text-sm font-bold text-white rounded-2xl flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] transition-all group">
                       <span className="flex items-center gap-2.5">
                         <Github size={18} />
                         <span>GitHub Profile</span>
@@ -4215,7 +4567,7 @@ function StaffStudentProfileModal({
                     </a>
                   )}
                   {profile.coding_profiles?.leetcode && (
-                    <a href={profile.coding_profiles.leetcode} target="_blank" rel="noreferrer" className="p-4 bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800 rounded-2xl flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] transition-all group">
+                    <a href={profile.coding_profiles.leetcode} target="_blank" rel="noreferrer" className="p-4 md:p-5 bg-amber-50 border border-amber-200 text-xs md:text-sm font-bold text-amber-800 rounded-2xl flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] transition-all group">
                       <span className="flex items-center gap-2.5">
                         <Globe size={18} className="text-amber-600" />
                         <span>LeetCode Profile</span>
@@ -4224,7 +4576,7 @@ function StaffStudentProfileModal({
                     </a>
                   )}
                   {profile.coding_profiles?.linkedin && (
-                    <a href={profile.coding_profiles.linkedin} target="_blank" rel="noreferrer" className="p-4 bg-blue-50 border border-blue-200 text-xs font-bold text-blue-800 rounded-2xl flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] transition-all group">
+                    <a href={profile.coding_profiles.linkedin} target="_blank" rel="noreferrer" className="p-4 md:p-5 bg-blue-50 border border-blue-200 text-xs md:text-sm font-bold text-blue-800 rounded-2xl flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] transition-all group">
                       <span className="flex items-center gap-2.5">
                         <Linkedin size={18} className="text-blue-600" />
                         <span>LinkedIn Profile</span>
@@ -4233,7 +4585,7 @@ function StaffStudentProfileModal({
                     </a>
                   )}
                   {profile.coding_profiles?.geeksforgeeks && (
-                    <a href={profile.coding_profiles.geeksforgeeks} target="_blank" rel="noreferrer" className="p-4 bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 rounded-2xl flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] transition-all group">
+                    <a href={profile.coding_profiles.geeksforgeeks} target="_blank" rel="noreferrer" className="p-4 md:p-5 bg-emerald-50 border border-emerald-200 text-xs md:text-sm font-bold text-emerald-800 rounded-2xl flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] transition-all group">
                       <span className="flex items-center gap-2.5">
                         <Globe size={18} className="text-emerald-600" />
                         <span>GeeksforGeeks Profile</span>
@@ -4242,7 +4594,7 @@ function StaffStudentProfileModal({
                     </a>
                   )}
                   {profile.coding_profiles?.portfolio && (
-                    <a href={profile.coding_profiles.portfolio} target="_blank" rel="noreferrer" className="p-4 bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-800 rounded-2xl flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] transition-all group">
+                    <a href={profile.coding_profiles.portfolio} target="_blank" rel="noreferrer" className="p-4 md:p-5 bg-indigo-50 border border-indigo-200 text-xs md:text-sm font-bold text-indigo-800 rounded-2xl flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] transition-all group">
                       <span className="flex items-center gap-2.5">
                         <Globe size={18} className="text-indigo-600" />
                         <span>Portfolio Website</span>
@@ -4254,22 +4606,22 @@ function StaffStudentProfileModal({
               )}
 
               {activeSection === 'achievements' && (
-                <div className="space-y-4">
+                <div className="space-y-4 md:space-y-5">
                   {(profile.achievements || []).length === 0 ? (
                     <p className="text-xs text-zinc-400 py-8 text-center">No achievements recorded.</p>
                   ) : (
                     profile.achievements.map((ach: any) => (
-                      <div key={ach.id} className="p-5 bg-zinc-50/50 border border-zinc-200/60 rounded-2xl shadow-2xs hover:shadow-xs transition-shadow space-y-1">
+                      <div key={ach.id} className="p-5 md:p-6 bg-zinc-50/50 border border-zinc-200/60 rounded-2xl shadow-2xs hover:shadow-xs transition-shadow space-y-1.5">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="text-sm font-bold text-zinc-900 flex items-center gap-1.5">
-                            <Trophy size={14} className="text-amber-500" /> {ach.title}
+                          <h4 className="text-sm md:text-base font-bold text-zinc-900 flex items-center gap-1.5">
+                            <Trophy size={15} className="text-amber-500" /> {ach.title}
                           </h4>
                           <span className="px-2 py-0.5 rounded bg-indigo-50 border border-indigo-100 text-[9px] font-black text-indigo-600 uppercase">
                             {ach.category}
                           </span>
                         </div>
-                        {ach.event_date && <p className="text-[10px] text-zinc-400 font-semibold">{ach.event_date}</p>}
-                        {ach.description && <p className="text-xs text-zinc-600 mt-2 leading-relaxed">{ach.description}</p>}
+                        {ach.event_date && <p className="text-[10px] md:text-xs text-zinc-400 font-semibold">{ach.event_date}</p>}
+                        {ach.description && <p className="text-xs md:text-sm text-zinc-600 mt-2 leading-relaxed">{ach.description}</p>}
                       </div>
                     ))
                   )}
@@ -5262,6 +5614,46 @@ export default function App() {
     min_team_size: 2,
     max_team_size: 5
   });
+  const [savedScreenshotOptions, setSavedScreenshotOptions] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('vsb_predefined_screenshot_options');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [savedFieldLabelOptions, setSavedFieldLabelOptions] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('vsb_predefined_field_labels');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isCustomScreenshot, setIsCustomScreenshot] = useState(false);
+  const [isCustomFieldLabel, setIsCustomFieldLabel] = useState(false);
+
+  const handleSaveCustomScreenshot = (val: string) => {
+    const trimmed = val.trim();
+    if (!trimmed || trimmed === 'Upload registration confirmation screenshot' || savedScreenshotOptions.includes(trimmed)) return;
+    const updated = [...savedScreenshotOptions, trimmed];
+    setSavedScreenshotOptions(updated);
+    try {
+      localStorage.setItem('vsb_predefined_screenshot_options', JSON.stringify(updated));
+    } catch {}
+    addToast('Saved screenshot instruction for reuse!', 'success');
+  };
+
+  const handleSaveCustomFieldLabel = (val: string) => {
+    const trimmed = val.trim();
+    if (!trimmed || trimmed === 'Have you registered?' || trimmed === 'Team Name' || savedFieldLabelOptions.includes(trimmed)) return;
+    const updated = [...savedFieldLabelOptions, trimmed];
+    setSavedFieldLabelOptions(updated);
+    try {
+      localStorage.setItem('vsb_predefined_field_labels', JSON.stringify(updated));
+    } catch {}
+    addToast('Saved verification label for reuse!', 'success');
+  };
   const [uploading, setUploading] = useState<number | null>(null);
   const [showTaskPreview, setShowTaskPreview] = useState(false);
   const [verificationFilter, setVerificationFilter] = useState<'PENDING' | 'VERIFIED' | 'REJECTED' | 'NOT INTERESTED' | 'ALL'>(() => {
@@ -5827,6 +6219,487 @@ export default function App() {
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const [highlightedNoticeId, setHighlightedNoticeId] = useState<string | null>(null);
 
+  // Auto-close all open modals, inspector panels, dialogs, and floating sheets on route/view navigation
+  useEffect(() => {
+    setInspectingSubmission(null);
+    setViewingStudentProfileId(null);
+    setProofPreviewData(null);
+    setShowRejectionModal(null);
+    setShowReviewsModal(false);
+    setShowAssignTargetModal(false);
+    setShowHistoryModal(false);
+    setShowTaskPreview(false);
+    setShowExportModal(false);
+    setShowCreateNoticeModal(false);
+    setShowTelegramLinkModal(false);
+    setShowProfilePromptModal(false);
+    setEmailAlertTask(null);
+    setEmailAlertPendingData(null);
+    setTeamReviewModal(null);
+    setExtendingTask(null);
+    setSelectedPosterModal(null);
+    setSharedTaskModal(null);
+    setTeamModalTask(null);
+    setCurrentTaskTeam(null);
+    setIndustryRejectModal(null);
+    setShowNotifications(false);
+    setIsMobileSidebarOpen(false);
+  }, [view]);
+
+  // Master Mutual-Exclusion Auto-Close: Whenever ANY modal/drawer/inspector opens,
+  // ensure all other overlapping modals, drawers, and panels are immediately closed.
+
+  // 1. When inspectingSubmission opens:
+  useEffect(() => {
+    if (inspectingSubmission) {
+      if (viewingStudentProfileId) setViewingStudentProfileId(null);
+      if (proofPreviewData) setProofPreviewData(null);
+      if (showRejectionModal) setShowRejectionModal(null);
+      if (showReviewsModal) setShowReviewsModal(false);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showTaskPreview) setShowTaskPreview(false);
+      if (showExportModal) setShowExportModal(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showTelegramLinkModal) setShowTelegramLinkModal(false);
+      if (showProfilePromptModal) setShowProfilePromptModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (extendingTask) setExtendingTask(null);
+      if (selectedPosterModal) setSelectedPosterModal(null);
+      if (sharedTaskModal) setSharedTaskModal(null);
+      if (teamModalTask) setTeamModalTask(null);
+      if (currentTaskTeam) setCurrentTaskTeam(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+      if (showFooterModal) setShowFooterModal(null);
+      if (showNotifications) setShowNotifications(false);
+      if (isMobileSidebarOpen) setIsMobileSidebarOpen(false);
+    }
+  }, [inspectingSubmission]);
+
+  // 2. When viewingStudentProfileId opens:
+  useEffect(() => {
+    if (viewingStudentProfileId) {
+      if (inspectingSubmission) setInspectingSubmission(null);
+      if (proofPreviewData) setProofPreviewData(null);
+      if (showRejectionModal) setShowRejectionModal(null);
+      if (showReviewsModal) setShowReviewsModal(false);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showTaskPreview) setShowTaskPreview(false);
+      if (showExportModal) setShowExportModal(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showTelegramLinkModal) setShowTelegramLinkModal(false);
+      if (showProfilePromptModal) setShowProfilePromptModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (extendingTask) setExtendingTask(null);
+      if (selectedPosterModal) setSelectedPosterModal(null);
+      if (sharedTaskModal) setSharedTaskModal(null);
+      if (teamModalTask) setTeamModalTask(null);
+      if (currentTaskTeam) setCurrentTaskTeam(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+      if (showFooterModal) setShowFooterModal(null);
+      if (showNotifications) setShowNotifications(false);
+      if (isMobileSidebarOpen) setIsMobileSidebarOpen(false);
+    }
+  }, [viewingStudentProfileId]);
+
+  // 3. When proofPreviewData opens:
+  useEffect(() => {
+    if (proofPreviewData) {
+      if (inspectingSubmission) setInspectingSubmission(null);
+      if (viewingStudentProfileId) setViewingStudentProfileId(null);
+      if (showRejectionModal) setShowRejectionModal(null);
+      if (showReviewsModal) setShowReviewsModal(false);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showTaskPreview) setShowTaskPreview(false);
+      if (showExportModal) setShowExportModal(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showTelegramLinkModal) setShowTelegramLinkModal(false);
+      if (showProfilePromptModal) setShowProfilePromptModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (extendingTask) setExtendingTask(null);
+      if (selectedPosterModal) setSelectedPosterModal(null);
+      if (sharedTaskModal) setSharedTaskModal(null);
+      if (teamModalTask) setTeamModalTask(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+      if (showFooterModal) setShowFooterModal(null);
+      if (showNotifications) setShowNotifications(false);
+      if (isMobileSidebarOpen) setIsMobileSidebarOpen(false);
+    }
+  }, [proofPreviewData]);
+
+  // 4. When showRejectionModal opens:
+  useEffect(() => {
+    if (showRejectionModal) {
+      if (inspectingSubmission) setInspectingSubmission(null);
+      if (viewingStudentProfileId) setViewingStudentProfileId(null);
+      if (proofPreviewData) setProofPreviewData(null);
+      if (showReviewsModal) setShowReviewsModal(false);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showTaskPreview) setShowTaskPreview(false);
+      if (showExportModal) setShowExportModal(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showTelegramLinkModal) setShowTelegramLinkModal(false);
+      if (showProfilePromptModal) setShowProfilePromptModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (extendingTask) setExtendingTask(null);
+      if (selectedPosterModal) setSelectedPosterModal(null);
+      if (sharedTaskModal) setSharedTaskModal(null);
+      if (teamModalTask) setTeamModalTask(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+      if (showFooterModal) setShowFooterModal(null);
+      if (showNotifications) setShowNotifications(false);
+      if (isMobileSidebarOpen) setIsMobileSidebarOpen(false);
+    }
+  }, [showRejectionModal]);
+
+  // 5. When showReviewsModal opens:
+  useEffect(() => {
+    if (showReviewsModal) {
+      if (inspectingSubmission) setInspectingSubmission(null);
+      if (viewingStudentProfileId) setViewingStudentProfileId(null);
+      if (proofPreviewData) setProofPreviewData(null);
+      if (showRejectionModal) setShowRejectionModal(null);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showTaskPreview) setShowTaskPreview(false);
+      if (showExportModal) setShowExportModal(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showTelegramLinkModal) setShowTelegramLinkModal(false);
+      if (showProfilePromptModal) setShowProfilePromptModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (extendingTask) setExtendingTask(null);
+      if (selectedPosterModal) setSelectedPosterModal(null);
+      if (sharedTaskModal) setSharedTaskModal(null);
+      if (teamModalTask) setTeamModalTask(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+      if (showFooterModal) setShowFooterModal(null);
+    }
+  }, [showReviewsModal]);
+
+  // 6. When showTaskPreview opens:
+  useEffect(() => {
+    if (showTaskPreview) {
+      if (inspectingSubmission) setInspectingSubmission(null);
+      if (viewingStudentProfileId) setViewingStudentProfileId(null);
+      if (proofPreviewData) setProofPreviewData(null);
+      if (showRejectionModal) setShowRejectionModal(null);
+      if (showReviewsModal) setShowReviewsModal(false);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showExportModal) setShowExportModal(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showTelegramLinkModal) setShowTelegramLinkModal(false);
+      if (showProfilePromptModal) setShowProfilePromptModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (extendingTask) setExtendingTask(null);
+      if (selectedPosterModal) setSelectedPosterModal(null);
+      if (sharedTaskModal) setSharedTaskModal(null);
+      if (teamModalTask) setTeamModalTask(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+      if (showFooterModal) setShowFooterModal(null);
+    }
+  }, [showTaskPreview]);
+
+  // 7. When showExportModal opens:
+  useEffect(() => {
+    if (showExportModal) {
+      if (inspectingSubmission) setInspectingSubmission(null);
+      if (viewingStudentProfileId) setViewingStudentProfileId(null);
+      if (proofPreviewData) setProofPreviewData(null);
+      if (showRejectionModal) setShowRejectionModal(null);
+      if (showReviewsModal) setShowReviewsModal(false);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showTaskPreview) setShowTaskPreview(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showTelegramLinkModal) setShowTelegramLinkModal(false);
+      if (showProfilePromptModal) setShowProfilePromptModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (extendingTask) setExtendingTask(null);
+      if (selectedPosterModal) setSelectedPosterModal(null);
+      if (sharedTaskModal) setSharedTaskModal(null);
+      if (teamModalTask) setTeamModalTask(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+      if (showFooterModal) setShowFooterModal(null);
+    }
+  }, [showExportModal]);
+
+  // 8. When selectedPosterModal opens:
+  useEffect(() => {
+    if (selectedPosterModal) {
+      if (proofPreviewData) setProofPreviewData(null);
+      if (inspectingSubmission) setInspectingSubmission(null);
+      if (viewingStudentProfileId) setViewingStudentProfileId(null);
+      if (showRejectionModal) setShowRejectionModal(null);
+      if (showReviewsModal) setShowReviewsModal(false);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showTaskPreview) setShowTaskPreview(false);
+      if (showExportModal) setShowExportModal(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showTelegramLinkModal) setShowTelegramLinkModal(false);
+      if (showProfilePromptModal) setShowProfilePromptModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (extendingTask) setExtendingTask(null);
+      if (sharedTaskModal) setSharedTaskModal(null);
+      if (teamModalTask) setTeamModalTask(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+      if (showFooterModal) setShowFooterModal(null);
+    }
+  }, [selectedPosterModal]);
+
+  // 9. When sharedTaskModal opens:
+  useEffect(() => {
+    if (sharedTaskModal) {
+      if (proofPreviewData) setProofPreviewData(null);
+      if (inspectingSubmission) setInspectingSubmission(null);
+      if (viewingStudentProfileId) setViewingStudentProfileId(null);
+      if (showRejectionModal) setShowRejectionModal(null);
+      if (showReviewsModal) setShowReviewsModal(false);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showTaskPreview) setShowTaskPreview(false);
+      if (showExportModal) setShowExportModal(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showTelegramLinkModal) setShowTelegramLinkModal(false);
+      if (showProfilePromptModal) setShowProfilePromptModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (extendingTask) setExtendingTask(null);
+      if (selectedPosterModal) setSelectedPosterModal(null);
+      if (teamModalTask) setTeamModalTask(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+      if (showFooterModal) setShowFooterModal(null);
+    }
+  }, [sharedTaskModal]);
+
+  // 10. When teamModalTask opens:
+  useEffect(() => {
+    if (teamModalTask) {
+      if (proofPreviewData) setProofPreviewData(null);
+      if (inspectingSubmission) setInspectingSubmission(null);
+      if (viewingStudentProfileId) setViewingStudentProfileId(null);
+      if (showRejectionModal) setShowRejectionModal(null);
+      if (showReviewsModal) setShowReviewsModal(false);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showTaskPreview) setShowTaskPreview(false);
+      if (showExportModal) setShowExportModal(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showTelegramLinkModal) setShowTelegramLinkModal(false);
+      if (showProfilePromptModal) setShowProfilePromptModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (extendingTask) setExtendingTask(null);
+      if (selectedPosterModal) setSelectedPosterModal(null);
+      if (sharedTaskModal) setSharedTaskModal(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+      if (showFooterModal) setShowFooterModal(null);
+    }
+  }, [teamModalTask]);
+
+  // 11. When extendingTask opens:
+  useEffect(() => {
+    if (extendingTask) {
+      if (proofPreviewData) setProofPreviewData(null);
+      if (inspectingSubmission) setInspectingSubmission(null);
+      if (viewingStudentProfileId) setViewingStudentProfileId(null);
+      if (showRejectionModal) setShowRejectionModal(null);
+      if (showReviewsModal) setShowReviewsModal(false);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showTaskPreview) setShowTaskPreview(false);
+      if (showExportModal) setShowExportModal(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showTelegramLinkModal) setShowTelegramLinkModal(false);
+      if (showProfilePromptModal) setShowProfilePromptModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (selectedPosterModal) setSelectedPosterModal(null);
+      if (sharedTaskModal) setSharedTaskModal(null);
+      if (teamModalTask) setTeamModalTask(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+      if (showFooterModal) setShowFooterModal(null);
+    }
+  }, [extendingTask]);
+
+  // 12. When showTelegramLinkModal opens:
+  useEffect(() => {
+    if (showTelegramLinkModal) {
+      if (proofPreviewData) setProofPreviewData(null);
+      if (inspectingSubmission) setInspectingSubmission(null);
+      if (viewingStudentProfileId) setViewingStudentProfileId(null);
+      if (showRejectionModal) setShowRejectionModal(null);
+      if (showReviewsModal) setShowReviewsModal(false);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showTaskPreview) setShowTaskPreview(false);
+      if (showExportModal) setShowExportModal(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showProfilePromptModal) setShowProfilePromptModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (extendingTask) setExtendingTask(null);
+      if (selectedPosterModal) setSelectedPosterModal(null);
+      if (sharedTaskModal) setSharedTaskModal(null);
+      if (teamModalTask) setTeamModalTask(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+      if (showFooterModal) setShowFooterModal(null);
+    }
+  }, [showTelegramLinkModal]);
+
+  // 13. When showProfilePromptModal opens:
+  useEffect(() => {
+    if (showProfilePromptModal) {
+      if (proofPreviewData) setProofPreviewData(null);
+      if (inspectingSubmission) setInspectingSubmission(null);
+      if (viewingStudentProfileId) setViewingStudentProfileId(null);
+      if (showRejectionModal) setShowRejectionModal(null);
+      if (showReviewsModal) setShowReviewsModal(false);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showTaskPreview) setShowTaskPreview(false);
+      if (showExportModal) setShowExportModal(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showTelegramLinkModal) setShowTelegramLinkModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (extendingTask) setExtendingTask(null);
+      if (selectedPosterModal) setSelectedPosterModal(null);
+      if (sharedTaskModal) setSharedTaskModal(null);
+      if (teamModalTask) setTeamModalTask(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+      if (showFooterModal) setShowFooterModal(null);
+    }
+  }, [showProfilePromptModal]);
+
+  // 14. When showFooterModal opens:
+  useEffect(() => {
+    if (showFooterModal) {
+      if (proofPreviewData) setProofPreviewData(null);
+      if (inspectingSubmission) setInspectingSubmission(null);
+      if (viewingStudentProfileId) setViewingStudentProfileId(null);
+      if (showRejectionModal) setShowRejectionModal(null);
+      if (showReviewsModal) setShowReviewsModal(false);
+      if (showAssignTargetModal) setShowAssignTargetModal(false);
+      if (showHistoryModal) setShowHistoryModal(false);
+      if (showTaskPreview) setShowTaskPreview(false);
+      if (showExportModal) setShowExportModal(false);
+      if (showCreateNoticeModal) setShowCreateNoticeModal(false);
+      if (showTelegramLinkModal) setShowTelegramLinkModal(false);
+      if (showProfilePromptModal) setShowProfilePromptModal(false);
+      if (emailAlertTask) setEmailAlertTask(null);
+      if (teamReviewModal) setTeamReviewModal(null);
+      if (extendingTask) setExtendingTask(null);
+      if (selectedPosterModal) setSelectedPosterModal(null);
+      if (sharedTaskModal) setSharedTaskModal(null);
+      if (teamModalTask) setTeamModalTask(null);
+      if (industryRejectModal) setIndustryRejectModal(null);
+    }
+  }, [showFooterModal]);
+
+  // 15. When sub-tabs change, close sub-tab specific modals
+  useEffect(() => {
+    setShowAssignTargetModal(false);
+    setShowHistoryModal(false);
+  }, [codingPlatformTab, leetcodeActiveTab]);
+
+  useEffect(() => {
+    setIndustryRejectModal(null);
+  }, [industryActiveTab]);
+
+  // 16. Universal Global Escape key dismiss handler
+  useEffect(() => {
+    const handleGlobalEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (proofPreviewData) {
+        setProofPreviewData(null);
+      } else if (viewingStudentProfileId) {
+        setViewingStudentProfileId(null);
+      } else if (inspectingSubmission) {
+        setInspectingSubmission(null);
+        setInspectingProofZoom(1);
+        setInspectingProofRotation(0);
+      } else if (showRejectionModal) {
+        setShowRejectionModal(null);
+      } else if (showReviewsModal) {
+        setShowReviewsModal(false);
+      } else if (showAssignTargetModal) {
+        setShowAssignTargetModal(false);
+      } else if (showHistoryModal) {
+        setShowHistoryModal(false);
+      } else if (showTaskPreview) {
+        setShowTaskPreview(false);
+      } else if (showExportModal) {
+        setShowExportModal(false);
+      } else if (showCreateNoticeModal) {
+        setShowCreateNoticeModal(false);
+      } else if (showTelegramLinkModal) {
+        setShowTelegramLinkModal(false);
+      } else if (showProfilePromptModal) {
+        setShowProfilePromptModal(false);
+      } else if (emailAlertTask) {
+        setEmailAlertTask(null);
+        setEmailAlertPendingData(null);
+      } else if (teamReviewModal) {
+        setTeamReviewModal(null);
+      } else if (extendingTask) {
+        setExtendingTask(null);
+      } else if (selectedPosterModal) {
+        setSelectedPosterModal(null);
+      } else if (sharedTaskModal) {
+        setSharedTaskModal(null);
+      } else if (teamModalTask) {
+        setTeamModalTask(null);
+        setCurrentTaskTeam(null);
+      } else if (industryRejectModal) {
+        setIndustryRejectModal(null);
+      } else if (showFooterModal) {
+        setShowFooterModal(null);
+      } else if (showNotifications) {
+        setShowNotifications(false);
+      } else if (isMobileSidebarOpen) {
+        setIsMobileSidebarOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalEsc);
+    return () => window.removeEventListener('keydown', handleGlobalEsc);
+  }, [
+    proofPreviewData,
+    viewingStudentProfileId,
+    inspectingSubmission,
+    showRejectionModal,
+    showReviewsModal,
+    showAssignTargetModal,
+    showHistoryModal,
+    showTaskPreview,
+    showExportModal,
+    showCreateNoticeModal,
+    showTelegramLinkModal,
+    showProfilePromptModal,
+    emailAlertTask,
+    teamReviewModal,
+    extendingTask,
+    selectedPosterModal,
+    sharedTaskModal,
+    teamModalTask,
+    industryRejectModal,
+    showFooterModal,
+    showNotifications,
+    isMobileSidebarOpen
+  ]);
+
   // Role Helpers
   const isAdmin = user?.role === 'SUPREME_ADMIN';
   const isHOD = user?.role === 'HOD';
@@ -6176,16 +7049,17 @@ export default function App() {
 
   useEffect(() => {
     if (token) {
-      // Smart live polling every 25 seconds only when tab is visible
+      // Smart live polling: fast 8s sync when actively viewing tasks or verifications (co-workspace parity), 20s for idle views
+      const pollDelay = (view === 'verifications' || view === 'tasks') ? 8000 : 20000;
       const interval = setInterval(() => {
         if (document.visibilityState === 'visible') {
           fetchRefresh();
           if (user?.role === 'STUDENT') fetchMyTeamsAndInvitations();
           if (user?.role === 'SUPREME_ADMIN' || user?.role === 'HOD') fetchIndustryData();
         }
-      }, 25000);
+      }, pollDelay);
 
-      // Instant refresh when tab/window gains focus
+      // Instant refresh the moment tab/window gains focus or becomes visible
       const handleFocusOrVisible = () => {
         if (document.visibilityState === 'visible') {
           fetchRefresh();
@@ -6204,7 +7078,7 @@ export default function App() {
     } else {
       setIsLoading(false);
     }
-  }, [token, user?.role]);
+  }, [token, user?.role, view]);
 
   useEffect(() => {
     if (token && user?.role === 'STUDENT' && view === 'tasks') {
@@ -6518,6 +7392,9 @@ export default function App() {
         }
         if (data.submissions) {
           setSubmissions(data.submissions);
+          try {
+            sessionStorage.setItem('app_cache_submissions', JSON.stringify(data.submissions));
+          } catch {}
         }
         if (data.notifications) {
           const notifs: Notification[] = data.notifications;
@@ -6585,7 +7462,13 @@ export default function App() {
   const fetchSubmissions = async () => {
     try {
       const res = await fetch(`${API_URL}/api/submissions`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setSubmissions(await res.json());
+      if (res.ok) {
+        const subsData = await res.json();
+        setSubmissions(subsData);
+        try {
+          sessionStorage.setItem('app_cache_submissions', JSON.stringify(subsData));
+        } catch {}
+      }
     } catch (e) { }
   };
 
@@ -7384,6 +8267,23 @@ export default function App() {
 
       if (res.ok) {
         const createdTask = await res.json();
+        // Auto-save custom screenshot instruction & field label for reuse across future tasks
+        if (newTask.screenshot_instruction && newTask.screenshot_instruction.trim() !== 'Upload registration confirmation screenshot' && !savedScreenshotOptions.includes(newTask.screenshot_instruction.trim())) {
+          const updated = [...savedScreenshotOptions, newTask.screenshot_instruction.trim()];
+          setSavedScreenshotOptions(updated);
+          try {
+            localStorage.setItem('vsb_predefined_screenshot_options', JSON.stringify(updated));
+          } catch {}
+        }
+        if (newTask.custom_field_label && newTask.custom_field_label.trim() !== 'Have you registered?' && newTask.custom_field_label.trim() !== 'Team Name' && !savedFieldLabelOptions.includes(newTask.custom_field_label.trim())) {
+          const updated = [...savedFieldLabelOptions, newTask.custom_field_label.trim()];
+          setSavedFieldLabelOptions(updated);
+          try {
+            localStorage.setItem('vsb_predefined_field_labels', JSON.stringify(updated));
+          } catch {}
+        }
+        setIsCustomScreenshot(false);
+        setIsCustomFieldLabel(false);
         setNewTask({ title: '', description: '', category: 'Competition', external_link: '', deadline: '', screenshot_instruction: '', custom_field_label: '', department_id: '', class_ids: [], submission_type: 'INDIVIDUAL', min_team_size: 2, max_team_size: 5 });
         setPosterFile(null);
         setPosterPreview(null);
@@ -7760,6 +8660,13 @@ export default function App() {
   };
 
   const handleExtendDeadlineAndReopen = async (taskId: string | number, deadlineIso: string) => {
+    // 1. Optimistic Update: instantly update task state in memory so UI responds at 0ms
+    const previousTasks = [...tasks];
+    setTasks(prev => prev.map(t => String(t.id) === String(taskId) ? { ...t, status: 'OPEN', deadline: deadlineIso } : t));
+    setExtendingTask(null);
+    setExtendedDeadline('');
+    addToast('Task reopened and deadline extended successfully!', 'success');
+
     try {
       const res = await fetch(`${API_URL}/api/tasks/${taskId}/reopen`, {
         method: 'PATCH',
@@ -7768,14 +8675,15 @@ export default function App() {
       });
       const data = await res.json();
       if (res.ok) {
-        addToast('Task reopened and deadline extended successfully!', 'success');
-        setExtendingTask(null);
-        setExtendedDeadline('');
         fetchTasks();
       } else {
+        // Rollback state on error
+        setTasks(previousTasks);
         addToast(data.error || 'Failed to extend deadline and reopen task', 'error');
       }
     } catch (e) {
+      // Rollback state on network error
+      setTasks(previousTasks);
       addToast('Network error reopening task', 'error');
     }
   };
@@ -9616,12 +10524,13 @@ export default function App() {
           {/* ── Forgot Password & Reset Modal ─────────────────────────────── */}
           <AnimatePresence>
             {showForgotPasswordModal && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm cursor-pointer" onClick={resetForgotModal}>
                 <motion.div
+                  onClick={e => e.stopPropagation()}
                   initial={{ opacity: 0, scale: 0.95, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                  className="bg-white rounded-[2rem] p-6 md:p-8 max-w-md w-full shadow-2xl relative border border-zinc-100 max-h-[90vh] overflow-y-auto"
+                  className="bg-white rounded-[2rem] p-6 md:p-8 max-w-md w-full shadow-2xl relative border border-zinc-100 max-h-[90vh] overflow-y-auto cursor-default"
                 >
                   <button
                     type="button"
@@ -9802,12 +10711,13 @@ export default function App() {
           {/* ── Industry Self-Registration Modal ─────────────────────────── */}
           <AnimatePresence>
             {showIndustryRegModal && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm cursor-pointer" onClick={() => setShowIndustryRegModal(false)}>
                 <motion.div
+                  onClick={e => e.stopPropagation()}
                   initial={{ opacity: 0, scale: 0.95, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                  className="bg-white rounded-[2rem] p-6 md:p-8 max-w-lg w-full shadow-2xl relative border border-zinc-100 max-h-[90vh] overflow-y-auto"
+                  className="bg-white rounded-[2rem] p-6 md:p-8 max-w-lg w-full shadow-2xl relative border border-zinc-100 max-h-[90vh] overflow-y-auto cursor-default"
                 >
                   <button
                     type="button"
@@ -11720,12 +12630,13 @@ export default function App() {
 
     return (
       <AnimatePresence>
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[210] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] flex items-center justify-center p-4 cursor-pointer" onClick={() => setShowTelegramLinkModal(false)}>
           <motion.div
+            onClick={e => e.stopPropagation()}
             initial={{ scale: 0.92, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.92, opacity: 0, y: 15 }}
-            className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-3xl shadow-2xl relative overflow-hidden border border-zinc-100 max-h-[92vh] overflow-y-auto"
+            className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-3xl shadow-2xl relative overflow-hidden border border-zinc-100 max-h-[92vh] overflow-y-auto cursor-default"
           >
             {/* Top decorative gradient bar */}
             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-sky-400 via-indigo-500 to-violet-600" />
@@ -13088,8 +13999,18 @@ export default function App() {
     const customTargetUrl = isCustomUrl ? (/^https?:\/\//i.test(customVal) ? customVal : `https://${customVal}`) : null;
 
     return (
-      <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[120] flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-200">
-        <div className="bg-white rounded-3xl w-full max-w-6xl h-[92vh] max-h-[920px] flex flex-col shadow-2xl overflow-hidden border border-zinc-200">
+      <div
+        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[130] flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-200 cursor-pointer"
+        onClick={() => {
+          setInspectingSubmission(null);
+          setInspectingProofZoom(1);
+          setInspectingProofRotation(0);
+        }}
+      >
+        <div
+          className="bg-white rounded-3xl w-full max-w-6xl h-[92vh] max-h-[920px] flex flex-col shadow-2xl overflow-hidden border border-zinc-200 cursor-default"
+          onClick={e => e.stopPropagation()}
+        >
           {/* Modal Top Bar */}
           <div className="px-5 py-3.5 border-b border-zinc-100 flex items-center justify-between gap-3 bg-zinc-50/70 shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -13358,7 +14279,13 @@ export default function App() {
                   <Button
                     variant="outline"
                     className="text-xs px-2.5 py-1.5 h-auto text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-bold shrink-0"
-                    onClick={() => setViewingStudentProfileId(String(inspectingSubmission.user_id))}
+                    onClick={() => {
+                      const studentId = String(inspectingSubmission.user_id);
+                      setInspectingSubmission(null);
+                      setInspectingProofZoom(1);
+                      setInspectingProofRotation(0);
+                      setViewingStudentProfileId(studentId);
+                    }}
                     title="Open full student academic profile with placement metrics"
                   >
                     <User size={13} /> Full Profile
@@ -13700,12 +14627,13 @@ export default function App() {
             const previewWithin24h = newTask.deadline && !previewDeadlinePassed && (new Date(newTask.deadline).getTime() - new Date().getTime()) < 24 * 60 * 60 * 1000;
 
             return (
-              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] flex items-center justify-center p-4 cursor-pointer" onClick={() => setShowTaskPreview(false)}>
                 <motion.div
+                  onClick={e => e.stopPropagation()}
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.9, opacity: 0 }}
-                  className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-4xl shadow-2xl relative max-h-[95vh] md:max-h-[90vh] flex flex-col"
+                  className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-4xl shadow-2xl relative max-h-[95vh] md:max-h-[90vh] flex flex-col cursor-default"
                 >
                   <button
                     onClick={() => setShowTaskPreview(false)}
@@ -13755,7 +14683,9 @@ export default function App() {
                         </div>
                       </div>
 
-                      <p className="text-zinc-600 text-sm mb-6 whitespace-pre-wrap break-words">{newTask.description || "No description provided."}</p>
+                      <div className="text-zinc-600 text-sm mb-6 break-words">
+                        <FormattedTaskDescription content={newTask.description} />
+                      </div>
 
                       {newTask.external_link && (
                         <div className="mb-6">
@@ -13829,12 +14759,13 @@ export default function App() {
         {/* Reviews Modal */}
         <AnimatePresence>
           {showReviewsModal && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] flex items-center justify-center p-4 cursor-pointer" onClick={() => setShowReviewsModal(false)}>
               <motion.div
+                onClick={e => e.stopPropagation()}
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto"
+                className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto cursor-default"
               >
                 <button
                   onClick={() => setShowReviewsModal(false)}
@@ -14793,11 +15724,12 @@ export default function App() {
 
                   {/* Rejection Reason Modal */}
                   {industryRejectModal && (
-                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm cursor-pointer" onClick={() => { setIndustryRejectModal(null); setIndustryRejectReason(''); }}>
                       <motion.div
+                        onClick={e => e.stopPropagation()}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-zinc-200"
+                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-zinc-200 cursor-default"
                       >
                         <h3 className="text-lg font-bold text-zinc-900">Deny Industry Application</h3>
                         <p className="text-xs text-zinc-500 mt-1">
@@ -15632,21 +16564,123 @@ export default function App() {
                                 </div>
                               </div>
                             </div>
-                            <div className="min-w-0">
-                              <Input
-                                placeholder="Screenshot Instruction (e.g. Upload registration page)"
-                                value={newTask.screenshot_instruction}
-                                onChange={e => setNewTask(prev => ({ ...prev, screenshot_instruction: e.target.value }))}
+                            {/* Screenshot Instruction – Dropdown with Custom option */}
+                            <div className="min-w-0 space-y-2">
+                              <Select
+                                value={
+                                  newTask.screenshot_instruction === 'Upload registration confirmation screenshot'
+                                    ? 'Upload registration confirmation screenshot'
+                                    : savedScreenshotOptions.includes(newTask.screenshot_instruction)
+                                      ? newTask.screenshot_instruction
+                                      : isCustomScreenshot || newTask.screenshot_instruction
+                                        ? '__custom__'
+                                        : ''
+                                }
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  if (val === '__custom__') {
+                                    setIsCustomScreenshot(true);
+                                    if (newTask.screenshot_instruction === 'Upload registration confirmation screenshot' || savedScreenshotOptions.includes(newTask.screenshot_instruction)) {
+                                      setNewTask(prev => ({ ...prev, screenshot_instruction: '' }));
+                                    }
+                                  } else {
+                                    setIsCustomScreenshot(false);
+                                    setNewTask(prev => ({ ...prev, screenshot_instruction: val }));
+                                  }
+                                }}
                                 required
-                              />
+                              >
+                                <option value="" disabled>Screenshot Instruction (Select Option)</option>
+                                <option value="Upload registration confirmation screenshot">Upload registration confirmation screenshot</option>
+                                {savedScreenshotOptions.filter(o => o !== 'Upload registration confirmation screenshot').map(opt => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                                <option value="__custom__">Other / Custom</option>
+                              </Select>
+
+                              {(isCustomScreenshot || (newTask.screenshot_instruction && newTask.screenshot_instruction !== 'Upload registration confirmation screenshot' && !savedScreenshotOptions.includes(newTask.screenshot_instruction))) && (
+                                <div className="space-y-1">
+                                  <Input
+                                    placeholder="Enter custom screenshot instruction..."
+                                    value={newTask.screenshot_instruction}
+                                    onChange={e => setNewTask(prev => ({ ...prev, screenshot_instruction: e.target.value }))}
+                                    required
+                                    autoFocus
+                                  />
+                                  {newTask.screenshot_instruction.trim() && !savedScreenshotOptions.includes(newTask.screenshot_instruction.trim()) && newTask.screenshot_instruction.trim() !== 'Upload registration confirmation screenshot' && (
+                                    <div className="flex items-center justify-between px-1">
+                                      <span className="text-[11px] text-zinc-400">Custom instruction</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSaveCustomScreenshot(newTask.screenshot_instruction)}
+                                        className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
+                                      >
+                                        + Save option for future tasks
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            <div className="min-w-0">
-                              <Input
-                                placeholder="Custom Verification Field Label (e.g. Team ID)"
-                                value={newTask.custom_field_label}
-                                onChange={e => setNewTask(prev => ({ ...prev, custom_field_label: e.target.value }))}
+
+                            {/* Custom Verification Field Label – Dropdown with Custom option */}
+                            <div className="min-w-0 space-y-2">
+                              <Select
+                                value={
+                                  (newTask.custom_field_label === 'Have you registered?' || newTask.custom_field_label === 'Team Name')
+                                    ? newTask.custom_field_label
+                                    : savedFieldLabelOptions.includes(newTask.custom_field_label)
+                                      ? newTask.custom_field_label
+                                      : isCustomFieldLabel || newTask.custom_field_label
+                                        ? '__custom__'
+                                        : ''
+                                }
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  if (val === '__custom__') {
+                                    setIsCustomFieldLabel(true);
+                                    if (newTask.custom_field_label === 'Have you registered?' || newTask.custom_field_label === 'Team Name' || savedFieldLabelOptions.includes(newTask.custom_field_label)) {
+                                      setNewTask(prev => ({ ...prev, custom_field_label: '' }));
+                                    }
+                                  } else {
+                                    setIsCustomFieldLabel(false);
+                                    setNewTask(prev => ({ ...prev, custom_field_label: val }));
+                                  }
+                                }}
                                 required
-                              />
+                              >
+                                <option value="" disabled>Custom Verification Field Label (Select Option)</option>
+                                <option value="Have you registered?">Have you registered?</option>
+                                <option value="Team Name">Team Name</option>
+                                {savedFieldLabelOptions.filter(o => o !== 'Have you registered?' && o !== 'Team Name').map(opt => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                                <option value="__custom__">Other / Custom</option>
+                              </Select>
+
+                              {(isCustomFieldLabel || (newTask.custom_field_label && newTask.custom_field_label !== 'Have you registered?' && newTask.custom_field_label !== 'Team Name' && !savedFieldLabelOptions.includes(newTask.custom_field_label))) && (
+                                <div className="space-y-1">
+                                  <Input
+                                    placeholder="Enter custom verification field label (e.g. Roll No, Team ID)..."
+                                    value={newTask.custom_field_label}
+                                    onChange={e => setNewTask(prev => ({ ...prev, custom_field_label: e.target.value }))}
+                                    required
+                                    autoFocus
+                                  />
+                                  {newTask.custom_field_label.trim() && !savedFieldLabelOptions.includes(newTask.custom_field_label.trim()) && newTask.custom_field_label.trim() !== 'Have you registered?' && newTask.custom_field_label.trim() !== 'Team Name' && (
+                                    <div className="flex items-center justify-between px-1">
+                                      <span className="text-[11px] text-zinc-400">Custom label</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSaveCustomFieldLabel(newTask.custom_field_label)}
+                                        className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
+                                      >
+                                        + Save option for future tasks
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
 
                             {/* Task Submission Type Selector */}
@@ -15843,10 +16877,10 @@ export default function App() {
                               )}
                             </div>
                           </div>
-                          <Textarea
-                            placeholder="Task Description..."
+                          <TaskDescriptionEditor
+                            placeholder="Task Description... (supports Bold, Italic, Bullet lists, and Numbered lists)"
                             value={newTask.description}
-                            onChange={e => setNewTask(prev => ({ ...prev, description: e.target.value }))}
+                            onChange={val => setNewTask(prev => ({ ...prev, description: val }))}
                             required
                           />
                           <div className="flex gap-4">
@@ -16168,7 +17202,9 @@ export default function App() {
                               </div>
                             </div>
 
-                            <p className="text-zinc-600 text-sm mb-6 whitespace-pre-wrap break-words">{task.description}</p>
+                            <div className="text-zinc-600 text-sm mb-6 break-words">
+                              <FormattedTaskDescription content={task.description} />
+                            </div>
 
                             <div className="flex flex-wrap items-center gap-3 mb-6">
                               <button
@@ -18327,12 +19363,13 @@ export default function App() {
 
           <AnimatePresence>
             {showExportModal && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+              <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm cursor-pointer" onClick={() => setShowExportModal(false)}>
                 <motion.div
+                  onClick={e => e.stopPropagation()}
                   initial={{ opacity: 0, scale: 0.95, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                  className="bg-white rounded-[2rem] p-6 md:p-8 max-w-xl w-full shadow-2xl relative border border-zinc-100 max-h-[90vh] overflow-y-auto"
+                  className="bg-white rounded-[2rem] p-6 md:p-8 max-w-xl w-full shadow-2xl relative border border-zinc-100 max-h-[90vh] overflow-y-auto cursor-default"
                 >
                   <button
                     onClick={() => setShowExportModal(false)}
@@ -18693,8 +19730,9 @@ export default function App() {
             )}
 
             {showFooterModal && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+              <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in cursor-pointer" onClick={() => setShowFooterModal(null)}>
                 <motion.div
+                  onClick={e => e.stopPropagation()}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
@@ -18755,12 +19793,13 @@ export default function App() {
             )}
 
             {selectedPosterModal && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+              <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md cursor-pointer" onClick={() => setSelectedPosterModal(null)}>
                 <motion.div
+                  onClick={e => e.stopPropagation()}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center p-2"
+                  className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center p-2 cursor-default"
                 >
                   <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
                     <a
@@ -18797,12 +19836,13 @@ export default function App() {
             )}
 
             {sharedTaskModal && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm cursor-pointer" onClick={() => setSharedTaskModal(null)}>
                 <motion.div
+                  onClick={e => e.stopPropagation()}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative space-y-6 max-h-[95vh] overflow-y-auto"
+                  className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative space-y-6 max-h-[95vh] overflow-y-auto cursor-default"
                 >
                   <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
                     <div className="flex items-center gap-3">
@@ -18856,12 +19896,13 @@ export default function App() {
             )}
 
             {teamModalTask && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm cursor-pointer" onClick={() => { setTeamModalTask(null); setCurrentTaskTeam(null); }}>
                 <motion.div
+                  onClick={e => e.stopPropagation()}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl relative space-y-6 max-h-[90vh] overflow-y-auto"
+                  className="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl relative space-y-6 max-h-[90vh] overflow-y-auto cursor-default"
                 >
                   <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
                     <div className="flex items-center gap-3">
@@ -19424,12 +20465,13 @@ export default function App() {
         {/* HOD Extend Deadline & Reopen Modal */}
         <AnimatePresence>
           {extendingTask && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] flex items-center justify-center p-4 cursor-pointer" onClick={() => setExtendingTask(null)}>
               <motion.div
+                onClick={e => e.stopPropagation()}
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-md shadow-2xl space-y-4"
+                className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-md shadow-2xl space-y-4 cursor-default"
               >
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-black text-zinc-900 flex items-center gap-2">

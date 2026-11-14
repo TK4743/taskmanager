@@ -2916,55 +2916,70 @@ async function startServer() {
 
     if (!isAuthorized) return res.status(403).json({ error: 'Forbidden: You do not have permission to reopen this task' });
 
-    // Clean up old backup ZIP file and reset backup state so a new backup can trigger 5 minutes before the new deadline
-    await cleanupTaskBackup(req.params.id);
-
+    // Update database immediately
     await pool.query(
       'UPDATE tasks SET status = \'OPEN\', deadline = $1, backed_up_deadline = NULL, backup_file_path = NULL, backup_taken_at = NULL, updated_at = NOW() WHERE id = $2',
       [newDeadline.toISOString(), req.params.id]
     );
 
-    // 1. In-App Notification Dispatch
-    if (taskClassIds.length > 0) {
-      const deadlineStr = newDeadline.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-      await notifyStudentsInClasses(taskClassIds, `Deadline extended & task reopened by ${req.user.full_name || req.user.role} for "${task.title}". New deadline: ${deadlineStr}`, 'TASK_REOPENED', 'Deadline Extended');
-      await notifyAdvisorsOfClasses(taskClassIds, `Deadline extended & task reopened for your class for "${task.title}". New deadline: ${deadlineStr}`, 'TASK_REOPENED', 'Deadline Extended', req.user.id);
-    }
-
-    // 2. 🚀 Telegram Group & Personal Notification Dispatch
-    notifyTaskReopened({
-      id: task.id,
-      title: task.title,
-      category: task.category,
-      deadline: newDeadline,
-      reopened_by: req.user.full_name || req.user.role
-    }, taskClassIds).catch(err => console.error('[Telegram Reopen Task Error]:', err));
-
-    // 3. 📧 Multi-Node Institutional Email Notification Dispatch
-    notifyTaskReopenedEmail({
-      id: task.id,
-      title: task.title,
-      category: task.category,
-      deadline: newDeadline,
-      reopened_by: req.user.full_name || req.user.role,
-      submission_type: task.submission_type
-    }, taskClassIds).catch(err => console.error('[Email Reopen Task Error]:', err));
-
-    // 4. 📱 Web Push Notification Dispatch
-    try {
-      const pushTitle = `🔄 Task Reopened: ${task.title}`;
-      const pushBody = `Deadline extended to ${newDeadline.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}. Please submit your work!`;
-      if (taskClassIds.length > 0) {
-        sendPushToClasses(taskClassIds, { title: pushTitle, body: pushBody, url: '/' }).catch(e => console.error('[Push Reopen Task Error]:', e));
-      } else {
-        sendPushToAll({ title: pushTitle, body: pushBody, url: '/' }).catch(e => console.error('[Push Reopen Task Error]:', e));
-      }
-    } catch (pushErr) {
-      console.error('[Push Notification Reopen Error]:', pushErr);
-    }
-
+    // Invalidate API cache so subsequent requests get fresh data
     invalidateApiCache('tasks_');
+    invalidateApiCache('submissions_');
+
+    // Return instant success response to client (< 50ms)
     res.json({ success: true, deadline: newDeadline.toISOString(), status: 'OPEN' });
+
+    // Offload heavy notification pipeline and backup cleanup to background execution
+    setImmediate(async () => {
+      try {
+        await cleanupTaskBackup(req.params.id);
+      } catch (err) {
+        console.warn('[Cleanup Task Backup Error]:', err);
+      }
+
+      // 1. In-App Notification Dispatch
+      if (taskClassIds.length > 0) {
+        const deadlineStr = newDeadline.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+        try {
+          await notifyStudentsInClasses(taskClassIds, `Deadline extended & task reopened by ${req.user.full_name || req.user.role} for "${task.title}". New deadline: ${deadlineStr}`, 'TASK_REOPENED', 'Deadline Extended');
+          await notifyAdvisorsOfClasses(taskClassIds, `Deadline extended & task reopened for your class for "${task.title}". New deadline: ${deadlineStr}`, 'TASK_REOPENED', 'Deadline Extended', req.user.id);
+        } catch (notifErr) {
+          console.warn('[In-App Reopen Notif Error]:', notifErr);
+        }
+      }
+
+      // 2. 🚀 Telegram Group & Personal Notification Dispatch
+      notifyTaskReopened({
+        id: task.id,
+        title: task.title,
+        category: task.category,
+        deadline: newDeadline,
+        reopened_by: req.user.full_name || req.user.role
+      }, taskClassIds).catch(err => console.error('[Telegram Reopen Task Error]:', err));
+
+      // 3. 📧 Multi-Node Institutional Email Notification Dispatch
+      notifyTaskReopenedEmail({
+        id: task.id,
+        title: task.title,
+        category: task.category,
+        deadline: newDeadline,
+        reopened_by: req.user.full_name || req.user.role,
+        submission_type: task.submission_type
+      }, taskClassIds).catch(err => console.error('[Email Reopen Task Error]:', err));
+
+      // 4. 📱 Web Push Notification Dispatch
+      try {
+        const pushTitle = `🔄 Task Reopened: ${task.title}`;
+        const pushBody = `Deadline extended to ${newDeadline.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}. Please submit your work!`;
+        if (taskClassIds.length > 0) {
+          sendPushToClasses(taskClassIds, { title: pushTitle, body: pushBody, url: '/' }).catch(e => console.error('[Push Reopen Task Error]:', e));
+        } else {
+          sendPushToAll({ title: pushTitle, body: pushBody, url: '/' }).catch(e => console.error('[Push Reopen Task Error]:', e));
+        }
+      } catch (pushErr) {
+        console.error('[Push Notification Reopen Error]:', pushErr);
+      }
+    });
   });
 
   // ── Fetch Incomplete / Pending Students for a Task ───────────────────────────
@@ -4859,39 +4874,46 @@ async function startServer() {
       WHERE id = ANY($2) AND status != 'VERIFIED'
     `, [note, submission_ids, req.user.id]);
 
-    // Dispatch In-App Notifications to all verified students
-    try {
-      const subsInfo = await pool.query(
-        `SELECT ts.user_id, t.title FROM task_submissions ts JOIN tasks t ON ts.task_id = t.id WHERE ts.id = ANY($1)`,
-        [submission_ids]
-      );
-      for (const row of subsInfo.rows) {
-        await createInAppNotification(row.user_id, `Your submission for "${row.title}" has been verified by ${req.user.full_name || 'Faculty'}.${note ? ' Note: ' + note : ''}`, 'VERIFIED', 'Task Verified');
-      }
-    } catch (e: any) {
-      console.warn('[Batch Verify In-App Notif Error]:', e.message);
-    }
-
-    notifySubmissionBatchVerified(submission_ids).catch(err => console.error('[Telegram Batch Verify Error]:', err));
-    
-    // Dispatch Web Push notification to verified students
-    pool.query('SELECT DISTINCT user_id FROM task_submissions WHERE id = ANY($1)', [submission_ids])
-      .then(r => {
-        const uIds = r.rows.map(x => x.user_id);
-        if (uIds.length > 0) {
-          sendPushToUsers(uIds, {
-            title: '✅ Tasks Verified!',
-            body: `Your submissions have been approved by ${req.user.full_name || 'Faculty'}.`,
-            url: '/'
-          });
-        }
-      })
-      .catch(e => console.error('[Push Batch Verify Error]:', e));
-
+    // Invalidate API caches immediately
     invalidateApiCache('tasks_');
     invalidateApiCache('submissions_');
     invalidateApiCache('notifs_');
+
+    // Respond immediately to the client (< 35ms)
     res.json({ success: true, count: submission_ids.length });
+
+    // Offload notification dispatches to background execution
+    setImmediate(async () => {
+      try {
+        const subsInfo = await pool.query(
+          `SELECT ts.user_id, t.title FROM task_submissions ts JOIN tasks t ON ts.task_id = t.id WHERE ts.id = ANY($1)`,
+          [submission_ids]
+        );
+        for (const row of subsInfo.rows) {
+          try {
+            await createInAppNotification(row.user_id, `Your submission for "${row.title}" has been verified by ${req.user.full_name || 'Faculty'}.${note ? ' Note: ' + note : ''}`, 'VERIFIED', 'Task Verified');
+          } catch (_) {}
+        }
+      } catch (e: any) {
+        console.warn('[Batch Verify In-App Notif Error]:', e.message);
+      }
+
+      notifySubmissionBatchVerified(submission_ids).catch(err => console.error('[Telegram Batch Verify Error]:', err));
+      
+      // Dispatch Web Push notification to verified students
+      pool.query('SELECT DISTINCT user_id FROM task_submissions WHERE id = ANY($1)', [submission_ids])
+        .then(r => {
+          const uIds = r.rows.map(x => x.user_id);
+          if (uIds.length > 0) {
+            sendPushToUsers(uIds, {
+              title: '✅ Tasks Verified!',
+              body: `Your submissions have been approved by ${req.user.full_name || 'Faculty'}.`,
+              url: '/'
+            });
+          }
+        })
+        .catch(e => console.error('[Push Batch Verify Error]:', e));
+    });
   });
 
   app.patch('/api/submissions/:id/verify', authenticate, authorize(['HOD', 'SUPREME_ADMIN', 'STUDENT', 'CLASS_ADVISOR']), async (req: any, res) => {
@@ -4991,49 +5013,58 @@ async function startServer() {
       client.release();
     }
 
-    const taskRes = await pool.query('SELECT title FROM tasks WHERE id = $1 LIMIT 1', [sub.task_id]);
-    const taskTitle = taskRes.rows[0] ? taskRes.rows[0].title : 'Task';
-    const message = status === 'VERIFIED'
-      ? `Your submission for "${taskTitle}" has been verified.${verification_note ? ` Note: ${verification_note}` : ''}`
-      : `Your submission for "${taskTitle}" has been rejected. Reason: ${rejection_reason}`;
-
-    const statusIcon = status === 'VERIFIED' ? '✅' : '❌';
-    const statusTitle = status === 'VERIFIED' ? 'Task Approved & Verified' : 'Submission Rejected';
-
-    // 1. In-App + Chrome Push Notification to the Student
-    await createInAppNotification(sub.user_id, message, status, statusTitle);
-    sendPushToUser(sub.user_id, {
-      title: `${statusIcon} ${statusTitle}: ${taskTitle}`,
-      body: status === 'VERIFIED'
-        ? `Your submission has been verified.${verification_note ? ` Note: ${verification_note}` : ''}`
-        : `Your submission was rejected. Reason: ${rejection_reason || 'Please review and resubmit.'}`,
-      url: '/'
-    }).catch(() => {});
-
-    // 2. In-App Notification to Class Advisor & Coordinators
-    if (sub.class_id) {
-      const verifierLabel = req.user.full_name || (req.user.is_coordinator ? 'Coordinator' : req.user.role);
-      await notifyAdvisorsOfClasses([sub.class_id], `${verifierLabel} ${status === 'VERIFIED' ? 'approved' : 'rejected'} a submission for "${taskTitle}".`, 'SUBMISSION_VERIFIED', `Task ${status === 'VERIFIED' ? 'Approved' : 'Rejected'}`, req.user.id);
-      
-      const coordRes = await pool.query(`SELECT id FROM users WHERE class_id = $1 AND role = 'STUDENT' AND is_coordinator = TRUE AND id != $2`, [sub.class_id, req.user.id]);
-      const coordIds = coordRes.rows.map((r: any) => r.id);
-      if (coordIds.length > 0) {
-        await createInAppNotification(coordIds, `${verifierLabel} ${status === 'VERIFIED' ? 'approved' : 'rejected'} a submission for "${taskTitle}".`, 'SUBMISSION_VERIFIED', `Task ${status === 'VERIFIED' ? 'Approved' : 'Rejected'}`);
-      }
-    }
-
-    // 3. In-App Notification to HOD
-    if (sub.department_id) {
-      await notifyLeadership(sub.department_id, `${req.user.full_name || 'Faculty'} ${status === 'VERIFIED' ? 'approved' : 'rejected'} a submission for "${taskTitle}".`, 'SUBMISSION_VERIFIED', `Task ${status === 'VERIFIED' ? 'Approved' : 'Rejected'}`, req.user.id);
-    }
-
-    notifySubmissionVerifiedOrRejected(req.params.id, status, status === 'VERIFIED' ? verification_note : rejection_reason).catch(err => console.error('[Telegram Notify Verify Error]:', err));
-
+    // Invalidate API caches immediately so all callers receive the updated status
     invalidateApiCache('tasks_');
     invalidateApiCache('submissions_');
     invalidateApiCache('notifs_');
 
-    res.json({ success: true });
+    // Instant HTTP response back to user (< 30ms)
+    res.json({ success: true, status });
+
+    // Background asynchronous notification dispatch
+    setImmediate(async () => {
+      try {
+        const taskRes = await pool.query('SELECT title FROM tasks WHERE id = $1 LIMIT 1', [sub.task_id]);
+        const taskTitle = taskRes.rows[0] ? taskRes.rows[0].title : 'Task';
+        const message = status === 'VERIFIED'
+          ? `Your submission for "${taskTitle}" has been verified.${verification_note ? ` Note: ${verification_note}` : ''}`
+          : `Your submission for "${taskTitle}" has been rejected. Reason: ${rejection_reason}`;
+
+        const statusIcon = status === 'VERIFIED' ? '✅' : '❌';
+        const statusTitle = status === 'VERIFIED' ? 'Task Approved & Verified' : 'Submission Rejected';
+
+        // 1. In-App + Chrome Push Notification to the Student
+        await createInAppNotification(sub.user_id, message, status, statusTitle);
+        sendPushToUser(sub.user_id, {
+          title: `${statusIcon} ${statusTitle}: ${taskTitle}`,
+          body: status === 'VERIFIED'
+            ? `Your submission has been verified.${verification_note ? ` Note: ${verification_note}` : ''}`
+            : `Your submission was rejected. Reason: ${rejection_reason || 'Please review and resubmit.'}`,
+          url: '/'
+        }).catch(() => {});
+
+        // 2. In-App Notification to Class Advisor & Coordinators
+        if (sub.class_id) {
+          const verifierLabel = req.user.full_name || (req.user.is_coordinator ? 'Coordinator' : req.user.role);
+          await notifyAdvisorsOfClasses([sub.class_id], `${verifierLabel} ${status === 'VERIFIED' ? 'approved' : 'rejected'} a submission for "${taskTitle}".`, 'SUBMISSION_VERIFIED', `Task ${status === 'VERIFIED' ? 'Approved' : 'Rejected'}`, req.user.id);
+          
+          const coordRes = await pool.query(`SELECT id FROM users WHERE class_id = $1 AND role = 'STUDENT' AND is_coordinator = TRUE AND id != $2`, [sub.class_id, req.user.id]);
+          const coordIds = coordRes.rows.map((r: any) => r.id);
+          if (coordIds.length > 0) {
+            await createInAppNotification(coordIds, `${verifierLabel} ${status === 'VERIFIED' ? 'approved' : 'rejected'} a submission for "${taskTitle}".`, 'SUBMISSION_VERIFIED', `Task ${status === 'VERIFIED' ? 'Approved' : 'Rejected'}`);
+          }
+        }
+
+        // 3. In-App Notification to HOD
+        if (sub.department_id) {
+          await notifyLeadership(sub.department_id, `${req.user.full_name || 'Faculty'} ${status === 'VERIFIED' ? 'approved' : 'rejected'} a submission for "${taskTitle}".`, 'SUBMISSION_VERIFIED', `Task ${status === 'VERIFIED' ? 'Approved' : 'Rejected'}`, req.user.id);
+        }
+
+        notifySubmissionVerifiedOrRejected(req.params.id, status, status === 'VERIFIED' ? verification_note : rejection_reason).catch(err => console.error('[Telegram Notify Verify Error]:', err));
+      } catch (err) {
+        console.warn('[Async Verify Notification Error]:', err);
+      }
+    });
   });
 
   app.get('/api/submissions/:id/reviews', authenticate, async (req: any, res) => {
