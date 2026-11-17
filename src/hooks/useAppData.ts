@@ -127,9 +127,10 @@ export function useAppData() {
   const [myInvitations, setMyInvitations] = useState<TeamInvitation[]>([]);
   const [teamSubmissions, setTeamSubmissions] = useState<TeamSubmission[]>([]);
 
-  // Industry Partners
+  // Industry Partners (fetched strictly from PostgreSQL database)
   const [pendingIndustryList, setPendingIndustryList] = useState<any[]>([]);
   const [allIndustryList, setAllIndustryList] = useState<any[]>([]);
+  const [myLeetcodeProgress, setMyLeetcodeProgress] = useState<any>(null);
 
   // Notices
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -365,8 +366,6 @@ export function useAppData() {
     if (isFetchingIndustryRef.current) return;
     isFetchingIndustryRef.current = true;
     try {
-      const activeUser = user || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null);
-      if (!activeUser || (activeUser.role !== 'SUPREME_ADMIN' && activeUser.role !== 'HOD')) return;
       const activeToken = passedToken || token || localStorage.getItem('token');
       if (!activeToken) return;
       const headers = { Authorization: `Bearer ${activeToken}` };
@@ -383,11 +382,26 @@ export function useAppData() {
         setAllIndustryList(Array.isArray(listData) ? listData : []);
       }
     } catch (e) {
-      console.error('Failed to fetch industry partner data', e);
+      console.error('Failed to fetch industry partner data from DB', e);
     } finally {
       isFetchingIndustryRef.current = false;
     }
-  }, [user, token]);
+  }, [token]);
+
+  const fetchMyLeetcodeProgress = useCallback(async (overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
+    try {
+      const res = await fetch(`${API_URL}/api/leetcode/progress/my`, {
+        headers: { Authorization: `Bearer ${activeTok}` }
+      });
+      if (res.ok) {
+        setMyLeetcodeProgress(await res.json());
+      }
+    } catch (e) {
+      console.error('Failed to fetch personal LeetCode progress from DB', e);
+    }
+  }, [token]);
 
   const fetchEmailNodesStatus = useCallback(async () => {
     if (!token) return;
@@ -443,7 +457,11 @@ export function useAppData() {
             fetchMyClass(activeToken);
           } else if (role === 'STUDENT') {
             fetchStudentStats(activeToken);
+            fetchMyLeetcodeProgress(activeToken);
             fetchMyTeamsAndInvitations();
+            if (bData.user.is_coordinator) {
+              fetchCoordinatorStats(activeToken);
+            }
           }
         }
       }
@@ -1096,11 +1114,6 @@ export function useAppData() {
   const isFaculty = user?.role === 'FACULTY';
   const isIndustry = user?.role === 'INDUSTRY';
 
-  const computedPendingIndustryList = useMemo(() => {
-    if (pendingIndustryList.length > 0) return pendingIndustryList;
-    return users.filter(u => u.role === 'INDUSTRY' && (!u.is_approved || u.status === 'PENDING'));
-  }, [users, pendingIndustryList]);
-
   const pendingVerificationCount = useMemo(() => {
     return submissions.filter(s => s.status === 'SUBMITTED').length;
   }, [submissions]);
@@ -1161,12 +1174,12 @@ export function useAppData() {
     handleToggleSidebar, handleLogout,
     deleteTask, toggleTaskStatus, verifySubmission,
     isAdmin, isHOD, isAdvisor, isStudent, isCoordinator, isFaculty, isIndustry,
-    pendingIndustryList: computedPendingIndustryList, setPendingIndustryList,
+    pendingIndustryList, setPendingIndustryList,
     allIndustryList, setAllIndustryList,
+    myLeetcodeProgress, setMyLeetcodeProgress, fetchMyLeetcodeProgress,
     teamRejectionReason, setTeamRejectionReason,
     pendingVerificationCount,
     codingPlatformTab, setCodingPlatformTab,
-    myLeetcodeProgress: null,
     fetchInitialData
   };
 }
