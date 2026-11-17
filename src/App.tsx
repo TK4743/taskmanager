@@ -104,7 +104,7 @@ function AppContent() {
           </ErrorBoundary>
         </main>
 
-        <Footer onShowModal={(modalType) => app.setView(modalType)} />
+        <Footer onShowModal={(modalType) => app.setFooterModal(modalType)} />
       </div>
 
       <GlobalModals app={app} />

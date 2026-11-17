@@ -9,7 +9,8 @@ import {
   ExtendDeadlineModal,
   CreateNoticeModal,
   TelegramLinkModal,
-  StaffStudentProfileModal
+  StaffStudentProfileModal,
+  LegalSupportModal
 } from './index';
 import { ProofPreviewModal } from './ProofPreviewModal';
 import {
@@ -278,6 +279,14 @@ export function GlobalModals({ app }: { app: any }) {
         <ProofPreviewModal
           data={app.proofPreviewData}
           onClose={() => app.setProofPreviewData(null)}
+        />
+      )}
+
+      {app.footerModal && (
+        <LegalSupportModal
+          isOpen={Boolean(app.footerModal)}
+          type={app.footerModal}
+          onClose={() => app.setFooterModal(null)}
         />
       )}
     </>

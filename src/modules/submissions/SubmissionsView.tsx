@@ -115,6 +115,12 @@ export function SubmissionsView({
                         Verified on {new Date(sub.verified_at).toLocaleString()}
                       </p>
                     )}
+                    {sub.status === 'REJECTED' && sub.rejection_reason && (
+                      <div className="mt-3 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-xl text-xs text-rose-700 dark:text-rose-300">
+                        <span className="font-bold block">Rejection Feedback:</span>
+                        <p className="mt-0.5 text-zinc-600 dark:text-zinc-400">{sub.rejection_reason}</p>
+                      </div>
+                    )}
                   </div>
 
                   {(isHOD || isAdmin || isAdvisor || isCoordinator) && sub.status === 'SUBMITTED' && (

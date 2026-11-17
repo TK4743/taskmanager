@@ -55,6 +55,39 @@ export function useAppData() {
     return null;
   });
 
+  const [footerModal, setFooterModal] = useState<'PRIVACY' | 'TERMS' | 'SUPPORT' | 'SOURCES' | null>(() => {
+    if (typeof window !== 'undefined') {
+      const r = parseRouteFromPath(window.location.pathname);
+      return r.footerModal || null;
+    }
+    return null;
+  });
+
+  // Browser navigation popstate synchronization (Back/Forward buttons)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handlePopState = () => {
+      const r = parseRouteFromPath(window.location.pathname);
+      if (r.view) setView(r.view);
+      if (r.codingPlatformTab) setCodingPlatformTab(r.codingPlatformTab);
+      if (r.portfolioRegNo) setPublicPortfolioRegNo(r.portfolioRegNo);
+      setFooterModal(r.footerModal || null);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Synchronize route state with browser URL
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const targetPath = getPathFromState(view, codingPlatformTab, footerModal);
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({}, '', targetPath);
+      }
+    } catch {}
+  }, [view, codingPlatformTab, footerModal]);
+
   const [viewingStudentProfileId, setViewingStudentProfileId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(() => {
     try {
@@ -1188,6 +1221,7 @@ export function useAppData() {
     teamRejectionReason, setTeamRejectionReason,
     pendingVerificationCount,
     codingPlatformTab, setCodingPlatformTab,
+    footerModal, setFooterModal,
     fetchInitialData
   };
 }

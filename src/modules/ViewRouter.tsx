@@ -84,6 +84,7 @@ export function ViewRouter({ app }: { app: any }) {
         />
       );
     case 'verifications':
+    case 'verification':
       return (
         <VerificationsView
           submissions={app.submissions}
@@ -216,29 +217,89 @@ export function ViewRouter({ app }: { app: any }) {
         />
       );
     case 'feature-comparison':
+    case 'sources':
       return <FeatureComparisonView />;
     case 'live-teaching-hub':
-      return <LiveTeachingHubView user={app.user} token={app.token} />;
+    case 'teaching-hub':
+      return <LiveTeachingHubView user={app.user} token={app.token} addToast={app.addToast} />;
     case 'skill-assessment':
-      return <SkillAssessmentView user={app.user} token={app.token} />;
+    case 'assessment':
+    case 'assessments':
+      return <SkillAssessmentView user={app.user} token={app.token} addToast={app.addToast} />;
     case 'placement-readiness':
-      return <PlacementReadinessView user={app.user} token={app.token} />;
+    case 'placement':
+    case 'placement-rating':
+      return (
+        <PlacementReadinessView
+          user={app.user}
+          token={app.token}
+          onNavigateToAssessment={() => app.setView('skill-assessment')}
+          addToast={app.addToast}
+        />
+      );
     case 'opportunities':
       return <StudentOpportunitiesView user={app.user} token={app.token} />;
     case 'skill-gap-analyzer':
+    case 'skill-gap':
+    case 'analyzer':
+    case 'progress-analyzer':
       return <SkillGapAnalyzerView user={app.user} token={app.token} />;
     case 'student-coding-assessments':
+    case 'coding-tests':
       return <StudentCodingAssessmentView user={app.user} token={app.token} />;
     case 'institutional-skill-heatmap':
+    case 'skill-heatmap':
+    case 'heatmap':
       return <InstitutionalSkillHeatmapView user={app.user} token={app.token} />;
+    case 'privacy':
+    case 'terms':
+    case 'support': {
+      // Trigger corresponding modal and display Dashboard backdrop seamlessly
+      if (app.footerModal !== app.view.toUpperCase()) {
+        setTimeout(() => app.setFooterModal(app.view.toUpperCase()), 0);
+      }
+      return (
+        <DashboardView
+          user={app.user}
+          token={app.token}
+          departments={app.departments}
+          classes={app.classes}
+          users={app.users}
+          tasks={app.tasks}
+          submissions={app.submissions}
+          hodStats={app.hodStats}
+          advisorStats={app.advisorStats}
+          coordinatorStats={app.coordinatorStats}
+          studentStats={app.studentStats}
+          myClass={app.myClass}
+          pendingIndustryList={app.pendingIndustryList}
+          myLeetcodeProgress={app.myLeetcodeProgress}
+          setView={app.setView}
+          onOpenTelegramModal={() => app.setShowTelegramLinkModal(true)}
+          addToast={app.addToast}
+        />
+      );
+    }
     case 'industry-portal':
     case 'industry-dashboard':
     case 'industry-postings':
     case 'industry-coding-assessments':
     case 'industry-applications':
     case 'industry-reports':
-    case 'industry-profile':
-      return <IndustryPortalView user={app.user} token={app.token} initialTab={app.view.replace('industry-', '')} />;
+    case 'industry-profile': {
+      const activeTab = (app.view === 'industry-portal' || app.view === 'industry-dashboard')
+        ? 'dashboard'
+        : (app.view.replace('industry-', '') as any);
+      return (
+        <IndustryPortalView
+          user={app.user}
+          token={app.token}
+          activeTab={activeTab}
+          onTabChange={(tab) => app.setView(tab === 'dashboard' ? 'industry-dashboard' : `industry-${tab}`)}
+          addToast={app.addToast}
+        />
+      );
+    }
     default:
       return (
         <DashboardView

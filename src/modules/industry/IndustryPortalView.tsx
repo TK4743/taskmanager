@@ -31,12 +31,14 @@ export default function IndustryPortalView({
   token,
   user,
   activeTab = 'dashboard',
-  onTabChange
+  onTabChange,
+  addToast
 }: {
   token: string;
   user: any;
   activeTab?: 'dashboard'|'postings'|'applications'|'coding-assessments'|'reports'|'profile';
   onTabChange?: (tab: 'dashboard'|'postings'|'coding-assessments'|'reports'|'profile') => void;
+  addToast?: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
 }) {
   const normalizedInitialTab = activeTab === 'applications' ? 'postings' : (activeTab || 'dashboard');
   const [tab, setTabState] = useState<'dashboard'|'postings'|'coding-assessments'|'reports'|'profile'>(normalizedInitialTab as any);
@@ -406,7 +408,7 @@ export default function IndustryPortalView({
           <HRCodingAssessmentsManager
             token={token}
             user={user}
-            showToast={(msg: string) => alert(msg)}
+            showToast={(msg: string) => addToast ? addToast(msg, 'info') : console.log(msg)}
           />
         )}
 

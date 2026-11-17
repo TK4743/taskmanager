@@ -11,3 +11,4 @@ export * from './SubmissionInspectorModal';
 export * from './TeamModal';
 export * from './ExportModal';
 export * from './NotificationsDrawer';
+export * from './LegalSupportModal';
