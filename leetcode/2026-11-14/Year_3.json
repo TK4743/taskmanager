@@ -2289,11 +2289,26 @@
     "leetcodeUrl": "https://leetcode.com/u/Tharunkumar__K/",
     "solvedToday": 1,
     "dailyTarget": 0,
+<<<<<<< HEAD
+=======
+    "solvedToday": 1,
+    "solvedYesterday": 1,
+    "totalSolved": 174,
+    "remainingDaily": 0,
+    "completionDailyPct": 0,
+>>>>>>> tharun_taskmanager/main
     "dailyStatus": "NO_TARGET",
     "solvedThisWeek": 5,
     "weeklyTarget": 0,
+<<<<<<< HEAD
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 174
+=======
+    "solvedThisWeek": 7,
+    "remainingWeekly": 0,
+    "completionWeeklyPct": 0,
+    "weeklyStatus": "NO_TARGET"
+>>>>>>> tharun_taskmanager/main
   },
   {
     "studentId": "ea7edd7a-b63c-4d7f-9ee6-84731ce55019",

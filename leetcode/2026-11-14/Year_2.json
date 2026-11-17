@@ -1096,6 +1096,7 @@
     "registerNumber": "922525205079",
     "fullName": "KOWSHIK M",
     "className": "II IT B",
+<<<<<<< HEAD
     "leetcodeUrl": "https://leetcode.com/u/_kowshik/",
     "solvedToday": 0,
     "dailyTarget": 0,
@@ -1104,6 +1105,23 @@
     "weeklyTarget": 0,
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 169
+=======
+    "leetcodeUsername": "",
+    "leetcodeUrl": "",
+    "githubUrl": "",
+    "dailyTarget": 0,
+    "solvedToday": 4,
+    "solvedYesterday": 0,
+    "totalSolved": 173,
+    "remainingDaily": 0,
+    "completionDailyPct": 0,
+    "dailyStatus": "NO_TARGET",
+    "weeklyTarget": 0,
+    "solvedThisWeek": 5,
+    "remainingWeekly": 0,
+    "completionWeeklyPct": 0,
+    "weeklyStatus": "NO_TARGET"
+>>>>>>> tharun_taskmanager/main
   },
   {
     "studentId": "166320cd-3ba0-49e4-a21e-8cd724df48d2",
@@ -2202,14 +2220,33 @@
     "registerNumber": "922525205159",
     "fullName": "SATYA JOTHI V",
     "className": "II IT C",
+<<<<<<< HEAD
     "leetcodeUrl": "https://leetcode.com/u/_Satya_Jothi_V/",
     "solvedToday": 1,
     "dailyTarget": 0,
+=======
+    "leetcodeUsername": "",
+    "leetcodeUrl": "",
+    "githubUrl": "",
+    "dailyTarget": 0,
+    "solvedToday": 3,
+    "solvedYesterday": 0,
+    "totalSolved": 162,
+    "remainingDaily": 0,
+    "completionDailyPct": 0,
+>>>>>>> tharun_taskmanager/main
     "dailyStatus": "NO_TARGET",
     "solvedThisWeek": 9,
     "weeklyTarget": 0,
+<<<<<<< HEAD
     "weeklyStatus": "NO_TARGET",
     "totalSolved": 160
+=======
+    "solvedThisWeek": 15,
+    "remainingWeekly": 0,
+    "completionWeeklyPct": 0,
+    "weeklyStatus": "NO_TARGET"
+>>>>>>> tharun_taskmanager/main
   },
   {
     "studentId": "fd6f885e-6531-4908-8197-c2b0ac00d315",
