@@ -193,10 +193,20 @@ async function exportLeetcodeReports(dateStr: string) {
 }
 
 async function main() {
-  const dateStr = process.argv[2] || getISTDateStr();
-  console.log(`[Workflow Backup] 🚀 Starting automated database & report backup for date: ${dateStr}...`);
+  const isForced = process.argv.includes('--force');
+  const dateStr = process.argv.find(a => !a.startsWith('--') && a !== process.argv[0] && a !== process.argv[1]) || getISTDateStr();
+  console.log(`[Workflow Backup] 🚀 Starting automated database & report backup for date: ${dateStr}... (Force: ${isForced})`);
 
   try {
+    // Check if Backup Service is enabled by Supreme Admin
+    const settingRes = await pool.query("SELECT value FROM system_settings WHERE key = 'backup_service_enabled' LIMIT 1").catch(() => null);
+    const isEnabled = settingRes && settingRes.rowCount ? (settingRes.rows[0].value === 'true' || settingRes.rows[0].value === '1') : false;
+    
+    if (!isEnabled && !isForced) {
+      console.log('[Workflow Backup] ⏸️ Database Backup Service is currently PAUSED / DISABLED by Supreme Admin. Exiting cleanly without generating snapshots.');
+      process.exit(0);
+    }
+
     // 1. Export LeetCode Reports
     await exportLeetcodeReports(dateStr);
 

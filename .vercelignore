@@ -1,0 +1,14 @@
+# Vercel Deployment Ignore
+# Prevents giant backup files, report artifacts, and development scripts from being bundled into Serverless Functions.
+
+backups/
+leetcode/
+students_directory/
+scripts/
+docs/
+*.pdf
+*.zip
+*.bat
+*.log
+scratch_*
+REPORT.pdf

@@ -209,6 +209,15 @@ export async function initDB(forceMigration: boolean = false) {
       );
     `);
 
+    // Ensure default system automation controls are initialized to 'false' (temporarily off) if not already set
+    await client.query(`
+      INSERT INTO system_settings (key, value, updated_at)
+      VALUES 
+        ('telegram_automation_enabled', 'false', CURRENT_TIMESTAMP),
+        ('backup_service_enabled', 'false', CURRENT_TIMESTAMP)
+      ON CONFLICT (key) DO NOTHING;
+    `);
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS tasks (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

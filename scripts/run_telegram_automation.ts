@@ -53,6 +53,15 @@ async function runAutomation() {
   const { todayStr, prevDayStr, hours, minutes } = getISTParts();
   console.log(`[Telegram Automation Runner] Mode: ${mode} | IST Date: ${todayStr} (Prev: ${prevDayStr}) | Time: ${hours}:${minutes.toString().padStart(2, '0')} IST | Force: ${isForced}`);
 
+  // Check if Telegram Automation is enabled by Supreme Admin
+  const settingRes = await pool.query("SELECT value FROM system_settings WHERE key = 'telegram_automation_enabled' LIMIT 1").catch(() => null);
+  const isEnabled = settingRes && settingRes.rowCount ? (settingRes.rows[0].value === 'true' || settingRes.rows[0].value === '1') : false;
+
+  if (!isEnabled && !isForced) {
+    console.log('[Telegram Automation Runner] ⏸️ Telegram Automation is currently PAUSED / DISABLED by Supreme Admin. Exiting cleanly.');
+    process.exit(0);
+  }
+
   // 1. Ensure credentials are resolved (env with PostgreSQL fallback)
   const botToken = await ensureBotTokenLoaded();
   if (!botToken) {

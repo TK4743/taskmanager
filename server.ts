@@ -512,6 +512,27 @@ async function startServer() {
   // Initialize Web Push VAPID Notification Service in non-blocking fashion
   initPushNotifications().catch(err => console.error('[WebPush] Startup init warning:', err));
 
+  // ── Database-Backed System Automation Controls Helpers ─────────────────────
+  async function isTelegramAutomationEnabled(): Promise<boolean> {
+    try {
+      const res = await pool.query("SELECT value FROM system_settings WHERE key = 'telegram_automation_enabled' LIMIT 1");
+      if (res.rowCount === 0) return false;
+      return res.rows[0].value === 'true' || res.rows[0].value === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  async function isBackupServiceEnabled(): Promise<boolean> {
+    try {
+      const res = await pool.query("SELECT value FROM system_settings WHERE key = 'backup_service_enabled' LIMIT 1");
+      if (res.rowCount === 0) return false;
+      return res.rows[0].value === 'true' || res.rows[0].value === '1';
+    } catch {
+      return false;
+    }
+  }
+
   // Only run background schedulers, cleanup workers, and pollers in persistent server environments (e.g. Render/VPS/local).
   // In Vercel serverless functions, background timers and long-polling keep the lambda active and rapidly consume Fluid Active CPU limits.
   if (!isVercel) {
@@ -523,7 +544,13 @@ async function startServer() {
 
     // Initialize Telegram Bot update poller for automated interactive commands & 1-click student account linking
     try {
-      startTelegramPoller();
+      isTelegramAutomationEnabled().then(tgActive => {
+        if (tgActive) {
+          startTelegramPoller();
+        } else {
+          console.log('[Telegram] Startup poller skipped: Telegram automation is currently disabled by administrator.');
+        }
+      }).catch(err => console.error('[Telegram] Error checking automation status on startup:', err));
     } catch (tgErr) {
       console.error('[Telegram] Failed to start poller:', tgErr);
     }
@@ -547,7 +574,13 @@ async function startServer() {
 
     // Auto-ensure Telegram Webhook is active if configured (unless local polling is explicitly forced)
     if (process.env.TELEGRAM_MODE !== 'polling' && process.env.FORCE_POLLING !== 'true') {
-      setTelegramWebhook().catch(err => console.error('[Telegram Webhook Init Warning]:', err));
+      isTelegramAutomationEnabled().then(tgActive => {
+        if (tgActive) {
+          setTelegramWebhook().catch(err => console.error('[Telegram Webhook Init Warning]:', err));
+        } else {
+          console.log('[Telegram] Webhook setup skipped: Telegram automation is currently disabled by administrator.');
+        }
+      }).catch(err => console.error('[Telegram Webhook] Status check warning:', err));
     }
   }
 
@@ -700,13 +733,15 @@ async function startServer() {
       const { todayStr, prevDayStr, hours, minutes } = getISTTimeParts();
 
       // 0. Pre-Deadline Task Backups (Automatic 5-Minute Pre-Deadline ZIP Capture)
-      try {
-        const deadlineBackups = await checkAndRunPreDeadlineBackups(5);
-        if (deadlineBackups && deadlineBackups.length > 0) {
-          triggered.push(`task_deadline_backups:${deadlineBackups.length}`);
+      if (await isBackupServiceEnabled()) {
+        try {
+          const deadlineBackups = await checkAndRunPreDeadlineBackups(5);
+          if (deadlineBackups && deadlineBackups.length > 0) {
+            triggered.push(`task_deadline_backups:${deadlineBackups.length}`);
+          }
+        } catch (backupErr) {
+          console.error('[Pre-Deadline Backup Scheduler Error]:', backupErr);
         }
-      } catch (backupErr) {
-        console.error('[Pre-Deadline Backup Scheduler Error]:', backupErr);
       }
 
       // 1. Morning Pre-Sync Window (7:50 AM IST onwards) -> Pre-Sync Previous Day LeetCode & GitHub Progress
@@ -724,11 +759,13 @@ async function startServer() {
             console.error('[Morning Pre-Sync Error]:', syncErr);
           }
 
-          // Auto-push previous day LeetCode CSVs and DB snapshot to GitHub
+          // Auto-push previous day LeetCode CSVs and DB snapshot to GitHub (if enabled)
           try {
             console.log(`[Scheduler] 🚀 Auto-exporting and pushing ${prevDayStr} LeetCode progress to GitHub...`);
             await exportAndPushLeetcodeDailyProgress(prevDayStr);
-            await generateDatabaseSnapshot();
+            if (await isBackupServiceEnabled()) {
+              await generateDatabaseSnapshot();
+            }
           } catch (exportErr) {
             console.error('[Morning LeetCode Export Error]:', exportErr);
           }
@@ -736,7 +773,7 @@ async function startServer() {
       }
 
       // 2. Morning Group Summary Window (7:55 AM IST onwards to 18:00) -> Send Morning Group Summary & 24h Deadline Alerts
-      if (hours >= 7 && hours < 18) {
+      if (hours >= 7 && hours < 18 && (await isTelegramAutomationEnabled())) {
         const morningCheck = await pool.query(
           "SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_morning_date' AND value = $1",
           [todayStr]
@@ -789,7 +826,7 @@ async function startServer() {
       }
 
       // 3. Evening Reminders Window (8:00 PM IST onwards / 20:00+) -> Student 1-to-1 Pending Reminders
-      if (hours >= 20) {
+      if (hours >= 20 && (await isTelegramAutomationEnabled())) {
         const claimed = await claimDailySlot('telegram_last_reminders_date', todayStr);
         if (claimed) {
           triggered.push('evening_reminders');
@@ -816,7 +853,7 @@ async function startServer() {
       }
 
       // 5. Evening Group Summary Window (8:45 PM IST onwards / 20:45+) -> Send Evening Department Progress Summary
-      if ((hours === 20 && minutes >= 45) || hours >= 21) {
+      if (((hours === 20 && minutes >= 45) || hours >= 21) && (await isTelegramAutomationEnabled())) {
         const eveningCheck = await pool.query(
           "SELECT value FROM system_settings WHERE key = 'telegram_last_group_summary_evening_date' AND value = $1",
           [todayStr]
@@ -888,10 +925,12 @@ async function startServer() {
             console.error('[Nightly Export Error]:', exportErr);
           }
 
-          try {
-            await generateDatabaseSnapshot();
-          } catch (backupErr) {
-            console.error('[Nightly Backup Error]:', backupErr);
+          if (await isBackupServiceEnabled()) {
+            try {
+              await generateDatabaseSnapshot();
+            } catch (backupErr) {
+              console.error('[Nightly Backup Error]:', backupErr);
+            }
           }
         }
       }
@@ -1196,6 +1235,55 @@ async function startServer() {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="${path.basename(snapshot.filePath)}"`);
     res.send(JSON.stringify(snapshot.backupPayload, null, 2));
+  }));
+
+  // ── Admin Endpoints: System Automation & Cloud Services Controls ────────────
+  app.get('/api/admin/system-controls', authenticate, authorize(['SUPREME_ADMIN', 'HOD']), asyncHandler(async (_req: Request, res: Response) => {
+    const telegramEnabled = await isTelegramAutomationEnabled();
+    const backupEnabled = await isBackupServiceEnabled();
+    res.json({
+      success: true,
+      controls: {
+        telegram_automation_enabled: telegramEnabled,
+        backup_service_enabled: backupEnabled
+      }
+    });
+  }));
+
+  app.post('/api/admin/system-controls', authenticate, authorize(['SUPREME_ADMIN']), asyncHandler(async (req: Request, res: Response) => {
+    const { telegram_automation_enabled, backup_service_enabled } = req.body;
+
+    if (telegram_automation_enabled !== undefined) {
+      const valStr = Boolean(telegram_automation_enabled) ? 'true' : 'false';
+      await pool.query(`
+        INSERT INTO system_settings (key, value, updated_at)
+        VALUES ('telegram_automation_enabled', $1, CURRENT_TIMESTAMP)
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+      `, [valStr]);
+      console.log(`[System Settings] telegram_automation_enabled set to: ${valStr}`);
+    }
+
+    if (backup_service_enabled !== undefined) {
+      const valStr = Boolean(backup_service_enabled) ? 'true' : 'false';
+      await pool.query(`
+        INSERT INTO system_settings (key, value, updated_at)
+        VALUES ('backup_service_enabled', $1, CURRENT_TIMESTAMP)
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+      `, [valStr]);
+      console.log(`[System Settings] backup_service_enabled set to: ${valStr}`);
+    }
+
+    const updatedTelegram = await isTelegramAutomationEnabled();
+    const updatedBackup = await isBackupServiceEnabled();
+
+    res.json({
+      success: true,
+      message: 'System automation controls updated successfully.',
+      controls: {
+        telegram_automation_enabled: updatedTelegram,
+        backup_service_enabled: updatedBackup
+      }
+    });
   }));
 
   // ── Real-Time Server-Sent Events (SSE) Stream ────────────────────────────────
@@ -9938,11 +10026,15 @@ async function startServer() {
       console.error('[Morning Sync LeetCode Export Error]:', e.message);
     }
 
-    try {
-      await generateDatabaseSnapshot();
-      backupSuccess = true;
-    } catch (e: any) {
-      console.error('[Morning Sync DB Backup Error]:', e.message);
+    if (await isBackupServiceEnabled()) {
+      try {
+        await generateDatabaseSnapshot();
+        backupSuccess = true;
+      } catch (e: any) {
+        console.error('[Morning Sync DB Backup Error]:', e.message);
+      }
+    } else {
+      console.log('[Morning Sync] DB snapshot skipped: Backup service is disabled by administrator.');
     }
 
     return res.json({
@@ -9959,6 +10051,15 @@ async function startServer() {
   // 2. Morning 8:00 AM IST Summary & 24-Hour Upcoming Deadline Alert
   app.all('/api/cron/morning-summary', asyncHandler(async (req: Request, res: Response) => {
     if (!(await verifyCronAuth(req, res))) return;
+
+    // Check if Telegram automation is enabled by Supreme Admin
+    if (!(await isTelegramAutomationEnabled()) && req.query.force !== 'true') {
+      return res.json({
+        success: true,
+        message: 'Telegram automation is currently disabled by administrator in system settings. Skipping morning summary.',
+        skipped: true
+      });
+    }
 
     const { todayStr, prevDayStr } = getISTTimeParts();
 
@@ -10003,6 +10104,14 @@ async function startServer() {
   app.all('/api/cron/evening-reminders', asyncHandler(async (req: Request, res: Response) => {
     if (!(await verifyCronAuth(req, res))) return;
 
+    if (!(await isTelegramAutomationEnabled()) && req.query.force !== 'true') {
+      return res.json({
+        success: true,
+        message: 'Telegram automation is currently disabled by administrator in system settings. Skipping evening reminders.',
+        skipped: true
+      });
+    }
+
     console.log('[Cron Webhook] 📢 Running automated evening 1-to-1 student deadline reminders...');
     const remindersRes = await triggerPendingTaskReminders().catch(err => ({ success: false, message: err.message }));
 
@@ -10037,6 +10146,14 @@ async function startServer() {
   // 5. Evening 9:00 PM IST Department Daily Progress Summary
   app.all('/api/cron/evening-summary', asyncHandler(async (req: Request, res: Response) => {
     if (!(await verifyCronAuth(req, res))) return;
+
+    if (!(await isTelegramAutomationEnabled()) && req.query.force !== 'true') {
+      return res.json({
+        success: true,
+        message: 'Telegram automation is currently disabled by administrator in system settings. Skipping evening summary.',
+        skipped: true
+      });
+    }
 
     const todayStr = getISTDateStr();
 
@@ -10106,11 +10223,15 @@ async function startServer() {
       console.error('[Cron Webhook LeetCode Export Error]:', err.message);
     }
 
-    try {
-      await generateDatabaseSnapshot();
-      backupSuccess = true;
-    } catch (err: any) {
-      console.error('[Cron Webhook DB Backup Error]:', err.message);
+    if (await isBackupServiceEnabled()) {
+      try {
+        await generateDatabaseSnapshot();
+        backupSuccess = true;
+      } catch (err: any) {
+        console.error('[Cron Webhook DB Backup Error]:', err.message);
+      }
+    } else {
+      console.log('[Nightly Sync] DB snapshot skipped: Backup service is disabled by administrator.');
     }
 
     return res.json({
