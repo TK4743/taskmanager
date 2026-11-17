@@ -18,14 +18,14 @@ import { SettingsView } from './settings/SettingsView';
 import { FeatureComparisonView } from './comparison/FeatureComparisonView';
 
 // Specialized Lazy Modules
-const LiveTeachingHubView = lazyWithRetry(() => import('../LiveTeachingHubView'));
-const SkillAssessmentView = lazyWithRetry(() => import('../SkillAssessmentView'));
-const PlacementReadinessView = lazyWithRetry(() => import('../PlacementReadinessView'));
-const StudentOpportunitiesView = lazyWithRetry(() => import('../StudentOpportunitiesView'));
-const SkillGapAnalyzerView = lazyWithRetry(() => import('../SkillGapAnalyzerView'));
-const StudentCodingAssessmentView = lazyWithRetry(() => import('../StudentCodingAssessmentView'));
-const InstitutionalSkillHeatmapView = lazyWithRetry(() => import('../InstitutionalSkillHeatmapView'));
-const IndustryPortalView = lazyWithRetry(() => import('../IndustryPortalView'));
+const LiveTeachingHubView = lazyWithRetry(() => import('./teaching/LiveTeachingHubView'));
+const SkillAssessmentView = lazyWithRetry(() => import('./assessments/SkillAssessmentView'));
+const PlacementReadinessView = lazyWithRetry(() => import('./placement/PlacementReadinessView'));
+const StudentOpportunitiesView = lazyWithRetry(() => import('./opportunities/StudentOpportunitiesView'));
+const SkillGapAnalyzerView = lazyWithRetry(() => import('./analytics/SkillGapAnalyzerView'));
+const StudentCodingAssessmentView = lazyWithRetry(() => import('./assessments/StudentCodingAssessmentView'));
+const InstitutionalSkillHeatmapView = lazyWithRetry(() => import('./analytics/InstitutionalSkillHeatmapView'));
+const IndustryPortalView = lazyWithRetry(() => import('./industry/IndustryPortalView'));
 
 export function ViewRouter({ app }: { app: any }) {
   switch (app.view) {

@@ -19,8 +19,8 @@ import {
   ensureBotTokenLoaded,
   ensureAdminChatIdLoaded,
   getGroupChatId
-} from '../telegramService.js';
-import { syncAllCodingProgress } from '../codingTelemetryService.js';
+} from '../services/telegramService.js';
+import { syncAllCodingProgress } from '../services/codingTelemetryService.js';
 
 function getISTParts() {
   const d = new Date();

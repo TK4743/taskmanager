@@ -8,7 +8,7 @@ import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { Input } from '../ui/Input';
 import type { Submission } from '../../types';
-import type { ProofPreviewData } from '../../ProofPreviewModal';
+import type { ProofPreviewData } from './ProofPreviewModal';
 
 export interface SubmissionInspectorModalProps {
   inspectingSubmission: Submission | null;

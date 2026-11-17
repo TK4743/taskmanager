@@ -7,7 +7,7 @@ import type {
   AdvisorStats, CoordinatorStats, StudentStats, ToastMessage, ToastType,
   AppRouteState
 } from '../types';
-import type { ProofPreviewData } from '../ProofPreviewModal';
+import type { ProofPreviewData } from '../components/modals/ProofPreviewModal';
 
 export function useAppData() {
   // Auth state
@@ -286,22 +286,20 @@ export function useAppData() {
   }, [token]);
 
   const fetchMyTeamsAndInvitations = useCallback(async () => {
-    if (!token) return;
+    if (!token || user?.role !== 'STUDENT') return;
     try {
-      const [teamsRes, invRes] = await Promise.all([
-        fetch(`${API_URL}/api/teams/my-teams`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_URL}/api/teams/my-invitations`, { headers: { Authorization: `Bearer ${token}` } })
-      ]);
-      if (teamsRes.ok) {
-        const tData = await teamsRes.json();
-        setMyTeams(tData);
+      const res = await fetch(`${API_URL}/api/team/my`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMyTeams(data.teams || []);
+        setMyInvitations(data.invitations || []);
       }
-      if (invRes.ok) {
-        const iData = await invRes.json();
-        setMyInvitations(iData);
-      }
-    } catch {}
-  }, [token]);
+    } catch (e) {
+      console.error('Failed to fetch my teams:', e);
+    }
+  }, [token, user?.role]);
 
   const fetchCoordinatorStats = useCallback(async () => {
     if (!token) return;
@@ -536,198 +534,249 @@ export function useAppData() {
   // Teams handlers
   const openTeamModal = useCallback(async (task: Task) => {
     setTeamModalTask(task);
+    setTeamProofFile(null);
+    setTeamRemarks('');
+    setSelectedClassmateIds([]);
+    setNewTeamName('');
+
     if (!token) return;
     try {
-      const [teamRes, matesRes] = await Promise.all([
-        fetch(`${API_URL}/api/teams/task/${task.id}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_URL}/api/teams/classmates`, { headers: { Authorization: `Bearer ${token}` } })
-      ]);
-      if (teamRes.ok) {
-        const teamData = await teamRes.json();
-        setCurrentTaskTeam(teamData);
-      } else {
-        setCurrentTaskTeam(null);
+      const res = await fetch(`${API_URL}/api/team/task/${task.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentTaskTeam(data.team || null);
+
+        if (!data.team && user?.role === 'STUDENT') {
+          const classmatesRes = await fetch(`${API_URL}/api/team/classmates/${task.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (classmatesRes.ok) {
+            setEligibleClassmates(await classmatesRes.json());
+          }
+        }
       }
-      if (matesRes.ok) {
-        const matesData = await matesRes.json();
-        setEligibleClassmates(matesData);
-      }
-    } catch {}
-  }, [token]);
+    } catch {
+      addToast('Failed to load team details', 'error');
+    }
+  }, [token, user?.role, addToast]);
 
   const handleCreateTeam = useCallback(async () => {
     if (!teamModalTask || !newTeamName.trim() || selectedClassmateIds.length === 0) return;
+    setIsSubmittingTeam(true);
     try {
-      const res = await fetch(`${API_URL}/api/teams`, {
+      const res = await fetch(`${API_URL}/api/team/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          task_id: teamModalTask.id,
-          team_name: newTeamName.trim(),
-          invited_student_ids: selectedClassmateIds
+          taskId: teamModalTask.id,
+          teamName: newTeamName.trim(),
+          members: selectedClassmateIds
         })
       });
+      const data = await res.json();
       if (res.ok) {
-        const created = await res.json();
-        setCurrentTaskTeam(created);
+        addToast('Team created successfully and invitations sent!', 'success');
         setNewTeamName('');
         setSelectedClassmateIds([]);
-        addToast('Team created and invitations dispatched!', 'success');
+        openTeamModal(teamModalTask);
         fetchMyTeamsAndInvitations();
       } else {
-        const data = await res.json();
         addToast(data.error || 'Failed to create team', 'error');
       }
     } catch {
       addToast('Network error creating team', 'error');
+    } finally {
+      setIsSubmittingTeam(false);
     }
-  }, [teamModalTask, newTeamName, selectedClassmateIds, token, fetchMyTeamsAndInvitations, addToast]);
+  }, [teamModalTask, newTeamName, selectedClassmateIds, token, openTeamModal, fetchMyTeamsAndInvitations, addToast]);
 
   const handleCreateSoloTeam = useCallback(async () => {
     if (!teamModalTask) return;
+    setIsSubmittingTeam(true);
     try {
-      const res = await fetch(`${API_URL}/api/teams/solo`, {
+      const soloTeamName = newTeamName.trim() || `${user?.full_name || user?.username || 'Student'} (Solo)`;
+      const res = await fetch(`${API_URL}/api/team/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ task_id: teamModalTask.id })
+        body: JSON.stringify({
+          taskId: teamModalTask.id,
+          teamName: soloTeamName,
+          members: []
+        })
       });
+      const data = await res.json();
       if (res.ok) {
-        const created = await res.json();
-        setCurrentTaskTeam(created);
-        addToast('Individual entry team established!', 'success');
+        addToast('Solo submission mode activated! You can now submit your proof.', 'success');
+        openTeamModal(teamModalTask);
         fetchMyTeamsAndInvitations();
       } else {
-        const data = await res.json();
-        addToast(data.error || 'Failed to create solo team', 'error');
+        addToast(data.error || 'Failed to activate solo mode', 'error');
       }
     } catch {
-      addToast('Network error creating solo team', 'error');
+      addToast('Network error creating solo entry', 'error');
+    } finally {
+      setIsSubmittingTeam(false);
     }
-  }, [teamModalTask, token, fetchMyTeamsAndInvitations, addToast]);
+  }, [teamModalTask, newTeamName, user, token, openTeamModal, fetchMyTeamsAndInvitations, addToast]);
 
   const handleInviteMoreClassmates = useCallback(async () => {
     if (!currentTaskTeam || selectedClassmateIds.length === 0) return;
     try {
-      const res = await fetch(`${API_URL}/api/teams/${currentTaskTeam.id}/invite`, {
+      const res = await fetch(`${API_URL}/api/team/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ student_ids: selectedClassmateIds })
+        body: JSON.stringify({
+          teamId: currentTaskTeam.id,
+          studentIds: selectedClassmateIds
+        })
       });
+      const data = await res.json();
       if (res.ok) {
-        const updated = await res.json();
-        setCurrentTaskTeam(updated);
+        addToast('Invitations sent successfully!', 'success');
         setSelectedClassmateIds([]);
-        addToast('Additional invitations dispatched!', 'success');
+        if (teamModalTask) openTeamModal(teamModalTask);
       } else {
-        const data = await res.json();
         addToast(data.error || 'Failed to send invitations', 'error');
       }
     } catch {
       addToast('Network error sending invitations', 'error');
     }
-  }, [currentTaskTeam, selectedClassmateIds, token, addToast]);
+  }, [currentTaskTeam, selectedClassmateIds, teamModalTask, token, openTeamModal, addToast]);
 
   const handleRespondInvitation = useCallback(async (invitationId: string, response: 'ACCEPT' | 'REJECT' | 'DECLINE') => {
-    const action = response === 'DECLINE' ? 'REJECT' : response;
+    const action = response === 'REJECT' ? 'DECLINE' : response;
+    setMyInvitations(prev => prev.filter(inv => inv.id !== invitationId));
     try {
-      const res = await fetch(`${API_URL}/api/teams/invitations/${invitationId}`, {
-        method: 'PATCH',
+      const res = await fetch(`${API_URL}/api/team/respond`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ response: action })
+        body: JSON.stringify({ invitationId, response: action })
       });
+      const data = await res.json();
       if (res.ok) {
-        addToast(`Invitation ${action.toLowerCase()}ed!`, 'success');
-        fetchMyTeamsAndInvitations();
-        fetchTasks();
+        addToast(`Invitation ${action === 'ACCEPT' ? 'accepted' : 'declined'} successfully!`, 'success');
+        Promise.all([
+          fetchMyTeamsAndInvitations(),
+          fetchTasks(),
+          fetchSubmissions()
+        ]);
+        if (teamModalTask) openTeamModal(teamModalTask);
       } else {
-        const data = await res.json();
-        addToast(data.error || 'Failed to update invitation', 'error');
+        addToast(data.error || 'Failed to respond to invitation', 'error');
+        fetchMyTeamsAndInvitations();
       }
     } catch {
       addToast('Network error responding to invitation', 'error');
+      fetchMyTeamsAndInvitations();
     }
-  }, [token, fetchMyTeamsAndInvitations, fetchTasks, addToast]);
+  }, [token, fetchMyTeamsAndInvitations, fetchTasks, fetchSubmissions, teamModalTask, openTeamModal, addToast]);
 
   const handleRemoveTeamMember = useCallback(async (memberId: string) => {
-    if (!currentTaskTeam) return;
+    if (!confirm('Remove this member from team?')) return;
     try {
-      const res = await fetch(`${API_URL}/api/teams/${currentTaskTeam.id}/members/${memberId}`, {
+      const res = await fetch(`${API_URL}/api/team/member/${memberId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
+      const data = await res.json();
       if (res.ok) {
-        const updated = await res.json();
-        setCurrentTaskTeam(updated);
-        addToast('Team member removed', 'info');
+        addToast('Member removed from team', 'info');
+        if (teamModalTask) openTeamModal(teamModalTask);
+      } else {
+        addToast(data.error || 'Failed to remove member', 'error');
       }
-    } catch {}
-  }, [currentTaskTeam, token, addToast]);
+    } catch {
+      addToast('Network error removing member', 'error');
+    }
+  }, [teamModalTask, token, openTeamModal, addToast]);
 
   const handleDeleteTeam = useCallback(async (teamId: string) => {
-    if (!confirm('Disband this entire team? All members and pending invitations will be cleared.')) return;
+    if (!confirm('Delete this team? All invitations and member details will be deleted.')) return;
     try {
-      const res = await fetch(`${API_URL}/api/teams/${teamId}`, {
+      const res = await fetch(`${API_URL}/api/team/${teamId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
+      const data = await res.json();
       if (res.ok) {
+        addToast('Team deleted', 'info');
         setCurrentTaskTeam(null);
-        addToast('Team disbanded successfully', 'info');
         fetchMyTeamsAndInvitations();
+        if (teamModalTask) openTeamModal(teamModalTask);
+      } else {
+        addToast(data.error || 'Failed to delete team', 'error');
       }
-    } catch {}
-  }, [token, fetchMyTeamsAndInvitations, addToast]);
+    } catch {
+      addToast('Network error deleting team', 'error');
+    }
+  }, [teamModalTask, token, openTeamModal, fetchMyTeamsAndInvitations, addToast]);
 
   const handleSubmitTeamProof = useCallback(async () => {
-    if (!currentTaskTeam || !teamProofFile) return;
+    if (!currentTaskTeam || !teamProofFile) {
+      return addToast('Please select a proof screenshot file', 'error');
+    }
     setIsSubmittingTeam(true);
     try {
       const formData = new FormData();
-      formData.append('proof', teamProofFile);
-      if (teamRemarks) formData.append('remarks', teamRemarks);
-      const res = await fetch(`${API_URL}/api/teams/${currentTaskTeam.id}/submit`, {
+      formData.append('teamId', currentTaskTeam.id);
+      formData.append('remarks', teamRemarks);
+      formData.append('screenshot', teamProofFile, teamProofFile.name);
+      formData.append('original_filename', teamProofFile.name);
+
+      const res = await fetch(`${API_URL}/api/team/submit`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData
       });
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
-        setCurrentTaskTeam(prev => prev ? { ...prev, submission: data } : null);
+        addToast('Team task submitted successfully!', 'success');
         setTeamProofFile(null);
         setTeamRemarks('');
-        addToast('Team proof submitted for academic verification!', 'success');
-        fetchMyTeamsAndInvitations();
-        fetchTasks();
+        if (teamModalTask) openTeamModal(teamModalTask);
+        fetchSubmissions();
+        if (user?.role === 'STUDENT' && user?.is_coordinator) {
+          fetchCoordinatorStats();
+        }
       } else {
-        const data = await res.json();
-        addToast(data.error || 'Failed to submit team proof', 'error');
+        addToast(data.error || 'Failed to submit team task', 'error');
       }
     } catch {
-      addToast('Network error submitting team proof', 'error');
+      addToast('Network error submitting team task', 'error');
     } finally {
       setIsSubmittingTeam(false);
     }
-  }, [currentTaskTeam, teamProofFile, teamRemarks, token, fetchMyTeamsAndInvitations, fetchTasks, addToast]);
+  }, [currentTaskTeam, teamProofFile, teamRemarks, teamModalTask, token, openTeamModal, fetchSubmissions, user, fetchCoordinatorStats, addToast]);
 
-  const handleReviewTeamSubmission = useCallback(async (submissionId: string, status: 'APPROVED' | 'REJECTED', reason?: string) => {
+  const handleReviewTeamSubmission = useCallback(async (submissionId: string, status: 'APPROVED' | 'REJECTED') => {
     try {
-      const res = await fetch(`${API_URL}/api/teams/submissions/${submissionId}/review`, {
-        method: 'PATCH',
+      const res = await fetch(`${API_URL}/api/team/review`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status, rejection_reason: reason })
+        body: JSON.stringify({
+          submissionId,
+          status,
+          feedback: status === 'REJECTED' ? teamRejectionReason : 'Approved team submission'
+        })
       });
+      const data = await res.json();
       if (res.ok) {
-        addToast(`Team submission ${status.toLowerCase()}!`, 'success');
+        addToast(`Team submission ${status.toLowerCase()} successfully!`, 'success');
         setTeamReviewModal(null);
-        fetchMyTeamsAndInvitations();
+        setTeamRejectionReason('');
+        fetchSubmissions();
+        if (user?.role === 'STUDENT' && user?.is_coordinator) {
+          fetchCoordinatorStats();
+        }
       } else {
-        const data = await res.json();
-        addToast(data.error || 'Failed to review team submission', 'error');
+        addToast(data.error || 'Failed to review submission', 'error');
       }
     } catch {
       addToast('Network error reviewing team submission', 'error');
     }
-  }, [token, fetchMyTeamsAndInvitations, addToast]);
+  }, [teamRejectionReason, token, fetchSubmissions, user, fetchCoordinatorStats, addToast]);
 
   // Notice handlers
   const handleCreateNotice = useCallback(async (e: React.FormEvent) => {

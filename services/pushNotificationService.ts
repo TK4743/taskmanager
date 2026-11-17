@@ -1,5 +1,5 @@
 import webpush from 'web-push';
-import { pool } from './db.js';
+import { pool } from '../db.js';
 
 let vapidPublicKey: string = process.env.VAPID_PUBLIC_KEY || '';
 let vapidPrivateKey: string = process.env.VAPID_PRIVATE_KEY || '';

@@ -19,9 +19,9 @@ import {
   Terminal,
   Download
 } from 'lucide-react';
-import { API_URL } from './config';
-import { ThemeToggle } from './ThemeToggle';
-import { downloadStudentResumePdf } from './studentProfilePdfGenerator';
+import { API_URL } from '../../config';
+import { ThemeToggle } from '../../components/layout/ThemeToggle';
+import { downloadStudentResumePdf } from '../../utils/pdf/studentProfilePdfGenerator';
 
 interface PublicPortfolioProps {
   regNo: string;

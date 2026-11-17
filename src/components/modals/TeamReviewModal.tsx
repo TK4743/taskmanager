@@ -1,6 +1,6 @@
 import React from 'react';
 import { Users } from 'lucide-react';
-import { FloatingModal } from '../../FloatingModal';
+import { FloatingModal } from './FloatingModal';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
 

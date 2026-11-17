@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
-import { cn } from './lib/utils';
+import { cn } from '../../lib/utils';
 
 export interface FloatingModalProps {
   isOpen: boolean;

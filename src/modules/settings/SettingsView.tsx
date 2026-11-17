@@ -13,7 +13,7 @@ import {
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
   sendTestPushNotification
-} from '../../pushNotificationClient';
+} from '../../utils/pushNotificationClient';
 import { API_URL } from '../../config';
 import { cn } from '../../lib/utils';
 import { Button } from '../../components/ui/Button';

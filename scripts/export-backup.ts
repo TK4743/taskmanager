@@ -2,9 +2,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { pool } from '../db.js';
-import { generateDatabaseSnapshot } from '../dbBackupService.js';
-import { safeWriteExportFile } from '../githubSyncService.js';
-import { checkAndRunPreDeadlineBackups } from '../taskDeadlineBackupService.js';
+import { generateDatabaseSnapshot } from '../services/dbBackupService.js';
+import { safeWriteExportFile } from '../services/githubSyncService.js';
+import { checkAndRunPreDeadlineBackups } from '../services/taskDeadlineBackupService.js';
 
 function getISTDateStr(): string {
   const now = new Date();

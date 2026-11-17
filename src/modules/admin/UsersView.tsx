@@ -122,7 +122,7 @@ export function UsersView({
       return;
     }
     try {
-      const res = await fetch(`${API_URL}/api/users/${studentId}/approve`, {
+      const res = await fetch(`${API_URL}/api/advisor/pending-students/${studentId}/approve`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -142,10 +142,10 @@ export function UsersView({
       onRejectStudent(studentId, studentName);
       return;
     }
-    if (!confirm(`Are you sure you want to reject and delete ${studentName}?`)) return;
+    if (!confirm(`Are you sure you want to reject and delete registration for ${studentName}?`)) return;
     try {
-      const res = await fetch(`${API_URL}/api/users/${studentId}`, {
-        method: 'DELETE',
+      const res = await fetch(`${API_URL}/api/advisor/pending-students/${studentId}/reject`, {
+        method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -164,32 +164,78 @@ export function UsersView({
       onBulkDownloadProfiles(customClassId);
       return;
     }
-    setIsExportingBulkResumes(true);
     try {
-      const params = new URLSearchParams();
-      if (customClassId) params.append('class_id', customClassId);
-      else if (userClassFilter) params.append('class_id', userClassFilter);
-      if (userDeptFilter) params.append('department_id', userDeptFilter);
-      if (userYearFilter) params.append('year', userYearFilter);
+      setIsExportingBulkResumes(true);
+      addToast('Querying student profiles for bulk download...', 'info');
 
-      const res = await fetch(`${API_URL}/api/admin/export-resumes-bulk?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const effectiveClassId = customClassId || userClassFilter || '';
+
+      // Determine target student IDs from visible users if available
+      const studentUsers = users.filter(u => u.role === 'STUDENT' && (
+        !effectiveClassId || String(u.class_id) === String(effectiveClassId)
+      ));
+      const targetIds = studentUsers.map(u => u.id);
+
+      const res = await fetch(`${API_URL}/api/student/bulk-profiles`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          student_ids: targetIds.length > 0 ? targetIds : undefined,
+          class_id: effectiveClassId || undefined
+        })
       });
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Students_Bulk_Resumes.zip`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        addToast('Resumes downloaded successfully', 'success');
-      } else {
-        addToast('Failed to download resumes', 'error');
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to fetch student profiles for export');
       }
-    } catch {
-      addToast('Network error while downloading resumes', 'error');
+
+      const data = await res.json();
+      const profiles: any[] = data.profiles || [];
+      if (profiles.length === 0) {
+        addToast('No student profile data found to export', 'warning');
+        return;
+      }
+
+      addToast(`Compiling Resume PDFs for ${profiles.length} students...`, 'info');
+
+      const [jszipModule, { generateStudentResumePdf }] = await Promise.all([
+        import('jszip'),
+        import('../../utils/pdf/studentProfilePdfGenerator'),
+      ]);
+      const JSZip = (jszipModule.default || jszipModule) as any;
+      const zip = new JSZip();
+      for (const p of profiles) {
+        try {
+          const doc = generateStudentResumePdf(p);
+          const pdfBlob = doc.output('blob');
+          const regNo = p.academic?.register_number || 'Student';
+          const name = (p.academic?.full_name || 'Profile').trim().replace(/\s+/g, '_');
+          zip.file(`${regNo}_${name}_Resume.pdf`, pdfBlob);
+        } catch (docErr) {
+          console.warn('Failed to generate PDF for student:', p.academic?.register_number, docErr);
+        }
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      const classObj = classes.find(c => String(c.id) === String(effectiveClassId));
+      const classLabel = classObj?.name ? `_${classObj.name.replace(/\s+/g, '_')}` : '';
+      link.download = `VSBEC_IT_Student_Resumes${classLabel}_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      addToast(`Successfully downloaded ${profiles.length} student resumes (.zip)!`, 'success');
+    } catch (err: any) {
+      console.error('Bulk download error:', err);
+      addToast(err.message || 'Failed to bulk download student resumes', 'error');
     } finally {
       setIsExportingBulkResumes(false);
     }

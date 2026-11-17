@@ -41,9 +41,9 @@ import {
   Laptop,
   Monitor
 } from 'lucide-react';
-import { API_URL } from './config';
-import { checkIsMobileOrTablet } from './lib/deviceCheck';
-import { downloadAssessmentAuditPdf } from './assessmentAuditPdfGenerator';
+import { API_URL } from '../../config';
+import { checkIsMobileOrTablet } from '../../lib/deviceCheck';
+import { downloadAssessmentAuditPdf } from '../../utils/pdf/assessmentAuditPdfGenerator';
 
 interface SkillAssessmentViewProps {
   user: any;

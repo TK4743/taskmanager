@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { pool } from '../db.js';
-import { checkAndRunPreDeadlineBackups, generateTaskDeadlineBackup } from '../taskDeadlineBackupService.js';
+import { checkAndRunPreDeadlineBackups, generateTaskDeadlineBackup } from '../services/taskDeadlineBackupService.js';
 
 async function run() {
   const arg = process.argv[2];

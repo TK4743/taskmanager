@@ -20,7 +20,7 @@ import fs from 'fs';
 import path from 'path';
 import JSZip from 'jszip';
 import ExcelJS from 'exceljs';
-import { pool } from './db.js';
+import { pool } from '../db.js';
 import { tryLocalGitPush, deleteGitHubFileViaAPI } from './githubSyncService.js';
 
 export function sanitizeArchiveName(str: string): string {

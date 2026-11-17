@@ -9,7 +9,7 @@ import {
   Sparkles,
   Trash2
 } from 'lucide-react';
-import { API_URL } from './config';
+import { API_URL } from '../../config';
 
 interface HRCodingAssessmentsManagerProps {
   token: string | null;

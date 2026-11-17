@@ -7,7 +7,7 @@
  * - GitHub Actions automated backup & report workflow
  */
 
-import { pool } from './db.js';
+import { pool } from '../db.js';
 
 export function extractLeetCodeUsername(profileUrl: string): string {
   if (!profileUrl || !profileUrl.trim()) return '';

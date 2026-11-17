@@ -1,6 +1,6 @@
 import React from 'react';
 import { Mail, Send, CheckCircle2, Loader2, Sparkles, Zap } from 'lucide-react';
-import { FloatingModal } from '../../FloatingModal';
+import { FloatingModal } from './FloatingModal';
 import { Button } from '../ui/Button';
 import { Skeleton } from '../ui/Skeleton';
 import { cn } from '../../lib/utils';

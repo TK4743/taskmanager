@@ -1,5 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
-import { pool } from './db.js';
+import { pool } from '../db.js';
 
 /**
  * Clears Cloudinary proof screenshots older than 30 days from verification or task deadline,

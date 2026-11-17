@@ -13,7 +13,7 @@ import {
   Code2,
   Bus
 } from 'lucide-react';
-import { GOAT_CE_URL } from './config';
+import { GOAT_CE_URL } from '../../config';
 
 interface LiveTeachingHubViewProps {
   user?: any;

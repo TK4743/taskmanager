@@ -1,4 +1,4 @@
-import { pool } from './db.js';
+import { pool } from '../db.js';
 import ExcelJS from 'exceljs';
 
 export interface ReportFilterOptions {

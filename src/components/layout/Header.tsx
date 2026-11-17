@@ -1,7 +1,7 @@
 import React from 'react';
 import { Menu, FileDown, Send, CheckCircle2, Bell, CheckCheck, Check } from 'lucide-react';
 import { Button } from '../ui/Button';
-import ThemeToggle from '../../ThemeToggle';
+import ThemeToggle from './ThemeToggle';
 import { cn } from '../../lib/utils';
 import type { User, TeamInvitation, Notification } from '../../types';
 import { NotificationsDrawer } from '../modals/NotificationsDrawer';

@@ -26,8 +26,8 @@ import {
   User,
   GraduationCap
 } from 'lucide-react';
-import { cn } from './lib/utils';
-import { FloatingModal } from './FloatingModal';
+import { cn } from '../../lib/utils';
+import { FloatingModal } from '../modals/FloatingModal';
 
 export interface MobileBottomNavProps {
   currentView: string;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { API_URL } from './config';
+import { API_URL } from '../../config';
 import { 
   BarChart3, Sparkles, AlertTriangle, CheckCircle2, TrendingUp, 
   Layers, Search, Download, ShieldCheck, 

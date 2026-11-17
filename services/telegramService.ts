@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { pool } from './db.js';
+import { pool } from '../db.js';
 import ExcelJS from 'exceljs';
 import path from 'path';
 import { sendTaskStatusEmail } from './emailService.js';

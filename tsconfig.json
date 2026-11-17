@@ -30,7 +30,7 @@
     "src",
     "server.ts",
     "db.ts",
-    "codingSandboxService.ts"
+    "services"
   ],
   "exclude": [
     "node_modules",

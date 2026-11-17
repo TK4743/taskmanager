@@ -1,6 +1,6 @@
 import React from 'react';
 import { Github, Code } from 'lucide-react';
-import { FloatingModal } from '../../FloatingModal';
+import { FloatingModal } from './FloatingModal';
 
 export interface StudentHistoryModalProps {
   isOpen: boolean;

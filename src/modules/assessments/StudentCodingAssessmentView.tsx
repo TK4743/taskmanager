@@ -24,8 +24,8 @@ import {
   Monitor,
   Mail
 } from 'lucide-react';
-import { API_URL } from './config';
-import { checkIsMobileOrTablet } from './lib/deviceCheck';
+import { API_URL } from '../../config';
+import { checkIsMobileOrTablet } from '../../lib/deviceCheck';
 
 interface StudentCodingAssessmentViewProps {
   user: any;

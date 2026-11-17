@@ -12,7 +12,7 @@ import { AuthView } from './modules/auth/AuthView';
 import { ViewRouter } from './modules/ViewRouter';
 import { GlobalModals } from './components/modals/GlobalModals';
 
-const PublicStudentPortfolioView = lazyWithRetry(() => import('./PublicStudentPortfolioView'));
+const PublicStudentPortfolioView = lazyWithRetry(() => import('./modules/portfolio/PublicStudentPortfolioView'));
 
 function AppContent() {
   const app = useAppData();

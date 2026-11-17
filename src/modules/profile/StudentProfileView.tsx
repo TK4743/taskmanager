@@ -544,7 +544,7 @@ export function StudentProfileView({
             type="button"
             onClick={async () => {
               if (profile) {
-                const { downloadStudentResumePdf } = await import('../../studentProfilePdfGenerator');
+                const { downloadStudentResumePdf } = await import('../../utils/pdf/studentProfilePdfGenerator');
                 downloadStudentResumePdf(profile);
                 addToast('Downloading your Profile Resume (PDF)...', 'success');
               } else {

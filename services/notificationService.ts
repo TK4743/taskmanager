@@ -1,4 +1,4 @@
-import { pool } from './db.js';
+import { pool } from '../db.js';
 import { dispatchEmailThroughPool, getCanonicalPortalUrl } from './emailService.js';
 import { sendTelegramMessage } from './telegramService.js';
 import { sendPushToUser } from './pushNotificationService.js';

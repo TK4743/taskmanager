@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { API_URL } from './config';
+import { API_URL } from '../../config';
 import { 
   BrainCircuit, Sparkles, CheckCircle2, AlertTriangle, BookOpen, 
   ExternalLink, Clock, Target, Plus, X, RefreshCw, Code2, 

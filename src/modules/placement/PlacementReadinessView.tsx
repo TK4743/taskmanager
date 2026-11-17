@@ -19,7 +19,7 @@ import {
   UserCheck,
   ArrowUpRight
 } from 'lucide-react';
-import { API_URL } from './config';
+import { API_URL } from '../../config';
 
 interface PlacementReadinessViewProps {
   user: any;

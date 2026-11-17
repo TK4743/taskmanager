@@ -12,7 +12,7 @@ import { Input } from '../ui/Input';
 import { Badge } from '../ui/Badge';
 import { cn } from '../../lib/utils';
 import type { Task, User } from '../../types';
-import type { ProofPreviewData } from '../../ProofPreviewModal';
+import type { ProofPreviewData } from './ProofPreviewModal';
 
 export interface TeamModalProps {
   teamModalTask: Task | null;

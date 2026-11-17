@@ -1,6 +1,6 @@
 import { API_URL } from '../config';
 import type { User, Class, Task, Submission, Department } from '../types';
-import type { ProofPdfItem } from '../proofPdfGenerator';
+import type { ProofPdfItem } from './pdf/proofPdfGenerator';
 
 export interface ReportFilterOptions {
   classIds?: string[];
@@ -1639,7 +1639,7 @@ export async function downloadScreenshotsPdf(
     };
 
     try {
-      const { generateMergedProofsPdf } = await import('../proofPdfGenerator');
+      const { generateMergedProofsPdf } = await import('./pdf/proofPdfGenerator');
       const pdfBlob = await generateMergedProofsPdf(
         uniqueItems,
         fetchImageBlob,

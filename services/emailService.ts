@@ -11,7 +11,7 @@
  */
 
 import nodemailer from 'nodemailer';
-import { pool } from './db.js';
+import { pool } from '../db.js';
 
 const COLLEGE_LOGO_URL = 'https://raw.githubusercontent.com/Tharun4743/IT_taskmanager/main/public/logo.png';
 

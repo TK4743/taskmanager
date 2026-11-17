@@ -1,6 +1,6 @@
 import React from 'react';
 import { Megaphone, GraduationCap } from 'lucide-react';
-import { FloatingModal } from '../../FloatingModal';
+import { FloatingModal } from './FloatingModal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';

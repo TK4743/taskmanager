@@ -36,25 +36,25 @@ export const prefetchView = (viewName: string) => {
   try {
     switch (viewName) {
       case 'live-teaching-hub':
-        import('../../LiveTeachingHubView');
+        import('../../modules/teaching/LiveTeachingHubView');
         break;
       case 'skill-assessment':
-        import('../../SkillAssessmentView');
+        import('../../modules/assessments/SkillAssessmentView');
         break;
       case 'placement-readiness':
-        import('../../PlacementReadinessView');
+        import('../../modules/placement/PlacementReadinessView');
         break;
       case 'opportunities':
-        import('../../StudentOpportunitiesView');
+        import('../../modules/opportunities/StudentOpportunitiesView');
         break;
       case 'skill-gap-analyzer':
-        import('../../SkillGapAnalyzerView');
+        import('../../modules/analytics/SkillGapAnalyzerView');
         break;
       case 'student-coding-assessments':
-        import('../../StudentCodingAssessmentView');
+        import('../../modules/assessments/StudentCodingAssessmentView');
         break;
       case 'institutional-skill-heatmap':
-        import('../../InstitutionalSkillHeatmapView');
+        import('../../modules/analytics/InstitutionalSkillHeatmapView');
         break;
       case 'industry-portal':
       case 'industry-dashboard':
@@ -63,7 +63,7 @@ export const prefetchView = (viewName: string) => {
       case 'industry-applications':
       case 'industry-reports':
       case 'industry-profile':
-        import('../../IndustryPortalView');
+        import('../../modules/industry/IndustryPortalView');
         break;
       default:
         break;

@@ -11,7 +11,7 @@ import {
   TelegramLinkModal,
   StaffStudentProfileModal
 } from './index';
-import { ProofPreviewModal } from '../../ProofPreviewModal';
+import { ProofPreviewModal } from './ProofPreviewModal';
 import {
   exportToExcel,
   downloadScreenshotsZip,

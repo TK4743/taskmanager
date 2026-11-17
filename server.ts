@@ -25,9 +25,9 @@ import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { pool, initDB, getPoolStatus, acquireSyncLock, releaseSyncLock, isSyncCompletedToday } from './db.js';
-import { cleanupOnlyTaskScreenshots } from './imageCleanupService.js';
-import { generateDatabaseSnapshot } from './dbBackupService.js';
-import { initSentry } from './sentryService.js';
+import { cleanupOnlyTaskScreenshots } from './services/imageCleanupService.js';
+import { generateDatabaseSnapshot } from './services/dbBackupService.js';
+import { initSentry } from './services/sentryService.js';
 import {
   sendPasswordResetOtpEmail,
   sendTaskStatusEmail,
@@ -45,7 +45,7 @@ import {
   triggerAssessmentCampaignEmails,
   sendAptitudeAssessmentResultEmail,
   sendCodingAssessmentResultEmail
-} from './emailService.js';
+} from './services/emailService.js';
 
 export {
   sendPasswordResetOtpEmail,
@@ -83,7 +83,7 @@ import {
   notifySubmissionBatchVerified,
   linkStudentTelegram,
   getISTDateStr
-} from './telegramService.js';
+} from './services/telegramService.js';
 import {
   initPushNotifications,
   getVapidPublicKey,
@@ -97,17 +97,17 @@ import {
   sendPushToCoordinators,
   sendPushToRole,
   sendPushToAll
-} from './pushNotificationService.js';
-import { sendUnifiedNotification, getUserNotificationPreferences } from './notificationService.js';
-import { fetchReportData, generateCSVReport, generateExcelReport, generateHTMLPDFReport, ReportType } from './hrReportService.js';
-import { evaluateCodeSandbox, STARTER_TEMPLATES, SupportedLanguage } from './codingSandboxService.js';
-import { cleanStudentName, syncAndGenerateStudentDirectory, updateStudentCodingProfileInDirectory, updateGitHubFileViaAPI } from './studentDirectoryService.js';
-import { commitFilesToGitHub, safeWriteExportFile, tryLocalGitPush, getGitHubSyncTargets } from './githubSyncService.js';
+} from './services/pushNotificationService.js';
+import { sendUnifiedNotification, getUserNotificationPreferences } from './services/notificationService.js';
+import { fetchReportData, generateCSVReport, generateExcelReport, generateHTMLPDFReport, ReportType } from './services/hrReportService.js';
+import { evaluateCodeSandbox, STARTER_TEMPLATES, SupportedLanguage } from './services/codingSandboxService.js';
+import { cleanStudentName, syncAndGenerateStudentDirectory, updateStudentCodingProfileInDirectory, updateGitHubFileViaAPI } from './services/studentDirectoryService.js';
+import { commitFilesToGitHub, safeWriteExportFile, tryLocalGitPush, getGitHubSyncTargets } from './services/githubSyncService.js';
 import { 
   checkAndRunPreDeadlineBackups, 
   cleanupTaskBackup, 
   generateTaskDeadlineBackup 
-} from './taskDeadlineBackupService.js';
+} from './services/taskDeadlineBackupService.js';
 
 function isValidStrictUrl(urlString: string | null | undefined): boolean {
   if (!urlString) return true;

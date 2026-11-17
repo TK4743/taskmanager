@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import HRCodingAssessmentsManager from './HRCodingAssessmentsManager';
-import { API_URL } from './config';
+import { API_URL } from '../../config';
 
 const API = API_URL || '';
 

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { API_URL } from '../../config';
 import { cn } from '../../lib/utils';
-import ThemeToggle from '../../ThemeToggle';
+import ThemeToggle from '../../components/layout/ThemeToggle';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';

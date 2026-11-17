@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 import util from 'util';
-import { pool } from './db.js';
+import { pool } from '../db.js';
 
 const execPromise = util.promisify(exec);
 
