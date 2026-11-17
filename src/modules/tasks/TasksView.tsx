@@ -163,29 +163,17 @@ export function TasksView({
   const allScreenshotOptions = useMemo(() => {
     const set = new Set<string>();
     set.add('Upload registration confirmation screenshot');
-    dbMetaOptions.screenshot_instructions.forEach(s => set.add(s));
     savedScreenshotOptions.forEach(s => set.add(s));
-    tasks.forEach(t => {
-      if (t.screenshot_instruction && t.screenshot_instruction.trim()) {
-        set.add(t.screenshot_instruction.trim());
-      }
-    });
     return Array.from(set);
-  }, [dbMetaOptions.screenshot_instructions, savedScreenshotOptions, tasks]);
+  }, [savedScreenshotOptions]);
 
   const allFieldLabelOptions = useMemo(() => {
     const set = new Set<string>();
     set.add('Have you registered?');
     set.add('Team Name');
-    dbMetaOptions.custom_field_labels.forEach(l => set.add(l));
     savedFieldLabelOptions.forEach(l => set.add(l));
-    tasks.forEach(t => {
-      if (t.custom_field_label && t.custom_field_label.trim()) {
-        set.add(t.custom_field_label.trim());
-      }
-    });
     return Array.from(set);
-  }, [dbMetaOptions.custom_field_labels, savedFieldLabelOptions, tasks]);
+  }, [savedFieldLabelOptions]);
 
   const getCategoryBadgeStyle = (category?: string) => {
     const cat = (category || '').toLowerCase();
@@ -704,17 +692,19 @@ export function TasksView({
                             <div className="min-w-0 space-y-2">
                               <Select
                                 value={
-                                  allScreenshotOptions.includes(newTask.screenshot_instruction)
-                                    ? newTask.screenshot_instruction
-                                    : isCustomScreenshot || newTask.screenshot_instruction
-                                      ? '__custom__'
-                                      : ''
+                                  newTask.screenshot_instruction === 'Upload registration confirmation screenshot'
+                                    ? 'Upload registration confirmation screenshot'
+                                    : savedScreenshotOptions.includes(newTask.screenshot_instruction)
+                                      ? newTask.screenshot_instruction
+                                      : isCustomScreenshot || newTask.screenshot_instruction
+                                        ? '__custom__'
+                                        : ''
                                 }
                                 onChange={e => {
                                   const val = e.target.value;
                                   if (val === '__custom__') {
                                     setIsCustomScreenshot(true);
-                                    if (allScreenshotOptions.includes(newTask.screenshot_instruction)) {
+                                    if (newTask.screenshot_instruction === 'Upload registration confirmation screenshot' || savedScreenshotOptions.includes(newTask.screenshot_instruction)) {
                                       setNewTask(prev => ({ ...prev, screenshot_instruction: '' }));
                                     }
                                   } else {
@@ -725,7 +715,8 @@ export function TasksView({
                                 required
                               >
                                 <option value="" disabled>Screenshot Instruction (Select Option)</option>
-                                {allScreenshotOptions.map(opt => (
+                                <option value="Upload registration confirmation screenshot">Upload registration confirmation screenshot</option>
+                                {savedScreenshotOptions.filter(o => o !== 'Upload registration confirmation screenshot').map(opt => (
                                   <option key={opt} value={opt}>{opt}</option>
                                 ))}
                                 <option value="__custom__">Other / Custom</option>
@@ -760,17 +751,19 @@ export function TasksView({
                             <div className="min-w-0 space-y-2">
                               <Select
                                 value={
-                                  allFieldLabelOptions.includes(newTask.custom_field_label)
+                                  (newTask.custom_field_label === 'Have you registered?' || newTask.custom_field_label === 'Team Name')
                                     ? newTask.custom_field_label
-                                    : isCustomFieldLabel || newTask.custom_field_label
-                                      ? '__custom__'
-                                      : ''
+                                    : savedFieldLabelOptions.includes(newTask.custom_field_label)
+                                      ? newTask.custom_field_label
+                                      : isCustomFieldLabel || newTask.custom_field_label
+                                        ? '__custom__'
+                                        : ''
                                 }
                                 onChange={e => {
                                   const val = e.target.value;
                                   if (val === '__custom__') {
                                     setIsCustomFieldLabel(true);
-                                    if (allFieldLabelOptions.includes(newTask.custom_field_label)) {
+                                    if (newTask.custom_field_label === 'Have you registered?' || newTask.custom_field_label === 'Team Name' || savedFieldLabelOptions.includes(newTask.custom_field_label)) {
                                       setNewTask(prev => ({ ...prev, custom_field_label: '' }));
                                     }
                                   } else {
@@ -781,7 +774,9 @@ export function TasksView({
                                 required
                               >
                                 <option value="" disabled>Custom Verification Field Label (Select Option)</option>
-                                {allFieldLabelOptions.map(opt => (
+                                <option value="Have you registered?">Have you registered?</option>
+                                <option value="Team Name">Team Name</option>
+                                {savedFieldLabelOptions.filter(o => o !== 'Have you registered?' && o !== 'Team Name').map(opt => (
                                   <option key={opt} value={opt}>{opt}</option>
                                 ))}
                                 <option value="__custom__">Other / Custom</option>
@@ -1552,12 +1547,28 @@ export function TasksView({
                                                   <span className="text-red-500 ml-0.5">*</span>
                                                   <span className="text-[10px] font-medium text-zinc-400 ml-1">(Required)</span>
                                                 </label>
-                                                <Input
-                                                  placeholder={`Enter ${task.custom_field_label || 'value'}...`}
-                                                  value={customFieldValue}
-                                                  onChange={e => setCustomFieldValue(e.target.value)}
-                                                  className={cn(!customFieldValue.trim() && 'border-red-200 focus:border-red-400')}
-                                                />
+                                                {task.custom_field_label?.trim() === 'Have you registered?' ? (
+                                                  <select
+                                                    value={customFieldValue}
+                                                    onChange={e => setCustomFieldValue(e.target.value)}
+                                                    className={cn(
+                                                      "w-full h-10 px-3 rounded-xl border bg-white dark:bg-zinc-900 text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-black",
+                                                      !customFieldValue.trim() ? "border-red-200 focus:border-red-400" : "border-zinc-200 dark:border-zinc-700"
+                                                    )}
+                                                    required
+                                                  >
+                                                    <option value="" disabled>Select (Yes / No)</option>
+                                                    <option value="Yes">Yes</option>
+                                                    <option value="No">No</option>
+                                                  </select>
+                                                ) : (
+                                                  <Input
+                                                    placeholder={`Enter ${task.custom_field_label || 'value'}...`}
+                                                    value={customFieldValue}
+                                                    onChange={e => setCustomFieldValue(e.target.value)}
+                                                    className={cn(!customFieldValue.trim() && 'border-red-200 focus:border-red-400')}
+                                                  />
+                                                )}
                                               </div>
                                               <div>
                                                 <label className="text-sm font-bold text-zinc-700 mb-1.5 flex items-center gap-1">
@@ -1913,10 +1924,21 @@ export function TasksView({
                             <label className="text-sm font-medium text-zinc-700 mb-2 block">
                               {newTask.custom_field_label || "Custom Field"}
                             </label>
-                            <Input
-                              placeholder={`Enter ${newTask.custom_field_label || "value"}...`}
-                              disabled
-                            />
+                            {newTask.custom_field_label?.trim() === 'Have you registered?' ? (
+                              <select
+                                disabled
+                                className="w-full h-10 px-3 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-400 text-sm font-medium cursor-not-allowed"
+                              >
+                                <option>Select (Yes / No) - Dropdown Option</option>
+                                <option>Yes</option>
+                                <option>No</option>
+                              </select>
+                            ) : (
+                              <Input
+                                placeholder={`Enter ${newTask.custom_field_label || "value"}...`}
+                                disabled
+                              />
+                            )}
                           </div>
                           <div>
                             <label className="text-sm font-medium text-zinc-700 mb-2 block">

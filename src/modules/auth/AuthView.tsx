@@ -54,6 +54,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
   const [indRegLoading, setIndRegLoading] = useState(false);
   const [indRegMsg, setIndRegMsg] = useState('');
   const [indRegError, setIndRegError] = useState('');
+  const [indRegShowPassword, setIndRegShowPassword] = useState(false);
 
   // 🎓 Student Self-Registration Drawer State (Idea 1)
   const [showStudentRegDrawer, setShowStudentRegDrawer] = useState(false);
@@ -736,39 +737,56 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
           {/* ── Industry Self-Registration Modal ─────────────────────────── */}
           <AnimatePresence>
             {showIndustryRegModal && (
-              <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm cursor-pointer" onClick={() => setShowIndustryRegModal(false)}>
+              <div
+                className="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm cursor-pointer"
+                onClick={() => setShowIndustryRegModal(false)}
+              >
                 <motion.div
                   onClick={e => e.stopPropagation()}
                   initial={{ opacity: 0, scale: 0.95, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                  className="bg-white rounded-[2rem] p-6 md:p-8 max-w-lg w-full shadow-2xl relative border border-zinc-100 max-h-[90vh] overflow-y-auto cursor-default"
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  className="bg-white dark:bg-[#121216] rounded-[2rem] p-6 md:p-8 max-w-lg w-full shadow-2xl relative border border-zinc-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto cursor-default flex flex-col"
                 >
+                  {/* Close Button in Top Right */}
                   <button
                     type="button"
                     onClick={() => setShowIndustryRegModal(false)}
-                    className="absolute top-5 right-5 p-2 hover:bg-zinc-100 rounded-full transition-colors cursor-pointer"
+                    className="absolute top-5 right-5 p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
                   >
-                    <X size={20} className="text-zinc-400" />
+                    <X size={20} />
                   </button>
 
-                  <div className="mb-6">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
-                      <span>🏢</span> Corporate Partner
+                  {/* Modal Header */}
+                  <div className="mb-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                      <Building2 size={14} /> Corporate &amp; HR Admissions
                     </div>
-                    <h3 className="text-2xl font-black text-zinc-900 tracking-tight">Register Industry Account</h3>
-                    <p className="text-xs text-zinc-500 mt-1">
-                      Post internships, live projects, campus jobs, and connect with talent
+                    <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
+                      Industry &amp; HR Registration
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                      {!indRegMsg
+                        ? 'Step 1 of 2: Fill your company details, recruiter credentials & hiring profile'
+                        : 'Application Submitted for Institutional Verification'}
                     </p>
+
+                    {/* Step Breadcrumbs Progress Bar */}
+                    <div className="flex items-center gap-2 mt-3">
+                      <div className={`h-1.5 flex-1 rounded-full transition-colors ${!indRegMsg ? 'bg-blue-600' : 'bg-blue-600'}`} />
+                      <div className={`h-1.5 flex-1 rounded-full transition-colors ${indRegMsg ? 'bg-blue-600' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+                      <div className={`h-1.5 flex-1 rounded-full transition-colors ${indRegMsg ? 'bg-emerald-600' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+                    </div>
                   </div>
 
                   {indRegMsg ? (
                     <div className="text-center py-6 space-y-4">
-                      <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto ring-8 ring-emerald-50">
+                      <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto ring-8 ring-emerald-50 dark:ring-emerald-950/20">
                         <CheckCircle2 size={36} />
                       </div>
-                      <h4 className="text-lg font-bold text-zinc-900">Registration Submitted!</h4>
-                      <p className="text-xs text-zinc-600 max-w-xs mx-auto">
+                      <h4 className="text-lg font-bold text-zinc-900 dark:text-white">Registration Submitted!</h4>
+                      <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
                         {indRegMsg}
                       </p>
                       <Button
@@ -805,28 +823,34 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                           setIndRegLoading(false);
                         }
                       }}
-                      className="space-y-3"
+                      className="space-y-3.5"
                     >
                       {indRegError && (
-                        <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl">
-                          ⚠️ {indRegError}
+                        <div className="p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-red-700 dark:text-red-300 text-xs font-semibold rounded-2xl flex items-start gap-2.5">
+                          <span className="text-sm shrink-0">⚠️</span>
+                          <div className="leading-relaxed">{indRegError}</div>
                         </div>
                       )}
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">Company Name *</label>
+                          <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-1">
+                            Company Name <span className="text-red-500">*</span>
+                          </label>
                           <Input
-                            placeholder="e.g. Zoho Corporation / Tech Innovations"
+                            placeholder="e.g. Zoho Corporation / Infosys Campus Hiring"
                             value={indRegData.company_name}
                             onChange={e => setIndRegData(p => ({ ...p, company_name: e.target.value }))}
                             required
+                            className="text-sm"
                           />
                         </div>
                         <div>
-                          <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">Industry Sector</label>
+                          <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-1">
+                            Industry Sector
+                          </label>
                           <select
-                            className="w-full h-10 px-3 border border-zinc-200 rounded-xl text-sm bg-white"
+                            className="w-full h-10 px-3 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-semibold bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
                             value={indRegData.industry_sector}
                             onChange={e => setIndRegData(p => ({ ...p, industry_sector: e.target.value }))}
                           >
@@ -840,62 +864,89 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">HR / Recruiter Name *</label>
+                          <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-1">
+                            HR / Recruiter Name <span className="text-red-500">*</span>
+                          </label>
                           <Input
-                            placeholder="e.g. Priya Sharma (Talent Acquisition Lead)"
+                            placeholder="e.g. Sarah Jenkins (Talent Acquisition Lead)"
                             value={indRegData.full_name}
                             onChange={e => setIndRegData(p => ({ ...p, full_name: e.target.value }))}
                             required
+                            className="text-sm"
                           />
                         </div>
                         <div>
-                          <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">Work Email *</label>
+                          <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-1">
+                            Work Email <span className="text-red-500">*</span>
+                          </label>
                           <Input
                             type="email"
-                            placeholder="hr@company.com or careers@org.in"
+                            placeholder="e.g. careers@company.com or hr@enterprise.org"
                             value={indRegData.email}
                             onChange={e => setIndRegData(p => ({ ...p, email: e.target.value, username: e.target.value }))}
                             required
+                            className="text-sm"
                           />
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">Password *</label>
-                          <Input
-                            type="password"
-                            placeholder="Create password (min 6 chars)"
-                            value={indRegData.password}
-                            onChange={e => setIndRegData(p => ({ ...p, password: e.target.value }))}
-                            required
-                          />
+                          <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-1">
+                            Password <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <Input
+                              type={indRegShowPassword ? 'text' : 'password'}
+                              placeholder="Create password (min 6 chars)"
+                              value={indRegData.password}
+                              onChange={e => setIndRegData(p => ({ ...p, password: e.target.value }))}
+                              required
+                              className="pr-10 text-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setIndRegShowPassword(p => !p)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
+                              tabIndex={-1}
+                            >
+                              {indRegShowPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          </div>
                         </div>
                         <div>
-                          <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">Website URL</label>
+                          <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-1">
+                            Website URL
+                          </label>
                           <Input
-                            placeholder="https://www.company.com"
+                            placeholder="e.g. https://www.company.com"
                             value={indRegData.website}
                             onChange={e => setIndRegData(p => ({ ...p, website: e.target.value }))}
+                            className="text-sm"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">HQ Location</label>
+                        <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-1">
+                          HQ Location
+                        </label>
                         <Input
                           placeholder="e.g. Bengaluru / Chennai, India"
                           value={indRegData.hq_location}
                           onChange={e => setIndRegData(p => ({ ...p, hq_location: e.target.value }))}
+                          className="text-sm"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1">Company Description</label>
+                        <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-1">
+                          Company Description
+                        </label>
                         <textarea
-                          className="w-full p-2.5 border border-zinc-200 rounded-xl text-xs resize-none"
+                          className="w-full p-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs resize-none bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
                           rows={2}
                           placeholder="Brief overview of company focus, hiring domains, and internship opportunities..."
                           value={indRegData.description}
@@ -914,7 +965,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                         </Button>
                         <Button
                           type="submit"
-                          className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700"
+                          className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
                           disabled={indRegLoading}
                         >
                           {indRegLoading ? 'Submitting...' : 'Register Company'}
@@ -990,7 +1041,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                             Full Name (As per College Records) <span className="text-red-500">*</span>
                           </label>
                           <Input
-                            placeholder="e.g. THARUN KUMAR K"
+                            placeholder="e.g. SATHISH KUMAR R"
                             value={studentRegData.fullName}
                             onChange={e => setStudentRegData(p => ({ ...p, fullName: e.target.value }))}
                             required
@@ -1064,7 +1115,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                           </label>
                           <Input
                             type="email"
-                            placeholder="e.g. 3ithackathon@gmail.com"
+                            placeholder="e.g. student@college.edu or name@domain.com"
                             value={studentRegData.email}
                             onChange={e => setStudentRegData(p => ({ ...p, email: e.target.value }))}
                             required
