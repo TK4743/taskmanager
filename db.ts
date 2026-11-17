@@ -903,7 +903,18 @@ export async function initDB(forceMigration: boolean = false) {
       }
     }
 
-    // Update batch definitions for Year 2 (2025-2029) and Year 3 (2024-2028)
+    // Update batch definitions for Year 1 (2026-2030), Year 2 (2025-2029), and Year 3 (2024-2028)
+    if (defaultDeptId) {
+      await client.query(`
+        INSERT INTO classes (name, department_id, year, batch)
+        VALUES 
+          ('I IT A', $1, 1, '2026-2030'),
+          ('I IT B', $1, 1, '2026-2030'),
+          ('I IT C', $1, 1, '2026-2030')
+        ON CONFLICT DO NOTHING;
+      `, [defaultDeptId]);
+    }
+    await client.query(`UPDATE classes SET batch = '2026-2030', updated_at = NOW() WHERE year = 1;`);
     await client.query(`UPDATE classes SET batch = '2025-2029', updated_at = NOW() WHERE year = 2;`);
     await client.query(`UPDATE classes SET batch = '2024-2028', updated_at = NOW() WHERE year = 3;`);
 
