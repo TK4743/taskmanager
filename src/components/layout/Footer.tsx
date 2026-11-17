@@ -11,7 +11,7 @@ export interface FooterProps {
 }
 
 export const Footer = ({ onShowModal }: FooterProps) => (
-  <footer className="mt-8 pt-4 pb-4 border-t border-zinc-200/80 shrink-0 w-full bg-white/60 backdrop-blur-md px-4 md:px-8">
+  <footer className="mt-auto pt-6 pb-6 border-t border-zinc-200/80 shrink-0 w-full bg-white/80 dark:bg-[#121216]/90 backdrop-blur-md px-4 md:px-8">
     <div className="w-full flex flex-col lg:flex-row items-center justify-between gap-3 text-xs min-w-0">
       {/* Brand Logo & Name */}
       <div className="flex items-center gap-2.5 shrink-0 min-w-0">

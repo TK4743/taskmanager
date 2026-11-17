@@ -311,7 +311,7 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
   };
 
   return (
-    <div className="w-full min-h-full overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] dark:bg-[#0f0f12] text-zinc-900 dark:text-zinc-100 font-sans">
+    <div className="w-full flex-1 overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] dark:bg-[#0f0f12] text-zinc-900 dark:text-zinc-100 font-sans">
       <div className="w-full space-y-6">
         {toast && (
           <div className="fixed bottom-6 right-6 z-[99999] bg-zinc-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-zinc-700 text-xs font-bold flex items-center gap-2 animate-bounce">

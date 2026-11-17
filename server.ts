@@ -14022,11 +14022,7 @@ async function startServer() {
   // 🎙️ Live Teaching Hub & Collaborative Peer Study Rooms
   // ══════════════════════════════════════════════════════════════════════════
 
-  const defaultPeerRooms = [
-    { room_code: 'VSB-8831', topic: 'LeetCode Daily Problems (Graph BFS/DFS)', host_id: null, host_name: 'Arun V', class_name: 'III IT A', peer_count: 3, status: 'LIVE', created_at: new Date().toISOString() },
-    { room_code: 'VSB-5120', topic: 'React + Express Fullstack Lab Task', host_id: null, host_name: 'Sneha M', class_name: 'III IT B', peer_count: 4, status: 'LIVE', created_at: new Date().toISOString() },
-    { room_code: 'VSB-9042', topic: 'Aptitude & Logical Reasoning Sprint', host_id: null, host_name: 'Kavitha R', class_name: 'IV IT A', peer_count: 2, status: 'LIVE', created_at: new Date().toISOString() }
-  ];
+  const defaultPeerRooms: any[] = [];
 
   let peerRoomsTableCreated = false;
   async function checkPeerRoomsTable() {

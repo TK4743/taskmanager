@@ -96,8 +96,8 @@ function AppContent() {
           setShowTelegramLinkModal={app.setShowTelegramLinkModal}
         />
 
-        <main className="flex-1 min-h-0 relative bg-[#F5F5F4] dark:bg-[#0f0f12] overflow-y-auto flex flex-col justify-between">
-          <div className="flex-1 min-h-0 w-full">
+        <main className="flex-1 min-h-0 relative bg-[#F5F5F4] dark:bg-[#0f0f12] overflow-y-auto flex flex-col">
+          <div className="flex-1 w-full flex flex-col">
             <ErrorBoundary fallbackTitle="Portal View Error">
               <Suspense fallback={<ViewLoadingFallback />}>
                 <ViewRouter app={app} />

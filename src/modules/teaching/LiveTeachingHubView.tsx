@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Mic,
   Laptop,
@@ -12,17 +12,10 @@ import {
   Eye,
   Code2,
   Bus,
-  Copy,
-  Check,
-  Play,
-  Users,
   Terminal,
-  Zap,
-  Share2,
-  RefreshCw,
-  XCircle
+  Zap
 } from 'lucide-react';
-import { GOAT_CE_URL, API_URL } from '../../config';
+import { GOAT_CE_URL } from '../../config';
 
 interface LiveTeachingHubViewProps {
   user?: any;
@@ -30,344 +23,106 @@ interface LiveTeachingHubViewProps {
   addToast?: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
 }
 
-interface PeerRoom {
-  id?: string;
-  room_code: string;
-  topic: string;
-  host_id?: string;
-  host_name: string;
-  class_name?: string;
-  peer_count: number;
-  status: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, token, addToast }) => {
-  const [createdRoomCode, setCreatedRoomCode] = useState<string>(() => `VSB-${Math.floor(1000 + Math.random() * 9000)}`);
+export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ addToast }) => {
   const [joinCode, setJoinCode] = useState<string>('');
-  const [selectedTopic, setSelectedTopic] = useState<string>('Data Structures & Algorithms');
-  const [copied, setCopied] = useState<boolean>(false);
-  const [loadingRooms, setLoadingRooms] = useState<boolean>(false);
-  const [activeRooms, setActiveRooms] = useState<PeerRoom[]>([]);
 
-  const topics = [
-    'Data Structures & Algorithms',
-    'Full-Stack Web Development',
-    'Python & AI/ML',
-    'Cloud & System Design',
-    'LeetCode Interview Prep'
-  ];
-
-  const fetchRooms = useCallback(async () => {
-    if (!token) return;
-    setLoadingRooms(true);
-    try {
-      const res = await fetch(`${API_URL}/api/teaching/rooms`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setActiveRooms(Array.isArray(data) ? data : []);
-      }
-    } catch {
-      // Keep existing list on failure
-    } finally {
-      setLoadingRooms(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    fetchRooms();
-    const interval = setInterval(fetchRooms, 15000);
-    return () => clearInterval(interval);
-  }, [fetchRooms]);
-
-  const handleLaunchCreatedRoom = async () => {
-    try {
-      if (token) {
-        await fetch(`${API_URL}/api/teaching/rooms`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            room_code: createdRoomCode,
-            topic: selectedTopic
-          })
-        });
-        fetchRooms();
-      }
-    } catch (e) {
-      console.error('Error creating room on backend:', e);
-    }
-
-    const url = `${GOAT_CE_URL}?room=${encodeURIComponent(createdRoomCode)}&topic=${encodeURIComponent(selectedTopic)}`;
+  const handleOpenGoatCE = (codeToJoin?: string) => {
+    const code = (codeToJoin !== undefined ? codeToJoin : joinCode).trim().toUpperCase();
+    const url = code ? `${GOAT_CE_URL}?room=${encodeURIComponent(code)}` : GOAT_CE_URL;
     window.open(url, '_blank', 'noopener,noreferrer');
-    if (addToast) addToast(`Room ${createdRoomCode} launched and published to cohort!`, 'success');
-  };
-
-  const handleJoinByCode = async (codeToJoin?: string) => {
-    const code = (codeToJoin || joinCode).trim();
-    if (!code) {
-      if (addToast) addToast('Please enter a valid room code', 'error');
-      return;
+    if (addToast) {
+      addToast(code ? `Connecting to peer room ${code} on GOAT Code Editor...` : 'Launching GOAT Code Editor...', 'success');
     }
-
-    try {
-      if (token) {
-        await fetch(`${API_URL}/api/teaching/rooms/${encodeURIComponent(code)}/join`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        fetchRooms();
-      }
-    } catch (e) {
-      console.error('Error recording peer join:', e);
-    }
-
-    const url = `${GOAT_CE_URL}?room=${encodeURIComponent(code)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-    if (addToast) addToast(`Connecting to room ${code}...`, 'info');
-  };
-
-  const handleEndRoom = async (code: string) => {
-    try {
-      if (token) {
-        const res = await fetch(`${API_URL}/api/teaching/rooms/${encodeURIComponent(code)}/end`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          if (addToast) addToast(`Room ${code} closed successfully.`, 'info');
-          fetchRooms();
-        }
-      }
-    } catch {
-      if (addToast) addToast('Failed to end room.', 'error');
-    }
-  };
-
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(createdRoomCode);
-    setCopied(true);
-    if (addToast) addToast(`Room code ${createdRoomCode} copied to clipboard!`, 'success');
-    setTimeout(() => setCopied(false), 2500);
-  };
-
-  const handleRegenerateCode = () => {
-    setCreatedRoomCode(`VSB-${Math.floor(1000 + Math.random() * 9000)}`);
   };
 
   return (
-    <div className="w-full min-h-full overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] dark:bg-[#0f0f12] text-zinc-900 dark:text-zinc-100 font-sans">
+    <div className="w-full flex-1 overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] dark:bg-[#0f0f12] text-zinc-900 dark:text-zinc-100 font-sans">
       <div className="w-full space-y-6 pb-12">
         
         {/* ── Page Header ────────────────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
           <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0 shadow-2xs">
-                  <Radio size={22} className="animate-pulse" />
-                </div>
-                <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
-                  Live Teaching Hub
-                </h1>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0 shadow-2xs">
+                <Radio size={22} className="animate-pulse" />
               </div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
+                Live Teaching Hub
+              </h1>
             </div>
             <p className="text-xs md:text-sm text-zinc-500 font-medium mt-1">
-              Peer-to-peer real-time collaborative coding, live voice mentorship, and interactive learning.
+              Peer-to-peer real-time collaborative coding, live voice mentorship, and interactive learning via GOAT Code Editor.
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
             <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Peer Voice & IDE Gateway Active</span>
+              <span>GOAT CE Gateway Active</span>
             </span>
           </div>
         </div>
 
-        {/* ── Hero Headline Banner & Interactive Room Console ────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Main Hero Card */}
-          <div className="lg:col-span-7 relative overflow-hidden rounded-2xl bg-white border border-zinc-200/80 p-6 md:p-8 shadow-xs flex flex-col justify-between space-y-4">
-            <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-50 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-purple-50 rounded-full blur-3xl pointer-events-none" />
+        {/* ── Hero Headline Banner & Direct Redirection Console ────────────────── */}
+        <div className="relative overflow-hidden rounded-2xl bg-white border border-zinc-200/80 p-6 md:p-10 shadow-xs space-y-6">
+          <div className="absolute -right-20 -top-20 w-72 h-72 bg-indigo-50 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -left-20 -bottom-20 w-72 h-72 bg-purple-50 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="relative z-10 space-y-3">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold rounded-full uppercase tracking-wider">
-                <Sparkles size={12} className="text-indigo-600" /> Peer-to-Peer Learning Environment
-              </div>
-              
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-900 leading-tight">
-                Learn. Teach. Code Together.
-              </h2>
-              
-              <p className="text-xs md:text-sm text-zinc-600 leading-relaxed font-normal">
-                Connect with your peers, teach concepts through voice, and write code together in real time — with zero setup, live Monaco editor, and integrated voice channels.
-              </p>
+          <div className="relative z-10 max-w-3xl space-y-3">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold rounded-full uppercase tracking-wider">
+              <Sparkles size={12} className="text-indigo-600" /> Collaborative IDE & Voice Gateway
             </div>
+            
+            <h2 className="text-2xl md:text-4xl font-black tracking-tight text-zinc-900 leading-tight">
+              Learn. Teach. Code Together.
+            </h2>
+            
+            <p className="text-xs md:text-base text-zinc-600 leading-relaxed font-normal">
+              Connect with your peers, teach concepts through real-time voice, and write code together live in GOAT Code Editor — with zero setup, Monaco editor, multi-language compiler, and integrated voice channels.
+            </p>
+          </div>
 
-            {/* Instant Room Creator Box */}
-            <div className="relative z-10 p-4 bg-zinc-50 border border-zinc-200 rounded-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <Terminal size={14} className="text-indigo-600" /> Instant Peer Room
-                </span>
-                <button
-                  type="button"
-                  onClick={handleRegenerateCode}
-                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition cursor-pointer"
-                >
-                  Generate New Code
-                </button>
+          {/* Launch & Join Controls */}
+          <div className="relative z-10 flex flex-col md:flex-row items-stretch md:items-center gap-4 pt-2">
+            <button
+              type="button"
+              onClick={() => handleOpenGoatCE()}
+              className="py-3.5 px-7 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+            >
+              <Zap size={16} />
+              <span>Launch GOAT Code Editor</span>
+              <ExternalLink size={15} className="group-hover:translate-x-0.5 transition-transform" />
+            </button>
+
+            {/* Optional Direct Code Input */}
+            <div className="flex items-center gap-2 p-1 bg-zinc-50 border border-zinc-200 rounded-xl max-w-md w-full">
+              <div className="flex items-center gap-2 px-3 flex-1">
+                <Terminal size={14} className="text-zinc-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Have a room code? (e.g. VSB-7371)"
+                  value={joinCode}
+                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                  onKeyDown={e => { if (e.key === 'Enter') handleOpenGoatCE(); }}
+                  className="w-full bg-transparent text-xs font-mono font-bold text-zinc-800 placeholder-zinc-400 focus:outline-none uppercase"
+                />
               </div>
-
-              <div className="flex flex-col sm:flex-row items-center gap-2">
-                <div className="w-full sm:w-auto flex-1 flex items-center bg-white border border-zinc-200 rounded-lg px-3 py-2">
-                  <span className="font-mono font-bold text-sm text-zinc-900 tracking-wider flex-1">
-                    {createdRoomCode}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleCopyCode}
-                    className="p-1 text-zinc-400 hover:text-zinc-900 transition cursor-pointer"
-                    title="Copy room code"
-                  >
-                    {copied ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
-                  </button>
-                </div>
-
-                <select
-                  value={selectedTopic}
-                  onChange={e => setSelectedTopic(e.target.value)}
-                  className="w-full sm:w-auto px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-800"
-                >
-                  {topics.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-
-                <button
-                  type="button"
-                  onClick={handleLaunchCreatedRoom}
-                  className="w-full sm:w-auto py-2.5 px-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs rounded-lg shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
-                >
-                  <Play size={14} />
-                  <span>Launch Room</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleOpenGoatCE()}
+                className="py-2 px-4 bg-zinc-900 hover:bg-black text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shrink-0"
+              >
+                Join Room
+              </button>
             </div>
           </div>
 
-          {/* Quick Join & Active Channels Panel */}
-          <div className="lg:col-span-5 bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs flex flex-col justify-between space-y-4">
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-                <h3 className="text-sm font-extrabold text-zinc-900 flex items-center gap-2">
-                  <Radio size={16} className="text-emerald-500 animate-pulse" />
-                  <span>Active Study Rooms</span>
-                </h3>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={fetchRooms}
-                    disabled={loadingRooms}
-                    className="p-1 text-zinc-400 hover:text-zinc-900 rounded transition cursor-pointer"
-                    title="Refresh rooms"
-                  >
-                    <RefreshCw size={13} className={loadingRooms ? 'animate-spin text-indigo-600' : ''} />
-                  </button>
-                  <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    {activeRooms.length} LIVE
-                  </span>
-                </div>
-              </div>
-
-              {/* Join Code Input */}
-              <div className="mt-3 flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter Room Code (e.g. VSB-8831)"
-                  value={joinCode}
-                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                  className="flex-1 px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-black uppercase"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleJoinByCode()}
-                  className="px-4 py-2 bg-black hover:bg-zinc-800 text-white rounded-lg text-xs font-bold transition cursor-pointer"
-                >
-                  Join
-                </button>
-              </div>
-
-              {/* Active Channels List */}
-              <div className="mt-4 space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                {activeRooms.length === 0 ? (
-                  <div className="p-6 text-center bg-zinc-50 border border-dashed border-zinc-200 rounded-xl space-y-1">
-                    <p className="text-xs font-bold text-zinc-600">No Active Peer Rooms Right Now</p>
-                    <p className="text-[11px] text-zinc-400">Launch a new session above to invite your classmates to study!</p>
-                  </div>
-                ) : (
-                  activeRooms.map((room) => {
-                    const isMyRoom = room.host_id === user?.id;
-                    return (
-                      <div key={room.room_code || room.id} className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between gap-3 hover:border-indigo-300 transition-colors">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
-                              {room.room_code}
-                            </span>
-                            <span className="text-xs font-bold text-zinc-900 truncate">
-                              {room.topic}
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-zinc-500 mt-0.5 flex items-center gap-2">
-                            <span>Host: <strong className="text-zinc-700">{room.host_name}</strong> {room.class_name ? `(${room.class_name})` : ''}</span>
-                            <span>•</span>
-                            <span className="flex items-center gap-1 text-emerald-600 font-bold">
-                              <Users size={12} /> {room.peer_count} {room.peer_count === 1 ? 'peer' : 'peers'}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {isMyRoom && (
-                            <button
-                              type="button"
-                              onClick={() => handleEndRoom(room.room_code)}
-                              className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-[11px] font-bold rounded-lg border border-red-200 transition cursor-pointer"
-                              title="End and close your live session"
-                            >
-                              End
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleJoinByCode(room.room_code)}
-                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition cursor-pointer"
-                          >
-                            Join
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            <div className="text-[11px] text-zinc-400 font-medium text-center">
-              Protected by encrypted WebRTC audio & real-time operational transformation.
-            </div>
+          <div className="relative z-10 text-[11px] text-zinc-400 font-medium">
+            🔒 Protected by WebRTC peer mesh & operational transformation • Zero installation required.
           </div>
         </div>
 
-        {/* ── 3. Feature Cards (4 Attractive Cards) ─────────────────────────────── */}
+        {/* ── Feature Cards (4 Attractive Cards) ─────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           {/* Card 1 */}
@@ -378,7 +133,7 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
             <div>
               <h3 className="text-base font-bold text-zinc-900">🎙️ Voice Teaching</h3>
               <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                Teach or learn through real-time voice communication.
+                Teach or learn through crystal-clear real-time voice communication while coding.
               </p>
             </div>
           </div>
@@ -391,7 +146,7 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
             <div>
               <h3 className="text-base font-bold text-zinc-900">💻 Live Collaborative Coding</h3>
               <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                Write and explain code together while both students see changes instantly.
+                Write and explain code together with multi-cursor live synchronization.
               </p>
             </div>
           </div>
@@ -404,7 +159,7 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
             <div>
               <h3 className="text-base font-bold text-zinc-900">💬 Real-Time Chat</h3>
               <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                Ask questions, discuss concepts and share files during the learning session.
+                Ask questions, discuss algorithm concepts, and share solution links with peers.
               </p>
             </div>
           </div>
@@ -417,14 +172,14 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
             <div>
               <h3 className="text-base font-bold text-zinc-900">🤖 AI Coding Assistant</h3>
               <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                Get instant coding explanations, debugging help and assistance when needed.
+                Get instant code explanations, debugging assistance, and syntax tips on the fly.
               </p>
             </div>
           </div>
 
         </div>
 
-        {/* ── 4. Travel-Learning Focus Section ─────────────────────────────────── */}
+        {/* ── Travel-Learning Focus Section ─────────────────────────────────── */}
         <div className="rounded-3xl bg-gradient-to-r from-indigo-900 via-indigo-950 to-purple-950 p-6 md:p-8 text-white shadow-lg space-y-5">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 text-indigo-300">
@@ -435,7 +190,7 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
                 Learn While You Travel 🚍
               </h3>
               <p className="text-xs md:text-sm text-indigo-200 font-medium mt-0.5">
-                Turn your travel time into learning time.
+                Turn your daily commute into collaborative peer study time.
               </p>
             </div>
           </div>
@@ -492,7 +247,7 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
           </div>
         </div>
 
-        {/* ── 7. How It Works Section (3-Step Explanation) ────────────────────── */}
+        {/* ── How It Works Section (3-Step Explanation) ────────────────────── */}
         <div className="p-6 md:p-8 bg-white border border-zinc-200 rounded-3xl shadow-sm space-y-6">
           <div>
             <span className="text-xs font-black uppercase tracking-wider text-indigo-600">
@@ -511,10 +266,10 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
                 01
               </div>
               <h4 className="text-base font-extrabold text-zinc-900">
-                Find a Peer
+                Open GOAT Code Editor
               </h4>
               <p className="text-xs text-zinc-500 leading-relaxed">
-                Connect with another student who wants to learn or teach.
+                Click Launch to open the instant browser-based collaborative Monaco coding IDE.
               </p>
             </div>
 
@@ -524,10 +279,10 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
                 02
               </div>
               <h4 className="text-base font-extrabold text-zinc-900">
-                Start a Session
+                Share or Join a Session
               </h4>
               <p className="text-xs text-zinc-500 leading-relaxed">
-                Join a live learning room with voice and collaborative coding.
+                Create a room or paste your classmate's room code to connect your editor in real time.
               </p>
             </div>
 
@@ -537,10 +292,10 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
                 03
               </div>
               <h4 className="text-base font-extrabold text-zinc-900">
-                Learn Together
+                Code & Learn Together
               </h4>
               <p className="text-xs text-zinc-500 leading-relaxed">
-                Teach, discuss, code and solve problems in real time.
+                Teach, discuss algorithms over voice, compile code, and solve challenges together.
               </p>
             </div>
 
@@ -549,14 +304,15 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
           {/* Final CTA Banner */}
           <div className="pt-4 border-t border-zinc-100 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
-              <h4 className="text-sm font-bold text-zinc-900">Ready to start collaborative peer learning?</h4>
-              <p className="text-xs text-zinc-500">Launch into your collaborative IDE room with real-time voice and Monaco editor.</p>
+              <h4 className="text-sm font-bold text-zinc-900">Ready to start peer collaborative coding?</h4>
+              <p className="text-xs text-zinc-500">Launch into GOAT Code Editor with real-time Monaco editor and compiler.</p>
             </div>
             <button
-              onClick={handleLaunchCreatedRoom}
+              type="button"
+              onClick={() => handleOpenGoatCE()}
               className="w-full sm:w-auto py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs md:text-sm rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Launch Collaborative Room</span>
+              <span>Launch GOAT Code Editor</span>
               <ExternalLink size={15} />
             </button>
           </div>

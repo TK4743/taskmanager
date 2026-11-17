@@ -1179,7 +1179,7 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
 
   // ── Render 3: Assessment Catalog & Pre-Check Modal ─────────────────────────
   return (
-    <div className="w-full min-h-full overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] dark:bg-[#0f0f12] text-zinc-900 dark:text-zinc-100 font-sans">
+    <div className="w-full flex-1 overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] dark:bg-[#0f0f12] text-zinc-900 dark:text-zinc-100 font-sans">
       <div className="w-full space-y-6">
       {toast && (
         <div className="fixed top-6 right-6 z-50 px-5 py-3 bg-zinc-900 text-white rounded-2xl text-xs font-bold shadow-2xl border border-zinc-700">
