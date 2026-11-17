@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import HRCodingAssessmentsManager from './HRCodingAssessmentsManager';
 import { API_URL } from '../../config';
 
@@ -21,7 +21,6 @@ interface Application {
   status: string; cover_note: string; created_at: string;
 }
 
-const POSTING_TYPES = ['JOB','INTERNSHIP','TRAINING','WORKSHOP','FDP','RESEARCH'];
 const SKILL_LEVELS = ['Beginner','Intermediate','Advanced','Expert','Master'];
 const STATUS_COLORS: Record<string, string> = {
   APPLIED: '#4f46e5', SHORTLISTED: '#d97706', INTERVIEW: '#2563eb',
@@ -61,6 +60,7 @@ export default function IndustryPortalView({
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(false);
   const [showPostingForm, setShowPostingForm] = useState(false);
+  const [metaPostingTypes, setMetaPostingTypes] = useState<string[]>([]);
   const [postingForm, setPostingForm] = useState({
     posting_type: 'INTERNSHIP', title: '', description: '', location: '', mode: 'Hybrid',
     stipend_or_salary: '', duration: '', min_cgpa: '0', total_seats: '',
@@ -70,6 +70,24 @@ export default function IndustryPortalView({
   const [newSkill, setNewSkill] = useState({ skill: '', level: 2, weight: 1 });
   const [profileForm, setProfileForm] = useState<Partial<CompanyProfile>>({});
   const [toast, setToast] = useState('');
+
+  useEffect(() => {
+    fetch(`${API}/api/industry/meta/options`, { headers: h })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d && Array.isArray(d.posting_types)) {
+          setMetaPostingTypes(d.posting_types);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const availablePostingTypes = useMemo(() => {
+    const set = new Set<string>(['INTERNSHIP', 'JOB']);
+    metaPostingTypes.forEach(t => set.add(t));
+    postings.forEach(p => { if (p.posting_type) set.add(p.posting_type); });
+    return Array.from(set);
+  }, [metaPostingTypes, postings]);
 
   // ── Reports Center State ──────────────────────────────────────────────────
   const [reportType, setReportType] = useState<string>('applications');
@@ -663,7 +681,7 @@ export default function IndustryPortalView({
             <div style={{ marginBottom:14 }}>
               <label style={c.lbl}>Posting Type *</label>
               <select style={c.inp} value={postingForm.posting_type} onChange={e=>setPostingForm(p=>({...p,posting_type:e.target.value}))}>
-                {POSTING_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
+                {availablePostingTypes.map(t=><option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             {([['title','Title *'],['location','Location'],['stipend_or_salary','Stipend / Salary'],['duration','Duration (e.g. 2 months)'],['min_cgpa','Minimum CGPA'],['total_seats','Total Seats'],['eligibility_notes','Eligibility Notes']] as [string,string][]).map(([field,label])=>(

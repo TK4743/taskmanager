@@ -123,6 +123,80 @@ export function TasksView({
     }
   });
 
+  const [dbMetaOptions, setDbMetaOptions] = useState<{
+    categories: string[];
+    screenshot_instructions: string[];
+    custom_field_labels: string[];
+  }>({ categories: [], screenshot_instructions: [], custom_field_labels: [] });
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API_URL}/api/tasks/meta/options`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          setDbMetaOptions({
+            categories: Array.isArray(data.categories) ? data.categories : [],
+            screenshot_instructions: Array.isArray(data.screenshot_instructions) ? data.screenshot_instructions : [],
+            custom_field_labels: Array.isArray(data.custom_field_labels) ? data.custom_field_labels : []
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const allTaskCategories = useMemo(() => {
+    const set = new Set<string>();
+    dbMetaOptions.categories.forEach(c => set.add(c));
+    tasks.forEach(t => {
+      if (t.category && t.category.trim()) set.add(t.category.trim());
+    });
+    if (set.size === 0) {
+      ['Competition', 'Course', 'Workshop', 'College Work'].forEach(c => set.add(c));
+    }
+    return Array.from(set).sort();
+  }, [dbMetaOptions.categories, tasks]);
+
+  const allScreenshotOptions = useMemo(() => {
+    const set = new Set<string>();
+    set.add('Upload registration confirmation screenshot');
+    dbMetaOptions.screenshot_instructions.forEach(s => set.add(s));
+    savedScreenshotOptions.forEach(s => set.add(s));
+    tasks.forEach(t => {
+      if (t.screenshot_instruction && t.screenshot_instruction.trim()) {
+        set.add(t.screenshot_instruction.trim());
+      }
+    });
+    return Array.from(set);
+  }, [dbMetaOptions.screenshot_instructions, savedScreenshotOptions, tasks]);
+
+  const allFieldLabelOptions = useMemo(() => {
+    const set = new Set<string>();
+    set.add('Have you registered?');
+    set.add('Team Name');
+    dbMetaOptions.custom_field_labels.forEach(l => set.add(l));
+    savedFieldLabelOptions.forEach(l => set.add(l));
+    tasks.forEach(t => {
+      if (t.custom_field_label && t.custom_field_label.trim()) {
+        set.add(t.custom_field_label.trim());
+      }
+    });
+    return Array.from(set);
+  }, [dbMetaOptions.custom_field_labels, savedFieldLabelOptions, tasks]);
+
+  const getCategoryBadgeStyle = (category?: string) => {
+    const cat = (category || '').toLowerCase();
+    if (cat.includes('competition') || cat.includes('hackathon')) return 'bg-rose-50 text-rose-600 border-rose-100';
+    if (cat.includes('course') || cat.includes('certif')) return 'bg-indigo-50 text-indigo-600 border-indigo-100';
+    if (cat.includes('workshop') || cat.includes('train')) return 'bg-amber-50 text-amber-600 border-amber-100';
+    if (cat.includes('college') || cat.includes('assign')) return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+    if (cat.includes('project') || cat.includes('research')) return 'bg-purple-50 text-purple-600 border-purple-100';
+    return 'bg-zinc-50 text-zinc-600 border-zinc-200';
+  };
+
   const [isCustomScreenshot, setIsCustomScreenshot] = useState(false);
   const [isCustomFieldLabel, setIsCustomFieldLabel] = useState(false);
   const [posterFile, setPosterFile] = useState<File | null>(null);
@@ -568,6 +642,7 @@ export function TasksView({
                               <CategoryDropdown
                                 value={newTask.category}
                                 onChange={val => setNewTask(prev => ({ ...prev, category: val }))}
+                                categories={allTaskCategories}
                               />
                             </div>
                             <div className="min-w-0">
@@ -629,19 +704,17 @@ export function TasksView({
                             <div className="min-w-0 space-y-2">
                               <Select
                                 value={
-                                  newTask.screenshot_instruction === 'Upload registration confirmation screenshot'
-                                    ? 'Upload registration confirmation screenshot'
-                                    : savedScreenshotOptions.includes(newTask.screenshot_instruction)
-                                      ? newTask.screenshot_instruction
-                                      : isCustomScreenshot || newTask.screenshot_instruction
-                                        ? '__custom__'
-                                        : ''
+                                  allScreenshotOptions.includes(newTask.screenshot_instruction)
+                                    ? newTask.screenshot_instruction
+                                    : isCustomScreenshot || newTask.screenshot_instruction
+                                      ? '__custom__'
+                                      : ''
                                 }
                                 onChange={e => {
                                   const val = e.target.value;
                                   if (val === '__custom__') {
                                     setIsCustomScreenshot(true);
-                                    if (newTask.screenshot_instruction === 'Upload registration confirmation screenshot' || savedScreenshotOptions.includes(newTask.screenshot_instruction)) {
+                                    if (allScreenshotOptions.includes(newTask.screenshot_instruction)) {
                                       setNewTask(prev => ({ ...prev, screenshot_instruction: '' }));
                                     }
                                   } else {
@@ -652,8 +725,7 @@ export function TasksView({
                                 required
                               >
                                 <option value="" disabled>Screenshot Instruction (Select Option)</option>
-                                <option value="Upload registration confirmation screenshot">Upload registration confirmation screenshot</option>
-                                {savedScreenshotOptions.filter(o => o !== 'Upload registration confirmation screenshot').map(opt => (
+                                {allScreenshotOptions.map(opt => (
                                   <option key={opt} value={opt}>{opt}</option>
                                 ))}
                                 <option value="__custom__">Other / Custom</option>
@@ -688,19 +760,17 @@ export function TasksView({
                             <div className="min-w-0 space-y-2">
                               <Select
                                 value={
-                                  (newTask.custom_field_label === 'Have you registered?' || newTask.custom_field_label === 'Team Name')
+                                  allFieldLabelOptions.includes(newTask.custom_field_label)
                                     ? newTask.custom_field_label
-                                    : savedFieldLabelOptions.includes(newTask.custom_field_label)
-                                      ? newTask.custom_field_label
-                                      : isCustomFieldLabel || newTask.custom_field_label
-                                        ? '__custom__'
-                                        : ''
+                                    : isCustomFieldLabel || newTask.custom_field_label
+                                      ? '__custom__'
+                                      : ''
                                 }
                                 onChange={e => {
                                   const val = e.target.value;
                                   if (val === '__custom__') {
                                     setIsCustomFieldLabel(true);
-                                    if (newTask.custom_field_label === 'Have you registered?' || newTask.custom_field_label === 'Team Name' || savedFieldLabelOptions.includes(newTask.custom_field_label)) {
+                                    if (allFieldLabelOptions.includes(newTask.custom_field_label)) {
                                       setNewTask(prev => ({ ...prev, custom_field_label: '' }));
                                     }
                                   } else {
@@ -711,9 +781,7 @@ export function TasksView({
                                 required
                               >
                                 <option value="" disabled>Custom Verification Field Label (Select Option)</option>
-                                <option value="Have you registered?">Have you registered?</option>
-                                <option value="Team Name">Team Name</option>
-                                {savedFieldLabelOptions.filter(o => o !== 'Have you registered?' && o !== 'Team Name').map(opt => (
+                                {allFieldLabelOptions.map(opt => (
                                   <option key={opt} value={opt}>{opt}</option>
                                 ))}
                                 <option value="__custom__">Other / Custom</option>
@@ -1115,21 +1183,7 @@ export function TasksView({
                         const isDeadlinePassed = task.deadline && new Date(task.deadline) < new Date();
                         const isWithin24h = task.deadline && !isDeadlinePassed && (new Date(task.deadline).getTime() - new Date().getTime()) < 24 * 60 * 60 * 1000;
 
-                        const categoryColors: Record<string, string> = {
-                          'Competition': 'bg-rose-50 text-rose-600 border-rose-100',
-                          'Course': 'bg-indigo-50 text-indigo-600 border-indigo-100',
-                          'Workshop': 'bg-amber-50 text-amber-600 border-amber-100',
-                          'College Work': 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                        };
-                        const categoryIcons: Record<string, string> = {
-                          'Competition': '',
-                          'Course': '',
-                          'Workshop': '',
-                          'College Work': ''
-                        };
-
-                        const catStyle = categoryColors[task.category || ''] || 'bg-zinc-50 text-zinc-600 border-zinc-200';
-                        const catIcon = categoryIcons[task.category || ''] || '';
+                        const catStyle = getCategoryBadgeStyle(task.category);
                         const isHighlighted = String(highlightedTaskId) === String(task.id);
 
                         return (
@@ -1774,20 +1828,7 @@ export function TasksView({
 
 
           {showTaskPreview && (() => {
-            const previewCatColors: Record<string, string> = {
-              'Competition': 'bg-rose-50 text-rose-600 border-rose-100',
-              'Course': 'bg-indigo-50 text-indigo-600 border-indigo-100',
-              'Workshop': 'bg-amber-50 text-amber-600 border-amber-100',
-              'College Work': 'bg-emerald-50 text-emerald-600 border-emerald-100'
-            };
-            const previewCategoryIcons: Record<string, string> = {
-              'Competition': '',
-              'Course': '',
-              'Workshop': '',
-              'College Work': ''
-            };
-            const catStyle = previewCatColors[newTask.category] || 'bg-zinc-50 text-zinc-600 border-zinc-200';
-            const catIcon = previewCategoryIcons[newTask.category] || '';
+            const catStyle = getCategoryBadgeStyle(newTask.category);
 
             const previewDeadlinePassed = newTask.deadline && new Date(newTask.deadline) < new Date();
             const previewWithin24h = newTask.deadline && !previewDeadlinePassed && (new Date(newTask.deadline).getTime() - new Date().getTime()) < 24 * 60 * 60 * 1000;

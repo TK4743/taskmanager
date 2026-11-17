@@ -3214,6 +3214,19 @@ async function startServer() {
   }
 
   // ── Tasks ─────────────────────────────────────────────────────────────────
+  app.get('/api/tasks/meta/options', authenticate, asyncHandler(async (_req: any, res: Response) => {
+    const [categoriesRes, screenshotsRes, labelsRes] = await Promise.all([
+      pool.query(`SELECT DISTINCT category FROM tasks WHERE category IS NOT NULL AND TRIM(category) != '' ORDER BY category ASC`),
+      pool.query(`SELECT DISTINCT screenshot_instruction FROM tasks WHERE screenshot_instruction IS NOT NULL AND TRIM(screenshot_instruction) != '' ORDER BY screenshot_instruction ASC`),
+      pool.query(`SELECT DISTINCT custom_field_label FROM tasks WHERE custom_field_label IS NOT NULL AND TRIM(custom_field_label) != '' ORDER BY custom_field_label ASC`)
+    ]);
+    res.json({
+      categories: categoriesRes.rows.map(r => r.category.trim()),
+      screenshot_instructions: screenshotsRes.rows.map(r => r.screenshot_instruction.trim()),
+      custom_field_labels: labelsRes.rows.map(r => r.custom_field_label.trim())
+    });
+  }));
+
   app.get('/api/tasks', authenticate, async (req: any, res) => {
     const dbUser = req.user;
     if (!dbUser) return res.status(401).json({ error: 'User not found' });
@@ -13001,6 +13014,18 @@ async function startServer() {
     res.status(201).json({ message: 'Industry registration submitted. Pending admin approval.', user: userRes.rows[0] });
   }));
 
+  // ── Industry Meta Options (Dynamic sectors & posting types from DB) ───────
+  app.get('/api/industry/meta/options', authenticate, asyncHandler(async (_req: Request, res: Response) => {
+    const [sectorsRes, typesRes] = await Promise.all([
+      pool.query(`SELECT DISTINCT industry_sector FROM company_profiles WHERE industry_sector IS NOT NULL AND TRIM(industry_sector) != '' ORDER BY industry_sector ASC`),
+      pool.query(`SELECT DISTINCT posting_type FROM industry_postings WHERE posting_type IS NOT NULL AND TRIM(posting_type) != '' ORDER BY posting_type ASC`)
+    ]);
+    res.json({
+      sectors: sectorsRes.rows.map(r => r.industry_sector.trim()),
+      posting_types: typesRes.rows.map(r => r.posting_type.trim())
+    });
+  }));
+
   // ── Industry Profile ───────────────────────────────────────────────────────
   app.get('/api/industry/profile', authenticate, authorize(['INDUSTRY']), asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
@@ -13719,47 +13744,12 @@ async function startServer() {
       else skillAgg[normKey].level_counts.intermediate++;
     }
 
-    // Standard baseline foundational skills to ensure high-value coverage
-    const baselineSkills = [
-      { name: 'Python', cat: '🤖 AI & Data Science' },
-      { name: 'Data Structures & Algorithms', cat: '⚡ Core CS & Databases' },
-      { name: 'C++', cat: '💼 Enterprise Software' },
-      { name: 'Java', cat: '💼 Enterprise Software' },
-      { name: 'SQL & Relational DBs', cat: '⚡ Core CS & Databases' },
-      { name: 'React.js & Web Tech', cat: '💼 Enterprise Software' },
-      { name: 'Cloud Computing & AWS', cat: '☁️ Cloud & DevOps' },
-      { name: 'Docker & Containerization', cat: '☁️ Cloud & DevOps' },
-      { name: 'Machine Learning & AI', cat: '🤖 AI & Data Science' },
-      { name: 'Ayurveda & Health Informatics', cat: '🌿 AYUSH & Digital Health-Tech' },
-      { name: 'Telemedicine & Health Data', cat: '🌿 AYUSH & Digital Health-Tech' },
-    ];
-
-    for (const b of baselineSkills) {
-      const k = b.name.toLowerCase();
-      if (!skillAgg[k]) {
-        const sampleCount = Math.max(1, Math.round(totalStudents * (k.includes('python') ? 0.85 : k.includes('data structure') ? 0.78 : k.includes('cloud') ? 0.38 : k.includes('ayush') || k.includes('ayurveda') || k.includes('telemedicine') ? 0.42 : 0.55)));
-        skillAgg[k] = {
-          skill_name: b.name,
-          category: b.cat,
-          student_ids: new Set(studentIds.slice(0, sampleCount)),
-          total_proficiency: sampleCount * (k.includes('python') ? 82 : k.includes('cloud') ? 58 : 72),
-          verified_count: Math.round(sampleCount * 0.6),
-          level_counts: {
-            beginner: Math.round(sampleCount * 0.25),
-            intermediate: Math.round(sampleCount * 0.5),
-            advanced: Math.round(sampleCount * 0.2),
-            expert: Math.round(sampleCount * 0.05)
-          }
-        };
-      }
-    }
-
-    // Build Heatmap Array
+    // Build Heatmap Array strictly from actual database skills
     const heatmapList = Object.values(skillAgg).map(item => {
       const count = item.student_ids.size;
-      const cohortPct = Math.min(100, Math.round((count / totalStudents) * 1000) / 10);
-      const avgProficiency = Math.round(item.total_proficiency / count);
-      const indDemand = industryDemandMap[item.skill_name.toLowerCase()] || (item.skill_name === 'Python' ? 12 : item.skill_name.includes('Cloud') ? 9 : 5);
+      const cohortPct = count > 0 && totalStudents > 0 ? Math.min(100, Math.round((count / totalStudents) * 1000) / 10) : 0;
+      const avgProficiency = count > 0 ? Math.round(item.total_proficiency / count) : 0;
+      const indDemand = industryDemandMap[item.skill_name.toLowerCase()] || 0;
       
       let status: 'STRONG' | 'MODERATE' | 'DEFICIT' = 'DEFICIT';
       if (cohortPct >= 65 && avgProficiency >= 70) status = 'STRONG';
@@ -13824,15 +13814,19 @@ async function startServer() {
 
     const overallHealthScore = heatmapList.length > 0
       ? Math.round(heatmapList.reduce((acc, s) => acc + (s.cohort_percentage * (s.avg_proficiency / 100)), 0) / heatmapList.length)
-      : 74;
+      : 0;
+
+    const verifiedRatio = (heatmapList.length > 0 && totalStudents > 0)
+      ? Math.round((heatmapList.reduce((acc, s) => acc + s.verified_count, 0) / (totalStudents * heatmapList.length)) * 100)
+      : 0;
 
     res.json({
       total_students: totalStudents,
       skills_heatmap: heatmapList,
       sector_readiness: sectorReadiness,
       critical_deficits: criticalDeficits,
-      institutional_health_score: Math.min(100, Math.max(10, overallHealthScore)),
-      verified_skills_ratio: heatmapList.length > 0 ? Math.round((heatmapList.reduce((acc, s) => acc + s.verified_count, 0) / (totalStudents * heatmapList.length)) * 100) : 62,
+      institutional_health_score: Math.min(100, Math.max(0, overallHealthScore)),
+      verified_skills_ratio: verifiedRatio,
       timestamp: new Date().toISOString()
     });
   }));

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { API_URL } from '../../config';
 import { 
   BarChart3, Sparkles, AlertTriangle, CheckCircle2, TrendingUp, 
@@ -7,16 +7,6 @@ import {
 } from 'lucide-react';
 
 const API = API_URL || '';
-
-export const INDUSTRY_SECTORS = [
-  { id: 'ALL', name: '🌐 All Domains & Sectors' },
-  { id: 'AYUSH_HEALTH', name: '🌿 AYUSH & Digital Health-Tech' },
-  { id: 'AI_DATA', name: '🤖 AI, Machine Learning & Data Science' },
-  { id: 'CLOUD_CYBER', name: '☁️ Cloud Computing, DevOps & Security' },
-  { id: 'ENTERPRISE_IT', name: '💼 Enterprise IT & Product Engineering' },
-  { id: 'FINTECH', name: '💳 FinTech & Banking Systems' },
-  { id: 'CORE_CS', name: '⚡ Core CS, DSA & Databases' },
-];
 
 interface SkillHeatmapItem {
   skill_name: string;
@@ -63,6 +53,10 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'STRONG' | 'MODERATE' | 'DEFICIT'>('ALL');
   const [toast, setToast] = useState<string>('');
+
+  const availableCategories = useMemo(() => {
+    return Array.from(new Set(heatmapData.map(item => item.category).filter(Boolean))).sort();
+  }, [heatmapData]);
 
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
@@ -385,11 +379,9 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
                 className="py-2 px-3 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
               >
                 <option value="ALL">All Categories</option>
-                <option value="AYUSH">🌿 AYUSH & Digital Health</option>
-                <option value="AI">🤖 AI & Data Science</option>
-                <option value="Cloud">☁️ Cloud & DevOps</option>
-                <option value="Enterprise">💼 Enterprise Software</option>
-                <option value="Core">⚡ Core CS & Databases</option>
+                {availableCategories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
               </select>
 
               <select

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { API_URL } from '../../config';
 
 interface Posting {
@@ -37,7 +37,6 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }
   COMPLETED: { bg: '#faf5ff', text: '#7c3aed', border: '#ddd6fe' },
   WITHDRAWN: { bg: '#f4f4f5', text: '#71717a', border: '#e4e4e7' }
 };
-const POST_TYPES = ['ALL','JOB','INTERNSHIP','TRAINING','WORKSHOP','FDP','RESEARCH'];
 
 export default function StudentOpportunitiesView({ token, user }: { token: string; user: any }) {
   const [tab, setTab] = useState<'browse'|'applications'|'recommendations'>('browse');
@@ -46,6 +45,8 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [sectorFilter, setSectorFilter] = useState('ALL');
+  const [metaSectors, setMetaSectors] = useState<string[]>([]);
+  const [metaTypes, setMetaTypes] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [selectedPosting, setSelectedPosting] = useState<Posting|null>(null);
   const [matchResult, setMatchResult] = useState<MatchResult|null>(null);
@@ -56,6 +57,40 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
   const [toast, setToast] = useState('');
   const [toastType, setToastType] = useState<'success'|'error'>('success');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/industry/meta/options`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d) {
+          if (Array.isArray(d.sectors)) setMetaSectors(d.sectors);
+          if (Array.isArray(d.posting_types)) setMetaTypes(d.posting_types);
+        }
+      })
+      .catch(() => {});
+  }, [token]);
+
+  const availablePostTypes = useMemo(() => {
+    const set = new Set<string>(['ALL']);
+    metaTypes.forEach(t => set.add(t));
+    postings.forEach(p => {
+      if (p.posting_type) set.add(p.posting_type);
+    });
+    return Array.from(set);
+  }, [metaTypes, postings]);
+
+  const availableSectors = useMemo(() => {
+    const set = new Set<string>();
+    metaSectors.forEach(s => set.add(s));
+    postings.forEach(p => {
+      if ((p as any).industry_sector && (p as any).industry_sector.trim()) {
+        set.add((p as any).industry_sector.trim());
+      }
+    });
+    return Array.from(set).sort();
+  }, [metaSectors, postings]);
 
   const showToast = (msg: string, type: 'success'|'error' = 'success') => {
     setToast(msg); setToastType(type); setTimeout(() => setToast(''), 3500);
@@ -233,8 +268,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
                 />
               </div>
               <div className="flex gap-1.5 flex-wrap">
-                {POST_TYPES.map(t => {
-                  const style = TYPE_COLORS[t];
+                {availablePostTypes.map(t => {
                   const active = typeFilter === t;
                   return (
                     <button
@@ -253,27 +287,30 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
               </div>
             </div>
 
-            {/* Multi-Domain & Ayush Sector Filter Row */}
+            {/* Dynamic Industry Sector Filter Row */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-4 scrollbar-none">
               <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider shrink-0 mr-1">Sector:</span>
-              {[
-                { id: 'ALL', label: 'All Domains' },
-                { id: 'AYUSH', label: '🌿 AYUSH & Digital Health' },
-                { id: 'AI', label: '🤖 AI & Data Science' },
-                { id: 'Cloud', label: '☁️ Cloud & DevOps' },
-                { id: 'Enterprise', label: '💼 Enterprise IT' },
-                { id: 'FinTech', label: '💳 FinTech & Web3' },
-              ].map(s => (
+              <button
+                onClick={() => setSectorFilter('ALL')}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                  sectorFilter === 'ALL'
+                    ? 'bg-teal-700 text-white border-teal-700 shadow-xs'
+                    : 'bg-white text-zinc-600 border-zinc-200 hover:bg-teal-50 hover:text-teal-800'
+                }`}
+              >
+                All Domains
+              </button>
+              {availableSectors.map(s => (
                 <button
-                  key={s.id}
-                  onClick={() => setSectorFilter(s.id)}
+                  key={s}
+                  onClick={() => setSectorFilter(s)}
                   className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
-                    sectorFilter === s.id
+                    sectorFilter === s
                       ? 'bg-teal-700 text-white border-teal-700 shadow-xs'
                       : 'bg-white text-zinc-600 border-zinc-200 hover:bg-teal-50 hover:text-teal-800'
                   }`}
                 >
-                  {s.label}
+                  {s}
                 </button>
               ))}
             </div>
