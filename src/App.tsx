@@ -11856,54 +11856,54 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          {/* ── 🎓 Student Registration Slide-Over Drawer (Idea 1) ─────────── */}
+          {/* ── 🎓 Student Registration Centered Modal ─────────────────────── */}
           <AnimatePresence>
             {showStudentRegDrawer && (
               <div
-                className="fixed inset-0 z-[140] flex justify-end bg-black/60 backdrop-blur-sm cursor-pointer"
+                className="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm cursor-pointer"
                 onClick={resetStudentRegDrawer}
               >
                 <motion.div
                   onClick={e => e.stopPropagation()}
-                  initial={{ x: '100%', opacity: 0.8 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: '100%', opacity: 0.8 }}
-                  transition={{ type: 'spring', damping: 26, stiffness: 220 }}
-                  className="w-full max-w-lg h-full bg-white dark:bg-[#121216] border-l border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col justify-between cursor-default overflow-hidden"
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  className="bg-white dark:bg-[#121216] rounded-[2rem] p-6 md:p-8 max-w-lg w-full shadow-2xl relative border border-zinc-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto cursor-default flex flex-col"
                 >
-                  {/* Drawer Header */}
-                  <div className="p-6 border-b border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/60 dark:bg-zinc-900/40 shrink-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold uppercase tracking-wider">
-                        <GraduationCap size={14} /> Student Admissions
-                      </div>
-                      <button
-                        type="button"
-                        onClick={resetStudentRegDrawer}
-                        className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                      >
-                        <X size={20} />
-                      </button>
+                  {/* Close Button in Top Right */}
+                  <button
+                    type="button"
+                    onClick={resetStudentRegDrawer}
+                    className="absolute top-5 right-5 p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                  >
+                    <X size={20} />
+                  </button>
+
+                  {/* Modal Header */}
+                  <div className="mb-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                      <GraduationCap size={14} /> Student Admissions
                     </div>
-                    <h3 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
+                    <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
                       Student Registration
                     </h3>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                       {studentRegStep === 'FORM' && 'Step 1 of 2: Fill your institutional details & academic section'}
                       {studentRegStep === 'OTP' && 'Step 2 of 2: Enter the 6-digit verification code sent to your email'}
                       {studentRegStep === 'SUCCESS' && 'Application Submitted for Class Advisor Verification'}
                     </p>
 
                     {/* Step Breadcrumbs */}
-                    <div className="flex items-center gap-2 mt-4">
+                    <div className="flex items-center gap-2 mt-3">
                       <div className={`h-1.5 flex-1 rounded-full transition-colors ${studentRegStep === 'FORM' || studentRegStep === 'OTP' || studentRegStep === 'SUCCESS' ? 'bg-blue-600' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
                       <div className={`h-1.5 flex-1 rounded-full transition-colors ${studentRegStep === 'OTP' || studentRegStep === 'SUCCESS' ? 'bg-blue-600' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
                       <div className={`h-1.5 flex-1 rounded-full transition-colors ${studentRegStep === 'SUCCESS' ? 'bg-emerald-600' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
                     </div>
                   </div>
 
-                  {/* Drawer Body (Scrollable) */}
-                  <div className="p-6 overflow-y-auto flex-1 space-y-4">
+                  {/* Modal Body */}
+                  <div className="space-y-4">
                     {studentRegError && (
                       <div className="p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-red-700 dark:text-red-300 text-xs font-semibold rounded-2xl flex items-start gap-2.5">
                         <span className="text-sm shrink-0">⚠️</span>
@@ -12121,8 +12121,8 @@ export default function App() {
                     )}
                   </div>
 
-                  {/* Drawer Footer Actions */}
-                  <div className="p-6 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/40 shrink-0 flex gap-3">
+                  {/* Modal Footer Actions */}
+                  <div className="pt-4 mt-4 border-t border-zinc-100 dark:border-zinc-800 flex gap-3">
                     {studentRegStep === 'FORM' && (
                       <>
                         <Button
