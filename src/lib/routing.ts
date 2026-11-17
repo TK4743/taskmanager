@@ -94,7 +94,7 @@ export const parseRouteFromPath = (pathname: string): AppRouteState => {
 
   // Assessment & Placement
   if (cleanPath === 'assessment' || cleanPath === 'assessments' || cleanPath === 'skill-assessment') return { view: 'skill-assessment', footerModal: null };
-  if (cleanPath === 'placement' || cleanPath === 'placement-readiness' || cleanPath === 'placement-rating') return { view: 'placement-readiness', footerModal: null };
+  if (cleanPath === 'placement' || cleanPath === 'placement-readiness' || cleanPath === 'placement-rating' || cleanPath === 'boost' || cleanPath === 'boost-readiness' || cleanPath === 'readiness' || cleanPath.startsWith('boost/')) return { view: 'placement-readiness', footerModal: null };
   if (cleanPath === 'teaching-hub' || cleanPath === 'live-teaching-hub') return { view: 'live-teaching-hub', footerModal: null };
   if (cleanPath === 'opportunities') return { view: 'opportunities', footerModal: null };
   if (cleanPath === 'coding-tests' || cleanPath === 'student-coding-assessments') return { view: 'student-coding-assessments', footerModal: null };
@@ -170,6 +170,11 @@ export const getPathFromState = (
     case 'skill-assessment':
       return '/assessment';
     case 'placement-readiness':
+    case 'placement':
+    case 'boost':
+      if (typeof window !== 'undefined' && (window.location.pathname === '/boost' || window.location.pathname.startsWith('/boost/'))) {
+        return '/boost';
+      }
       return '/placement';
     case 'live-teaching-hub':
       return '/teaching-hub';

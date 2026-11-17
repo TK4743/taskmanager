@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import ExcelJS from 'exceljs';
 import {
   Target,
   Briefcase,
@@ -17,9 +16,17 @@ import {
   Star,
   RefreshCw,
   UserCheck,
-  ArrowUpRight
+  ArrowUpRight,
+  Eye,
+  FileText,
+  RotateCcw
 } from 'lucide-react';
 import { API_URL } from '../../config';
+import { cn } from '../../lib/utils';
+import {
+  downloadStudentPlacementScorecardPdf,
+  downloadCohortPlacementReportPdf
+} from '../../utils/pdf/placementReadinessPdfGenerator';
 
 interface PlacementReadinessViewProps {
   user: any;
@@ -27,6 +34,7 @@ interface PlacementReadinessViewProps {
   addToast: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
   onNavigateToAssessment?: () => void;
   onViewStudentProfile?: (student: any) => void;
+  setView?: (view: string) => void;
 }
 
 export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
@@ -34,7 +42,8 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
   token,
   addToast,
   onNavigateToAssessment,
-  onViewStudentProfile
+  onViewStudentProfile,
+  setView
 }) => {
   const isSupreme = user?.role === 'SUPREME_ADMIN';
   const isHOD = user?.role === 'HOD';
@@ -52,10 +61,14 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
   const [students, setStudents] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
 
   // Filters
   const [selectedTier, setSelectedTier] = useState<string>('ALL');
   const [selectedClassId, setSelectedClassId] = useState<string>(() => isClassScoped && user?.class_id ? String(user.class_id) : '');
+  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Student Profile State
@@ -76,7 +89,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
     if (isStudent) {
       fetchMyReadinessProfile();
     }
-  }, [selectedTier, selectedClassId, user?.id, user?.class_id, canViewClassDashboard]);
+  }, [selectedTier, selectedClassId, selectedDeptId, user?.id, user?.class_id, user?.department_id, canViewClassDashboard]);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -84,6 +97,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
       let url = `${API_URL}/api/placement/readiness-dashboard?`;
       if (selectedTier && selectedTier !== 'ALL') url += `tier=${selectedTier}&`;
       if (selectedClassId) url += `class_id=${selectedClassId}&`;
+      if (selectedDeptId) url += `department_id=${selectedDeptId}&`;
 
       const authHeaders: any = {};
       if (token) authHeaders['Authorization'] = `Bearer ${token}`;
@@ -93,7 +107,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
       if (data.success) {
         setMetrics(data.metrics);
         setStudents(data.students || []);
-        if (data.classes && classes.length === 0) {
+        if (data.classes && (classes.length === 0 || classes.length !== data.classes.length)) {
           setClasses(data.classes);
         }
       }
@@ -102,6 +116,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
       addToast('Error loading placement readiness data', 'error');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -120,12 +135,32 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
       console.error('Error fetching student readiness profile:', e);
     } finally {
       setIsProfileLoading(false);
+      setIsRefreshing(false);
     }
   };
 
-  // ── Export Company-Ready Shortlist to Excel ────────────────────────────────
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    if (canViewClassDashboard) {
+      await fetchDashboardData();
+    }
+    if (isStudent) {
+      await fetchMyReadinessProfile();
+    }
+    addToast('Placement readiness indicators refreshed!', 'success');
+  };
+
+  // ── Export Company-Ready Shortlist to Excel (Lazy-loaded) ────────────────────
   const handleExportCompanyReadyList = async () => {
+    const dataToExport = filteredStudents;
+    if (dataToExport.length === 0) {
+      addToast('No student records match the active filters to export', 'warning');
+      return;
+    }
+
+    setIsExportingExcel(true);
     try {
+      const ExcelJS = (await import('exceljs')).default || await import('exceljs');
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Placement Ready Students');
 
@@ -152,8 +187,6 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
         pattern: 'solid',
         fgColor: { argb: 'FF0F172A' }
       };
-
-      const dataToExport = filteredStudents;
 
       dataToExport.forEach((s, idx) => {
         worksheet.addRow({
@@ -185,8 +218,62 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
       addToast(`Exported ${dataToExport.length} company-ready candidates to Excel!`, 'success');
     } catch (e) {
       console.error('Export error:', e);
-      addToast('Error exporting shortlist', 'error');
+      addToast('Error exporting shortlist to Excel', 'error');
+    } finally {
+      setIsExportingExcel(false);
     }
+  };
+
+  // ── Export Cohort Placement Audit Report (PDF) ──────────────────────────────
+  const handleExportCohortReportPdf = async () => {
+    const dataToExport = filteredStudents;
+    if (dataToExport.length === 0) {
+      addToast('No student records match the active filters to export to PDF', 'warning');
+      return;
+    }
+
+    setIsExportingPdf(true);
+    try {
+      const filterLabel = isClassScoped
+        ? (classes[0]?.name || user?.class_name || 'My Class')
+        : isHOD
+        ? `${user?.department_name || 'Department'} Cohort`
+        : 'Institutional Placement Cohort';
+
+      await downloadCohortPlacementReportPdf(metrics, dataToExport, filterLabel);
+      addToast(`Generated official Cohort Placement Audit PDF!`, 'success');
+    } catch (e) {
+      console.error('PDF export error:', e);
+      addToast('Error generating PDF report', 'error');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  // ── Student: Download Official Scorecard PDF ────────────────────────────────
+  const handleDownloadStudentScorecardPdf = async () => {
+    if (!myProfile) {
+      addToast('Scorecard profile data not loaded yet', 'warning');
+      return;
+    }
+    setIsExportingPdf(true);
+    try {
+      await downloadStudentPlacementScorecardPdf(myProfile);
+      addToast('Downloaded Official Placement Readiness Scorecard PDF!', 'success');
+    } catch (e) {
+      console.error('Scorecard download error:', e);
+      addToast('Error generating scorecard PDF', 'error');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handleResetFilters = () => {
+    setSelectedTier('ALL');
+    setSearchQuery('');
+    if (!isClassScoped) setSelectedClassId('');
+    setSelectedDeptId('');
+    addToast('Filters reset to default view', 'info');
   };
 
   const filteredStudents = students.filter(s => {
@@ -231,25 +318,55 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
             </p>
           </div>
 
-          {canViewClassDashboard && (
-            <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              disabled={isLoading || isRefreshing}
+              className="p-2.5 bg-white hover:bg-zinc-50 border border-zinc-200 text-zinc-700 rounded-xl transition shadow-2xs cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+              title="Refresh Placement Readiness Indicators"
+            >
+              <RefreshCw size={14} className={isLoading || isRefreshing ? 'animate-spin text-indigo-600' : ''} />
+              <span className="hidden sm:inline">{isLoading || isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+
+            {isStudent && (
               <button
                 type="button"
-                onClick={fetchDashboardData}
-                className="p-2 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-xl transition cursor-pointer"
-                title="Refresh Metrics"
+                onClick={handleDownloadStudentScorecardPdf}
+                disabled={isExportingPdf || !myProfile}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
               >
-                <RefreshCw size={15} />
+                <Download size={14} />
+                <span>{isExportingPdf ? 'Building Scorecard...' : 'Download Scorecard (.PDF)'}</span>
               </button>
-              <button
-                type="button"
-                onClick={handleExportCompanyReadyList}
-                className="px-4 py-2 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <Download size={14} /> Export Company Shortlist (.xlsx)
-              </button>
-            </div>
-          )}
+            )}
+
+            {canViewClassDashboard && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleExportCohortReportPdf}
+                  disabled={isExportingPdf || filteredStudents.length === 0}
+                  className="px-3.5 py-2 bg-white hover:bg-zinc-50 border border-zinc-200 text-zinc-800 rounded-xl text-xs font-bold shadow-2xs transition-all flex items-center gap-2 cursor-pointer"
+                  title="Export official cohort audit report PDF"
+                >
+                  <FileText size={14} className="text-red-600" />
+                  <span>{isExportingPdf ? 'Exporting PDF...' : 'Export Audit Report (.pdf)'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportCompanyReadyList}
+                  disabled={isExportingExcel || filteredStudents.length === 0}
+                  className="px-4 py-2 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Download size={14} />
+                  <span>{isExportingExcel ? 'Exporting Excel...' : 'Export Shortlist (.xlsx)'}</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* ═════════════════════════════════════════════════════════════════════
@@ -399,16 +516,29 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                         <span>Weekly Streak Target:</span>
                         <span className="font-bold text-zinc-800">7 Days / Week</span>
                       </div>
-                      {myProfile.leetcode_url && (
-                        <a
-                          href={myProfile.leetcode_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:underline pt-0.5"
-                        >
-                          Verified LeetCode Profile <ArrowUpRight size={11} />
-                        </a>
-                      )}
+                      <div className="pt-1 flex items-center justify-between gap-2 flex-wrap">
+                        {myProfile.leetcode_url ? (
+                          <a
+                            href={myProfile.leetcode_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:underline"
+                          >
+                            Verified LeetCode Profile <ArrowUpRight size={11} />
+                          </a>
+                        ) : (
+                          <span className="text-[10px] text-zinc-400 italic">LeetCode not linked</span>
+                        )}
+                        {setView && (
+                          <button
+                            type="button"
+                            onClick={() => setView('leetcode-targets')}
+                            className="text-[11px] font-bold text-amber-600 hover:text-amber-800 flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Open Tracker</span> <ArrowUpRight size={11} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -430,9 +560,17 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                       </span>
                     </div>
                     <div className="space-y-1 text-[11px] text-zinc-500">
-                      <div className="flex justify-between">
-                        <span>Portfolio Target:</span>
-                        <span className="font-bold text-zinc-800">3+ Core Projects</span>
+                      <div className="flex justify-between items-center">
+                        <span>Portfolio Target: <strong className="text-zinc-800">3+ Core Projects</strong></span>
+                        {setView && (
+                          <button
+                            type="button"
+                            onClick={() => setView('profile')}
+                            className="text-[11px] font-bold text-emerald-600 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Add</span> <ArrowUpRight size={11} />
+                          </button>
+                        )}
                       </div>
                       {myProfile.pillars.projects?.projects_list?.length > 0 ? (
                         <div className="pt-1 flex flex-wrap gap-1">
@@ -470,29 +608,98 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                         +{myProfile?.pillars?.tasks?.contribution ?? 0} / 20 pts ({myProfile?.pillars?.tasks?.submitted ?? 0}/{myProfile?.pillars?.tasks?.total_assigned ?? 0} tasks)
                       </span>
                     </div>
-                    <p className="text-[11px] text-zinc-500 font-medium">
-                      Verified academic tasks and laboratory assignments submitted on portal.
-                    </p>
+                    <div className="flex justify-between items-center text-[11px] text-zinc-500">
+                      <span>Verified portal laboratory & assignments</span>
+                      {setView && (
+                        <button
+                          type="button"
+                          onClick={() => setView('tasks')}
+                          className="text-[11px] font-bold text-purple-600 hover:text-purple-800 flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>Tasks</span> <ArrowUpRight size={11} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 {/* Actionable Recommendations to Level Up */}
                 {myProfile.recommendations?.length > 0 && (
-                  <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-sm space-y-3">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp size={18} className="text-indigo-600" />
-                      <h3 className="text-sm font-bold text-zinc-900">
-                        How to Boost Your Placement Readiness Score
-                      </h3>
+                  <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp size={18} className="text-indigo-600" />
+                        <h3 className="text-sm font-bold text-zinc-900">
+                          How to Boost Your Placement Readiness Score
+                        </h3>
+                      </div>
+                      <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
+                        Interactive Action Items
+                      </span>
                     </div>
 
-                    <div className="space-y-2">
-                      {myProfile.recommendations.map((rec: string, idx: number) => (
-                        <div key={idx} className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 text-xs font-medium text-zinc-700 flex items-start gap-2.5">
-                          <CheckCircle2 size={15} className="text-emerald-600 shrink-0 mt-0.5" />
-                          <span>{rec}</span>
-                        </div>
-                      ))}
+                    <div className="space-y-2.5">
+                      {myProfile.recommendations.map((rec: string, idx: number) => {
+                        const isAptitude = rec.toLowerCase().includes('diagnostic') || rec.toLowerCase().includes('aptitude') || rec.toLowerCase().includes('assessment');
+                        const isLeetCode = rec.toLowerCase().includes('leetcode') || rec.toLowerCase().includes('streak') || rec.toLowerCase().includes('daily');
+                        const isProjects = rec.toLowerCase().includes('project') || rec.toLowerCase().includes('portfolio');
+                        const isTasks = rec.toLowerCase().includes('task') || rec.toLowerCase().includes('discipline');
+
+                        return (
+                          <div key={idx} className="p-3.5 bg-zinc-50 rounded-xl border border-zinc-200 text-xs font-medium text-zinc-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-indigo-300 transition-colors">
+                            <div className="flex items-start gap-2.5">
+                              <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                              <span className="leading-relaxed">{rec}</span>
+                            </div>
+
+                            <div className="shrink-0 pl-6 sm:pl-0 flex items-center gap-2">
+                              {isAptitude && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (onNavigateToAssessment) onNavigateToAssessment();
+                                    else setView?.('skill-assessment');
+                                  }}
+                                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-[11px] shadow-2xs transition cursor-pointer flex items-center gap-1"
+                                >
+                                  <span>Take Assessment</span>
+                                  <ArrowUpRight size={11} />
+                                </button>
+                              )}
+                              {isLeetCode && (
+                                <button
+                                  type="button"
+                                  onClick={() => setView?.('leetcode-targets')}
+                                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-[11px] shadow-2xs transition cursor-pointer flex items-center gap-1"
+                                >
+                                  <span>Daily Coding</span>
+                                  <ArrowUpRight size={11} />
+                                </button>
+                              )}
+                              {isProjects && (
+                                <button
+                                  type="button"
+                                  onClick={() => setView?.('profile')}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[11px] shadow-2xs transition cursor-pointer flex items-center gap-1"
+                                >
+                                  <span>Add Project</span>
+                                  <ArrowUpRight size={11} />
+                                </button>
+                              )}
+                              {isTasks && (
+                                <button
+                                  type="button"
+                                  onClick={() => setView?.('tasks')}
+                                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-[11px] shadow-2xs transition cursor-pointer flex items-center gap-1"
+                                >
+                                  <span>Submit Tasks</span>
+                                  <ArrowUpRight size={11} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -555,7 +762,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setSelectedTier('ALL')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
                       selectedTier === 'ALL'
                         ? 'bg-black text-white shadow-xs'
                         : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
@@ -567,49 +774,61 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setSelectedTier('ZOHO')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 cursor-pointer ${
                       selectedTier === 'ZOHO'
                         ? 'bg-emerald-600 text-white shadow-xs'
                         : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
                     }`}
                   >
-                    <Star size={12} /> Zoho / Product (≥80%)
+                    <Star size={12} /> Zoho / Product (≥80%) ({metrics?.tier1_count || 0})
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setSelectedTier('TCS')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 cursor-pointer ${
                       selectedTier === 'TCS'
                         ? 'bg-indigo-600 text-white shadow-xs'
                         : 'bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200'
                     }`}
                   >
-                    <Briefcase size={12} /> TCS / Infosys (≥65%)
+                    <Briefcase size={12} /> TCS / Services (≥65%) ({metrics?.tier2_count || 0})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTier('TIER_3')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 cursor-pointer ${
+                      selectedTier === 'TIER_3'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+                    }`}
+                  >
+                    <Target size={12} /> Tier 3: Developing (50-64%) ({metrics?.tier3_count || 0})
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setSelectedTier('ELIGIBLE')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 cursor-pointer ${
                       selectedTier === 'ELIGIBLE'
                         ? 'bg-black text-white shadow-xs'
                         : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
                     }`}
                   >
-                    <UserCheck size={12} /> Placement Ready (≥75%)
+                    <UserCheck size={12} /> Placement Ready (≥75%) ({metrics?.eligible_count || 0})
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setSelectedTier('NEEDS_ATTENTION')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 cursor-pointer ${
                       selectedTier === 'NEEDS_ATTENTION'
                         ? 'bg-rose-600 text-white shadow-xs'
                         : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
                     }`}
                   >
-                    <AlertTriangle size={12} /> Action Needed (&lt;50%)
+                    <AlertTriangle size={12} /> Action Needed (&lt;50%) ({metrics?.needs_attention_count || 0})
                   </button>
                 </div>
 
@@ -665,7 +884,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
 
             {/* Candidate List Table */}
             <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+              <div className="flex items-center justify-between border-b border-zinc-100 pb-3 flex-wrap gap-2">
                 <h3 className="text-sm font-bold text-zinc-900">
                   {isAdvisor
                     ? 'Class Candidate Readiness Ranking'
@@ -674,16 +893,35 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                     : 'Candidate Readiness Ranking'}{' '}
                   ({filteredStudents.length} Students)
                 </h3>
-                <span className="text-xs text-zinc-400">
-                  Sorted by Register Number
-                </span>
+                <div className="flex items-center gap-2">
+                  {(selectedTier !== 'ALL' || searchQuery || (!isClassScoped && selectedClassId)) && (
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <RotateCcw size={12} /> Reset Filters
+                    </button>
+                  )}
+                  <span className="text-xs text-zinc-400">
+                    Sorted by Register Number
+                  </span>
+                </div>
               </div>
 
               {filteredStudents.length === 0 ? (
-                <div className="p-8 text-center bg-zinc-50 rounded-xl border border-dashed border-zinc-200">
-                  <Target size={28} className="mx-auto text-zinc-400 mb-2" />
+                <div className="p-8 text-center bg-zinc-50 rounded-xl border border-dashed border-zinc-200 space-y-2">
+                  <Target size={28} className="mx-auto text-zinc-400 mb-1" />
                   <p className="text-sm font-bold text-zinc-700">No Candidates Match the Filter</p>
                   <p className="text-xs text-zinc-400">Try selecting "All Students" or resetting the search query.</p>
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-zinc-800 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer mt-1"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Reset All Filters</span>
+                  </button>
                 </div>
               ) : (
                 <div className="overflow-x-auto">

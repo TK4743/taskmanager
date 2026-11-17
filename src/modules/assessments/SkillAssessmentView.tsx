@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import ExcelJS from 'exceljs';
 import {
   Sparkles,
   CheckCircle2,
@@ -1029,6 +1028,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
   // ── HOD: Excel Upload and Publish ──────────────────────────────────────────
 
   const handleDownloadTemplate = async () => {
+    const ExcelJS = (await import('exceljs')).default || await import('exceljs');
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Aptitude Questions');
 
@@ -1083,6 +1083,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
     setIsParsingExcel(true);
     try {
       const arrayBuffer = await file.arrayBuffer();
+      const ExcelJS = (await import('exceljs')).default || await import('exceljs');
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(arrayBuffer);
 
@@ -1174,6 +1175,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
 
   const handleExportResults = async () => {
     try {
+      const ExcelJS = (await import('exceljs')).default || await import('exceljs');
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Assessment Results');
 

@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf';
+import type { jsPDF as JsPDFType } from 'jspdf';
 
 export interface ProofPdfItem {
   url: string;
@@ -110,6 +110,7 @@ export async function generateMergedProofsPdf(
     }));
   }
 
+  const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

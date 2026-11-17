@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf';
+import type { jsPDF as JsPDFType } from 'jspdf';
 
 export interface AssessmentAuditData {
   id: string;
@@ -84,7 +84,8 @@ async function loadImageData(url: string): Promise<{ dataUrl: string; format: 'J
 /**
  * Generates an official, institutional-grade Proctoring Integrity & Scorecard Audit Report PDF.
  */
-export async function generateAssessmentAuditPdf(data: AssessmentAuditData): Promise<jsPDF> {
+export async function generateAssessmentAuditPdf(data: AssessmentAuditData): Promise<JsPDFType> {
+  const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

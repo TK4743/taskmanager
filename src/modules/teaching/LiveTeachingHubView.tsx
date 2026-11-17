@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Mic,
   Laptop,
@@ -18,9 +18,11 @@ import {
   Users,
   Terminal,
   Zap,
-  Share2
+  Share2,
+  RefreshCw,
+  XCircle
 } from 'lucide-react';
-import { GOAT_CE_URL } from '../../config';
+import { GOAT_CE_URL, API_URL } from '../../config';
 
 interface LiveTeachingHubViewProps {
   user?: any;
@@ -28,11 +30,26 @@ interface LiveTeachingHubViewProps {
   addToast?: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
 }
 
-export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, addToast }) => {
+interface PeerRoom {
+  id?: string;
+  room_code: string;
+  topic: string;
+  host_id?: string;
+  host_name: string;
+  class_name?: string;
+  peer_count: number;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, token, addToast }) => {
   const [createdRoomCode, setCreatedRoomCode] = useState<string>(() => `VSB-${Math.floor(1000 + Math.random() * 9000)}`);
   const [joinCode, setJoinCode] = useState<string>('');
   const [selectedTopic, setSelectedTopic] = useState<string>('Data Structures & Algorithms');
   const [copied, setCopied] = useState<boolean>(false);
+  const [loadingRooms, setLoadingRooms] = useState<boolean>(false);
+  const [activeRooms, setActiveRooms] = useState<PeerRoom[]>([]);
 
   const topics = [
     'Data Structures & Algorithms',
@@ -42,27 +59,94 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
     'LeetCode Interview Prep'
   ];
 
-  const activeRooms = [
-    { code: 'VSB-8831', topic: 'LeetCode Daily Problems (Graph BFS/DFS)', host: 'Arun V (III IT A)', peers: 3, status: 'LIVE' },
-    { code: 'VSB-5120', topic: 'React + Express Fullstack Lab Task', host: 'Sneha M (III IT B)', peers: 4, status: 'LIVE' },
-    { code: 'VSB-9042', topic: 'Aptitude & Logical Reasoning Sprint', host: 'Kavitha R (IV IT A)', peers: 2, status: 'LIVE' },
-  ];
+  const fetchRooms = useCallback(async () => {
+    if (!token) return;
+    setLoadingRooms(true);
+    try {
+      const res = await fetch(`${API_URL}/api/teaching/rooms`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveRooms(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      // Keep existing list on failure
+    } finally {
+      setLoadingRooms(false);
+    }
+  }, [token]);
 
-  const handleLaunchCreatedRoom = () => {
+  useEffect(() => {
+    fetchRooms();
+    const interval = setInterval(fetchRooms, 15000);
+    return () => clearInterval(interval);
+  }, [fetchRooms]);
+
+  const handleLaunchCreatedRoom = async () => {
+    try {
+      if (token) {
+        await fetch(`${API_URL}/api/teaching/rooms`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            room_code: createdRoomCode,
+            topic: selectedTopic
+          })
+        });
+        fetchRooms();
+      }
+    } catch (e) {
+      console.error('Error creating room on backend:', e);
+    }
+
     const url = `${GOAT_CE_URL}?room=${encodeURIComponent(createdRoomCode)}&topic=${encodeURIComponent(selectedTopic)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
-    if (addToast) addToast(`Room ${createdRoomCode} launched! Share the code with classmates.`, 'success');
+    if (addToast) addToast(`Room ${createdRoomCode} launched and published to cohort!`, 'success');
   };
 
-  const handleJoinByCode = (codeToJoin?: string) => {
+  const handleJoinByCode = async (codeToJoin?: string) => {
     const code = (codeToJoin || joinCode).trim();
     if (!code) {
       if (addToast) addToast('Please enter a valid room code', 'error');
       return;
     }
+
+    try {
+      if (token) {
+        await fetch(`${API_URL}/api/teaching/rooms/${encodeURIComponent(code)}/join`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        fetchRooms();
+      }
+    } catch (e) {
+      console.error('Error recording peer join:', e);
+    }
+
     const url = `${GOAT_CE_URL}?room=${encodeURIComponent(code)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
     if (addToast) addToast(`Connecting to room ${code}...`, 'info');
+  };
+
+  const handleEndRoom = async (code: string) => {
+    try {
+      if (token) {
+        const res = await fetch(`${API_URL}/api/teaching/rooms/${encodeURIComponent(code)}/end`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          if (addToast) addToast(`Room ${code} closed successfully.`, 'info');
+          fetchRooms();
+        }
+      }
+    } catch {
+      if (addToast) addToast('Failed to end room.', 'error');
+    }
   };
 
   const handleCopyCode = () => {
@@ -187,9 +271,20 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
                   <Radio size={16} className="text-emerald-500 animate-pulse" />
                   <span>Active Study Rooms</span>
                 </h3>
-                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  3 LIVE
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={fetchRooms}
+                    disabled={loadingRooms}
+                    className="p-1 text-zinc-400 hover:text-zinc-900 rounded transition cursor-pointer"
+                    title="Refresh rooms"
+                  >
+                    <RefreshCw size={13} className={loadingRooms ? 'animate-spin text-indigo-600' : ''} />
+                  </button>
+                  <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    {activeRooms.length} LIVE
+                  </span>
+                </div>
               </div>
 
               {/* Join Code Input */}
@@ -211,35 +306,58 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
               </div>
 
               {/* Active Channels List */}
-              <div className="mt-4 space-y-2.5">
-                {activeRooms.map((room) => (
-                  <div key={room.code} className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between gap-3 hover:border-indigo-300 transition-colors">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
-                          {room.code}
-                        </span>
-                        <span className="text-xs font-bold text-zinc-900 truncate">
-                          {room.topic}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-zinc-500 mt-0.5 flex items-center gap-2">
-                        <span>Host: {room.host}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1 text-emerald-600 font-bold">
-                          <Users size={12} /> {room.peers} peers
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleJoinByCode(room.code)}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition cursor-pointer shrink-0"
-                    >
-                      Join
-                    </button>
+              <div className="mt-4 space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                {activeRooms.length === 0 ? (
+                  <div className="p-6 text-center bg-zinc-50 border border-dashed border-zinc-200 rounded-xl space-y-1">
+                    <p className="text-xs font-bold text-zinc-600">No Active Peer Rooms Right Now</p>
+                    <p className="text-[11px] text-zinc-400">Launch a new session above to invite your classmates to study!</p>
                   </div>
-                ))}
+                ) : (
+                  activeRooms.map((room) => {
+                    const isMyRoom = room.host_id === user?.id;
+                    return (
+                      <div key={room.room_code || room.id} className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between gap-3 hover:border-indigo-300 transition-colors">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                              {room.room_code}
+                            </span>
+                            <span className="text-xs font-bold text-zinc-900 truncate">
+                              {room.topic}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-zinc-500 mt-0.5 flex items-center gap-2">
+                            <span>Host: <strong className="text-zinc-700">{room.host_name}</strong> {room.class_name ? `(${room.class_name})` : ''}</span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1 text-emerald-600 font-bold">
+                              <Users size={12} /> {room.peer_count} {room.peer_count === 1 ? 'peer' : 'peers'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {isMyRoom && (
+                            <button
+                              type="button"
+                              onClick={() => handleEndRoom(room.room_code)}
+                              className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-[11px] font-bold rounded-lg border border-red-200 transition cursor-pointer"
+                              title="End and close your live session"
+                            >
+                              End
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleJoinByCode(room.room_code)}
+                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition cursor-pointer"
+                          >
+                            Join
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -435,7 +553,7 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, 
               <p className="text-xs text-zinc-500">Launch into your collaborative IDE room with real-time voice and Monaco editor.</p>
             </div>
             <button
-              onClick={handleOpenGoatCE}
+              onClick={handleLaunchCreatedRoom}
               className="w-full sm:w-auto py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs md:text-sm rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Launch Collaborative Room</span>

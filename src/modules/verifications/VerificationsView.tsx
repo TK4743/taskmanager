@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   Search, Filter, CheckCircle2, XCircle, Clock, Eye, Download,
@@ -126,6 +126,11 @@ export function VerificationsView({
   const [selectedSubmissions, setSelectedSubmissions] = useState<(string | number)[]>([]);
   const [verificationNote, setVerificationNote] = useState('');
   const [isBatchVerifying, setIsBatchVerifying] = useState(false);
+
+  // Automatically reset page when any filter criteria changes
+  useEffect(() => {
+    setSubmissionPage(1);
+  }, [verificationFilter, verificationTaskFilter, verificationDeptFilter, verificationClassFilter, verificationYearFilter, submissionSearchTerm]);
 
   const fetchInitialData = () => {
     onRefresh();
@@ -663,8 +668,9 @@ export function VerificationsView({
 
                     {(() => {
                       const filtered = getFilteredVerificationSubmissions();
-                      const totalPages = Math.ceil(filtered.length / itemsPerPage);
-                      const paginated = filtered.slice((submissionPage - 1) * itemsPerPage, submissionPage * itemsPerPage);
+                      const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+                      const safePage = Math.min(submissionPage, totalPages);
+                      const paginated = filtered.slice((safePage - 1) * itemsPerPage, safePage * itemsPerPage);
 
                       return (
                         <>
@@ -1017,8 +1023,9 @@ export function VerificationsView({
                             );
                           }
 
-                          const totalPages = Math.ceil(filtered.length / itemsPerPage);
-                          const paginated = filtered.slice((submissionPage - 1) * itemsPerPage, submissionPage * itemsPerPage);
+                          const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+                          const safePage = Math.min(submissionPage, totalPages);
+                          const paginated = filtered.slice((safePage - 1) * itemsPerPage, safePage * itemsPerPage);
 
                           return (
                             <>
@@ -1324,25 +1331,25 @@ export function VerificationsView({
                                   <TD colSpan={7} className="bg-zinc-50/30">
                                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-1">
                                       <p className="text-xs font-medium text-zinc-500 whitespace-nowrap">
-                                        Showing {(submissionPage - 1) * itemsPerPage + 1} to {Math.min(submissionPage * itemsPerPage, filtered.length)} of {filtered.length} entries
+                                        Showing {(safePage - 1) * itemsPerPage + 1} to {Math.min(safePage * itemsPerPage, filtered.length)} of {filtered.length} entries
                                       </p>
                                       <div className="flex items-center gap-1.5 flex-wrap justify-end">
                                         <Button
                                           variant="secondary"
                                           className="px-3 py-1 h-8 text-xs font-semibold"
-                                          disabled={submissionPage === 1}
-                                          onClick={() => setSubmissionPage(prev => prev - 1)}
+                                          disabled={safePage <= 1}
+                                          onClick={() => setSubmissionPage(prev => Math.max(1, prev - 1))}
                                         >
                                           Previous
                                         </Button>
                                         <div className="flex items-center gap-1">
-                                          {getPaginationRange(submissionPage, totalPages).map((p, idx) => typeof p === 'number' ? (
+                                          {getPaginationRange(safePage, totalPages).map((p, idx) => typeof p === 'number' ? (
                                             <button
                                               key={idx}
                                               onClick={() => setSubmissionPage(p)}
                                               className={cn(
                                                 "w-8 h-8 rounded-lg text-xs font-bold transition-all",
-                                                submissionPage === p ? "bg-black text-white shadow-sm" : "text-zinc-600 hover:bg-zinc-100"
+                                                safePage === p ? "bg-black text-white shadow-sm" : "text-zinc-600 hover:bg-zinc-100"
                                               )}
                                             >
                                               {p}
@@ -1354,8 +1361,8 @@ export function VerificationsView({
                                         <Button
                                           variant="secondary"
                                           className="px-3 py-1 h-8 text-xs font-semibold"
-                                          disabled={submissionPage === totalPages}
-                                          onClick={() => setSubmissionPage(prev => prev + 1)}
+                                          disabled={safePage >= totalPages}
+                                          onClick={() => setSubmissionPage(prev => Math.min(totalPages, prev + 1))}
                                         >
                                           Next
                                         </Button>

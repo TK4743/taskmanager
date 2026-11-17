@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { API_URL } from '../../config';
 import { ThemeToggle } from '../../components/layout/ThemeToggle';
-import { downloadStudentResumePdf } from '../../utils/pdf/studentProfilePdfGenerator';
 
 interface PublicPortfolioProps {
   regNo: string;
@@ -160,7 +159,10 @@ export default function PublicStudentPortfolioView({ regNo, onBackToApp }: Publi
 
           {/* Download Resume PDF Button */}
           <button
-            onClick={() => downloadStudentResumePdf(data)}
+            onClick={async () => {
+              const { downloadStudentResumePdf } = await import('../../utils/pdf/studentProfilePdfGenerator');
+              downloadStudentResumePdf(data);
+            }}
             className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-bold transition shadow-2xs cursor-pointer"
             title="Download verified student academic resume (PDF)"
           >

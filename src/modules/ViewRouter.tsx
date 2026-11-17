@@ -229,10 +229,13 @@ export function ViewRouter({ app }: { app: any }) {
     case 'placement-readiness':
     case 'placement':
     case 'placement-rating':
+    case 'boost':
+    case 'boost-readiness':
       return (
         <PlacementReadinessView
           user={app.user}
           token={app.token}
+          setView={app.setView}
           onNavigateToAssessment={() => app.setView('skill-assessment')}
           onViewStudentProfile={(student) => app.setViewingStaffStudentProfile(student)}
           addToast={app.addToast}

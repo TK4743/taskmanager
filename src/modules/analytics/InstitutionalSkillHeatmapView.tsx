@@ -101,6 +101,186 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
+  const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+
+  const exportExcel = async () => {
+    if (heatmapData.length === 0) {
+      showToast('No skill data available to export');
+      return;
+    }
+    setIsExportingExcel(true);
+    try {
+      const ExcelJS = (await import('exceljs')).default || await import('exceljs');
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Institutional Skill Heatmap');
+
+      worksheet.columns = [
+        { header: 'S.No', key: 'sno', width: 8 },
+        { header: 'Skill / Competency', key: 'name', width: 32 },
+        { header: 'Domain Category', key: 'category', width: 26 },
+        { header: 'Student Count', key: 'count', width: 16 },
+        { header: 'Cohort Coverage (%)', key: 'cohortPct', width: 22 },
+        { header: 'Average Proficiency (%)', key: 'avgProf', width: 24 },
+        { header: 'Verified Count', key: 'verified', width: 18 },
+        { header: 'Industry Demand Rank', key: 'demand', width: 22 },
+        { header: 'Institutional Status', key: 'status', width: 20 }
+      ];
+
+      worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF1E1B4B' }
+      };
+
+      filteredSkills.forEach((h, idx) => {
+        worksheet.addRow({
+          sno: idx + 1,
+          name: h.skill_name,
+          category: h.category,
+          count: h.student_count,
+          cohortPct: `${h.cohort_percentage}%`,
+          avgProf: `${h.avg_proficiency}%`,
+          verified: h.verified_count,
+          demand: `Rank #${h.industry_demand}`,
+          status: h.status
+        });
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Institutional_Skill_Heatmap_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Exported ${filteredSkills.length} skills to Excel!`);
+    } catch {
+      showToast('Error exporting Excel document');
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
+  const exportPDF = async () => {
+    if (heatmapData.length === 0) {
+      showToast('No skill data available to export');
+      return;
+    }
+    setIsExportingPdf(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageWidth = 297;
+      const pageHeight = 210;
+      const margin = 12;
+      const contentWidth = pageWidth - (margin * 2);
+
+      // Header Banner
+      doc.setFillColor(30, 27, 75);
+      doc.rect(margin, 10, contentWidth, 20, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('V.S.B. ENGINEERING COLLEGE — INSTITUTIONAL SKILL HEATMAP REPORT', pageWidth / 2, 18, { align: 'center' });
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`COHORT COMPETENCY BENCHMARK & SECTOR READINESS • GENERATED ON ${new Date().toLocaleDateString('en-GB')}`, pageWidth / 2, 25, { align: 'center' });
+
+      // KPI Strip
+      let y = 35;
+      const cardW = contentWidth / 4;
+      const kpis = [
+        { label: 'COHORT ANALYZED', val: `${totalStudents} Students` },
+        { label: 'HEALTH SCORE', val: `${healthScore}/100` },
+        { label: 'VERIFIED SKILLS', val: `${verifiedRatio}% Ratio` },
+        { label: 'TRACKED SKILLS', val: `${heatmapData.length} Competencies` }
+      ];
+
+      kpis.forEach((k, idx) => {
+        const x = margin + (idx * cardW);
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.rect(x, y, cardW - 2, 14, 'FD');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139);
+        doc.text(k.label, x + 3, y + 5);
+        doc.setFontSize(10);
+        doc.setTextColor(15, 23, 42);
+        doc.text(k.val, x + 3, y + 11);
+      });
+
+      // Table Header
+      y += 20;
+      const drawHdr = (curY: number) => {
+        doc.setFillColor(226, 232, 240);
+        doc.rect(margin, curY, contentWidth, 7, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(30, 41, 59);
+        doc.text('S.No', margin + 2, curY + 5);
+        doc.text('Skill / Competency', margin + 14, curY + 5);
+        doc.text('Domain Category', margin + 75, curY + 5);
+        doc.text('Student Count', margin + 145, curY + 5);
+        doc.text('Cohort %', margin + 175, curY + 5);
+        doc.text('Avg Prof %', margin + 205, curY + 5);
+        doc.text('Verified', margin + 235, curY + 5);
+        doc.text('Status', margin + 258, curY + 5);
+      };
+
+      drawHdr(y);
+      y += 7;
+
+      let pageNum = 1;
+      filteredSkills.forEach((h, idx) => {
+        if (y > pageHeight - 16) {
+          doc.setFontSize(7);
+          doc.setTextColor(148, 163, 184);
+          doc.text(`Page ${pageNum} — Institutional Skill Heatmap Audit Report`, margin, pageHeight - 8);
+          doc.addPage();
+          pageNum++;
+          y = 12;
+          drawHdr(y);
+          y += 7;
+        }
+
+        doc.setFillColor(idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 250, idx % 2 === 0 ? 255 : 252);
+        doc.rect(margin, y, contentWidth, 6.5, 'F');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(15, 23, 42);
+
+        doc.text(`${idx + 1}`, margin + 2, y + 4.5);
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(h.skill_name || '').slice(0, 32), margin + 14, y + 4.5);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(h.category || '').slice(0, 28), margin + 75, y + 4.5);
+        doc.text(`${h.student_count}`, margin + 145, y + 4.5);
+        doc.text(`${h.cohort_percentage}%`, margin + 175, y + 4.5);
+        doc.text(`${h.avg_proficiency}%`, margin + 205, y + 4.5);
+        doc.text(`${h.verified_count}`, margin + 235, y + 4.5);
+
+        doc.setFont('helvetica', 'bold');
+        if (h.status === 'STRONG') doc.setTextColor(16, 185, 129);
+        else if (h.status === 'MODERATE') doc.setTextColor(245, 158, 11);
+        else doc.setTextColor(244, 63, 94);
+        doc.text(h.status, margin + 258, y + 4.5);
+
+        y += 6.5;
+      });
+
+      doc.save(`Institutional_Skill_Heatmap_${new Date().toISOString().slice(0, 10)}.pdf`);
+      showToast('Generated Institutional Skill Heatmap PDF!');
+    } catch {
+      showToast('Error generating PDF report');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const exportCSV = () => {
     if (heatmapData.length === 0) return;
     const csvRows = [
@@ -151,21 +331,40 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={fetchHeatmap}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
             >
               <RefreshCw size={13} className={loading ? 'animate-spin text-indigo-600' : ''} />
               Refresh
             </button>
             <button
               onClick={exportCSV}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer border border-zinc-200"
+              title="Export raw CSV data for accreditation bodies"
             >
               <Download size={13} />
-              Export Accreditation CSV
+              <span>CSV</span>
+            </button>
+            <button
+              onClick={exportExcel}
+              disabled={isExportingExcel}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+              title="Export formatted multi-column Excel spreadsheet"
+            >
+              <Download size={13} />
+              <span>{isExportingExcel ? 'Exporting...' : 'Export Excel (.xlsx)'}</span>
+            </button>
+            <button
+              onClick={exportPDF}
+              disabled={isExportingPdf}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+              title="Export official landscape PDF accreditation report"
+            >
+              <Download size={13} />
+              <span>{isExportingPdf ? 'Exporting...' : 'Export Audit (.pdf)'}</span>
             </button>
           </div>
         </div>
