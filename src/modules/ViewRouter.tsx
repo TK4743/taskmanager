@@ -235,6 +235,8 @@ export function ViewRouter({ app }: { app: any }) {
         <PlacementReadinessView
           user={app.user}
           token={app.token}
+          departments={app.departments}
+          classes={app.classes}
           setView={app.setView}
           onNavigateToAssessment={() => app.setView('skill-assessment')}
           onViewStudentProfile={(student) => app.setViewingStaffStudentProfile(student)}

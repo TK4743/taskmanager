@@ -55,6 +55,7 @@ export interface Class {
   department_name?: string;
   year?: number;
   batch?: string;
+  advisor_id?: string | number;
 }
 
 export interface Task {

@@ -4,7 +4,14 @@ process.env.UV_THREADPOOL_SIZE = process.env.UV_THREADPOOL_SIZE || '128';
 import dotenv from 'dotenv';
 dotenv.config();
 
-import ExcelJS from 'exceljs';
+let _ExcelJS: any = null;
+async function getExcelJS() {
+  if (!_ExcelJS) {
+    const mod = await import('exceljs');
+    _ExcelJS = mod.default || mod;
+  }
+  return _ExcelJS;
+}
 
 import { exec } from 'child_process';
 import util from 'util';
@@ -163,6 +170,7 @@ export async function buildExcelReportBuffer(
   department: string = 'INFORMATION TECHNOLOGY',
   academicYear: string = '2024-2028'
 ): Promise<Buffer> {
+  const ExcelJS = await getExcelJS();
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'IT Vault';
   workbook.created = new Date();
@@ -11788,7 +11796,12 @@ async function startServer() {
 
     if (isAdvisor) {
       // Class Advisor: STRICTLY isolated to their own assigned class
-      if (!req.user.class_id) {
+      let advisorClassId = req.user.class_id;
+      if (!advisorClassId) {
+        const clsRes = await pool.query('SELECT id FROM classes WHERE advisor_id = $1 LIMIT 1', [req.user.id]);
+        if (clsRes.rows.length > 0) advisorClassId = clsRes.rows[0].id;
+      }
+      if (!advisorClassId) {
         return res.json({
           success: true,
           metrics: { total_students: 0, eligible_count: 0, tier1_count: 0, tier2_count: 0, tier3_count: 0, needs_attention_count: 0, average_readiness: 0, pass_rate: 0 },
@@ -11796,15 +11809,20 @@ async function startServer() {
           classes: []
         });
       }
-      class_id = req.user.class_id;
+      class_id = advisorClassId;
       studentQuery += ` AND u.class_id = $${studentQueryParams.length + 1}`;
-      studentQueryParams.push(req.user.class_id);
+      studentQueryParams.push(advisorClassId);
 
       classesQuery += ` WHERE id = $${classesQueryParams.length + 1}`;
-      classesQueryParams.push(req.user.class_id);
+      classesQueryParams.push(advisorClassId);
     } else if (isHOD) {
       // HOD: STRICTLY isolated to their own department
-      if (!req.user.department_id) {
+      let hodDeptId = req.user.department_id;
+      if (!hodDeptId) {
+        const dRes = await pool.query('SELECT id FROM departments WHERE name ILIKE $1 OR code ILIKE $2 LIMIT 1', ['%Information Technology%', 'IT']);
+        if (dRes.rows.length > 0) hodDeptId = dRes.rows[0].id;
+      }
+      if (!hodDeptId) {
         return res.json({
           success: true,
           metrics: { total_students: 0, eligible_count: 0, tier1_count: 0, tier2_count: 0, tier3_count: 0, needs_attention_count: 0, average_readiness: 0, pass_rate: 0 },
@@ -11813,10 +11831,10 @@ async function startServer() {
         });
       }
       studentQuery += ` AND (u.department_id = $${studentQueryParams.length + 1} OR c.department_id = $${studentQueryParams.length + 2})`;
-      studentQueryParams.push(req.user.department_id, req.user.department_id);
+      studentQueryParams.push(hodDeptId, hodDeptId);
 
       classesQuery += ` WHERE department_id = $${classesQueryParams.length + 1}`;
-      classesQueryParams.push(req.user.department_id);
+      classesQueryParams.push(hodDeptId);
 
       // If HOD optionally filters by a specific class within their department
       if (class_id && class_id !== 'ALL') {

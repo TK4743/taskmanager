@@ -182,11 +182,15 @@ export function VerificationsView({
       // 3. Role / Scope filter
       const subClassId = s.class_id ? String(s.class_id) : '';
       const subDeptId = s.department_id ? String(s.department_id) : '';
-      const userClassId = user?.class_id ? String(user?.class_id) : '';
+      const resolvedUserClassId = user?.class_id
+        ? String(user.class_id)
+        : classes.find(cls => cls.advisor_id === user?.id)?.id
+        ? String(classes.find(cls => cls.advisor_id === user?.id)?.id)
+        : '';
       const userDeptId = user?.department_id ? String(user?.department_id) : '';
 
       if (isAdvisor || isCoordinator) {
-        if (userClassId && subClassId && subClassId !== userClassId) return false;
+        if (resolvedUserClassId && subClassId && subClassId !== resolvedUserClassId) return false;
       } else if (isHOD || isFaculty) {
         if (userDeptId && subDeptId && subDeptId !== userDeptId) return false;
       }

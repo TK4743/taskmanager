@@ -172,10 +172,8 @@ export const getPathFromState = (
     case 'placement-readiness':
     case 'placement':
     case 'boost':
-      if (typeof window !== 'undefined' && (window.location.pathname === '/boost' || window.location.pathname.startsWith('/boost/'))) {
-        return '/boost';
-      }
-      return '/placement';
+    case 'boost-readiness':
+      return '/boost';
     case 'live-teaching-hub':
       return '/teaching-hub';
     case 'opportunities':

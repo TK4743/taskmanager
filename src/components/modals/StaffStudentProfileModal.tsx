@@ -107,7 +107,7 @@ export function StaffStudentProfileModal({
               onClick={async () => {
                 if (profile) {
                   const { downloadStudentResumePdf } = await import('../../utils/pdf/studentProfilePdfGenerator');
-                  downloadStudentResumePdf(profile);
+                  await downloadStudentResumePdf(profile);
                 }
               }}
               className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0"

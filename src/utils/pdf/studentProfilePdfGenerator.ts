@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf';
+import type { jsPDF as JsPDFType } from 'jspdf';
 
 export interface StudentProfileData {
   academic?: any;
@@ -18,8 +18,9 @@ export interface StudentProfileData {
  * Generates a clean, professional, multi-page Resume PDF for a student
  * using native vector typography and standard A4 styling.
  */
-export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
-  const doc = new jsPDF({
+export async function generateStudentResumePdf(profile: StudentProfileData): Promise<JsPDFType> {
+  const { jsPDF } = await import('jspdf');
+  const doc: JsPDFType = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4'
@@ -574,8 +575,8 @@ export function generateStudentResumePdf(profile: StudentProfileData): jsPDF {
 /**
  * Downloads single student's resume PDF directly to the browser
  */
-export function downloadStudentResumePdf(profile: StudentProfileData): void {
-  const doc = generateStudentResumePdf(profile);
+export async function downloadStudentResumePdf(profile: StudentProfileData): Promise<void> {
+  const doc = await generateStudentResumePdf(profile);
   const regNo = profile.academic?.register_number || 'Student';
   const name = (profile.academic?.full_name || '').replace(/\s+/g, '_');
   const filename = `${regNo}_${name || 'Profile'}_Resume.pdf`;

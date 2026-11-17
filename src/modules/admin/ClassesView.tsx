@@ -137,7 +137,7 @@ export function ClassesView({
 
       for (const p of profiles) {
         try {
-          const doc = generateStudentResumePdf(p);
+          const doc = await generateStudentResumePdf(p);
           const pdfBlob = doc.output('blob');
           const regNo = p.academic?.register_number || 'Student';
           const name = (p.academic?.full_name || 'Profile').trim().replace(/\s+/g, '_');

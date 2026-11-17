@@ -19,7 +19,8 @@ import {
   ArrowUpRight,
   Eye,
   FileText,
-  RotateCcw
+  RotateCcw,
+  ArrowLeft
 } from 'lucide-react';
 import { API_URL } from '../../config';
 import { cn } from '../../lib/utils';
@@ -31,6 +32,8 @@ import {
 interface PlacementReadinessViewProps {
   user: any;
   token: string | null;
+  departments?: any[];
+  classes?: any[];
   addToast: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
   onNavigateToAssessment?: () => void;
   onViewStudentProfile?: (student: any) => void;
@@ -40,6 +43,8 @@ interface PlacementReadinessViewProps {
 export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
   user,
   token,
+  departments = [],
+  classes: initialClasses = [],
   addToast,
   onNavigateToAssessment,
   onViewStudentProfile,
@@ -59,7 +64,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
   // HOD / Advisor / HR Dashboard State
   const [metrics, setMetrics] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>(() => (initialClasses && initialClasses.length > 0 ? initialClasses : []));
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
@@ -82,6 +87,13 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
     }
   }, [user?.class_id, isClassScoped]);
 
+  // Sync initialClasses when passed from parent cache
+  useEffect(() => {
+    if (initialClasses && initialClasses.length > 0 && classes.length === 0) {
+      setClasses(initialClasses);
+    }
+  }, [initialClasses]);
+
   useEffect(() => {
     if (canViewClassDashboard) {
       fetchDashboardData();
@@ -89,9 +101,10 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
     if (isStudent) {
       fetchMyReadinessProfile();
     }
-  }, [selectedTier, selectedClassId, selectedDeptId, user?.id, user?.class_id, user?.department_id, canViewClassDashboard]);
+  }, [selectedTier, selectedClassId, selectedDeptId, user?.id, user?.class_id, user?.department_id, canViewClassDashboard, token]);
 
   const fetchDashboardData = async () => {
+    if (!token) return;
     setIsLoading(true);
     try {
       let url = `${API_URL}/api/placement/readiness-dashboard?`;
@@ -99,17 +112,18 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
       if (selectedClassId) url += `class_id=${selectedClassId}&`;
       if (selectedDeptId) url += `department_id=${selectedDeptId}&`;
 
-      const authHeaders: any = {};
-      if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+      const authHeaders: any = { Authorization: `Bearer ${token}` };
 
       const res = await fetch(url, { headers: authHeaders });
       const data = await res.json();
       if (data.success) {
         setMetrics(data.metrics);
         setStudents(data.students || []);
-        if (data.classes && (classes.length === 0 || classes.length !== data.classes.length)) {
+        if (data.classes && Array.isArray(data.classes)) {
           setClasses(data.classes);
         }
+      } else {
+        addToast(data.error || 'Error loading placement readiness data', 'error');
       }
     } catch (e) {
       console.error('Error fetching placement readiness:', e);
@@ -121,15 +135,17 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
   };
 
   const fetchMyReadinessProfile = async () => {
+    if (!token) return;
     setIsProfileLoading(true);
     try {
-      const authHeaders: any = {};
-      if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+      const authHeaders: any = { Authorization: `Bearer ${token}` };
       const url = user?.id ? `${API_URL}/api/placement/my-readiness?user_id=${user.id}` : `${API_URL}/api/placement/my-readiness`;
       const res = await fetch(url, { headers: authHeaders });
       const data = await res.json();
       if (data.success) {
         setMyProfile(data.profile);
+      } else {
+        addToast(data.error || 'Failed to load readiness profile', 'error');
       }
     } catch (e) {
       console.error('Error fetching student readiness profile:', e);
@@ -141,13 +157,19 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
-    if (canViewClassDashboard) {
-      await fetchDashboardData();
+    try {
+      if (canViewClassDashboard) {
+        await fetchDashboardData();
+      }
+      if (isStudent) {
+        await fetchMyReadinessProfile();
+      }
+      addToast('Placement readiness indicators refreshed!', 'success');
+    } catch {
+      addToast('Failed to refresh placement indicators', 'error');
+    } finally {
+      setIsRefreshing(false);
     }
-    if (isStudent) {
-      await fetchMyReadinessProfile();
-    }
-    addToast('Placement readiness indicators refreshed!', 'success');
   };
 
   // ── Export Company-Ready Shortlist to Excel (Lazy-loaded) ────────────────────
@@ -213,8 +235,10 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
       const a = document.createElement('a');
       a.href = url;
       a.download = `Company_Placement_Ready_List_${selectedTier}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       addToast(`Exported ${dataToExport.length} company-ready candidates to Excel!`, 'success');
     } catch (e) {
       console.error('Export error:', e);
@@ -222,6 +246,10 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
     } finally {
       setIsExportingExcel(false);
     }
+  };
+
+  const handleTierClick = (tier: string) => {
+    setSelectedTier(prev => (prev === tier ? 'ALL' : tier));
   };
 
   // ── Export Cohort Placement Audit Report (PDF) ──────────────────────────────
@@ -319,6 +347,18 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
+            {setView && (
+              <button
+                type="button"
+                onClick={() => setView('dashboard')}
+                className="p-2.5 bg-white hover:bg-zinc-50 border border-zinc-200 text-zinc-700 rounded-xl transition shadow-2xs cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+                title="Back to Main Dashboard"
+              >
+                <ArrowLeft size={14} />
+                <span className="hidden sm:inline">Dashboard</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleManualRefresh}
@@ -468,7 +508,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                     <div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-extrabold text-zinc-900">
-                          {myProfile?.pillars?.aptitude?.completed ? `${myProfile.pillars.aptitude.score}%` : '0%'}
+                          {myProfile?.pillars?.aptitude?.completed ? `${myProfile?.pillars?.aptitude?.score ?? 0}%` : '0%'}
                         </span>
                         <span className="text-xs font-bold text-zinc-500">
                           {myProfile?.pillars?.aptitude?.completed ? 'Benchmark Score' : 'Not Attempted'}
@@ -503,12 +543,12 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                     <div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-extrabold text-zinc-900">
-                          {myProfile.pillars.leetcode?.weekly_streak ?? 0}d
+                          {myProfile?.pillars?.leetcode?.weekly_streak ?? 0}d
                         </span>
                         <span className="text-xs font-bold text-zinc-500">Weekly Streak</span>
                       </div>
                       <span className="text-xs font-bold text-amber-700 block mt-0.5">
-                        +{myProfile.pillars.leetcode?.contribution ?? 0} / 25 pts ({myProfile.pillars.leetcode?.consistency ?? 0}% Consistency)
+                        +{myProfile?.pillars?.leetcode?.contribution ?? 0} / 25 pts ({myProfile?.pillars?.leetcode?.consistency ?? 0}% Consistency)
                       </span>
                     </div>
                     <div className="space-y-1 text-[11px] text-zinc-500">
@@ -517,7 +557,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                         <span className="font-bold text-zinc-800">7 Days / Week</span>
                       </div>
                       <div className="pt-1 flex items-center justify-between gap-2 flex-wrap">
-                        {myProfile.leetcode_url ? (
+                        {myProfile?.leetcode_url ? (
                           <a
                             href={myProfile.leetcode_url}
                             target="_blank"
@@ -551,12 +591,12 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                     <div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-extrabold text-zinc-900">
-                          {myProfile.pillars.projects?.count ?? 0}
+                          {myProfile?.pillars?.projects?.count ?? 0}
                         </span>
                         <span className="text-xs font-bold text-zinc-500">Projects Built</span>
                       </div>
                       <span className="text-xs font-bold text-emerald-700 block mt-0.5">
-                        +{myProfile.pillars.projects?.contribution ?? 0} / 20 pts (Benchmark: 3+ Projects)
+                        +{myProfile?.pillars?.projects?.contribution ?? 0} / 20 pts (Benchmark: 3+ Projects)
                       </span>
                     </div>
                     <div className="space-y-1 text-[11px] text-zinc-500">
@@ -572,7 +612,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                           </button>
                         )}
                       </div>
-                      {myProfile.pillars.projects?.projects_list?.length > 0 ? (
+                      {myProfile?.pillars?.projects?.projects_list?.length > 0 ? (
                         <div className="pt-1 flex flex-wrap gap-1">
                           {myProfile.pillars.projects.projects_list.slice(0, 2).map((p: any) => (
                             <span key={p.id} className="text-[10px] bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-200 truncate max-w-[140px]" title={p.project_name}>
@@ -712,6 +752,14 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
           </div>
         )}
 
+        {/* ── State: Role verification in progress / Unauthenticated ─────────── */}
+        {!isStudent && !canViewClassDashboard && (
+          <div className="bg-white border border-zinc-200 rounded-3xl p-12 text-center text-zinc-500 text-xs font-semibold space-y-3">
+            <RefreshCw size={24} className="animate-spin text-indigo-600 mx-auto" />
+            <p>Loading placement indicators and verifying role credentials...</p>
+          </div>
+        )}
+
         {/* ═════════════════════════════════════════════════════════════════════
             ADVISOR / HOD / SUPREME ADMIN / HR DASHBOARD: AGGREGATE STATS, COMPANY FILTERS & TABLE
             ═════════════════════════════════════════════════════════════════════ */}
@@ -761,7 +809,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => setSelectedTier('ALL')}
+                    onClick={() => handleTierClick('ALL')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
                       selectedTier === 'ALL'
                         ? 'bg-black text-white shadow-xs'
@@ -773,7 +821,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => setSelectedTier('ZOHO')}
+                    onClick={() => handleTierClick('ZOHO')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 cursor-pointer ${
                       selectedTier === 'ZOHO'
                         ? 'bg-emerald-600 text-white shadow-xs'
@@ -785,7 +833,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => setSelectedTier('TCS')}
+                    onClick={() => handleTierClick('TCS')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 cursor-pointer ${
                       selectedTier === 'TCS'
                         ? 'bg-indigo-600 text-white shadow-xs'
@@ -797,7 +845,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => setSelectedTier('TIER_3')}
+                    onClick={() => handleTierClick('TIER_3')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 cursor-pointer ${
                       selectedTier === 'TIER_3'
                         ? 'bg-amber-600 text-white shadow-xs'
@@ -809,7 +857,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => setSelectedTier('ELIGIBLE')}
+                    onClick={() => handleTierClick('ELIGIBLE')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 cursor-pointer ${
                       selectedTier === 'ELIGIBLE'
                         ? 'bg-black text-white shadow-xs'
@@ -821,7 +869,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => setSelectedTier('NEEDS_ATTENTION')}
+                    onClick={() => handleTierClick('NEEDS_ATTENTION')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1 cursor-pointer ${
                       selectedTier === 'NEEDS_ATTENTION'
                         ? 'bg-rose-600 text-white shadow-xs'
@@ -833,7 +881,25 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                 </div>
 
                 {/* Class Dropdown & Search Input */}
-                <div className="flex items-center gap-2.5 w-full md:w-auto">
+                <div className="flex items-center gap-2.5 w-full md:w-auto flex-wrap">
+                  {(isSupreme || isIndustry) && departments && departments.length > 0 && (
+                    <select
+                      value={selectedDeptId}
+                      onChange={e => {
+                        setSelectedDeptId(e.target.value);
+                        setSelectedClassId('');
+                      }}
+                      className="py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
+                    >
+                      <option value="">All Departments</option>
+                      {departments.map((d: any) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} ({d.code})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
                   {isClassScoped ? (
                     <div className="py-1.5 px-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs font-bold text-zinc-800 flex items-center gap-1.5">
                       <Building2 size={13} className="text-zinc-500" />
@@ -843,7 +909,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                     <select
                       value={selectedClassId}
                       onChange={e => setSelectedClassId(e.target.value)}
-                      className="py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-black"
+                      className="py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
                     >
                       <option value="">All Department Classes ({user?.department_name || 'Department'})</option>
                       {classes.map(c => (
@@ -856,10 +922,10 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                     <select
                       value={selectedClassId}
                       onChange={e => setSelectedClassId(e.target.value)}
-                      className="py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-black"
+                      className="py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
                     >
-                      <option value="">All Classes & Sections</option>
-                      {classes.map(c => (
+                      <option value="">{selectedDeptId ? 'All Classes in Selected Dept' : 'All Classes & Sections'}</option>
+                      {(selectedDeptId ? classes.filter(c => String(c.department_id) === String(selectedDeptId)) : classes).map(c => (
                         <option key={c.id} value={c.id}>
                           {c.name} (Year {c.year})
                         </option>

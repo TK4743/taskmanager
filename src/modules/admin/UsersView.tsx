@@ -210,8 +210,8 @@ export function UsersView({
       const zip = new JSZip();
       for (const p of profiles) {
         try {
-          const doc = generateStudentResumePdf(p);
-          const pdfBlob = doc.output('blob');
+          const doc: any = await generateStudentResumePdf(p);
+          const pdfBlob = doc.output ? doc.output('blob') : (await doc).output('blob');
           const regNo = p.academic?.register_number || 'Student';
           const name = (p.academic?.full_name || 'Profile').trim().replace(/\s+/g, '_');
           zip.file(`${regNo}_${name}_Resume.pdf`, pdfBlob);

@@ -154,8 +154,10 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
       const a = document.createElement('a');
       a.href = url;
       a.download = `Institutional_Skill_Heatmap_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       showToast(`Exported ${filteredSkills.length} skills to Excel!`);
     } catch {
       showToast('Error exporting Excel document');
@@ -301,7 +303,10 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
     const a = document.createElement('a');
     a.href = url;
     a.download = `Institutional_Skill_Heatmap_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
     a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     showToast('Exported institutional heatmap CSV successfully');
   };
 

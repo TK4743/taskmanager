@@ -157,14 +157,16 @@ export async function downloadStudentPlacementScorecardPdf(studentProfile: any):
   y += 4;
   doc.setFillColor(254, 243, 199);
   doc.setDrawColor(251, 191, 36);
-  doc.rect(margin, y, contentWidth, 12, 'FD');
+  const compLines = doc.splitTextToSize(eligibleCompanies, contentWidth - 10);
+  const compBoxHeight = Math.max(12, compLines.length * 4.5 + 4);
+  doc.rect(margin, y, contentWidth, compBoxHeight, 'FD');
   doc.setFontSize(8.5);
   doc.setTextColor(120, 53, 15);
   doc.setFont('helvetica', 'normal');
-  doc.text(eligibleCompanies, margin + 5, y + 7.5);
+  doc.text(compLines, margin + 5, y + 5.5);
 
   // ── Actionable AI Boost Recommendations ──
-  y += 18;
+  y += compBoxHeight + 6;
   doc.setTextColor(15, 23, 42);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
@@ -341,8 +343,8 @@ export async function downloadCohortPlacementReportPdf(
     doc.text(`${s.leetcode_weekly_streak ?? s.pillars?.leetcode?.weekly_streak ?? 0}d/Wk`, margin + 210, y + 4.5);
     doc.text(`${s.project_count ?? s.pillars?.projects?.count ?? 0} Proj`, margin + 232, y + 4.5);
 
-    const comps = Array.isArray(s.eligible_companies) ? s.eligible_companies.slice(0, 2).join(', ') : '';
-    doc.text(comps || 'General IT', margin + 252, y + 4.5);
+    const comps = Array.isArray(s.eligible_companies) ? s.eligible_companies.slice(0, 2).join(', ') : (s.eligible_companies || '');
+    doc.text(String(comps || 'General IT').slice(0, 22), margin + 252, y + 4.5);
 
     y += 6.5;
   });

@@ -1071,8 +1071,10 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
     const a = document.createElement('a');
     a.href = url;
     a.download = `Institutional_Questions_Template_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     addToast('Template downloaded successfully!', 'success');
   };
 
@@ -1229,8 +1231,10 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
       const a = document.createElement('a');
       a.href = url;
       a.download = `Assessment_Submissions_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       addToast(`Exported ${filtered.length} student scores to Excel!`, 'success');
     } catch (e) {
       addToast('Error exporting results', 'error');
