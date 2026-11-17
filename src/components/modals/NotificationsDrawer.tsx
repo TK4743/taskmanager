@@ -29,8 +29,8 @@ export function NotificationsDrawer({
     <div className="fixed sm:absolute left-2 right-2 sm:left-auto sm:right-0 top-16 sm:top-auto sm:mt-2 w-auto sm:w-96 bg-white dark:bg-[#181820] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-4 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[80vh] overflow-y-auto md:max-h-none md:overflow-visible">
       <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-zinc-100 dark:border-zinc-800">
         <div className="flex items-center gap-2">
-          <div id="app-logo-slot" className="logo-container w-5 h-5 object-contain rounded-full flex items-center justify-center text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200" aria-label="Company Logo Slot">
-            V
+          <div id="app-logo-slot" className="logo-container w-5 h-5 object-contain rounded-full flex items-center justify-center text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 overflow-hidden" aria-label="Company Logo Slot">
+            <img src="/logo.png" alt="IT Vault Logo" className="w-full h-full object-contain" width="20" height="20" loading="eager" decoding="async" />
           </div>
           <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">Notifications</h3>
           {notifications.filter(n => !n.is_read).length > 0 && (

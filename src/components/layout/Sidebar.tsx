@@ -105,7 +105,9 @@ export function Sidebar({
     <div className="flex flex-col h-full bg-white">
       <div className="p-4 border-b border-zinc-100 flex items-center justify-between shrink-0 h-20">
         <div className="flex items-center gap-3">
-          <div id="app-logo-slot" className="logo-container w-11 h-11 rounded-full bg-white p-1.5 overflow-hidden shrink-0 shadow-sm border border-zinc-200 flex items-center justify-center" aria-label="Company Logo Slot"></div>
+          <div id="app-logo-slot" className="logo-container w-11 h-11 rounded-full bg-white p-1.5 overflow-hidden shrink-0 shadow-sm border border-zinc-200 flex items-center justify-center" aria-label="Company Logo Slot">
+            <img src="/logo.png" alt="IT Vault Logo" className="w-full h-full object-contain" width="44" height="44" loading="eager" decoding="async" />
+          </div>
           <div className="min-w-0">
             <span className="font-black text-sm tracking-tight text-zinc-900 block leading-tight">IT Vault</span>
             <span className={cn(

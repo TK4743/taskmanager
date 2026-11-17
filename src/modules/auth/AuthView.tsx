@@ -377,7 +377,9 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
         >
           {/* Header Section */}
           <div className="flex flex-col items-center mb-3 sm:mb-4 text-center">
-            <div id="app-logo-slot" className="logo-container w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white dark:bg-zinc-800 p-1.5 mb-2 shadow-lg border border-zinc-200/80 dark:border-zinc-700/80 ring-4 ring-indigo-50 dark:ring-indigo-950/40 flex items-center justify-center overflow-hidden" aria-label="Company Logo Slot"></div>
+            <div id="app-logo-slot" className="logo-container w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white dark:bg-zinc-800 p-1.5 mb-2 shadow-lg border border-zinc-200/80 dark:border-zinc-700/80 ring-4 ring-indigo-50 dark:ring-indigo-950/40 flex items-center justify-center overflow-hidden" aria-label="Company Logo Slot">
+              <img src="/logo.png" alt="IT Vault Logo" className="w-full h-full object-contain" width="56" height="56" loading="eager" decoding="async" />
+            </div>
             <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">IT Vault</h1>
             <p className="text-zinc-500 dark:text-zinc-400 mt-0.5 text-xs sm:text-sm font-medium">
               VSBEC IT Vault — Academic & Placement Governance Platform

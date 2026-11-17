@@ -361,7 +361,9 @@ export function SettingsView({
         <Card className="p-6 bg-white border-zinc-200 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-100">
             <div className="flex items-center gap-3">
-              <div id="app-logo-slot" className="logo-container w-11 h-11 rounded-full bg-white flex items-center justify-center border border-zinc-200 shadow-sm p-1.5 shrink-0 overflow-hidden" aria-label="Company Logo Slot"></div>
+              <div id="app-logo-slot" className="logo-container w-11 h-11 rounded-full bg-white flex items-center justify-center border border-zinc-200 shadow-sm p-1.5 shrink-0 overflow-hidden" aria-label="Company Logo Slot">
+                <img src="/logo.png" alt="IT Vault Logo" className="w-full h-full object-contain" width="44" height="44" loading="eager" decoding="async" />
+              </div>
               <div>
                 <h3 className="text-base font-black text-zinc-900 flex items-center gap-2">
                   Mobile & Lock Screen Notifications (PWA)

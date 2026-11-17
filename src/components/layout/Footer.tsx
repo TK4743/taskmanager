@@ -15,7 +15,9 @@ export const Footer = ({ onShowModal }: FooterProps) => (
     <div className="w-full flex flex-col lg:flex-row items-center justify-between gap-3 text-xs min-w-0">
       {/* Brand Logo & Name */}
       <div className="flex items-center gap-2.5 shrink-0 min-w-0">
-        <div id="app-logo-slot" className="logo-container w-8 h-8 rounded-full bg-white p-0.5 overflow-hidden shrink-0 border border-zinc-200 shadow-2xs flex items-center justify-center" aria-label="Company Logo Slot"></div>
+        <div id="app-logo-slot" className="logo-container w-8 h-8 rounded-full bg-white p-0.5 overflow-hidden shrink-0 border border-zinc-200 shadow-2xs flex items-center justify-center" aria-label="Company Logo Slot">
+          <img src="/logo.png" alt="IT Vault Logo" className="w-full h-full object-contain" width="32" height="32" loading="eager" decoding="async" />
+        </div>
         <span className="font-extrabold text-zinc-900 text-xs tracking-tight whitespace-nowrap">VSBEC IT Vault</span>
       </div>
 

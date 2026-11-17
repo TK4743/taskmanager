@@ -1240,7 +1240,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
   const totalQuestionCount = activeQuestions.length;
 
   return (
-    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] text-zinc-900 font-sans">
+    <div className="w-full min-h-full overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F5F5F4] dark:bg-[#0f0f12] text-zinc-900 dark:text-zinc-100 font-sans">
       <div className="w-full space-y-6">
 
         {/* ── Header Bar ────────────────────────────────────────────────────── */}

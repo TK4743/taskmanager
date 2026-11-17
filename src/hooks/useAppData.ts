@@ -56,7 +56,15 @@ export function useAppData() {
   });
 
   const [viewingStudentProfileId, setViewingStudentProfileId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    try {
+      const hasCachedUser = !!localStorage.getItem('user');
+      const hasCachedTasks = !!sessionStorage.getItem('app_cache_tasks');
+      return !(hasCachedUser && hasCachedTasks);
+    } catch {
+      return true;
+    }
+  });
   const [hasError, setHasError] = useState<boolean>(false);
 
   // Toast notification state
