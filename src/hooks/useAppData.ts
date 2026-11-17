@@ -879,17 +879,16 @@ export function useAppData() {
     if (!telegramChatIdInput.trim()) return;
     setIsLinkingTelegram(true);
     try {
-      const res = await fetch(`${API_URL}/api/users/me/telegram`, {
+      const res = await fetch(`${API_URL}/api/student/link-telegram`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          chat_id: telegramChatIdInput.trim(),
-          username: telegramUsernameInput.trim() || undefined
+          chatId: telegramChatIdInput.trim(),
+          telegramUsername: telegramUsernameInput.trim() || undefined
         })
       });
       if (res.ok) {
-        const data = await res.json();
-        setUser(prev => prev ? { ...prev, telegram_chat_id: data.chat_id } : null);
+        setUser(prev => prev ? { ...prev, telegram_chat_id: telegramChatIdInput.trim(), telegram_username: telegramUsernameInput.trim() } : null);
         setShowTelegramLinkModal(false);
         addToast('Telegram linked successfully!', 'success');
       } else {
@@ -929,15 +928,20 @@ export function useAppData() {
   const handleUnlinkTelegram = useCallback(async () => {
     if (!confirm('Unlink your Telegram notifications?')) return;
     try {
-      const res = await fetch(`${API_URL}/api/users/me/telegram`, {
+      const res = await fetch(`${API_URL}/api/student/unlink-telegram`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        setUser(prev => prev ? { ...prev, telegram_chat_id: null } : null);
+        setUser(prev => prev ? { ...prev, telegram_chat_id: null, telegram_username: null, telegram_linked_at: null } : null);
         addToast('Telegram unlinked', 'info');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        addToast(data.error || 'Failed to unlink Telegram', 'error');
       }
-    } catch {}
+    } catch {
+      addToast('Network error unlinking Telegram', 'error');
+    }
   }, [token, addToast]);
 
   // Email alert modal handler
