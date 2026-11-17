@@ -6,7 +6,6 @@ import { lazyWithRetry } from './components/common/helpers';
 import { useAppData } from './hooks/useAppData';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
-import { Footer } from './components/layout/Footer';
 import { ToastContainer } from './components/ui/Toast';
 import { AuthView } from './modules/auth/AuthView';
 import { ViewRouter } from './modules/ViewRouter';
@@ -103,8 +102,6 @@ function AppContent() {
             </Suspense>
           </ErrorBoundary>
         </main>
-
-        <Footer onShowModal={(modalType) => app.setFooterModal(modalType)} />
       </div>
 
       <GlobalModals app={app} />

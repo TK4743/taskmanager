@@ -87,7 +87,7 @@ export function DepartmentsView({
               onChange={e => setNewDept(e.target.value)}
               required
             />
-            <Button disabled={isSubmitting} className="whitespace-nowrap flex items-center gap-2">
+            <Button type="submit" disabled={isSubmitting} className="whitespace-nowrap flex items-center gap-2">
               <Plus size={18} /> {isSubmitting ? 'Creating...' : 'Create Department'}
             </Button>
           </form>

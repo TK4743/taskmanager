@@ -206,7 +206,7 @@ export function ClassesView({
                   />
                 </div>
               </div>
-              <Button disabled={isSubmitting} className="flex items-center gap-2">
+              <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2">
                 <Plus size={18} /> Update Class Info
               </Button>
             </form>

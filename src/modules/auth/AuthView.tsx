@@ -472,7 +472,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                       </div>
                     </motion.div>
                   )}
-                  <Button className="w-full py-2.5 sm:py-3 text-base sm:text-lg font-bold rounded-xl mt-1 cursor-pointer">Sign In</Button>
+                  <Button type="submit" className="w-full py-2.5 sm:py-3 text-base sm:text-lg font-bold rounded-xl mt-1 cursor-pointer">Sign In</Button>
 
                   {/* Onboarding Actions: Symmetrical Dual Registration Cards (Task Manager Style) */}
                   <div className="pt-3.5 mt-3.5 border-t border-zinc-100 dark:border-zinc-800">
