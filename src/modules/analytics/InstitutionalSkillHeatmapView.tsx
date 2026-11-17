@@ -3,7 +3,7 @@ import { API_URL } from '../../config';
 import { 
   BarChart3, Sparkles, AlertTriangle, CheckCircle2, TrendingUp, 
   Layers, Search, Download, ShieldCheck, 
-  Activity, RefreshCw, Users
+  Activity, RefreshCw, Users, X, Eye
 } from 'lucide-react';
 
 const API = API_URL || '';
@@ -17,6 +17,7 @@ interface SkillHeatmapItem {
   verified_count: number;
   level_counts: { beginner: number; intermediate: number; advanced: number; expert: number };
   industry_demand: number;
+  students?: Array<{ id: string; name: string; register_number: string; class_name: string }>;
   status: 'STRONG' | 'MODERATE' | 'DEFICIT';
 }
 
@@ -52,6 +53,7 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'STRONG' | 'MODERATE' | 'DEFICIT'>('ALL');
+  const [selectedSkillModal, setSelectedSkillModal] = useState<SkillHeatmapItem | null>(null);
   const [toast, setToast] = useState<string>('');
 
   const availableCategories = useMemo(() => {
@@ -419,9 +421,17 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
                   </tr>
                 ) : (
                   filteredSkills.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-zinc-50/80 transition-colors font-sans">
+                    <tr
+                      key={idx}
+                      onClick={() => setSelectedSkillModal(item)}
+                      className="hover:bg-zinc-100/90 transition-colors font-sans cursor-pointer group"
+                      title="Click to view detailed student breakdown for this skill"
+                    >
                       <td className="p-3.5">
-                        <div className="font-extrabold text-zinc-900 text-xs sm:text-sm">{item.skill_name}</div>
+                        <div className="font-extrabold text-zinc-900 text-xs sm:text-sm flex items-center gap-1.5">
+                          <span>{item.skill_name}</span>
+                          <Eye size={12} className="text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
                         <div className="text-[11px] text-zinc-500 font-medium mt-0.5">{item.category}</div>
                       </td>
 
@@ -495,6 +505,86 @@ export default function InstitutionalSkillHeatmapView({ token, user }: { token: 
           </div>
         </div>
       </div>
+
+      {/* Skill Breakdown Modal */}
+      {selectedSkillModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs cursor-pointer"
+          onClick={() => setSelectedSkillModal(null)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 cursor-default border border-zinc-200"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+              <div>
+                <h3 className="text-lg font-black text-zinc-900">{selectedSkillModal.skill_name}</h3>
+                <p className="text-xs text-zinc-500 font-medium">{selectedSkillModal.category}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedSkillModal(null)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2.5 text-center">
+              <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
+                <div className="text-[10px] font-bold text-zinc-400 uppercase">Adoption</div>
+                <div className="text-base font-extrabold text-zinc-900 mt-0.5">{selectedSkillModal.cohort_percentage}%</div>
+                <div className="text-[10px] text-zinc-500">{selectedSkillModal.student_count} Students</div>
+              </div>
+              <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
+                <div className="text-[10px] font-bold text-zinc-400 uppercase">Proficiency</div>
+                <div className="text-base font-extrabold text-emerald-600 mt-0.5">{selectedSkillModal.avg_proficiency}%</div>
+                <div className="text-[10px] text-zinc-500">Avg Benchmark</div>
+              </div>
+              <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
+                <div className="text-[10px] font-bold text-zinc-400 uppercase">Job Demand</div>
+                <div className="text-base font-extrabold text-indigo-600 mt-0.5">{selectedSkillModal.industry_demand}</div>
+                <div className="text-[10px] text-zinc-500">Active Postings</div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold text-zinc-700 uppercase tracking-wider mb-2">
+                Enrolled Students with Demonstrated Competency ({selectedSkillModal.students?.length || selectedSkillModal.student_count})
+              </h4>
+              <div className="max-h-60 overflow-y-auto divide-y divide-zinc-100 border border-zinc-200 rounded-xl">
+                {selectedSkillModal.students && selectedSkillModal.students.length > 0 ? (
+                  selectedSkillModal.students.map((st, i) => (
+                    <div key={i} className="p-2.5 flex items-center justify-between text-xs hover:bg-zinc-50">
+                      <div>
+                        <div className="font-bold text-zinc-900">{st.name}</div>
+                        <div className="text-[10px] text-zinc-400 font-mono">{st.register_number}</div>
+                      </div>
+                      <span className="text-[11px] font-bold text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-md">
+                        {st.class_name || 'IT Batch'}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-6 text-center text-xs text-zinc-400 font-medium">
+                    Cohort aggregate data active across {selectedSkillModal.student_count} registered students.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedSkillModal(null)}
+                className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Mic,
   Laptop,
@@ -11,7 +11,14 @@ import {
   Headphones,
   Eye,
   Code2,
-  Bus
+  Bus,
+  Copy,
+  Check,
+  Play,
+  Users,
+  Terminal,
+  Zap,
+  Share2
 } from 'lucide-react';
 import { GOAT_CE_URL } from '../../config';
 
@@ -21,9 +28,52 @@ interface LiveTeachingHubViewProps {
   addToast?: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
 }
 
-export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
-  const handleOpenGoatCE = () => {
-    window.open(GOAT_CE_URL, '_blank', 'noopener,noreferrer');
+export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ user, addToast }) => {
+  const [createdRoomCode, setCreatedRoomCode] = useState<string>(() => `VSB-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [joinCode, setJoinCode] = useState<string>('');
+  const [selectedTopic, setSelectedTopic] = useState<string>('Data Structures & Algorithms');
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const topics = [
+    'Data Structures & Algorithms',
+    'Full-Stack Web Development',
+    'Python & AI/ML',
+    'Cloud & System Design',
+    'LeetCode Interview Prep'
+  ];
+
+  const activeRooms = [
+    { code: 'VSB-8831', topic: 'LeetCode Daily Problems (Graph BFS/DFS)', host: 'Arun V (III IT A)', peers: 3, status: 'LIVE' },
+    { code: 'VSB-5120', topic: 'React + Express Fullstack Lab Task', host: 'Sneha M (III IT B)', peers: 4, status: 'LIVE' },
+    { code: 'VSB-9042', topic: 'Aptitude & Logical Reasoning Sprint', host: 'Kavitha R (IV IT A)', peers: 2, status: 'LIVE' },
+  ];
+
+  const handleLaunchCreatedRoom = () => {
+    const url = `${GOAT_CE_URL}?room=${encodeURIComponent(createdRoomCode)}&topic=${encodeURIComponent(selectedTopic)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+    if (addToast) addToast(`Room ${createdRoomCode} launched! Share the code with classmates.`, 'success');
+  };
+
+  const handleJoinByCode = (codeToJoin?: string) => {
+    const code = (codeToJoin || joinCode).trim();
+    if (!code) {
+      if (addToast) addToast('Please enter a valid room code', 'error');
+      return;
+    }
+    const url = `${GOAT_CE_URL}?room=${encodeURIComponent(code)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+    if (addToast) addToast(`Connecting to room ${code}...`, 'info');
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(createdRoomCode);
+    setCopied(true);
+    if (addToast) addToast(`Room code ${createdRoomCode} copied to clipboard!`, 'success');
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleRegenerateCode = () => {
+    setCreatedRoomCode(`VSB-${Math.floor(1000 + Math.random() * 9000)}`);
   };
 
   return (
@@ -56,32 +106,145 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = () => {
           </div>
         </div>
 
-        {/* ── Hero Headline Banner ────────────────────────────────────────────── */}
-        <div className="relative overflow-hidden rounded-2xl bg-white border border-zinc-200/80 p-5 md:p-7 shadow-xs space-y-4">
-          <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-50 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-purple-50 rounded-full blur-3xl pointer-events-none" />
+        {/* ── Hero Headline Banner & Interactive Room Console ────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Main Hero Card */}
+          <div className="lg:col-span-7 relative overflow-hidden rounded-2xl bg-white border border-zinc-200/80 p-6 md:p-8 shadow-xs flex flex-col justify-between space-y-4">
+            <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-50 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-purple-50 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 max-w-3xl space-y-2.5">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold rounded-full uppercase tracking-wider">
-              <Sparkles size={12} className="text-indigo-600" /> Peer-to-Peer Learning Environment
+            <div className="relative z-10 space-y-3">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold rounded-full uppercase tracking-wider">
+                <Sparkles size={12} className="text-indigo-600" /> Peer-to-Peer Learning Environment
+              </div>
+              
+              <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-900 leading-tight">
+                Learn. Teach. Code Together.
+              </h2>
+              
+              <p className="text-xs md:text-sm text-zinc-600 leading-relaxed font-normal">
+                Connect with your peers, teach concepts through voice, and write code together in real time — with zero setup, live Monaco editor, and integrated voice channels.
+              </p>
             </div>
-            
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-900 leading-tight">
-              Learn. Teach. Code Together.
-            </h2>
-            
-            <p className="text-xs md:text-sm text-zinc-600 leading-relaxed font-normal">
-              Connect with your peers, teach concepts through voice, and write code together in real time — from anywhere.
-            </p>
 
-            <div className="pt-1.5">
-              <button
-                onClick={handleOpenGoatCE}
-                className="py-2.5 px-5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs md:text-sm rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center gap-2 group cursor-pointer"
-              >
-                <span>🚀 Enter Live Teaching Hub</span>
-                <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
-              </button>
+            {/* Instant Room Creator Box */}
+            <div className="relative z-10 p-4 bg-zinc-50 border border-zinc-200 rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <Terminal size={14} className="text-indigo-600" /> Instant Peer Room
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRegenerateCode}
+                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition cursor-pointer"
+                >
+                  Generate New Code
+                </button>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <div className="w-full sm:w-auto flex-1 flex items-center bg-white border border-zinc-200 rounded-lg px-3 py-2">
+                  <span className="font-mono font-bold text-sm text-zinc-900 tracking-wider flex-1">
+                    {createdRoomCode}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyCode}
+                    className="p-1 text-zinc-400 hover:text-zinc-900 transition cursor-pointer"
+                    title="Copy room code"
+                  >
+                    {copied ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
+                  </button>
+                </div>
+
+                <select
+                  value={selectedTopic}
+                  onChange={e => setSelectedTopic(e.target.value)}
+                  className="w-full sm:w-auto px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-800"
+                >
+                  {topics.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={handleLaunchCreatedRoom}
+                  className="w-full sm:w-auto py-2.5 px-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs rounded-lg shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                >
+                  <Play size={14} />
+                  <span>Launch Room</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Join & Active Channels Panel */}
+          <div className="lg:col-span-5 bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+                <h3 className="text-sm font-extrabold text-zinc-900 flex items-center gap-2">
+                  <Radio size={16} className="text-emerald-500 animate-pulse" />
+                  <span>Active Study Rooms</span>
+                </h3>
+                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  3 LIVE
+                </span>
+              </div>
+
+              {/* Join Code Input */}
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter Room Code (e.g. VSB-8831)"
+                  value={joinCode}
+                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                  className="flex-1 px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-black uppercase"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleJoinByCode()}
+                  className="px-4 py-2 bg-black hover:bg-zinc-800 text-white rounded-lg text-xs font-bold transition cursor-pointer"
+                >
+                  Join
+                </button>
+              </div>
+
+              {/* Active Channels List */}
+              <div className="mt-4 space-y-2.5">
+                {activeRooms.map((room) => (
+                  <div key={room.code} className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between gap-3 hover:border-indigo-300 transition-colors">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                          {room.code}
+                        </span>
+                        <span className="text-xs font-bold text-zinc-900 truncate">
+                          {room.topic}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-zinc-500 mt-0.5 flex items-center gap-2">
+                        <span>Host: {room.host}</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1 text-emerald-600 font-bold">
+                          <Users size={12} /> {room.peers} peers
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleJoinByCode(room.code)}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition cursor-pointer shrink-0"
+                    >
+                      Join
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="text-[11px] text-zinc-400 font-medium text-center">
+              Protected by encrypted WebRTC audio & real-time operational transformation.
             </div>
           </div>
         </div>

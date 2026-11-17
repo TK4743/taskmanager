@@ -234,6 +234,7 @@ export function ViewRouter({ app }: { app: any }) {
           user={app.user}
           token={app.token}
           onNavigateToAssessment={() => app.setView('skill-assessment')}
+          onViewStudentProfile={(student) => app.setViewingStaffStudentProfile(student)}
           addToast={app.addToast}
         />
       );

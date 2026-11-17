@@ -26,13 +26,15 @@ interface PlacementReadinessViewProps {
   token: string | null;
   addToast: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
   onNavigateToAssessment?: () => void;
+  onViewStudentProfile?: (student: any) => void;
 }
 
 export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
   user,
   token,
   addToast,
-  onNavigateToAssessment
+  onNavigateToAssessment,
+  onViewStudentProfile
 }) => {
   const isSupreme = user?.role === 'SUPREME_ADMIN';
   const isHOD = user?.role === 'HOD';
@@ -697,11 +699,20 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                         <th className="p-3">Projects Built (20%)</th>
                         <th className="p-3">Tasks (20%)</th>
                         <th className="p-3 text-right">Eligible Companies</th>
+                        <th className="p-3 text-center">Dossier</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100">
                       {filteredStudents.map(s => (
-                        <tr key={s.id} className="hover:bg-zinc-50/80 font-medium font-sans">
+                        <tr
+                          key={s.id}
+                          onClick={() => onViewStudentProfile?.(s)}
+                          className={cn(
+                            "hover:bg-zinc-50/90 font-medium font-sans transition-colors",
+                            onViewStudentProfile ? "cursor-pointer group" : ""
+                          )}
+                          title="Click to view comprehensive student dossier"
+                        >
                           {/* Student Info */}
                           <td className="p-3 font-bold text-zinc-900 flex items-center gap-2.5">
                             {s.proctor_photo_url ? (
@@ -807,6 +818,22 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                             <span className="text-[11px] font-semibold text-zinc-600">
                               {s.eligible_companies?.slice(0, 2).join(', ') || 'None yet'}
                             </span>
+                          </td>
+
+                          {/* Action / Student Dossier */}
+                          <td className="p-3 text-center">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onViewStudentProfile?.(s);
+                              }}
+                              className="px-2.5 py-1 bg-zinc-100 hover:bg-zinc-900 hover:text-white rounded-lg text-[11px] font-bold text-zinc-700 transition flex items-center justify-center gap-1 mx-auto cursor-pointer shadow-2xs group-hover:bg-zinc-900 group-hover:text-white"
+                              title="Open Student Profile Dossier"
+                            >
+                              <Eye size={12} />
+                              <span>View Dossier</span>
+                            </button>
                           </td>
                         </tr>
                       ))}
