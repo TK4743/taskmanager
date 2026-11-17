@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS users (
   telegram_username VARCHAR(100),
   telegram_linked_at TIMESTAMP,
   leetcode_url VARCHAR(255),
+  is_approved BOOLEAN DEFAULT TRUE,
+  rejection_reason TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -135,3 +137,23 @@ CREATE INDEX IF NOT EXISTS idx_tasks_pre_deadline ON tasks (status, deadline, ba
 CREATE INDEX IF NOT EXISTS idx_task_submissions_task_id ON task_submissions (task_id);
 CREATE INDEX IF NOT EXISTS idx_task_submissions_status ON task_submissions (status);
 CREATE INDEX IF NOT EXISTS idx_task_submissions_hash ON task_submissions (proof_file_hash);
+
+-- 9. Student Signup Temporary OTP Registrations Table
+CREATE TABLE IF NOT EXISTS student_signup_otps (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  register_number VARCHAR(50) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL,
+  full_name VARCHAR(255) NOT NULL,
+  department_id UUID REFERENCES departments(id) ON DELETE CASCADE,
+  class_id UUID REFERENCES classes(id) ON DELETE CASCADE,
+  password_hash VARCHAR(255) NOT NULL,
+  otp_code VARCHAR(10) NOT NULL,
+  attempts INT DEFAULT 0,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_student_signup_otps_reg ON student_signup_otps (register_number);
+CREATE INDEX IF NOT EXISTS idx_student_signup_otps_email ON student_signup_otps (email);
+CREATE INDEX IF NOT EXISTS idx_student_signup_otps_expires ON student_signup_otps (expires_at);

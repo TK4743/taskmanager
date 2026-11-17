@@ -1446,6 +1446,32 @@ export async function initDB(forceMigration: boolean = false) {
 
     console.log('[SIH26044] Industry Short Coding Assessment tables initialized successfully.');
 
+    // ─── 🎓 Student Self-Registration with Advisor Approval Tables ──────────────
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT TRUE;`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS rejection_reason TEXT;`);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS student_signup_otps (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        register_number VARCHAR(50) NOT NULL UNIQUE,
+        email VARCHAR(255) NOT NULL,
+        full_name VARCHAR(255) NOT NULL,
+        department_id UUID REFERENCES departments(id) ON DELETE CASCADE,
+        class_id UUID REFERENCES classes(id) ON DELETE CASCADE,
+        password_hash VARCHAR(255) NOT NULL,
+        otp_code VARCHAR(10) NOT NULL,
+        attempts INT DEFAULT 0,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_student_signup_otps_reg ON student_signup_otps (register_number);
+      CREATE INDEX IF NOT EXISTS idx_student_signup_otps_email ON student_signup_otps (email);
+      CREATE INDEX IF NOT EXISTS idx_student_signup_otps_expires ON student_signup_otps (expires_at);
+    `);
+    console.log('[Registration] Student self-signup OTP tables initialized successfully.');
+
     // ─── 🛡️ Supabase Security & Row Level Security (RLS) Auto-Enforcement ───
     try {
       await client.query(`

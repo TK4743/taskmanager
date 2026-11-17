@@ -1530,6 +1530,171 @@ export async function sendPasswordResetOtpEmail(payload: PasswordResetOtpPayload
   return await dispatchEmailThroughPool(to, studentName, subject, htmlContent, 'VSBEC IT Security Desk');
 }
 
+export interface StudentRegistrationOtpPayload {
+  to: string;
+  studentName: string;
+  registerNumber: string;
+  className?: string;
+  departmentName?: string;
+  otpCode: string;
+  expiresInMinutes?: number;
+}
+
+/**
+ * 🎓 Dispatches an official 6-digit Brevo OTP email for new Student Self-Registration
+ */
+export async function sendStudentRegistrationOtpEmail(payload: StudentRegistrationOtpPayload): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const { to, studentName, registerNumber, className = 'Assigned Section', departmentName = 'Information Technology' } = payload;
+  const otpCode = String(payload.otpCode || '000000');
+  const expiresInMinutes = payload.expiresInMinutes || 10;
+  const subject = `🎓 Student Verification Code: ${otpCode} — VSBEC IT Task Manager`;
+  const currentDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 24px 8px; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #cbd5e1; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);">
+    
+    <!-- Institutional Header -->
+    <tr>
+      <td style="padding: 28px 24px 20px 24px; background-color: #ffffff; border-bottom: 2px solid #2563eb; text-align: center;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="center" style="padding-bottom: 12px;">
+              <img src="${COLLEGE_LOGO_URL}" alt="VSBEC IT Emblem" width="76" height="76" style="display: block; width: 76px; height: 76px; border-radius: 50%; border: 2px solid #d97706; box-shadow: 0 2px 8px rgba(0,0,0,0.15);" />
+            </td>
+          </tr>
+          <tr>
+            <td align="center">
+              <h1 style="margin: 0 0 4px 0; font-size: 20px; font-weight: 900; color: #0f172a; letter-spacing: -0.01em; text-transform: uppercase; font-family: Georgia, 'Times New Roman', serif;">
+                VSB Engineering College
+              </h1>
+              <h2 style="margin: 0 0 6px 0; font-size: 13px; font-weight: 700; color: #1e3a8a; letter-spacing: 0.08em; text-transform: uppercase;">
+                ${departmentName}
+              </h2>
+              <span style="display: inline-block; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 3px 10px; font-size: 11px; font-weight: 700; color: #1d4ed8; letter-spacing: 0.05em;">
+                STUDENT REGISTRATION VERIFICATION
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Reference Bar -->
+    <tr>
+      <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 10px 24px; font-size: 11px;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 0.03em; color: #1e3a8a;">
+              STUDENT ONBOARDING SYSTEM
+            </td>
+            <td align="right" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #64748b; font-weight: 500;">
+              REF DATE: ${currentDate}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Salutation & Context -->
+    <tr>
+      <td style="padding: 24px 24px 16px 24px;">
+        <p style="margin: 0 0 12px 0; font-size: 14px; line-height: 22px; color: #334155;">
+          Dear <b>${studentName}</b>,
+        </p>
+        <p style="margin: 0 0 16px 0; font-size: 13px; line-height: 20px; color: #475569;">
+          We received a student registration request for your profile on the <b>VSBEC IT Task Manager Portal</b>. Please enter the verification code below to verify your email address. Once verified, your profile will be sent to your <b>Class Advisor</b> for final roster verification.
+        </p>
+      </td>
+    </tr>
+
+    <!-- Registration Summary Table -->
+    <tr>
+      <td style="padding: 0 24px 20px 24px;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <tr>
+            <td style="padding: 10px 14px; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0; width: 40%; font-weight: 600;">Register Number:</td>
+            <td style="padding: 10px 14px; font-size: 12px; color: #0f172a; border-bottom: 1px solid #e2e8f0; font-weight: 700; font-family: monospace;">${registerNumber}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 14px; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Class / Section:</td>
+            <td style="padding: 10px 14px; font-size: 12px; color: #0f172a; border-bottom: 1px solid #e2e8f0; font-weight: 700;">${className}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 14px; font-size: 12px; color: #64748b; font-weight: 600;">Department:</td>
+            <td style="padding: 10px 14px; font-size: 12px; color: #0f172a; font-weight: 700;">${departmentName}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Secure OTP Display Box -->
+    <tr>
+      <td align="center" style="padding: 10px 24px 24px 24px;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px dashed #2563eb; border-radius: 12px; padding: 20px 36px; text-align: center;">
+          <tr>
+            <td align="center">
+              <span style="display: block; font-size: 11px; font-weight: 800; color: #1e40af; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 8px;">
+                Your 6-Digit Verification Code
+              </span>
+              <span style="font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 900; letter-spacing: 12px; color: #1e3a8a; padding-left: 12px; display: inline-block;">
+                ${otpCode}
+              </span>
+              <span style="display: block; font-size: 11px; color: #64748b; margin-top: 10px; font-weight: 600;">
+                ⏱️ Valid for exactly <b>${expiresInMinutes} minutes</b>. Do not share this code.
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Next Steps Notice -->
+    <tr>
+      <td style="padding: 0 24px 24px 24px;">
+        <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 4px;">
+          <p style="margin: 0; font-size: 12px; line-height: 18px; color: #92400e;">
+            <b>What happens next?</b> After you enter this code on the portal, your account will be placed in <i>Pending Approval</i>. Your designated Class Advisor will review and approve your registration, granting full access to tasks, attendance, and placement tests.
+          </p>
+        </div>
+      </td>
+    </tr>
+
+    <!-- Institutional Footer -->
+    <tr>
+      <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 24px; text-align: center;">
+        <p style="margin: 0 0 6px 0; font-size: 12px; color: #0f172a; font-weight: 800; text-transform: uppercase;">
+          Department of ${departmentName}
+        </p>
+        <p style="margin: 0 0 10px 0; font-size: 11px; color: #475569;">
+          VSB Engineering College, NH-67 Covai Road, Karur, Tamil Nadu — 639111
+        </p>
+        <p style="margin: 0 0 6px 0; font-size: 12px; color: #334155; font-weight: 600; letter-spacing: 0.02em;">
+          Developed and Maintained by <a href="https://tharunkumark4743.netlify.app/" style="color: #1d4ed8; text-decoration: underline; font-weight: 800;">Tharunkumar K</a>
+        </p>
+        <p style="margin: 6px 0 0 0; font-size: 10px; color: #94a3b8;">
+          🔒 <i>CONFIDENTIALITY NOTICE: This transmission is intended solely for ${to}. Generated automatically by VSBEC IT DEPARTMENT.</i>
+        </p>
+      </td>
+    </tr>
+
+  </table>
+
+</body>
+</html>
+  `;
+
+  return await dispatchEmailThroughPool(to, studentName, subject, htmlContent, 'VSBEC Student Admissions');
+}
+
 /**
  * Dispatches an official Task Pending Reminder email to an incomplete student.
  */

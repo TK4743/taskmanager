@@ -40,6 +40,7 @@ import {
   triggerDeadlineUrgentEmailReminders,
   notifyNoticeBoardAnnouncementEmail,
   getLiveEmailNodesStatus,
+  sendStudentRegistrationOtpEmail,
   sendAssessmentInvitationEmail,
   triggerAssessmentCampaignEmails,
   sendAptitudeAssessmentResultEmail,
@@ -1723,6 +1724,37 @@ async function startServer() {
       }
     }
 
+    // ── Class Advisor Approval Gatekeeper for Registered Students ──
+    if (user.role === 'STUDENT') {
+      if (user.is_approved === false || user.status === 'PENDING_APPROVAL') {
+        let advisorName = 'your Class Advisor';
+        try {
+          if (user.class_id) {
+            const advRes = await pool.query(
+              `SELECT full_name FROM users WHERE role = 'CLASS_ADVISOR' AND class_id = $1 LIMIT 1`,
+              [user.class_id]
+            );
+            if (advRes.rowCount && advRes.rows[0]?.full_name) {
+              advisorName = advRes.rows[0].full_name;
+            }
+          }
+        } catch {
+          // Fallback
+        }
+        return res.status(403).json({
+          status: 'PENDING_APPROVAL',
+          error: `Your student account is currently pending approval by ${advisorName}. You will be able to log in once your Class Advisor verifies your registration.`
+        });
+      }
+
+      if (user.status === 'REJECTED') {
+        return res.status(403).json({
+          status: 'REJECTED',
+          error: `Your student account registration was not approved. Reason: ${user.rejection_reason || 'Information mismatch'}. Please contact your Class Advisor.`
+        });
+      }
+    }
+
     const token = jwt.sign({
       id: user.id,
       username: user.username,
@@ -1967,6 +1999,359 @@ async function startServer() {
     });
   }));
 
+  // ── 🎓 Student Self-Registration with Brevo 6-Digit OTP Verification ─────────
+  app.post('/api/auth/student-signup/request-otp', asyncHandler(async (req: Request, res: Response) => {
+    const { fullName, registerNumber, email, departmentId, classId, password } = req.body;
+
+    if (!fullName || !fullName.trim()) {
+      return res.status(400).json({ error: 'Full Name is required.' });
+    }
+    const cleanRegNo = (registerNumber || '').trim();
+    if (!cleanRegNo || cleanRegNo.length < 5) {
+      return res.status(400).json({ error: 'Valid University Register Number is required.' });
+    }
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      return res.status(400).json({ error: 'Valid student email address is required.' });
+    }
+    if (!departmentId) {
+      return res.status(400).json({ error: 'Department selection is required.' });
+    }
+    if (!classId) {
+      return res.status(400).json({ error: 'Class & Section selection is required.' });
+    }
+    const cleanPassword = (password || '').trim();
+    if (!cleanPassword || cleanPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+
+    // Check duplicate register number or email in users
+    const existingUser = await pool.query(
+      `SELECT id, username, email, register_number FROM users 
+       WHERE LOWER(TRIM(username)) = LOWER($1) 
+          OR LOWER(TRIM(register_number)) = LOWER($1) 
+          OR LOWER(TRIM(email)) = LOWER($2) LIMIT 1`,
+      [cleanRegNo, cleanEmail]
+    );
+    if (existingUser.rowCount && existingUser.rowCount > 0) {
+      const match = existingUser.rows[0];
+      if (match.register_number?.toLowerCase() === cleanRegNo.toLowerCase() || match.username?.toLowerCase() === cleanRegNo.toLowerCase()) {
+        return res.status(409).json({ error: `Register Number "${cleanRegNo}" is already registered. Please sign in or use Forgot Password.` });
+      }
+      return res.status(409).json({ error: `Email "${cleanEmail}" is already linked to an existing account. Please sign in or use a different email.` });
+    }
+
+    // Verify class and department validity
+    const classCheck = await pool.query(
+      `SELECT c.id as class_id, c.name as class_name, d.id as dept_id, d.name as dept_name
+       FROM classes c
+       JOIN departments d ON d.id = c.department_id
+       WHERE c.id = $1 AND d.id = $2 LIMIT 1`,
+      [classId, departmentId]
+    );
+    if (classCheck.rowCount === 0) {
+      return res.status(400).json({ error: 'Selected Class/Section does not belong to the selected Department.' });
+    }
+    const classInfo = classCheck.rows[0];
+
+    // Check rate limit on recent OTP requests (< 60 seconds)
+    const existingOtp = await pool.query(
+      `SELECT updated_at, expires_at FROM student_signup_otps WHERE register_number = $1 LIMIT 1`,
+      [cleanRegNo]
+    );
+    if (existingOtp.rowCount && existingOtp.rowCount > 0) {
+      const lastUpdated = new Date(existingOtp.rows[0].updated_at).getTime();
+      const elapsedSeconds = Math.floor((Date.now() - lastUpdated) / 1000);
+      if (elapsedSeconds < 60) {
+        return res.status(429).json({
+          error: `Please wait ${60 - elapsedSeconds} seconds before requesting a new verification code.`,
+          retryAfter: 60 - elapsedSeconds
+        });
+      }
+    }
+
+    // Cryptographic 6-digit OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedPassword = await bcrypt.hash(cleanPassword, 10);
+
+    // Upsert into student_signup_otps
+    await pool.query(
+      `INSERT INTO student_signup_otps (
+         register_number, email, full_name, department_id, class_id, password_hash, otp_code, attempts, expires_at, created_at, updated_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 0, NOW() + INTERVAL '10 minutes', NOW(), NOW())
+       ON CONFLICT (register_number) DO UPDATE SET
+         email = EXCLUDED.email,
+         full_name = EXCLUDED.full_name,
+         department_id = EXCLUDED.department_id,
+         class_id = EXCLUDED.class_id,
+         password_hash = EXCLUDED.password_hash,
+         otp_code = EXCLUDED.otp_code,
+         attempts = 0,
+         expires_at = NOW() + INTERVAL '10 minutes',
+         updated_at = NOW();`,
+      [cleanRegNo, cleanEmail, cleanStudentName(fullName), departmentId, classId, hashedPassword, otpCode]
+    );
+
+    // Dispatch email via Brevo
+    try {
+      await sendStudentRegistrationOtpEmail({
+        to: cleanEmail,
+        studentName: cleanStudentName(fullName),
+        registerNumber: cleanRegNo,
+        className: classInfo.class_name,
+        departmentName: classInfo.dept_name,
+        otpCode,
+        expiresInMinutes: 10
+      });
+    } catch (mailErr: any) {
+      console.error('[StudentSignup] Brevo OTP email delivery error:', mailErr);
+    }
+
+    res.json({
+      success: true,
+      message: 'Verification code sent to your email.',
+      maskedEmail: maskEmail(cleanEmail),
+      expiresInSeconds: 600,
+      cooldownSeconds: 60
+    });
+  }));
+
+  app.post('/api/auth/student-signup/resend-otp', asyncHandler(async (req: Request, res: Response) => {
+    const { registerNumber } = req.body;
+    const cleanRegNo = (registerNumber || '').trim();
+    if (!cleanRegNo) return res.status(400).json({ error: 'Register Number is required.' });
+
+    const otpRes = await pool.query(
+      `SELECT s.*, c.name as class_name, d.name as dept_name
+       FROM student_signup_otps s
+       LEFT JOIN classes c ON c.id = s.class_id
+       LEFT JOIN departments d ON d.id = s.department_id
+       WHERE s.register_number = $1 LIMIT 1`,
+      [cleanRegNo]
+    );
+    if (otpRes.rowCount === 0) {
+      return res.status(404).json({ error: 'No active registration session found. Please fill in your details again.' });
+    }
+    const record = otpRes.rows[0];
+
+    const lastUpdated = new Date(record.updated_at).getTime();
+    const elapsedSeconds = Math.floor((Date.now() - lastUpdated) / 1000);
+    if (elapsedSeconds < 60) {
+      return res.status(429).json({
+        error: `Please wait ${60 - elapsedSeconds} seconds before requesting a new code.`,
+        retryAfter: 60 - elapsedSeconds
+      });
+    }
+
+    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    await pool.query(
+      `UPDATE student_signup_otps 
+       SET otp_code = $1, attempts = 0, expires_at = NOW() + INTERVAL '10 minutes', updated_at = NOW() 
+       WHERE register_number = $2`,
+      [newOtp, cleanRegNo]
+    );
+
+    try {
+      await sendStudentRegistrationOtpEmail({
+        to: record.email,
+        studentName: record.full_name,
+        registerNumber: record.register_number,
+        className: record.class_name || 'Assigned Section',
+        departmentName: record.dept_name || 'Information Technology',
+        otpCode: newOtp,
+        expiresInMinutes: 10
+      });
+    } catch (mailErr: any) {
+      console.error('[StudentSignup] Resend Brevo OTP error:', mailErr);
+    }
+
+    res.json({
+      success: true,
+      message: 'New verification code sent to your email.',
+      maskedEmail: maskEmail(record.email),
+      expiresInSeconds: 600,
+      cooldownSeconds: 60
+    });
+  }));
+
+  app.post('/api/auth/student-signup/verify-and-register', asyncHandler(async (req: Request, res: Response) => {
+    const { registerNumber, otp } = req.body;
+    const cleanRegNo = (registerNumber || '').trim();
+    const cleanOtp = (otp || '').trim();
+
+    if (!cleanRegNo) return res.status(400).json({ error: 'Register Number is required.' });
+    if (!cleanOtp || cleanOtp.length !== 6) return res.status(400).json({ error: 'Please enter a valid 6-digit verification code.' });
+
+    const otpRes = await pool.query(
+      `SELECT s.*, c.name as class_name, d.name as dept_name
+       FROM student_signup_otps s
+       LEFT JOIN classes c ON c.id = s.class_id
+       LEFT JOIN departments d ON d.id = s.department_id
+       WHERE s.register_number = $1 LIMIT 1`,
+      [cleanRegNo]
+    );
+    if (otpRes.rowCount === 0) {
+      return res.status(404).json({ error: 'Registration request expired or not found. Please restart registration.' });
+    }
+    const record = otpRes.rows[0];
+
+    // Check expiration
+    if (new Date(record.expires_at).getTime() < Date.now()) {
+      return res.status(400).json({ error: 'Verification code has expired. Please click "Resend Code".' });
+    }
+
+    // Check max attempts
+    if (record.attempts >= 5) {
+      return res.status(429).json({ error: 'Too many invalid attempts. Please request a new code.' });
+    }
+
+    if (record.otp_code !== cleanOtp) {
+      await pool.query(
+        `UPDATE student_signup_otps SET attempts = attempts + 1, updated_at = NOW() WHERE register_number = $1`,
+        [cleanRegNo]
+      );
+      return res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
+    }
+
+    // Successful OTP verification -> Create User in PENDING_APPROVAL state
+    try {
+      const newUserRes = await pool.query(
+        `INSERT INTO users (
+           username, password, role, department_id, class_id, full_name, email,
+           register_number, is_coordinator, status, is_approved
+         ) VALUES ($1, $2, 'STUDENT', $3, $4, $5, $6, $7, FALSE, 'PENDING_APPROVAL', FALSE)
+         RETURNING id, username, full_name, email, role, register_number, department_id, class_id, status, is_approved`,
+        [
+          record.register_number,
+          record.password_hash,
+          record.department_id,
+          record.class_id,
+          record.full_name,
+          record.email,
+          record.register_number
+        ]
+      );
+      const student = newUserRes.rows[0];
+
+      // Remove consumed OTP record
+      await pool.query(`DELETE FROM student_signup_otps WHERE register_number = $1`, [cleanRegNo]);
+
+      // Notify Class Advisor(s) assigned to this class
+      try {
+        await pool.query(
+          `INSERT INTO notifications (user_id, message, type)
+           SELECT id, 'New student ' || $1 || ' (' || $2 || ') registered for your section and requires approval.', 'STUDENT_APPROVAL_REQUIRED'
+           FROM users 
+           WHERE role = 'CLASS_ADVISOR' AND class_id = $3`,
+          [student.full_name, student.register_number, student.class_id]
+        );
+      } catch (notifErr) {
+        console.warn('[StudentSignup] Notification to advisor warning:', notifErr);
+      }
+
+      // Invalidate users cache
+      invalidateApiCache('users_');
+
+      res.status(201).json({
+        success: true,
+        message: 'Registration submitted successfully! Your account is now pending Class Advisor approval.',
+        student: {
+          id: student.id,
+          fullName: student.full_name,
+          registerNumber: student.register_number,
+          email: student.email,
+          className: record.class_name,
+          departmentName: record.dept_name,
+          status: 'PENDING_APPROVAL'
+        }
+      });
+    } catch (insertErr: any) {
+      if (insertErr.code === '23505') {
+        return res.status(409).json({ error: 'This Register Number or Email is already registered.' });
+      }
+      console.error('[StudentSignup] User creation error:', insertErr);
+      return res.status(500).json({ error: 'Failed to create student account. Please try again.' });
+    }
+  }));
+
+  // ── Class Advisor Pending Student Approvals Endpoints ──────────────────────
+  app.get('/api/advisor/pending-students', authenticate, authorize(['CLASS_ADVISOR', 'HOD', 'SUPREME_ADMIN']), asyncHandler(async (req: any, res: Response) => {
+    let query = `
+      SELECT u.id, u.username, u.full_name, u.email, u.register_number, u.status, u.is_approved, u.created_at,
+             d.name as department_name, c.name as class_name, c.year, c.batch
+      FROM users u
+      LEFT JOIN departments d ON d.id = u.department_id
+      LEFT JOIN classes c ON c.id = u.class_id
+      WHERE u.role = 'STUDENT' AND (u.is_approved = FALSE OR u.status = 'PENDING_APPROVAL')
+    `;
+    const params: any[] = [];
+    if (req.user.role === 'CLASS_ADVISOR') {
+      params.push(req.user.class_id);
+      query += ` AND u.class_id = $1`;
+    } else if (req.user.role === 'HOD') {
+      params.push(req.user.department_id);
+      query += ` AND u.department_id = $1`;
+    }
+    query += ` ORDER BY u.created_at DESC`;
+
+    const pendingRes = await pool.query(query, params);
+    res.json({ students: pendingRes.rows, count: pendingRes.rowCount });
+  }));
+
+  app.post('/api/advisor/pending-students/:id/approve', authenticate, authorize(['CLASS_ADVISOR', 'HOD', 'SUPREME_ADMIN']), asyncHandler(async (req: any, res: Response) => {
+    const { id } = req.params;
+    let checkQuery = `SELECT * FROM users WHERE id = $1 AND role = 'STUDENT' LIMIT 1`;
+    const checkRes = await pool.query(checkQuery, [id]);
+    if (checkRes.rowCount === 0) return res.status(404).json({ error: 'Student not found.' });
+    const student = checkRes.rows[0];
+
+    if (req.user.role === 'CLASS_ADVISOR' && String(student.class_id) !== String(req.user.class_id)) {
+      return res.status(403).json({ error: 'Forbidden: You can only approve students from your assigned class.' });
+    }
+    if (req.user.role === 'HOD' && String(student.department_id) !== String(req.user.department_id)) {
+      return res.status(403).json({ error: 'Forbidden: You can only approve students from your department.' });
+    }
+
+    await pool.query(
+      `UPDATE users SET is_approved = TRUE, status = 'ACTIVE', updated_at = NOW() WHERE id = $1`,
+      [id]
+    );
+
+    // Send in-app notification to student
+    try {
+      await pool.query(
+        `INSERT INTO notifications (user_id, message, type) 
+         VALUES ($1, '🎉 Your student account has been approved by your Class Advisor! You now have full access to portal tasks and attendance.', 'ACCOUNT_APPROVED')`,
+        [id]
+      );
+    } catch {}
+
+    invalidateApiCache('users_');
+    res.json({ success: true, message: `Student ${student.full_name} (${student.register_number}) approved successfully.` });
+  }));
+
+  app.post('/api/advisor/pending-students/:id/reject', authenticate, authorize(['CLASS_ADVISOR', 'HOD', 'SUPREME_ADMIN']), asyncHandler(async (req: any, res: Response) => {
+    const { id } = req.params;
+    const { rejectionReason } = req.body;
+    let checkQuery = `SELECT * FROM users WHERE id = $1 AND role = 'STUDENT' LIMIT 1`;
+    const checkRes = await pool.query(checkQuery, [id]);
+    if (checkRes.rowCount === 0) return res.status(404).json({ error: 'Student not found.' });
+    const student = checkRes.rows[0];
+
+    if (req.user.role === 'CLASS_ADVISOR' && String(student.class_id) !== String(req.user.class_id)) {
+      return res.status(403).json({ error: 'Forbidden: You can only review students from your assigned class.' });
+    }
+
+    const reason = (rejectionReason || 'Details mismatch with institutional records').trim();
+    await pool.query(
+      `UPDATE users SET is_approved = FALSE, status = 'REJECTED', rejection_reason = $1, updated_at = NOW() WHERE id = $2`,
+      [reason, id]
+    );
+
+    invalidateApiCache('users_');
+    res.json({ success: true, message: `Student registration rejected.` });
+  }));
+
   app.get('/api/auth/me', authenticate, asyncHandler(async (req: any, res: Response) => {
     const cacheKey = `me_${req.user.id}`;
     const cached = getApiCache(cacheKey);
@@ -2020,6 +2405,22 @@ async function startServer() {
 
 
 
+
+  // ── Public Academic Structure for Student Registration ───────────────────
+  app.get('/api/public/academic-structure', asyncHandler(async (_req: Request, res: Response) => {
+    const cached = getApiCache('public_academic_structure');
+    if (cached) return res.json(cached);
+
+    const deptsRes = await pool.query('SELECT id, name FROM departments ORDER BY name ASC');
+    const classesRes = await pool.query('SELECT id, name, department_id, year, batch FROM classes ORDER BY year ASC, name ASC');
+
+    const data = {
+      departments: deptsRes.rows,
+      classes: classesRes.rows
+    };
+    setApiCache('public_academic_structure', data, 60);
+    res.json(data);
+  }));
 
   // ── Departments ───────────────────────────────────────────────────────────
   app.get('/api/departments', authenticate, async (req, res) => {
@@ -2310,6 +2711,10 @@ async function startServer() {
       department_name: u.department_name,
       class_id: u.class_id,
       class_name: u.class_name,
+      is_approved: u.is_approved !== false,
+      status: u.status || 'ACTIVE',
+      rejection_reason: u.rejection_reason || null,
+      created_at: u.created_at,
     }));
     setApiCache(cacheKey, data, 20);
     res.json(data);
