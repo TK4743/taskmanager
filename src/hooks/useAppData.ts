@@ -127,6 +127,10 @@ export function useAppData() {
   const [myInvitations, setMyInvitations] = useState<TeamInvitation[]>([]);
   const [teamSubmissions, setTeamSubmissions] = useState<TeamSubmission[]>([]);
 
+  // Industry Partners
+  const [pendingIndustryList, setPendingIndustryList] = useState<any[]>([]);
+  const [allIndustryList, setAllIndustryList] = useState<any[]>([]);
+
   // Notices
   const [notices, setNotices] = useState<Notice[]>([]);
   const [noticeForm, setNoticeForm] = useState({
@@ -154,6 +158,7 @@ export function useAppData() {
   const [showRejectionModal, setShowRejectionModal] = useState<Submission | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [teamReviewModal, setTeamReviewModal] = useState<TeamSubmission | null>(null);
+  const [teamRejectionReason, setTeamRejectionReason] = useState<string>('');
 
   const [teamModalTask, setTeamModalTask] = useState<Task | null>(null);
   const [currentTaskTeam, setCurrentTaskTeam] = useState<Team | null>(null);
@@ -301,18 +306,88 @@ export function useAppData() {
     }
   }, [token, user?.role]);
 
-  const fetchCoordinatorStats = useCallback(async () => {
-    if (!token) return;
+  const fetchSupremeStats = useCallback(async (overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
     try {
-      const res = await fetch(`${API_URL}/api/stats/coordinator`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCoordinatorStats(data);
-      }
+      const res = await fetch(`${API_URL}/api/stats/supreme`, { headers: { Authorization: `Bearer ${activeTok}` } });
+      if (res.ok) setSupremeStats(await res.json());
     } catch {}
   }, [token]);
+
+  const fetchHODStats = useCallback(async (overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
+    try {
+      const res = await fetch(`${API_URL}/api/stats/hod`, { headers: { Authorization: `Bearer ${activeTok}` } });
+      if (res.ok) setHodStats(await res.json());
+    } catch {}
+  }, [token]);
+
+  const fetchAdvisorStats = useCallback(async (overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
+    try {
+      const res = await fetch(`${API_URL}/api/stats/advisor`, { headers: { Authorization: `Bearer ${activeTok}` } });
+      if (res.ok) setAdvisorStats(await res.json());
+    } catch {}
+  }, [token]);
+
+  const fetchCoordinatorStats = useCallback(async (overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
+    try {
+      const res = await fetch(`${API_URL}/api/stats/coordinator`, { headers: { Authorization: `Bearer ${activeTok}` } });
+      if (res.ok) setCoordinatorStats(await res.json());
+    } catch {}
+  }, [token]);
+
+  const fetchStudentStats = useCallback(async (overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
+    try {
+      const res = await fetch(`${API_URL}/api/stats/student`, { headers: { Authorization: `Bearer ${activeTok}` } });
+      if (res.ok) setStudentStats(await res.json());
+    } catch {}
+  }, [token]);
+
+  const fetchMyClass = useCallback(async (overrideToken?: string) => {
+    const activeTok = overrideToken || token || localStorage.getItem('token');
+    if (!activeTok) return;
+    try {
+      const res = await fetch(`${API_URL}/api/my-class`, { headers: { Authorization: `Bearer ${activeTok}` } });
+      if (res.ok) setMyClass(await res.json());
+    } catch {}
+  }, [token]);
+
+  const isFetchingIndustryRef = useRef<boolean>(false);
+  const fetchIndustryData = useCallback(async (passedToken?: string) => {
+    if (isFetchingIndustryRef.current) return;
+    isFetchingIndustryRef.current = true;
+    try {
+      const activeUser = user || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null);
+      if (!activeUser || (activeUser.role !== 'SUPREME_ADMIN' && activeUser.role !== 'HOD')) return;
+      const activeToken = passedToken || token || localStorage.getItem('token');
+      if (!activeToken) return;
+      const headers = { Authorization: `Bearer ${activeToken}` };
+      const [pendingRes, listRes] = await Promise.all([
+        fetch(`${API_URL}/api/admin/industry/pending`, { headers }),
+        fetch(`${API_URL}/api/admin/industry/list`, { headers })
+      ]);
+      if (pendingRes.ok) {
+        const pendingData = await pendingRes.json();
+        setPendingIndustryList(Array.isArray(pendingData) ? pendingData : []);
+      }
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        setAllIndustryList(Array.isArray(listData) ? listData : []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch industry partner data', e);
+    } finally {
+      isFetchingIndustryRef.current = false;
+    }
+  }, [user, token]);
 
   const fetchEmailNodesStatus = useCallback(async () => {
     if (!token) return;
@@ -356,6 +431,20 @@ export function useAppData() {
         if (bData.user) {
           setUser(bData.user);
           localStorage.setItem('user', JSON.stringify(bData.user));
+          const role = bData.user.role;
+          if (role === 'SUPREME_ADMIN') {
+            fetchSupremeStats(activeToken);
+            fetchIndustryData(activeToken);
+          } else if (role === 'HOD') {
+            fetchHODStats(activeToken);
+            fetchIndustryData(activeToken);
+          } else if (role === 'CLASS_ADVISOR' || role === 'FACULTY' || role === 'STAFF') {
+            fetchAdvisorStats(activeToken);
+            fetchMyClass(activeToken);
+          } else if (role === 'STUDENT') {
+            fetchStudentStats(activeToken);
+            fetchMyTeamsAndInvitations();
+          }
         }
       }
     } catch (e) {
@@ -750,7 +839,7 @@ export function useAppData() {
     }
   }, [currentTaskTeam, teamProofFile, teamRemarks, teamModalTask, token, openTeamModal, fetchSubmissions, user, fetchCoordinatorStats, addToast]);
 
-  const handleReviewTeamSubmission = useCallback(async (submissionId: string, status: 'APPROVED' | 'REJECTED') => {
+  const handleReviewTeamSubmission = useCallback(async (submissionId: string, status: 'APPROVED' | 'REJECTED', reason?: string) => {
     try {
       const res = await fetch(`${API_URL}/api/team/review`, {
         method: 'POST',
@@ -758,7 +847,7 @@ export function useAppData() {
         body: JSON.stringify({
           submissionId,
           status,
-          feedback: status === 'REJECTED' ? teamRejectionReason : 'Approved team submission'
+          feedback: status === 'REJECTED' ? (reason || teamRejectionReason || 'Team submission rejected') : 'Approved team submission'
         })
       });
       const data = await res.json();
@@ -1007,9 +1096,10 @@ export function useAppData() {
   const isFaculty = user?.role === 'FACULTY';
   const isIndustry = user?.role === 'INDUSTRY';
 
-  const pendingIndustryList = useMemo(() => {
+  const computedPendingIndustryList = useMemo(() => {
+    if (pendingIndustryList.length > 0) return pendingIndustryList;
     return users.filter(u => u.role === 'INDUSTRY' && (!u.is_approved || u.status === 'PENDING'));
-  }, [users]);
+  }, [users, pendingIndustryList]);
 
   const pendingVerificationCount = useMemo(() => {
     return submissions.filter(s => s.status === 'SUBMITTED').length;
@@ -1026,12 +1116,13 @@ export function useAppData() {
     users, setUsers, fetchUsers,
     tasks, setTasks, fetchTasks,
     submissions, setSubmissions, fetchSubmissions,
-    hodStats, setHodStats,
-    advisorStats, setAdvisorStats,
-    studentStats, setStudentStats,
+    hodStats, setHodStats, fetchHODStats,
+    advisorStats, setAdvisorStats, fetchAdvisorStats,
+    studentStats, setStudentStats, fetchStudentStats,
     coordinatorStats, setCoordinatorStats, fetchCoordinatorStats,
-    supremeStats, setSupremeStats,
-    myClass, setMyClass,
+    supremeStats, setSupremeStats, fetchSupremeStats,
+    myClass, setMyClass, fetchMyClass,
+    fetchIndustryData,
     notifications, setNotifications, showNotifications, setShowNotifications,
     notificationDropdownRef, markNotificationsRead, markSingleNotificationRead,
     myTeams, setMyTeams, myInvitations, setMyInvitations,
@@ -1070,7 +1161,10 @@ export function useAppData() {
     handleToggleSidebar, handleLogout,
     deleteTask, toggleTaskStatus, verifySubmission,
     isAdmin, isHOD, isAdvisor, isStudent, isCoordinator, isFaculty, isIndustry,
-    pendingIndustryList, pendingVerificationCount,
+    pendingIndustryList: computedPendingIndustryList, setPendingIndustryList,
+    allIndustryList, setAllIndustryList,
+    teamRejectionReason, setTeamRejectionReason,
+    pendingVerificationCount,
     codingPlatformTab, setCodingPlatformTab,
     myLeetcodeProgress: null,
     fetchInitialData

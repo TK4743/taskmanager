@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { ImageIcon, AlertTriangle, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
@@ -27,7 +27,16 @@ export function SubmissionsView({
   isCoordinator,
   verifySubmission = () => {},
 }: SubmissionsViewProps) {
-  const userSubmissions = submissions.filter(s => s.user_id?.toString() === user?.id?.toString());
+  const userSubmissions = useMemo(() => {
+    if (!user) return [];
+    if (user.role === 'STUDENT') {
+      return submissions.filter(s => String(s.user_id) === String(user.id));
+    }
+    if (isAdvisor && user.class_id) {
+      return submissions.filter(s => String(s.class_id) === String(user.class_id));
+    }
+    return submissions;
+  }, [submissions, user, isAdvisor]);
 
   return (
     <motion.div

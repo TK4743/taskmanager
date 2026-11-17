@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { API_URL } from '../../config';
 
 interface Posting {
   id: string; posting_type: string; title: string; description: string; location: string;
@@ -62,7 +63,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
 
   const fetchPostings = useCallback(async () => {
     setLoading(true);
-    let url = `/api/postings`;
+    let url = `${API_URL}/api/postings`;
     const params = new URLSearchParams();
     if (typeFilter !== 'ALL') params.append('type', typeFilter);
     if (sectorFilter !== 'ALL') params.append('sector', sectorFilter);
@@ -85,7 +86,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
 
   const fetchApplications = useCallback(async () => {
     try {
-      const r = await fetch(`/api/student/applications`, { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
+      const r = await fetch(`${API_URL}/api/student/applications`, { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
       if (r.ok) {
         const data = await r.json();
         setApplications(Array.isArray(data) ? data : []);
@@ -97,7 +98,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
 
   const fetchRecommendations = useCallback(async () => {
     try {
-      const r = await fetch(`/api/student/recommendations`, { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
+      const r = await fetch(`${API_URL}/api/student/recommendations`, { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
       if (r.ok) {
         const data = await r.json();
         setRecommendations(Array.isArray(data) ? data : []);
@@ -113,7 +114,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
   const openPosting = async (p: Posting) => {
     setSelectedPosting(p); setMatchResult(null); setMatchLoading(true);
     try {
-      const r = await fetch(`/api/postings/${p.id}/match`, { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
+      const r = await fetch(`${API_URL}/api/postings/${p.id}/match`, { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
       if (r.ok) setMatchResult(await r.json());
     } catch {}
     setMatchLoading(false);
@@ -123,7 +124,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
     if (!selectedPosting) return;
     setApplyLoading(true);
     try {
-      const r = await fetch(`/api/postings/${selectedPosting.id}/apply`, {
+      const r = await fetch(`${API_URL}/api/postings/${selectedPosting.id}/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ cover_note: coverNote })
@@ -147,7 +148,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
 
   const withdrawApp = async (id: string) => {
     try {
-      const r = await fetch(`/api/student/applications/${id}`, {
+      const r = await fetch(`${API_URL}/api/student/applications/${id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       });

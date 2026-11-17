@@ -185,6 +185,7 @@ export function ViewRouter({ app }: { app: any }) {
           isAdvisor={app.isAdvisor}
           isIndustry={app.isIndustry}
           myClass={app.myClass}
+          onViewStudentProfile={(id) => app.setViewingStaffStudentProfile(id)}
           onRefresh={app.fetchUsers}
           addToast={app.addToast}
         />

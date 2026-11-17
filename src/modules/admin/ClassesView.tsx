@@ -104,25 +104,64 @@ export function ClassesView({
   const handleBulkDownloadProfiles = async (classId?: string) => {
     if (!classId) return;
     setIsExportingBulkResumes(true);
+    addToast('Querying student profiles for class resume export...', 'info');
     try {
-      const res = await fetch(`${API_URL}/api/classes/${classId}/export-resumes`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch(`${API_URL}/api/student/bulk-profiles`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ class_id: classId })
       });
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Class_${myClass?.name || classId}_Resumes.zip`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        addToast('Class resumes downloaded successfully', 'success');
-      } else {
-        addToast('Failed to download class resumes', 'error');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to fetch student profiles for export');
       }
-    } catch {
-      addToast('Network error while downloading class resumes', 'error');
+
+      const data = await res.json();
+      const profiles: any[] = data.profiles || [];
+      if (profiles.length === 0) {
+        addToast('No student profile data found to export', 'warning');
+        return;
+      }
+
+      addToast(`Compiling Resume PDFs for ${profiles.length} students...`, 'info');
+
+      const [jszipModule, { generateStudentResumePdf }] = await Promise.all([
+        import('jszip'),
+        import('../../utils/pdf/studentProfilePdfGenerator'),
+      ]);
+      const JSZip = (jszipModule.default || jszipModule) as any;
+      const zip = new JSZip();
+
+      for (const p of profiles) {
+        try {
+          const doc = generateStudentResumePdf(p);
+          const pdfBlob = doc.output('blob');
+          const regNo = p.academic?.register_number || 'Student';
+          const name = (p.academic?.full_name || 'Profile').trim().replace(/\s+/g, '_');
+          zip.file(`${regNo}_${name}_Resume.pdf`, pdfBlob);
+        } catch (docErr) {
+          console.warn('Failed to generate PDF for student:', p.academic?.register_number, docErr);
+        }
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      const classNameClean = (myClass?.name || classId).replace(/\s+/g, '_');
+      link.download = `Class_${classNameClean}_Resumes_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      addToast(`Successfully downloaded ${profiles.length} student resumes (.zip)!`, 'success');
+    } catch (err: any) {
+      console.error('Bulk download error:', err);
+      addToast(err.message || 'Failed to download class resumes', 'error');
     } finally {
       setIsExportingBulkResumes(false);
     }

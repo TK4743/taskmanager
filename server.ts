@@ -2929,7 +2929,7 @@ async function startServer() {
   });
 
 
-  app.patch('/api/users/:id/reset-password', authenticate, authorize(['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR']), async (req: any, res) => {
+  const handleResetUserPassword = async (req: any, res: any) => {
     const targetRes = await pool.query('SELECT * FROM users WHERE id = $1 LIMIT 1', [req.params.id]);
     const targetUser = targetRes.rows[0];
     if (!targetUser) return res.status(404).json({ error: 'User not found' });
@@ -2939,12 +2939,14 @@ async function startServer() {
     if (req.user.role === 'CLASS_ADVISOR' && targetUser.class_id?.toString() !== req.user.class_id?.toString())
       return res.status(403).json({ error: 'Forbidden' });
 
-    const newPass = targetUser.register_number || targetUser.username;
+    const newPass = targetUser.register_number || targetUser.username || 'welcome123';
     const hashed = await bcrypt.hash(newPass, 10);
     await pool.query('UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2', [hashed, req.params.id]);
     invalidateUserAuthCache(req.params.id);
     res.json({ success: true, message: `Password reset to ${newPass}` });
-  });
+  };
+  app.patch('/api/users/:id/reset-password', authenticate, authorize(['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR']), handleResetUserPassword);
+  app.post('/api/users/:id/reset-password', authenticate, authorize(['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR']), handleResetUserPassword);
 
   app.delete('/api/users/:id', authenticate, authorize(['SUPREME_ADMIN', 'HOD', 'CLASS_ADVISOR']), async (req: any, res) => {
     const targetRes = await pool.query('SELECT * FROM users WHERE id = $1 LIMIT 1', [req.params.id]);
@@ -13353,19 +13355,23 @@ async function startServer() {
 
 
   // ── Notification Center Endpoints ──────────────────────────────────────────
-  app.put('/api/notifications/read-all', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const handleMarkAllNotificationsRead = asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
     await pool.query(`UPDATE notifications SET is_read=TRUE, updated_at=NOW() WHERE user_id=$1 AND is_read=FALSE`, [userId]);
     invalidateApiCache(`notifs_${userId}`);
     res.json({ success: true, message: 'All notifications marked as read' });
-  }));
+  });
+  app.put('/api/notifications/read-all', authenticate, handleMarkAllNotificationsRead);
+  app.patch('/api/notifications/read-all', authenticate, handleMarkAllNotificationsRead);
 
-  app.put('/api/notifications/:id/read', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const handleMarkSingleNotificationRead = asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
     const { id } = req.params;
     await pool.query(`UPDATE notifications SET is_read=TRUE, updated_at=NOW() WHERE id=$1 AND user_id=$2`, [id, userId]);
     res.json({ success: true, message: 'Notification marked as read' });
-  }));
+  });
+  app.put('/api/notifications/:id/read', authenticate, handleMarkSingleNotificationRead);
+  app.patch('/api/notifications/:id/read', authenticate, handleMarkSingleNotificationRead);
 
   app.get('/api/notifications/preferences', authenticate, asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
