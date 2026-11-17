@@ -114,6 +114,7 @@ export const parseRouteFromPath = (pathname: string): AppRouteState => {
   if (cleanPath === 'users' || cleanPath === 'students') return { view: 'users', footerModal: null };
   if (cleanPath === 'industry-approvals' || cleanPath === 'industry-partners') return { view: 'industry-approvals', footerModal: null };
   if (cleanPath === 'settings') return { view: 'settings', footerModal: null };
+  if (cleanPath === 'comparison' || cleanPath === 'feature-comparison') return { view: 'feature-comparison', footerModal: null };
 
   // Corporate / Industry Portal
   if (cleanPath === 'industry/dashboard' || cleanPath === 'industry-dashboard' || cleanPath === 'industry-portal') return { view: 'industry-dashboard', footerModal: null };
@@ -196,6 +197,8 @@ export const getPathFromState = (
       return '/industry-approvals';
     case 'settings':
       return '/settings';
+    case 'feature-comparison':
+      return '/comparison';
     case 'profile':
       return '/profile';
     case 'industry-dashboard':
