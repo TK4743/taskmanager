@@ -1324,9 +1324,16 @@ export const StudentCodingAssessmentView: React.FC<StudentCodingAssessmentViewPr
                     className="w-full h-full object-cover"
                   />
                   {!cameraAllowed && (
-                    <div className="text-center p-4 text-xs text-zinc-400 space-y-2">
+                    <div className="text-center p-4 text-xs text-zinc-400 space-y-2.5 z-10">
                       <Camera size={28} className="mx-auto text-zinc-500" />
-                      <p>{cameraError || 'Requesting camera permissions...'}</p>
+                      <p className="max-w-xs mx-auto text-rose-500 font-semibold">{cameraError || 'Requesting camera permissions...'}</p>
+                      <button
+                        type="button"
+                        onClick={() => initWebcam()}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-sm"
+                      >
+                        Grant / Retry Camera Access
+                      </button>
                     </div>
                   )}
                 </div>
