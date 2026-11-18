@@ -205,6 +205,7 @@ export function CreateNoticeModal({
             Cancel
           </Button>
           <Button
+            type="submit"
             className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
             disabled={isPublishingNotice}
           >

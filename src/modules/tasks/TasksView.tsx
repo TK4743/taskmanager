@@ -1919,6 +1919,14 @@ export function TasksView({
                       )}
 
                       <div className="bg-zinc-50 p-6 rounded-xl border border-zinc-200 mt-6 shadow-sm">
+                        <div className="flex items-center justify-between pb-3 mb-4 border-b border-zinc-200/80">
+                          <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <Eye size={13} className="text-indigo-600" /> Student Submission Form (Preview Mode)
+                          </span>
+                          <span className="text-[10px] bg-zinc-200/80 text-zinc-600 font-bold px-2 py-0.5 rounded">
+                            Interactive Mockup
+                          </span>
+                        </div>
                         <div className="space-y-4">
                           <div>
                             <label className="text-sm font-medium text-zinc-700 mb-2 block">
@@ -1956,11 +1964,13 @@ export function TasksView({
                                   </div>
                                 </div>
                                 <Button
+                                  type="button"
                                   disabled
                                   variant="secondary"
+                                  title="Inactive in task creator preview. Active for enrolled students once published."
                                   className="h-auto md:h-full px-8 py-4 shrink-0 transition-all font-black uppercase tracking-wider text-sm opacity-50 cursor-not-allowed"
                                 >
-                                  Submit
+                                  Submit (Preview)
                                 </Button>
                               </div>
                               <div className="mt-3 flex items-start gap-2 text-zinc-400">
