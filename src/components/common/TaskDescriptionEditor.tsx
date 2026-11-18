@@ -7,7 +7,7 @@ export function TaskDescriptionEditor({
   value,
   onChange,
   required = false,
-  placeholder = "Task Description..."
+  placeholder = "Enter comprehensive task specifications and instructions..."
 }: {
   value: string;
   onChange: (val: string) => void;

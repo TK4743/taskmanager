@@ -367,7 +367,7 @@ export function UsersView({
                       <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
                         <Input
-                          placeholder={`Search ${isAdmin ? 'HODs' : isHOD ? 'Advisors or Students' : isIndustry ? 'Candidates by name, registration number, department...' : 'Students'} by name or registration number...`}
+                          placeholder={`Search ${isAdmin ? 'department heads' : isHOD ? 'faculty advisors or students' : isIndustry ? 'candidates' : 'students'} by name or university register number...`}
                           className="pl-10 h-11"
                           value={searchTerm}
                           onChange={e => { setSearchTerm(e.target.value); setUserPage(1); }}

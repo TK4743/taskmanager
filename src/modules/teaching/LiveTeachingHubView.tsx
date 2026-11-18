@@ -100,7 +100,7 @@ export const LiveTeachingHubView: React.FC<LiveTeachingHubViewProps> = ({ addToa
                 <Terminal size={14} className="text-zinc-400 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Have a room code? (e.g. VSB-7371)"
+                  placeholder="Enter active room access code (e.g. VSB-7371)"
                   value={joinCode}
                   onChange={e => setJoinCode(e.target.value.toUpperCase())}
                   onKeyDown={e => { if (e.key === 'Enter') handleOpenGoatCE(); }}

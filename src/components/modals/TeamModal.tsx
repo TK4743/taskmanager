@@ -127,7 +127,7 @@ export function TeamModal({
                       <div className="space-y-2">
                         <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider block">Team Name <span className="text-red-500">*</span></label>
                         <Input
-                          placeholder="e.g. Cyber Squad / Tech Titans"
+                          placeholder="Enter team designation (e.g. Systems Architecture Group)"
                           value={newTeamName}
                           onChange={e => setNewTeamName(e.target.value)}
                           className="h-11 font-semibold"
@@ -148,7 +148,7 @@ export function TeamModal({
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
                             <Input
-                              placeholder="Search classmate by Name or Reg No..."
+                              placeholder="Search peer by student name or register number..."
                               value={classmateSearchTerm}
                               onChange={e => setClassmateSearchTerm(e.target.value)}
                               className="pl-9 h-9 text-xs"
@@ -374,7 +374,7 @@ export function TeamModal({
                               <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
                                 <Input
-                                  placeholder="Search classmate by Name or Reg No..."
+                                  placeholder="Search peer by student name or register number..."
                                   value={classmateSearchTerm}
                                   onChange={e => setClassmateSearchTerm(e.target.value)}
                                   className="pl-9 h-9 text-xs"
@@ -616,7 +616,7 @@ export function TeamModal({
                             <div>
                               <label className="text-xs font-bold text-zinc-700 mb-1.5 block">Remarks / Notes (Optional)</label>
                               <Textarea
-                                placeholder="Add any additional notes for the reviewer..."
+                                placeholder="Enter submission remarks or review documentation notes..."
                                 value={teamRemarks}
                                 onChange={e => setTeamRemarks(e.target.value)}
                                 className="min-h-[80px]"

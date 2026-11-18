@@ -65,7 +65,7 @@ export function CreateNoticeModal({
             Notice Title <span className="text-red-500">*</span>
           </label>
           <Input
-            placeholder="e.g. Schedule for Mid-Term Exams"
+            placeholder="Official circular subject (e.g. Departmental Assessment & Examination Schedule)"
             value={noticeForm.title}
             onChange={e => setNoticeForm(prev => ({ ...prev, title: e.target.value }))}
             required
@@ -78,7 +78,7 @@ export function CreateNoticeModal({
           </label>
           <textarea
             rows={4}
-            placeholder="Enter full notice announcement details here..."
+            placeholder="Enter official departmental notice content, guidelines, and instructions..."
             value={noticeForm.description}
             onChange={e => setNoticeForm(prev => ({ ...prev, description: e.target.value }))}
             className="w-full p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white text-sm bg-white dark:bg-[#181820] text-zinc-800 dark:text-zinc-200"

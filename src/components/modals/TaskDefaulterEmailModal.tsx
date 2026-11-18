@@ -291,7 +291,7 @@ export function TaskDefaulterEmailModal({
               <textarea
                 value={emailAlertCustomMsg}
                 onChange={e => setEmailAlertCustomMsg(e.target.value)}
-                placeholder="e.g., Mandatory internal task compliance. Submit your valid completion certificate by 4:00 PM today without fail."
+                placeholder="Specify institutional compliance instructions, deadline expectations, and submission requirements..."
                 rows={3}
                 className="w-full text-xs p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 focus:outline-hidden focus:ring-2 focus:ring-amber-500 focus:border-amber-500 resize-none font-medium text-zinc-800 dark:text-zinc-200 bg-white dark:bg-[#181820]"
               />

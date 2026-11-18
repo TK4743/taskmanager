@@ -61,7 +61,7 @@ export function TeamReviewModal({
             {teamReviewModal.status === 'APPROVED' ? 'Approval Note (Optional)' : 'Reason for Rejection *'}
           </label>
           <Textarea
-            placeholder={teamReviewModal.status === 'APPROVED' ? 'Optional feedback or note...' : 'Please specify why this team submission is rejected...'}
+            placeholder={teamReviewModal.status === 'APPROVED' ? 'Optional verification feedback or commendation...' : 'Specify institutional justification and corrective criteria for rejection...'}
             value={teamRejectionReason}
             onChange={e => setTeamRejectionReason(e.target.value)}
             className="text-xs min-h-[90px]"

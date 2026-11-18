@@ -1164,7 +1164,7 @@ export function CodingProgressView({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={15} />
                 <input
                   type="text"
-                  placeholder="Search student or reg no..."
+                  placeholder="Search candidate by name or register number..."
                   value={leetcodeSearch}
                   onChange={(e) => setLeetcodeSearch(e.target.value)}
                   className="w-full pl-9 pr-8 py-1.5 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-800 bg-zinc-50/50 focus:bg-white focus:outline-hidden transition-all"
@@ -1529,7 +1529,7 @@ export function CodingProgressView({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={15} />
                 <input
                   type="text"
-                  placeholder="Search student or reg no..."
+                  placeholder="Search candidate by name or register number..."
                   value={leetcodeSearch}
                   onChange={(e) => setLeetcodeSearch(e.target.value)}
                   className="w-full pl-9 pr-8 py-1.5 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-800 bg-zinc-50/50 focus:bg-white focus:outline-hidden transition-all"

@@ -632,7 +632,7 @@ export function StudentProfileView({
                   <form onSubmit={handleAvatarUrlSave} className="flex gap-2">
                     <Input
                       type="url"
-                      placeholder="Or paste image URL (https://...)"
+                      placeholder="Direct HTTPS image resource URL (https://...)"
                       value={avatarUrl}
                       onChange={e => setAvatarUrl(e.target.value)}
                       className="text-xs flex-1"
@@ -798,7 +798,7 @@ export function StudentProfileView({
                       type="tel"
                       value={mobileNumber}
                       onChange={e => setMobileNumber(e.target.value)}
-                      placeholder="+91 9876543210"
+                      placeholder="Contact telephone number (e.g. +91 9876543210)"
                     />
                   </div>
                   <div>
@@ -826,7 +826,7 @@ export function StudentProfileView({
                       max="10"
                       value={cgpa}
                       onChange={e => setCgpa(e.target.value)}
-                      placeholder="e.g. 8.50"
+                      placeholder="Cumulative Grade Point Average (e.g. 8.50)"
                     />
                   </div>
                   <div>
@@ -854,7 +854,7 @@ export function StudentProfileView({
                   <Textarea
                     value={aboutMe}
                     onChange={e => setAboutMe(e.target.value)}
-                    placeholder="Brief intro about your academic focus, career goals, or technical interests..."
+                    placeholder="Executive summary of academic specialization, technical proficiencies, and career objectives..."
                     rows={3}
                   />
                 </div>
@@ -881,7 +881,7 @@ export function StudentProfileView({
             <form onSubmit={handleAddSkill} className="flex flex-col sm:flex-row gap-3 mb-6 p-3 bg-zinc-50 rounded-xl border border-zinc-200">
               <Input
                 type="text"
-                placeholder="Skill name (e.g. React, Python, Communication)"
+                placeholder="Competency designation (e.g. Distributed Systems, PostgreSQL, React)"
                 value={newSkillName}
                 onChange={e => setNewSkillName(e.target.value)}
                 required
@@ -934,12 +934,12 @@ export function StudentProfileView({
 
             <form onSubmit={handleAddProject} className="space-y-3 p-4 bg-zinc-50 rounded-xl border border-zinc-200">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Input placeholder="Project Name *" value={newProjName} onChange={e => setNewProjName(e.target.value)} required />
-                <Input placeholder="Tech Stack (e.g. React, Node.js, PostgreSQL)" value={newProjTech} onChange={e => setNewProjTech(e.target.value)} />
-                <Input type="url" placeholder="GitHub Repository URL" value={newProjGithub} onChange={e => setNewProjGithub(e.target.value)} />
-                <Input type="url" placeholder="Live Demo URL" value={newProjDemo} onChange={e => setNewProjDemo(e.target.value)} />
+                <Input placeholder="Enterprise / Academic Project Title *" value={newProjName} onChange={e => setNewProjName(e.target.value)} required />
+                <Input placeholder="Technology Stack & Tools (e.g. React, Node.js, PostgreSQL)" value={newProjTech} onChange={e => setNewProjTech(e.target.value)} />
+                <Input type="url" placeholder="GitHub Repository Source URL (https://github.com/...)" value={newProjGithub} onChange={e => setNewProjGithub(e.target.value)} />
+                <Input type="url" placeholder="Production / Live Demo URL (https://...)" value={newProjDemo} onChange={e => setNewProjDemo(e.target.value)} />
               </div>
-              <Textarea placeholder="Project Description..." value={newProjDesc} onChange={e => setNewProjDesc(e.target.value)} rows={2} />
+              <Textarea placeholder="Comprehensive project overview, problem statement, and key architectural contributions..." value={newProjDesc} onChange={e => setNewProjDesc(e.target.value)} rows={2} />
               <div className="flex justify-end">
                 <Button type="submit" disabled={addingProject} variant="primary">
                   {addingProject ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
@@ -982,16 +982,16 @@ export function StudentProfileView({
 
             <form onSubmit={handleAddInternship} className="space-y-3 p-4 bg-zinc-50 rounded-xl border border-zinc-200">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                <Input placeholder="Company / Organization *" value={newInternCompany} onChange={e => setNewInternCompany(e.target.value)} required />
-                <Input placeholder="Role (e.g. Web Dev Intern)" value={newInternRole} onChange={e => setNewInternRole(e.target.value)} />
-                <Input placeholder="Duration (e.g. 3 Months, Jun-Aug 2025)" value={newInternDuration} onChange={e => setNewInternDuration(e.target.value)} />
+                <Input placeholder="Organization / Corporate Entity *" value={newInternCompany} onChange={e => setNewInternCompany(e.target.value)} required />
+                <Input placeholder="Designation (e.g. Software Engineering Intern)" value={newInternRole} onChange={e => setNewInternRole(e.target.value)} />
+                <Input placeholder="Engagement Timeline (e.g. June 2025 – August 2025)" value={newInternDuration} onChange={e => setNewInternDuration(e.target.value)} />
                 <Select value={newInternMode} onChange={e => setNewInternMode(e.target.value)} required>
                   <option value="" disabled>Select Work Mode</option>
                   <option value="Offline">Offline / On-site</option>
                   <option value="Online">Online / Remote</option>
                   <option value="Hybrid">Hybrid</option>
                 </Select>
-                <Input type="url" placeholder="Certificate Link / URL" value={newInternCertUrl} onChange={e => setNewInternCertUrl(e.target.value)} className="sm:col-span-2" />
+                <Input type="url" placeholder="Verified Credential Verification Link / URL" value={newInternCertUrl} onChange={e => setNewInternCertUrl(e.target.value)} className="sm:col-span-2" />
               </div>
               <div className="flex justify-end">
                 <Button type="submit" disabled={addingInternship} variant="primary">
@@ -1035,11 +1035,11 @@ export function StudentProfileView({
 
             <form onSubmit={handleAddCertification} className="space-y-3 p-4 bg-zinc-50 rounded-xl border border-zinc-200">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Input placeholder="Certificate Name *" value={newCertName} onChange={e => setNewCertName(e.target.value)} required />
-                <Input placeholder="Provider (e.g. Coursera, NPTEL, AWS)" value={newCertProvider} onChange={e => setNewCertProvider(e.target.value)} />
+                <Input placeholder="Professional Certification Title *" value={newCertName} onChange={e => setNewCertName(e.target.value)} required />
+                <Input placeholder="Accrediting Body (e.g. AWS, NPTEL, Coursera, Google)" value={newCertProvider} onChange={e => setNewCertProvider(e.target.value)} />
                 <Input type="date" placeholder="Issue Date" value={newCertIssueDate} onChange={e => setNewCertIssueDate(e.target.value)} />
-                <Input placeholder="Credential ID" value={newCertCredentialId} onChange={e => setNewCertCredentialId(e.target.value)} />
-                <Input type="url" placeholder="Certificate URL / Link" value={newCertUrl} onChange={e => setNewCertUrl(e.target.value)} className="sm:col-span-2" />
+                <Input placeholder="Official Credential / License ID" value={newCertCredentialId} onChange={e => setNewCertCredentialId(e.target.value)} />
+                <Input type="url" placeholder="Public Credential Verification URL (https://...)" value={newCertUrl} onChange={e => setNewCertUrl(e.target.value)} className="sm:col-span-2" />
               </div>
               <div className="flex justify-end">
                 <Button type="submit" disabled={addingCert} variant="primary">
@@ -1125,7 +1125,7 @@ export function StudentProfileView({
 
             <form onSubmit={handleAddAchievement} className="space-y-3 p-4 bg-zinc-50 rounded-xl border border-zinc-200">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Input placeholder="Achievement / Event Title *" value={newAchTitle} onChange={e => setNewAchTitle(e.target.value)} required className="sm:col-span-2" />
+                <Input placeholder="Honors / Competition / Event Title *" value={newAchTitle} onChange={e => setNewAchTitle(e.target.value)} required className="sm:col-span-2" />
                 <Select value={newAchCategory} onChange={e => setNewAchCategory(e.target.value)} required>
                   <option value="" disabled>Select Category</option>
                   <option value="Hackathons">Hackathons</option>
@@ -1134,9 +1134,9 @@ export function StudentProfileView({
                   <option value="Paper Presentations">Paper Presentations</option>
                   <option value="Awards">Awards & Honors</option>
                 </Select>
-                <Input placeholder="Date / Year (e.g. Feb 2026)" value={newAchDate} onChange={e => setNewAchDate(e.target.value)} />
+                <Input placeholder="Recognition Period (e.g. February 2026)" value={newAchDate} onChange={e => setNewAchDate(e.target.value)} />
               </div>
-              <Textarea placeholder="Description / Details of your achievement..." value={newAchDesc} onChange={e => setNewAchDesc(e.target.value)} rows={2} />
+              <Textarea placeholder="Comprehensive description of recognition, award criteria, or competitive ranking..." value={newAchDesc} onChange={e => setNewAchDesc(e.target.value)} rows={2} />
               <div className="flex justify-end">
                 <Button type="submit" disabled={addingAch} variant="primary">
                   {addingAch ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}

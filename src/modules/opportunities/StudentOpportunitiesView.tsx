@@ -261,7 +261,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
               <div className="relative flex-1">
                 <input
                   type="text"
-                  placeholder="🔍 Search company, role, or keywords..."
+                  placeholder="Search opportunities by organization, designation, or competency..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   className="w-full bg-white border border-zinc-200 rounded-xl px-4 py-2.5 text-xs text-zinc-900 font-medium placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-2xs"
@@ -751,7 +751,7 @@ export default function StudentOpportunitiesView({ token, user }: { token: strin
             <p className="text-xs text-zinc-500 font-medium">Your verified skill profile, LeetCode metrics, and academic CGPA will be securely submitted to {selectedPosting.company_name}.</p>
 
             <textarea
-              placeholder="Add an optional cover note or statement of interest (optional)..."
+              placeholder="Provide a professional statement of interest and career objective..."
               value={coverNote}
               onChange={e => setCoverNote(e.target.value)}
               rows={4}

@@ -285,7 +285,7 @@ export function IndustryApprovalsView({
                       <div className="space-y-4">
                         <div className="flex items-center gap-3">
                           <Input
-                            placeholder="🔍 Search company name, recruiter, email, sector..."
+                            placeholder="Search registered organizations by name, recruiter, or domain..."
                             value={industrySearchTerm}
                             onChange={e => setIndustrySearchTerm(e.target.value)}
                             className="max-w-md bg-white rounded-xl"
@@ -384,7 +384,7 @@ export function IndustryApprovalsView({
                           <textarea
                             className="w-full p-3 border border-zinc-200 rounded-xl text-xs resize-none"
                             rows={3}
-                            placeholder="e.g. Incomplete corporate verification credentials or company domain mismatch."
+                            placeholder="Specify institutional justification and documentation criteria for rejection..."
                             value={industryRejectReason}
                             onChange={e => setIndustryRejectReason(e.target.value)}
                           />

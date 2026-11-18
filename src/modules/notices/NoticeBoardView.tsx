@@ -96,7 +96,7 @@ export function NoticeBoardView({
           <div className="relative flex-1 min-w-[200px]">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
             <Input
-              placeholder="Search notices..."
+              placeholder="Search departmental circulars and notices..."
               value={noticeSearch}
               onChange={e => setNoticeSearch(e.target.value)}
               className="pl-10"

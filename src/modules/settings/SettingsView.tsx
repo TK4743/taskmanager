@@ -615,7 +615,7 @@ export function SettingsView({
                   <Input
                     value={groupChatIdInput}
                     onChange={e => setGroupChatIdInput(e.target.value)}
-                    placeholder="e.g. -1001234567890 (or group username)"
+                    placeholder="Enter Telegram Channel / Group ID (e.g. -1001234567890)"
                     className="text-xs bg-white"
                   />
                   <Button
@@ -697,7 +697,7 @@ export function SettingsView({
                   value={currentPassword}
                   onChange={e => setCurrentPassword(e.target.value)}
                   required
-                  placeholder="Enter current password"
+                  placeholder="Current account password"
                   className="pr-10"
                 />
                 <button
@@ -721,7 +721,7 @@ export function SettingsView({
                   onChange={e => setNewPassword(e.target.value)}
                   required
                   minLength={6}
-                  placeholder="Minimum 6 characters"
+                  placeholder="New password (minimum 8 characters)"
                   className="pr-10"
                 />
                 <button
@@ -745,7 +745,7 @@ export function SettingsView({
                   onChange={e => setConfirmPassword(e.target.value)}
                   required
                   minLength={6}
-                  placeholder="Re-enter new password"
+                  placeholder="Confirm new password"
                   className="pr-10"
                 />
                 <button

@@ -404,7 +404,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                   <div>
                     <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1 block">Email ID / Register Number</label>
                     <Input
-                      placeholder="Enter Email ID or Register Number"
+                      placeholder="Institutional Email or University Register Number"
                       value={loginData.username}
                       onChange={e => setLoginData(prev => ({ ...prev, username: e.target.value }))}
                       required
@@ -417,7 +417,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                     <div className="relative">
                       <Input
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="Enter your password"
+                        placeholder="Account Password"
                         value={loginData.password}
                         onChange={e => setLoginData(prev => ({ ...prev, password: e.target.value }))}
                         required
@@ -585,7 +585,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                           Email ID or Register Number
                         </label>
                         <Input
-                          placeholder="Enter Email ID or Register Number"
+                          placeholder="Institutional Email or University Register Number"
                           value={forgotIdentifier}
                           onChange={e => setForgotIdentifier(e.target.value)}
                           required
@@ -650,7 +650,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                         <div className="relative">
                           <Input
                             type={forgotShowNewPass ? 'text' : 'password'}
-                            placeholder="At least 6 characters"
+                            placeholder="New password (minimum 8 characters)"
                             value={forgotNewPassword}
                             onChange={e => setForgotNewPassword(e.target.value)}
                             required
@@ -673,7 +673,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                         </label>
                         <Input
                           type={forgotShowNewPass ? 'text' : 'password'}
-                          placeholder="Re-enter new password"
+                          placeholder="Confirm new password"
                           value={forgotConfirmPassword}
                           onChange={e => setForgotConfirmPassword(e.target.value)}
                           required
@@ -840,7 +840,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                             Company Name <span className="text-red-500">*</span>
                           </label>
                           <Input
-                            placeholder="e.g. Zoho Corporation / Infosys Campus Hiring"
+                            placeholder="Enter corporate entity name (e.g. Zoho Corporation)"
                             value={indRegData.company_name}
                             onChange={e => setIndRegData(p => ({ ...p, company_name: e.target.value }))}
                             required
@@ -872,7 +872,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                             HR / Recruiter Name <span className="text-red-500">*</span>
                           </label>
                           <Input
-                            placeholder="e.g. Sarah Jenkins (Talent Acquisition Lead)"
+                            placeholder="Recruiter full name and designation"
                             value={indRegData.full_name}
                             onChange={e => setIndRegData(p => ({ ...p, full_name: e.target.value }))}
                             required
@@ -885,7 +885,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                           </label>
                           <Input
                             type="email"
-                            placeholder="e.g. careers@company.com or hr@enterprise.org"
+                            placeholder="Official corporate communication email address"
                             value={indRegData.email}
                             onChange={e => setIndRegData(p => ({ ...p, email: e.target.value, username: e.target.value }))}
                             required
@@ -902,7 +902,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                           <div className="relative">
                             <Input
                               type={indRegShowPassword ? 'text' : 'password'}
-                              placeholder="Create password (min 6 chars)"
+                              placeholder="Create secure account password"
                               value={indRegData.password}
                               onChange={e => setIndRegData(p => ({ ...p, password: e.target.value }))}
                               required
@@ -923,7 +923,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                             Website URL
                           </label>
                           <Input
-                            placeholder="e.g. https://www.company.com"
+                            placeholder="Official corporate website URL (https://...)"
                             value={indRegData.website}
                             onChange={e => setIndRegData(p => ({ ...p, website: e.target.value }))}
                             className="text-sm"
@@ -936,7 +936,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                           HQ Location
                         </label>
                         <Input
-                          placeholder="e.g. Bengaluru / Chennai, India"
+                          placeholder="Corporate headquarters / regional locations (e.g. Chennai, India)"
                           value={indRegData.hq_location}
                           onChange={e => setIndRegData(p => ({ ...p, hq_location: e.target.value }))}
                           className="text-sm"
@@ -950,7 +950,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                         <textarea
                           className="w-full p-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs resize-none bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
                           rows={2}
-                          placeholder="Brief overview of company focus, hiring domains, and internship opportunities..."
+                          placeholder="Provide corporate profile, recruitment focus areas, and eligibility overview..."
                           value={indRegData.description}
                           onChange={e => setIndRegData(p => ({ ...p, description: e.target.value }))}
                         />
@@ -1043,7 +1043,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                             Full Name (As per College Records) <span className="text-red-500">*</span>
                           </label>
                           <Input
-                            placeholder="e.g. SATHISH KUMAR R"
+                            placeholder="Student full name (as per university records)"
                             value={studentRegData.fullName}
                             onChange={e => setStudentRegData(p => ({ ...p, fullName: e.target.value }))}
                             required
@@ -1057,7 +1057,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                             University Register Number <span className="text-red-500">*</span>
                           </label>
                           <Input
-                            placeholder="e.g. 922524205001"
+                            placeholder="12-digit university register number"
                             value={studentRegData.registerNumber}
                             onChange={e => setStudentRegData(p => ({ ...p, registerNumber: e.target.value.trim().toUpperCase() }))}
                             required
@@ -1117,7 +1117,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                           </label>
                           <Input
                             type="email"
-                            placeholder="e.g. student@college.edu or name@domain.com"
+                            placeholder="Institutional or personal email address"
                             value={studentRegData.email}
                             onChange={e => setStudentRegData(p => ({ ...p, email: e.target.value }))}
                             required
@@ -1135,7 +1135,7 @@ export function AuthView({ onLoginSuccess, onToast }: AuthViewProps) {
                           <div className="relative">
                             <Input
                               type={studentRegShowPassword ? 'text' : 'password'}
-                              placeholder="Choose secure password"
+                              placeholder="Create secure account password"
                               value={studentRegData.password}
                               onChange={e => setStudentRegData(p => ({ ...p, password: e.target.value }))}
                               required

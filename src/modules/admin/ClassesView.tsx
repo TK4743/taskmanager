@@ -254,7 +254,7 @@ export function ClassesView({
               <div className="space-y-1">
                 <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Class Name</label>
                 <Input
-                  placeholder="e.g. IT-A"
+                  placeholder="Enter section designation (e.g. IT-A)"
                   value={newClass.name}
                   onChange={e => setNewClass(prev => ({ ...prev, name: e.target.value }))}
                   required
@@ -278,7 +278,7 @@ export function ClassesView({
               <div className="space-y-1">
                 <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Batch</label>
                 <Input
-                  placeholder="e.g. 2023-2027"
+                  placeholder="Enter academic batch (e.g. 2023-2027)"
                   value={newClass.batch}
                   onChange={e => setNewClass(prev => ({ ...prev, batch: e.target.value }))}
                   required

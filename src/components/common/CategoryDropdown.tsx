@@ -163,7 +163,7 @@ export function CategoryDropdown({ value, onChange, categories: propCategories }
                 <form onSubmit={handleAddCustom} className="flex items-center gap-1.5">
                   <input
                     type="text"
-                    placeholder="New category name..."
+                    placeholder="Enter category designation..."
                     value={customInput}
                     onChange={e => setCustomInput(e.target.value)}
                     autoFocus

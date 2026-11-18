@@ -622,7 +622,7 @@ export function SubmissionInspectorModal({
                     <span className="text-[10px] text-zinc-400 font-normal">Optional for approval, required for rejection</span>
                   </label>
                   <Input
-                    placeholder="e.g. Approved, excellent submission! Or specific feedback..."
+                    placeholder="Enter official verification remarks or corrective feedback for this submission..."
                     value={verificationNote}
                     onChange={e => setVerificationNote(e.target.value)}
                     className="text-xs h-9 bg-white"

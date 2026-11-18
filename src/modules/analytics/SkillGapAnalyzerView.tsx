@@ -794,7 +794,7 @@ export default function SkillGapAnalyzerView({ token, user }: { token: string; u
                 <input
                   type="text"
                   required
-                  placeholder="e.g. React, Docker, Python, SQL..."
+                  placeholder="Enter technical competency (e.g. TypeScript, PostgreSQL, Docker)"
                   className="w-full p-2.5 rounded-xl border border-zinc-300 text-xs font-bold text-zinc-800 outline-none focus:border-zinc-900"
                   value={newSkillName}
                   onChange={e => setNewSkillName(e.target.value)}

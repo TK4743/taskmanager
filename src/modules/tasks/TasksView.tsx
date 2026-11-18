@@ -620,7 +620,7 @@ export function TasksView({
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0">
                             <div className="min-w-0">
                               <Input
-                                placeholder="Task Title"
+                                placeholder="Official Task Title"
                                 value={newTask.title}
                                 onChange={e => setNewTask(prev => ({ ...prev, title: e.target.value }))}
                                 required
@@ -635,7 +635,7 @@ export function TasksView({
                             </div>
                             <div className="min-w-0">
                               <Input
-                                placeholder="Apply Link (Optional)"
+                                placeholder="Application / Reference Documentation URL (Optional)"
                                 value={newTask.external_link}
                                 onChange={e => setNewTask(prev => ({ ...prev, external_link: e.target.value }))}
                               />
@@ -725,7 +725,7 @@ export function TasksView({
                               {(isCustomScreenshot || (newTask.screenshot_instruction && newTask.screenshot_instruction !== 'Upload registration confirmation screenshot' && !savedScreenshotOptions.includes(newTask.screenshot_instruction))) && (
                                 <div className="space-y-1">
                                   <Input
-                                    placeholder="Enter custom screenshot instruction..."
+                                    placeholder="Enter detailed proof guidelines and required screenshot criteria..."
                                     value={newTask.screenshot_instruction}
                                     onChange={e => setNewTask(prev => ({ ...prev, screenshot_instruction: e.target.value }))}
                                     required
@@ -785,7 +785,7 @@ export function TasksView({
                               {(isCustomFieldLabel || (newTask.custom_field_label && newTask.custom_field_label !== 'Have you registered?' && newTask.custom_field_label !== 'Team Name' && !savedFieldLabelOptions.includes(newTask.custom_field_label))) && (
                                 <div className="space-y-1">
                                   <Input
-                                    placeholder="Enter custom verification field label (e.g. Roll No, Team ID)..."
+                                    placeholder="Enter custom verification attribute label (e.g. Problem URL, Team ID)..."
                                     value={newTask.custom_field_label}
                                     onChange={e => setNewTask(prev => ({ ...prev, custom_field_label: e.target.value }))}
                                     required
@@ -1002,7 +1002,7 @@ export function TasksView({
                             </div>
                           </div>
                           <TaskDescriptionEditor
-                            placeholder="Task Description... (supports Bold, Italic, Bullet lists, and Numbered lists)"
+                            placeholder="Comprehensive task brief, procedural steps, and submission guidelines..."
                             value={newTask.description}
                             onChange={val => setNewTask(prev => ({ ...prev, description: val }))}
                             required
@@ -1520,7 +1520,7 @@ export function TasksView({
                                                 Reason for Not Participating <span className="text-red-500">*</span>
                                               </label>
                                               <Textarea
-                                                placeholder="e.g. Already participated in a similar event / Not relevant to my current semester..."
+                                                placeholder="Provide official academic justification for opting out of this task..."
                                                 value={notParticipatingReason[task.id] || ''}
                                                 onChange={e => setNotParticipatingReason(prev => ({ ...prev, [task.id]: e.target.value }))}
                                                 className="min-h-[90px]"
@@ -1563,7 +1563,7 @@ export function TasksView({
                                                   </select>
                                                 ) : (
                                                   <Input
-                                                    placeholder={`Enter ${task.custom_field_label || 'value'}...`}
+                                                    placeholder={`Enter ${task.custom_field_label || 'required detail'}...`}
                                                     value={customFieldValue}
                                                     onChange={e => setCustomFieldValue(e.target.value)}
                                                     className={cn(!customFieldValue.trim() && 'border-red-200 focus:border-red-400')}
@@ -1943,7 +1943,7 @@ export function TasksView({
                               </select>
                             ) : (
                               <Input
-                                placeholder={`Enter ${newTask.custom_field_label || "value"}...`}
+                                placeholder={`Enter ${newTask.custom_field_label || "required detail"}...`}
                                 disabled
                               />
                             )}

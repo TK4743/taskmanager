@@ -52,7 +52,7 @@ export function RejectionModal({
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Reason for Rejection *</label>
           <Textarea
-            placeholder="Explain what needs to be corrected for the student to resubmit..."
+            placeholder="Provide explicit feedback and actionable correction criteria for the student..."
             value={rejectionReason}
             onChange={e => setRejectionReason(e.target.value)}
             required

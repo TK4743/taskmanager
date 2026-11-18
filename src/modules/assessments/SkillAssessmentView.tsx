@@ -2641,7 +2641,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                 <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400" />
                 <input
                   type="text"
-                  placeholder="Search student or reg no..."
+                  placeholder="Search candidate by name or register number..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800"
@@ -3623,7 +3623,7 @@ export const SkillAssessmentView: React.FC<SkillAssessmentViewProps> = ({ user, 
                   </label>
                   <textarea
                     rows={3}
-                    placeholder="e.g. Mandatory mock test before upcoming campus placement drive. Make sure webcam is enabled and full-screen lockdown is maintained."
+                    placeholder="Enter examination guidelines, proctoring requirements, and submission instructions..."
                     value={triggerInstructions}
                     onChange={e => setTriggerInstructions(e.target.value)}
                     className="w-full p-3 bg-zinc-50 border border-zinc-300 rounded-xl text-xs text-zinc-800 placeholder-zinc-400 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition leading-relaxed resize-none"

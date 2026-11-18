@@ -937,7 +937,7 @@ export const PlacementReadinessView: React.FC<PlacementReadinessViewProps> = ({
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                     <input
                       type="text"
-                      placeholder="Search name or reg no..."
+                      placeholder="Search candidate by name or register number..."
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
                       className="w-full pl-8 pr-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-black"

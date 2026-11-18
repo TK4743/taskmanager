@@ -710,7 +710,7 @@ export default function IndustryPortalView({
             <div style={{ background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:10, padding:14, marginBottom:16 }}>
               <label style={{ ...c.lbl, color:'#4338ca', marginBottom:10 }}>Required Skills (for AI matching)</label>
               <div style={{ display:'flex', gap:8, marginBottom:10, flexWrap:'wrap' }}>
-                <input style={{ ...c.inp, flex:2, minWidth:100 }} placeholder="Skill name (e.g. React)" value={newSkill.skill} onChange={e=>setNewSkill(p=>({...p,skill:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&addSkill()} />
+                <input style={{ ...c.inp, flex:2, minWidth:100 }} placeholder="Required competency (e.g. React, PostgreSQL)" value={newSkill.skill} onChange={e=>setNewSkill(p=>({...p,skill:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&addSkill()} />
                 <select style={{ ...c.inp, flex:1, minWidth:110 }} value={newSkill.level} onChange={e=>setNewSkill(p=>({...p,level:parseInt(e.target.value)}))}>
                   {SKILL_LEVELS.map((l,i)=><option key={l} value={i+1}>{l}</option>)}
                 </select>

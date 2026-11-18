@@ -82,7 +82,7 @@ export function DepartmentsView({
           <h3 className="text-lg font-semibold mb-4 text-zinc-900 dark:text-zinc-100">Create New Department</h3>
           <form onSubmit={createDepartment} className="flex gap-4">
             <Input
-              placeholder="e.g. Computer Science & Engineering"
+              placeholder="Enter official department name (e.g. Information Technology)"
               value={newDept}
               onChange={e => setNewDept(e.target.value)}
               required
